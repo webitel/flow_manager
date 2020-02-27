@@ -8,6 +8,7 @@ import (
 )
 
 type ApplicationHandler func(c Connection, args interface{}) (Response, *AppError)
+type ApplicationArgsParser func(c Connection, args ...interface{}) interface{}
 
 type ApplicationObject map[string]interface{}
 type Applications []ApplicationObject
@@ -20,6 +21,7 @@ type Response interface {
 type Application struct {
 	AllowNoConnect bool
 	Handler        ApplicationHandler
+	ArgsParser     ApplicationArgsParser
 }
 
 func (j Applications) Value() (driver.Value, error) {

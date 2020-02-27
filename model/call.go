@@ -29,6 +29,9 @@ type Call interface {
 	DomainId() int
 	InboundGatewayId() int
 
+	SetAll(vars Variables) (Response, *AppError)
+	SetNoLocal(vars Variables) (Response, *AppError)
+
 	RingReady() (Response, *AppError)
 	PreAnswer() (Response, *AppError)
 	Answer() (Response, *AppError)

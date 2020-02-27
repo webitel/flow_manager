@@ -37,9 +37,8 @@ type Flow struct {
 	sync.RWMutex
 }
 
-func New(name string, fm *app.FlowManager, handler app.Handler, c model.Applications, conn model.Connection) *Flow {
+func New(name string, handler app.Handler, c model.Applications, conn model.Connection) *Flow {
 	i := &Flow{}
-	i.fm = fm
 	i.handler = handler
 	i.name = name
 	i.conn = conn
@@ -58,6 +57,10 @@ type ApplicationRequest struct {
 	Name    string
 	DebugId string
 	Tag     string
+}
+
+func (a *ApplicationRequest) IsCancel() bool {
+	return a.Flags&ApplicationFlagBreakEnabled == ApplicationFlagBreakEnabled
 }
 
 func (a *ApplicationRequest) Id() string {
@@ -169,7 +172,9 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 			}
 
 		case "break":
-			fmt.Println("break")
+			req.args = &BreakArgs{i}
+			i.trySetTag(req.Tag, root, req.idx)
+			root.Add(req)
 
 		default:
 			if req.Name != "" {

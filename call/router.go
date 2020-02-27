@@ -34,7 +34,12 @@ func (r *Router) Handlers() model.ApplicationHandlers {
 
 func (r *Router) Request(conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
 	if h, ok := r.apps[req.Id()]; ok {
-		return h.Handler(conn, req.Args())
+		if h.ArgsParser != nil {
+			return h.Handler(conn, h.ArgsParser(conn, req.Args()))
+		} else {
+			return h.Handler(conn, req.Args())
+		}
+
 	}
 	return nil, model.NewAppError("Call.Request", "call.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
 }
@@ -63,17 +68,8 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 		return err
 	}
 
-	i := flow.New(routing.Schema.Name, r.fm, r, routing.Schema.Schema, conn)
+	i := flow.New(routing.Schema.Name, r, routing.Schema.Schema, conn)
 	flow.Route(i, r)
 
 	return nil
-}
-
-func (r *Router) GetApplication(id string) (*model.Application, *model.AppError) {
-	a, ok := r.apps[id]
-	if !ok {
-		return nil, model.NewAppError("CallExecute", "router.call.execute.not_found", nil, fmt.Sprintf("not found %s", id), http.StatusNotFound)
-	}
-
-	return a, nil
 }

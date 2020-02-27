@@ -1,0 +1,19 @@
+[
+  {
+    "set": {
+      "var1": "val2",
+      "var2": "val2",
+      "var3": "val2"
+    }
+  },
+  {
+    "setAll": {
+      "key1": "val "
+    }
+  },
+  {
+    "setNoLocal": {
+      "key1": "val "
+    }
+  }
+]

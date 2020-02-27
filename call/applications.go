@@ -30,6 +30,16 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        callHandlerMiddleware(r.hangup),
 	}
 
+	apps["setAll"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.setAll),
+	}
+
+	apps["setNoLocal"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.setNoLocal),
+	}
+
 	return apps
 }
 

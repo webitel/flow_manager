@@ -18,6 +18,8 @@ type Server interface {
 	GetApplication(string) (*Application, *AppError)
 }
 
+type Variables map[string]interface{}
+
 type Connection interface {
 	Type() ConnectionType
 	Id() string
@@ -25,7 +27,7 @@ type Connection interface {
 
 	Execute(string, interface{}) (Response, *AppError)
 	Get(key string) (string, bool)
-	Set(key, value string) (Response, *AppError)
+	Set(vars Variables) (Response, *AppError)
 	ParseText(text string) string
 
 	Close() *AppError

@@ -41,13 +41,28 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 	var apps = make(model.ApplicationHandlers)
 
 	apps["if"] = &model.Application{
-		AllowNoConnect: false,
+		AllowNoConnect: true,
 		Handler:        r.conditionHandler,
 	}
 
+	apps["switch"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.switchHandler,
+	}
+
 	apps["execute"] = &model.Application{
-		AllowNoConnect: false,
+		AllowNoConnect: true,
 		Handler:        r.execute,
+	}
+
+	apps["set"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.set,
+	}
+
+	apps["break"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.breakHandler,
 	}
 
 	return apps
@@ -76,6 +91,11 @@ func Route(i *Flow, handler app.Handler) {
 			wlog.Error(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), err.Error()))
 		} else {
 			wlog.Debug(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.String()))
+		}
+
+		if i.IsCancel() || req.IsCancel() {
+			wlog.Debug(fmt.Sprintf("flow [%s] break", i.Name()))
+			break
 		}
 	}
 }

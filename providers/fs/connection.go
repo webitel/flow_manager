@@ -154,8 +154,39 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 	return
 }
 
-func (c *Connection) Set(key, value string) (model.Response, *model.AppError) {
-	return c.Execute("set", fmt.Sprintf("%s=%s", key, value))
+func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
+	if len(vars) == 0 {
+		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
+	}
+
+	str := "^^"
+	for k, v := range vars {
+		str += fmt.Sprintf(`~'%s'='%v'`, k, v)
+	}
+
+	return c.Execute("multiset", str)
+}
+
+func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppError) {
+	var err *model.AppError
+	for k, v := range vars {
+		if _, err = c.Execute("export", fmt.Sprintf(`'%s'='%v'`, k, v)); err != nil {
+			return nil, err
+		}
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SetNoLocal(vars model.Variables) (model.Response, *model.AppError) {
+	var err *model.AppError
+	for k, v := range vars {
+		if _, err = c.Execute("export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
+			return nil, err
+		}
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func (c *Connection) initDestination(dump *eventsocket.Event) {

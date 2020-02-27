@@ -66,7 +66,7 @@ func (s *server) RouteFlow(stream flow.FlowService_RouteFlowServer) error {
 	return nil
 }
 
-func (c *connection) Set(key, value string) (model.Response, *model.AppError) {
+func (c *connection) Set(vars model.Variables) (model.Response, *model.AppError) {
 	return nil, nil
 }
 

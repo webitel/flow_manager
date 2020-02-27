@@ -19,7 +19,7 @@ func (i *Flow) addFunction(args interface{}) *model.AppError {
 		if actions, ok := tmp["actions"].([]interface{}); !ok {
 			return model.NewAppError("Iterator", "iterator.parse_app.function.valid_actions", nil, "bad arguments, actions is required", http.StatusBadRequest)
 		} else {
-			i.Functions[name] = New(fmt.Sprintf("function-%s", name), i.fm, i.handler, ArrInterfaceToArrayApplication(actions), i.conn)
+			i.Functions[name] = New(fmt.Sprintf("function-%s", name), i.handler, ArrInterfaceToArrayApplication(actions), i.conn)
 		}
 
 		return nil
