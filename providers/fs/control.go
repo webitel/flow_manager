@@ -1,6 +1,9 @@
 package fs
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"context"
+	"github.com/webitel/flow_manager/model"
+)
 
 const (
 	HANGUP_NORMAL_TEMPORARY_FAILURE = "NORMAL_TEMPORARY_FAILURE"
@@ -8,25 +11,25 @@ const (
 )
 
 func (c *Connection) Answer() (model.Response, *model.AppError) {
-	return c.Execute("answer", "")
+	return c.Execute(context.Background(), "answer", "")
 }
 
 func (c *Connection) PreAnswer() (model.Response, *model.AppError) {
-	return c.Execute("pre_answer", "")
+	return c.Execute(context.Background(), "pre_answer", "")
 }
 
 func (c *Connection) RingReady() (model.Response, *model.AppError) {
-	return c.Execute("ring_ready", "")
+	return c.Execute(context.Background(), "ring_ready", "")
 }
 
 func (c *Connection) Hangup(cause string) (model.Response, *model.AppError) {
-	return c.Execute("hangup", cause)
+	return c.Execute(context.Background(), "hangup", cause)
 }
 
 func (c *Connection) HangupNoRoute() (model.Response, *model.AppError) {
-	return c.Execute("hangup", HANGUP_NO_ROUTE_DESTINATION)
+	return c.Execute(context.Background(), "hangup", HANGUP_NO_ROUTE_DESTINATION)
 }
 
 func (c *Connection) HangupAppErr() (model.Response, *model.AppError) {
-	return c.Execute("hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
+	return c.Execute(context.Background(), "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
 }

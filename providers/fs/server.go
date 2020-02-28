@@ -52,7 +52,7 @@ func (s *server) Start() *model.AppError {
 	address := s.getAddress()
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		return model.NewAppError(s.Name(), "grpc.start_server.error", nil, err.Error(), http.StatusInternalServerError)
+		return model.NewAppError(s.Name(), "fs.start_server.error", nil, err.Error(), http.StatusInternalServerError)
 	}
 	s.listener = lis
 	go s.listen(lis)

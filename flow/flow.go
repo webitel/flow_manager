@@ -7,6 +7,7 @@ import (
 	"github.com/webitel/wlog"
 	"strconv"
 	"sync"
+	"time"
 )
 
 const MAX_GOTO = 100 //32767
@@ -24,7 +25,7 @@ type Tag struct {
 }
 
 type Flow struct {
-	fm          *app.FlowManager
+	timezone    *time.Location
 	handler     app.Handler
 	conn        model.Connection
 	name        string
@@ -37,17 +38,37 @@ type Flow struct {
 	sync.RWMutex
 }
 
-func New(name string, handler app.Handler, c model.Applications, conn model.Connection) *Flow {
+type Config struct {
+	Timezone string
+	Name     string
+	Handler  app.Handler
+	Apps     model.Applications
+	Conn     model.Connection
+}
+
+func New(conf Config) *Flow {
 	i := &Flow{}
-	i.handler = handler
-	i.name = name
-	i.conn = conn
+	i.handler = conf.Handler
+	i.name = conf.Name
+	i.conn = conf.Conn
 	i.currentNode = NewNode(nil)
 	i.Functions = make(map[string]*Flow)
 	i.triggers = make(map[string]*Flow)
 	i.Tags = make(map[string]*Tag)
-	parseFlowArray(i, i.currentNode, c)
+
+	if conf.Timezone != "" {
+		i.timezone, _ = time.LoadLocation(conf.Timezone)
+	}
+	parseFlowArray(i, i.currentNode, conf.Apps)
 	return i
+}
+
+func (i *Flow) Now() time.Time {
+	if i.timezone != nil {
+		return time.Now().In(i.timezone)
+	}
+
+	return time.Now()
 }
 
 type ApplicationRequest struct {

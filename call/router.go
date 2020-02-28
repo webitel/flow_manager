@@ -68,7 +68,12 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 		return err
 	}
 
-	i := flow.New(routing.Schema.Name, r, routing.Schema.Schema, conn)
+	i := flow.New(flow.Config{
+		Name:    routing.Schema.Name,
+		Handler: r,
+		Apps:    routing.Schema.Schema,
+		Conn:    conn,
+	})
 	flow.Route(i, r)
 
 	return nil

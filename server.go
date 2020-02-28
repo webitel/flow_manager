@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/call"
-	_ "github.com/webitel/flow_manager/client"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/grpc_route"
 	"github.com/webitel/wlog"
 	"os"
 	"os/signal"
@@ -24,6 +24,7 @@ func main() {
 
 	flow.Init(fm)
 	call.Init(fm)
+	grpc_route.Init(fm)
 
 	go fm.Listen()
 

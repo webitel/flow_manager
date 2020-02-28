@@ -5,9 +5,14 @@ const (
 )
 
 type Config struct {
-	NodeName    string      `json:"node_name"`
-	SqlSettings SqlSettings `json:"sql_settings"`
-	Dev         bool        `json:"dev"`
+	Id                string            `json:"id"`
+	SqlSettings       SqlSettings       `json:"sql_settings"`
+	DiscoverySettings DiscoverySettings `json:"discovery_settings"`
+	Dev               bool              `json:"dev"`
+}
+
+type DiscoverySettings struct {
+	Url string
 }
 
 type SqlSettings struct {

@@ -2,6 +2,7 @@ package fs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
 	"github.com/webitel/flow_manager/model"
@@ -141,7 +142,7 @@ func (c *Connection) Close() *model.AppError {
 
 func (c *Connection) SetDirection(direction string) error {
 	if c.direction == "" {
-		if _, err := c.Execute("set", "webitel_direction="+direction); err != nil {
+		if _, err := c.Execute(context.Background(), "set", "webitel_direction="+direction); err != nil {
 			return err
 		}
 		c.direction = getDirection(direction)
@@ -164,13 +165,13 @@ func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError)
 		str += fmt.Sprintf(`~'%s'='%v'`, k, v)
 	}
 
-	return c.Execute("multiset", str)
+	return c.Execute(context.Background(), "multiset", str)
 }
 
 func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute("export", fmt.Sprintf(`'%s'='%v'`, k, v)); err != nil {
+		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`'%s'='%v'`, k, v)); err != nil {
 			return nil, err
 		}
 	}
@@ -181,7 +182,7 @@ func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppErr
 func (c *Connection) SetNoLocal(vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute("export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
+		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
 			return nil, err
 		}
 	}
@@ -274,7 +275,7 @@ func (c *Connection) HangupCause() string {
 	return c.hangupCause
 }
 
-func (c *Connection) Execute(app string, args interface{}) (model.Response, *model.AppError) {
+func (c *Connection) Execute(ctx context.Context, app string, args interface{}) (model.Response, *model.AppError) {
 	if c.Stopped() {
 		return nil, errExecuteAfterHangup
 	}
@@ -306,8 +307,12 @@ func (c *Connection) Execute(app string, args interface{}) (model.Response, *mod
 		return nil, errExecuteAfterHangup
 	}
 
-	<-e
-	return model.CallResponseOK, nil
+	select {
+	case <-ctx.Done():
+		return model.CallResponse{Status: "CANCEL"}, model.NewAppError("FreeSWITCH", "provider.fs.execute.cancel", nil, "cancel", http.StatusInternalServerError)
+	case <-e:
+		return model.CallResponseOK, nil
+	}
 }
 
 func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {

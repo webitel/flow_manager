@@ -13,8 +13,9 @@ import (
 
 type FlowManager struct {
 	Log         *wlog.Logger
-	nodeId      string
+	id          string
 	config      *model.Config
+	cluster     *cluster
 	Store       store.Store
 	servers     []model.Server
 	schemaCache utils.ObjectCache
@@ -35,7 +36,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm := &FlowManager{
 		config:      config,
-		nodeId:      fmt.Sprintf("%s-%s", model.AppServiceName, model.NewId()),
+		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
 		servers:     make([]model.Server, 0, 1),
 		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
 		stop:        make(chan struct{}),
@@ -70,11 +71,19 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return
 	}
 
-	return fm, nil
+	fm.cluster = NewCluster(fm)
+	if err = fm.cluster.Start(); err != nil {
+		return nil, err
+	}
+
+	return fm, outErr
 }
 
 func (f *FlowManager) Shutdown() {
 	wlog.Info("stopping Server...")
+	if f.cluster != nil {
+		f.cluster.Stop()
+	}
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()

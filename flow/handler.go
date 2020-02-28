@@ -81,6 +81,9 @@ func Route(i *Flow, handler app.Handler) {
 	var err *model.AppError
 	var res model.Response
 
+	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.conn.Id()))
+	defer wlog.Debug(fmt.Sprintf("flow %s stopped conn %s", i.name, i.conn.Id()))
+
 	for {
 		req = i.NextRequest()
 		if req == nil {

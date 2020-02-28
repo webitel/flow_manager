@@ -7,6 +7,7 @@ package flow;
 
 service FlowService {
     rpc RouteFlow(stream RouteFlowRequest) returns (stream RouteFlowResponse) {}
+    rpc CallCenter(stream RouteFlowRequest) returns (stream RouteFlowResponse) {}
 }
 
 message ErrorStatus {
@@ -15,6 +16,12 @@ message ErrorStatus {
 }
 
 message RouteFlowRequest {
+    message Request {
+        int32 schema_id = 1;
+        int64 schema_updated_at = 2;
+        int64 domain_id = 3;
+    }
+
     message Execute {
         string app = 1;
     }
@@ -22,12 +29,19 @@ message RouteFlowRequest {
     int32 seq = 1;
     oneof route_request {
         Execute exec = 2;
+        Request request = 3;
     }
 }
 
 message RouteFlowResponse {
+
+    message Bye {
+        string cause = 1;
+    }
+
     int32 seq = 1;
     oneof resp {
         ErrorStatus error = 2;
+        Bye bye = 3;
     }
 }

@@ -1,5 +1,7 @@
 package model
 
+import "context"
+
 type ConnectionType int8
 
 const (
@@ -25,7 +27,7 @@ type Connection interface {
 	Id() string
 	NodeId() string
 
-	Execute(string, interface{}) (Response, *AppError)
+	Execute(context.Context, string, interface{}) (Response, *AppError)
 	Get(key string) (string, bool)
 	Set(vars Variables) (Response, *AppError)
 	ParseText(text string) string
