@@ -11,6 +11,7 @@ type SqlStore interface {
 	GetReplica() *gorp.DbMap
 	GetAllConns() []*gorp.DbMap
 
+	Call() store.CallStore
 	Schema() store.SchemaStore
 	CallRouting() store.CallRoutingStore
 	Endpoint() store.EndpointStore

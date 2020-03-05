@@ -29,6 +29,7 @@ const (
 )
 
 type SqlSupplierOldStores struct {
+	call        store.CallStore
 	schema      store.SchemaStore
 	callRouting store.CallRoutingStore
 	endpoint    store.EndpointStore
@@ -53,6 +54,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	}
 	supplier.initConnection()
 
+	supplier.oldStores.call = NewSqlCallStore(supplier)
 	supplier.oldStores.schema = NewSqlSchemaStore(supplier)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
@@ -165,6 +167,10 @@ func (me typeConverter) ToDb(val interface{}) (interface{}, error) {
 
 func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 	return gorp.CustomScanner{}, false
+}
+
+func (ss *SqlSupplier) Call() store.CallStore {
+	return ss.oldStores.call
 }
 
 func (ss *SqlSupplier) Schema() store.SchemaStore {

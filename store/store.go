@@ -8,9 +8,15 @@ import (
 var ErrNoRows = sql.ErrNoRows
 
 type Store interface {
+	Call() CallStore
 	Schema() SchemaStore
 	CallRouting() CallRoutingStore
 	Endpoint() EndpointStore
+}
+
+type CallStore interface {
+	Save(call *model.CallActionRinging) *model.AppError
+	SetState(call *model.CallAction) *model.AppError
 }
 
 type SchemaStore interface {

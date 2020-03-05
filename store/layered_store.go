@@ -20,6 +20,10 @@ func NewLayeredStore(db LayeredStoreDatabaseLayer) Store {
 	return store
 }
 
+func (s *LayeredStore) Call() CallStore {
+	return s.DatabaseLayer.Call()
+}
+
 func (s *LayeredStore) Schema() SchemaStore {
 	return s.DatabaseLayer.Schema()
 }

@@ -15,6 +15,13 @@ type DiscoverySettings struct {
 	Url string
 }
 
+type ServiceSettings struct {
+	NodeId                *string
+	ListenAddress         *string
+	ListenInternalAddress *string
+	SessionCacheInMinutes *int
+}
+
 type SqlSettings struct {
 	DriverName                  *string
 	DataSource                  *string
@@ -26,4 +33,8 @@ type SqlSettings struct {
 	Trace                       bool
 	AtRestEncryptKey            string
 	QueryTimeout                *int
+}
+
+type MQSettings struct {
+	Url string
 }

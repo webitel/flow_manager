@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/mq"
+	"github.com/webitel/flow_manager/mq/rabbit"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
@@ -21,6 +23,8 @@ type FlowManager struct {
 	schemaCache utils.ObjectCache
 	stop        chan struct{}
 	stopped     chan struct{}
+
+	eventQueue mq.MQ
 
 	FlowRouter model.Router
 	CallRouter model.CallRouter
@@ -70,6 +74,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		outErr = err
 		return
 	}
+
+	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(model.MQSettings{
+		Url: "amqp://webitel:webitel@10.9.8.111:5672?heartbeat=10",
+	}, fm.id))
 
 	fm.cluster = NewCluster(fm)
 	if err = fm.cluster.Start(); err != nil {

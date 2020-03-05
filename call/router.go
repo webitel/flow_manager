@@ -55,6 +55,11 @@ func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) (*model.Cal
 }
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
+	go r.handle(conn)
+	return nil
+}
+
+func (r *Router) handle(conn model.Connection) {
 	call := conn.(model.Call)
 	var routing *model.Routing
 	var err *model.AppError
@@ -64,9 +69,11 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 
 	from := call.From()
 	if from == nil {
-		wlog.Info("not allowed call: from is empty")
-		_, err = call.HangupAppErr()
-		return err
+		wlog.Error("not allowed call: from is empty")
+		if _, err = call.HangupAppErr(); err != nil {
+			wlog.Error(err.Error())
+		}
+		return
 	}
 
 	switch call.Direction() {
@@ -74,15 +81,21 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 		var to *model.CallEndpoint
 		to, err = r.ToRequired(call, call.To())
 		if err != nil {
-			_, err = call.HangupAppErr()
-			return err
+			wlog.Error(err.Error())
+			if _, err = call.HangupAppErr(); err != nil {
+				wlog.Error(err.Error())
+			}
+			return
 		}
 
 		switch from.Type {
 		case model.CallEndpointTypeDestination:
 			if id := to.IntId(); id == nil {
-				_, err = call.HangupNoRoute()
-				return err
+
+				if _, err = call.HangupNoRoute(); err != nil {
+					wlog.Error(err.Error())
+				}
+				return
 			} else {
 				wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
 				routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
@@ -101,14 +114,18 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 
 	if err != nil {
 		wlog.Error(err.Error())
-		_, err = call.HangupAppErr()
-		return err
+		if _, err = call.HangupAppErr(); err != nil {
+			wlog.Error(err.Error())
+		}
+		return
 	}
 
 	if routing == nil {
 		wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
-		_, err = call.HangupNoRoute()
-		return err
+		if _, err = call.HangupNoRoute(); err != nil {
+			wlog.Error(err.Error())
+		}
+		return
 	}
 
 	call.SetDomainName(routing.DomainName) //fixme
@@ -120,6 +137,4 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 		Conn:    conn,
 	})
 	flow.Route(i, r)
-
-	return nil
 }

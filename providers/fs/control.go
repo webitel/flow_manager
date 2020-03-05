@@ -85,3 +85,11 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 
 	return c.Execute(context.Background(), "bridge", dialString)
 }
+
+func (c *Connection) Echo(delay int) (model.Response, *model.AppError) {
+	if delay == 0 {
+		return c.Execute(context.Background(), "echo", "")
+	} else {
+		return c.Execute(context.Background(), "delay_echo", delay)
+	}
+}
