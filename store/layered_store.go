@@ -27,3 +27,7 @@ func (s *LayeredStore) Schema() SchemaStore {
 func (s *LayeredStore) CallRouting() CallRoutingStore {
 	return s.DatabaseLayer.CallRouting()
 }
+
+func (s *LayeredStore) Endpoint() EndpointStore {
+	return s.DatabaseLayer.Endpoint()
+}

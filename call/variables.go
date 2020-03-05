@@ -21,3 +21,22 @@ func (r *Router) setNoLocal(call model.Call, args interface{}) (model.Response, 
 
 	return nil, model.NewAppError("Call.SetAll", "router.call.set_all.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
 }
+
+func getStringValueFromMap(name string, params map[string]interface{}, def string) (res string) {
+	var ok bool
+	var v interface{}
+
+	if v, ok = params[name]; ok {
+
+		switch v.(type) {
+		case map[string]interface{}:
+		case []interface{}:
+			return def
+
+		default:
+			return fmt.Sprint(v)
+		}
+	}
+
+	return def
+}

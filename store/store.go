@@ -10,6 +10,7 @@ var ErrNoRows = sql.ErrNoRows
 type Store interface {
 	Schema() SchemaStore
 	CallRouting() CallRoutingStore
+	Endpoint() EndpointStore
 }
 
 type SchemaStore interface {
@@ -18,4 +19,9 @@ type SchemaStore interface {
 
 type CallRoutingStore interface {
 	FromGateway(domainId, gatewayId int) (*model.Routing, *model.AppError)
+	SearchToDestination(domainId int, destination string) (*model.Routing, *model.AppError)
+}
+
+type EndpointStore interface {
+	Get(domainId int64, callerName, callerNumber string, endpoints model.Applications) ([]*model.Endpoint, *model.AppError)
 }

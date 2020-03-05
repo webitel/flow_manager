@@ -31,6 +31,7 @@ const (
 type SqlSupplierOldStores struct {
 	schema      store.SchemaStore
 	callRouting store.CallRoutingStore
+	endpoint    store.EndpointStore
 }
 
 type SqlSupplier struct {
@@ -54,6 +55,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 
 	supplier.oldStores.schema = NewSqlSchemaStore(supplier)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
+	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -171,4 +173,8 @@ func (ss *SqlSupplier) Schema() store.SchemaStore {
 
 func (ss *SqlSupplier) CallRouting() store.CallRoutingStore {
 	return ss.oldStores.callRouting
+}
+
+func (ss *SqlSupplier) Endpoint() store.EndpointStore {
+	return ss.oldStores.endpoint
 }

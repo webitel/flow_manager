@@ -40,6 +40,11 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        callHandlerMiddleware(r.setNoLocal),
 	}
 
+	apps["bridge"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.bridge),
+	}
+
 	return apps
 }
 

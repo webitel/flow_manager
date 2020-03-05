@@ -41,16 +41,21 @@ const (
 var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
 
 type Connection struct {
-	id               string
-	uuid             string
-	nodeId           string
-	nodeName         string
-	context          string
-	destination      string
-	stopped          bool
-	direction        model.CallDirection
-	gatewayId        int
-	domainId         int
+	id              string
+	uuid            string
+	nodeId          string
+	nodeName        string
+	context         string
+	destination     string
+	stopped         bool
+	direction       model.CallDirection
+	gatewayId       int
+	domainId        int
+	domainName      string
+	from            *model.CallEndpoint
+	to              *model.CallEndpoint
+	systemDirection string
+
 	userId           int
 	disconnected     chan struct{}
 	lastEvent        *eventsocket.Event
@@ -90,9 +95,39 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		disconnected:     make(chan struct{}),
 		variables:        make(map[string]string),
 	}
+	connection.setCallInfo(dump)
 	connection.initDestination(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
+}
+
+func (c *Connection) setCallInfo(dump *eventsocket.Event) {
+	c.from = &model.CallEndpoint{}
+	c.from.Number = dump.Get("Caller-Caller-ID-Number")
+	c.from.Name = dump.Get("Caller-Caller-ID-Name")
+
+	if c.gatewayId != 0 {
+		c.from.Type = model.CallEndpointTypeDestination
+
+		c.to = &model.CallEndpoint{
+			Type: model.CallEndpointTypeGateway,
+			Id:   dump.Get("variable_sip_h_X-Webitel-Gateway-Id"),
+			Name: dump.Get("variable_sip_h_X-Webitel-Gateway"),
+		}
+	} else if c.userId != 0 {
+		c.from.Type = model.CallEndpointTypeUser
+
+	} else {
+		c.from.Type = "unknown"
+	}
+}
+
+func (c *Connection) From() *model.CallEndpoint {
+	return c.from
+}
+
+func (c *Connection) To() *model.CallEndpoint {
+	return c.to
 }
 
 func getIntFromStr(str string) int {
@@ -108,12 +143,20 @@ func (c *Connection) DomainId() int {
 	return c.domainId
 }
 
+func (c *Connection) SetDomainName(name string) {
+	c.domainName = name
+}
+
+func (c *Connection) DomainName() string {
+	return c.domainName
+}
+
 func (c *Connection) UserId() int {
 	return c.userId
 }
 
 func (c *Connection) ParseText(text string) string {
-	return "FIXME"
+	return text
 }
 
 func (c *Connection) Context() string {
@@ -150,16 +193,26 @@ func (c *Connection) SetDirection(direction string) error {
 	return nil
 }
 
-//FIXME
 func (c *Connection) Get(key string) (value string, ok bool) {
+	if c.Stopped() {
+		value, ok = c.variables[key]
+	} else if c.lastEvent != nil {
+		value = c.lastEvent.Get("variable_" + c.UserVariablePrefix(key))
+		if value != "" {
+			ok = true
+		}
+	}
 	return
 }
 
-func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
-	if len(vars) == 0 {
-		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
+func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, *model.AppError) {
+	for k, v := range vars {
+		c.variables[k] = fmt.Sprintf("%v", v)
 	}
+	return model.CallResponseOK, nil
+}
 
+func (c *Connection) setChannelVariables(vars model.Variables) (model.Response, *model.AppError) {
 	str := "^^"
 	for k, v := range vars {
 		str += fmt.Sprintf(`~'%s'='%v'`, k, v)
@@ -168,10 +221,26 @@ func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError)
 	return c.Execute(context.Background(), "multiset", str)
 }
 
+func (c Connection) UserVariablePrefix(name string) string {
+	return fmt.Sprintf("usr_%s", name)
+}
+
+func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
+	if len(vars) == 0 {
+		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
+	}
+
+	if c.Stopped() {
+		return c.setDisconnectedVariables(vars)
+	} else {
+		return c.setChannelVariables(vars)
+	}
+}
+
 func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`'%s'='%v'`, k, v)); err != nil {
+		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`'%s'='%v'`, c.UserVariablePrefix(k), v)); err != nil {
 			return nil, err
 		}
 	}

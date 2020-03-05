@@ -44,29 +44,74 @@ func (r *Router) Request(conn model.Connection, req model.ApplicationRequest) (m
 	return nil, model.NewAppError("Call.Request", "call.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
 }
 
+func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) (*model.CallEndpoint, *model.AppError) {
+	if in == nil {
+		wlog.Error(fmt.Sprintf("call %s not found to", call.Id()))
+		_, err := call.HangupAppErr()
+		return nil, err
+	} else {
+		return in, nil
+	}
+}
+
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	call := conn.(model.Call)
 	var routing *model.Routing
 	var err *model.AppError
 
-	wlog.Debug(fmt.Sprintf("call %s [domain_id=%d direction=%s user_id=%d] - %s", call.Id(), call.DomainId(),
-		call.Direction(), call.UserId(), call.Destination()))
+	wlog.Info(fmt.Sprintf("call %s [%d %s] from: [%s] to: [%s] destination %s", call.Id(), call.DomainId(), call.Direction(),
+		call.From().String(), call.To().String(), call.Destination()))
+
+	from := call.From()
+	if from == nil {
+		wlog.Info("not allowed call: from is empty")
+		_, err = call.HangupAppErr()
+		return err
+	}
 
 	switch call.Direction() {
 	case model.CallDirectionInbound:
+		var to *model.CallEndpoint
+		to, err = r.ToRequired(call, call.To())
+		if err != nil {
+			_, err = call.HangupAppErr()
+			return err
+		}
+
+		switch from.Type {
+		case model.CallEndpointTypeDestination:
+			if id := to.IntId(); id == nil {
+				_, err = call.HangupNoRoute()
+				return err
+			} else {
+				wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
+				routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
+			}
+
+		}
 	case model.CallDirectionOutbound:
+		switch from.Type {
+		case model.CallEndpointTypeUser:
+			routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination())
+		}
+
+	default:
+		err = model.NewAppError("Call.Handle", "call.router.valid.direction", nil, fmt.Sprintf("no handler direction %s", call.Direction()), http.StatusInternalServerError)
 	}
 
-	routing, err = r.fm.GetRoutingFromGateway(1, 3)
 	if err != nil {
-		wlog.Warn(err.Error())
-		if err.StatusCode == http.StatusNotFound {
-			_, err = call.HangupNoRoute()
-		} else {
-			_, err = call.HangupAppErr()
-		}
+		wlog.Error(err.Error())
+		_, err = call.HangupAppErr()
 		return err
 	}
+
+	if routing == nil {
+		wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
+		_, err = call.HangupNoRoute()
+		return err
+	}
+
+	call.SetDomainName(routing.DomainName) //fixme
 
 	i := flow.New(flow.Config{
 		Name:    routing.Schema.Name,

@@ -2,7 +2,9 @@ package fs
 
 import (
 	"context"
+	"fmt"
 	"github.com/webitel/flow_manager/model"
+	"strings"
 )
 
 const (
@@ -32,4 +34,54 @@ func (c *Connection) HangupNoRoute() (model.Response, *model.AppError) {
 
 func (c *Connection) HangupAppErr() (model.Response, *model.AppError) {
 	return c.Execute(context.Background(), "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
+}
+
+func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint) (model.Response, *model.AppError) {
+	var dialString, separator string
+
+	if strategy == "failover" {
+		separator = "|"
+	} else if strategy != "" && strategy != "multiple" {
+		separator = ":_:"
+	} else {
+		separator = ","
+	}
+
+	var from string
+
+	from = fmt.Sprintf("sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination=%s",
+		call.Id(), call.From().Type, call.From().Id, call.Destination())
+
+	dialString += "<sip_route_uri=sip:$${outbound_sip_proxy}," + from
+	for key, val := range vars {
+		dialString += fmt.Sprintf(",'%s'='%s'", key, val)
+	}
+	dialString += ">"
+
+	end := make([]string, 0, len(endpoints))
+
+	for _, e := range endpoints {
+		switch e.TypeName {
+		case "sipGateway":
+			if e == nil || e.Destination == nil {
+				end = append(end, "error/UNALLOCATED_NUMBER")
+			} else if e.Dnd != nil && *e.Dnd {
+				end = append(end, "error/GATEWAY_DOWN")
+			} else {
+				end = append(end, fmt.Sprintf("{%s}sofia/sip/%s", e.ToStringVariables(), *e.Destination))
+			}
+		case "user":
+			if e == nil || e.Destination == nil {
+				end = append(end, "error/UNALLOCATED_NUMBER")
+			} else if e.Dnd != nil && *e.Dnd {
+				end = append(end, "error/USER_BUSY")
+			} else {
+				end = append(end, fmt.Sprintf("{%s}sofia/sip/%s", e.ToStringVariables(), *e.Destination))
+			}
+		}
+	}
+
+	dialString += call.ParseText(strings.Join(end, separator))
+
+	return c.Execute(context.Background(), "bridge", dialString)
 }
