@@ -52,7 +52,7 @@ const (
 type CallAction struct {
 	Id        string `json:"id"`
 	AppId     string `json:"app_id"`
-	DomainId  string `json:"domain_id"`
+	DomainId  int8   `json:"domain_id,string"`
 	Timestamp int64  `json:"timestamp,string"`
 	Event     string `json:"event"`
 }

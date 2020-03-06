@@ -13,6 +13,8 @@ func (f *FlowManager) Listen() {
 	defer close(f.stopped)
 	var wg sync.WaitGroup
 
+	f.callWatcher.Start()
+
 	go f.listenCallEvents(f.stop)
 
 	for _, v := range f.servers {
@@ -63,38 +65,6 @@ func (f *FlowManager) listenGrpcConnection(stop chan struct{}, wg *sync.WaitGrou
 			if err := f.GRPCRouter.Handle(c); err != nil {
 				wlog.Error(err.Error())
 			}
-		}
-	}
-}
-
-func (f *FlowManager) listenCallEvents(stop chan struct{}) {
-	wlog.Info(fmt.Sprintf("listen call events..."))
-	defer wlog.Debug(fmt.Sprintf("stop listening call events..."))
-	for {
-		select {
-		case <-stop:
-			return
-		case c, ok := <-f.eventQueue.ConsumeCallEvent():
-			if !ok {
-				return
-			}
-			go f.handleCallAction(c)
-
-		}
-	}
-}
-
-func (f *FlowManager) handleCallAction(data model.CallActionData) {
-	action := data.GetEvent()
-
-	switch action.(type) {
-	case *model.CallActionRinging:
-		if err := f.Store.Call().Save(action.(*model.CallActionRinging)); err != nil {
-			wlog.Error(err.Error())
-		}
-	default:
-		if err := f.Store.Call().SetState(&data.CallAction); err != nil {
-			wlog.Error(err.Error())
 		}
 	}
 }

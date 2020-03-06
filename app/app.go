@@ -26,9 +26,10 @@ type FlowManager struct {
 
 	eventQueue mq.MQ
 
-	FlowRouter model.Router
-	CallRouter model.CallRouter
-	GRPCRouter model.GRPCRouter
+	FlowRouter  model.Router
+	CallRouter  model.CallRouter
+	GRPCRouter  model.GRPCRouter
+	callWatcher *callWatcher
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -51,6 +52,8 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		EnableConsole: true,
 		ConsoleLevel:  wlog.LevelDebug,
 	})
+
+	fm.callWatcher = NewCallWatcher(fm)
 
 	wlog.RedirectStdLog(fm.Log)
 	wlog.InitGlobalLogger(fm.Log)
@@ -92,6 +95,11 @@ func (f *FlowManager) Shutdown() {
 	if f.cluster != nil {
 		f.cluster.Stop()
 	}
+
+	if f.callWatcher != nil {
+		f.callWatcher.Stop()
+	}
+
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()

@@ -17,9 +17,9 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, direction, destination, parent_id, timestamp, state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload)
+                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at)
 values (:Id, :Direction, :Destination, :ParentId, :Timestamp, :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload)
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt)
 on conflict (id)
     do update set
         direction = :Direction,
@@ -34,6 +34,7 @@ on conflict (id)
         to_number = :ToNumber,
         to_id = :ToId,
         payload = :Payload`, map[string]interface{}{
+		"DomainId":    call.DomainId,
 		"Id":          call.Id,
 		"Direction":   call.Direction,
 		"Destination": call.Destination,
@@ -41,6 +42,7 @@ on conflict (id)
 		"Timestamp":   call.Timestamp,
 		"State":       call.Event,
 		"AppId":       call.AppId,
+		"CreatedAt":   call.Timestamp,
 		"FromType":    call.GetFrom().GetType(),
 		"FromName":    call.GetFrom().GetName(),
 		"FromNumber":  call.GetFrom().GetNumber(),
@@ -62,8 +64,8 @@ on conflict (id)
 }
 
 func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id)
-values (:Id, :State, :Timestamp, :AppId)
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id)
+values (:Id, :State, :Timestamp, :AppId, :DomainId)
 on conflict (id) where timestamp < :Timestamp
     do update set 
       state = :State,
@@ -72,11 +74,60 @@ on conflict (id) where timestamp < :Timestamp
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
 		"AppId":     call.AppId,
+		"DomainId":  call.DomainId,
 	})
 
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetState", "store.sql_call.set_state.error", nil,
 			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code)
+values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode)
+on conflict (id) where timestamp < :Timestamp
+    do update set
+      state = :State,
+      cause = :Cause,
+      sip_code = :SipCode,
+      timestamp = :Timestamp`, map[string]interface{}{
+		"Id":        call.Id,
+		"State":     call.Event,
+		"Timestamp": call.Timestamp,
+		"AppId":     call.AppId,
+		"DomainId":  call.DomainId,
+		"Cause":     call.Cause,
+		"SipCode":   call.SipCode,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetState", "store.sql_call.set_state.error", nil,
+			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) MoveToHistory() *model.AppError {
+	_, err := s.GetMaster().Exec(`with c as (
+    delete from cc_calls c
+	where c.hangup_at > 0
+    returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
+       c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code
+)
+insert into cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
+                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code)
+select to_timestamp(c.created_at / 1000) created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
+       c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code
+from c`)
+	if err != nil {
+		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
+			err.Error(), extractCodeFromErr(err))
 	}
 
 	return nil

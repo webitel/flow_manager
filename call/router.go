@@ -44,13 +44,15 @@ func (r *Router) Request(conn model.Connection, req model.ApplicationRequest) (m
 	return nil, model.NewAppError("Call.Request", "call.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
 }
 
-func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) (*model.CallEndpoint, *model.AppError) {
+func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.CallEndpoint {
 	if in == nil {
 		wlog.Error(fmt.Sprintf("call %s not found to", call.Id()))
-		_, err := call.HangupAppErr()
-		return nil, err
+		if _, err := call.HangupAppErr(); err != nil {
+			wlog.Error(err.Error())
+		}
+		return nil
 	} else {
-		return in, nil
+		return in
 	}
 }
 
@@ -79,12 +81,8 @@ func (r *Router) handle(conn model.Connection) {
 	switch call.Direction() {
 	case model.CallDirectionInbound:
 		var to *model.CallEndpoint
-		to, err = r.ToRequired(call, call.To())
-		if err != nil {
-			wlog.Error(err.Error())
-			if _, err = call.HangupAppErr(); err != nil {
-				wlog.Error(err.Error())
-			}
+		to = r.ToRequired(call, call.To())
+		if to == nil {
 			return
 		}
 
