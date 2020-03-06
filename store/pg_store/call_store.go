@@ -22,6 +22,7 @@ values (:Id, :Direction, :Destination, :ParentId, :Timestamp, :State, :AppId, :F
         :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt)
 on conflict (id)
     do update set
+		created_at = :CreatedAt,
         direction = :Direction,
         destination = :Destination,
         parent_id = :ParentId,
