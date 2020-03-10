@@ -67,10 +67,10 @@ on conflict (id)
 func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id)
 values (:Id, :State, :Timestamp, :AppId, :DomainId)
-on conflict (id) where timestamp < :Timestamp
+on conflict (id) where timestamp < :Timestamp and cause isnull
     do update set 
-      state = :State,
-      timestamp = :Timestamp`, map[string]interface{}{
+      state = EXCLUDED.state,
+      timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
@@ -89,12 +89,12 @@ on conflict (id) where timestamp < :Timestamp
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code)
 values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode)
-on conflict (id) where timestamp < :Timestamp
+on conflict (id) where timestamp <= :Timestamp
     do update set
-      state = :State,
-      cause = :Cause,
-      sip_code = :SipCode,
-      timestamp = :Timestamp`, map[string]interface{}{
+      state = EXCLUDED.state,
+      cause = EXCLUDED.cause,
+      sip_code = EXCLUDED.sip_code,
+      timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
