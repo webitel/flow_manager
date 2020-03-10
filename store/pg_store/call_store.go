@@ -17,24 +17,26 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, direction, destination, parent_id, timestamp, state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at)
+                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id)
 values (:Id, :Direction, :Destination, :ParentId, :Timestamp, :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt)
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt, :GatewayId, :UserId)
 on conflict (id)
     do update set
-		created_at = :CreatedAt,
-        direction = :Direction,
-        destination = :Destination,
-        parent_id = :ParentId,
-        from_type = :FromType,
-        from_name = :FromName,
-        from_number = :FromNumber,
-        from_id = :FromId,
-        to_type = :ToType,
-        to_name = :ToName,
-        to_number = :ToNumber,
-        to_id = :ToId,
-        payload = :Payload`, map[string]interface{}{
+		created_at = EXCLUDED.created_at,
+		direction = EXCLUDED.direction,
+		destination = EXCLUDED.destination,
+		parent_id = EXCLUDED.parent_id,
+		from_type = EXCLUDED.from_type,
+		from_name = EXCLUDED.from_name,
+		from_number = EXCLUDED.from_number,
+		from_id = EXCLUDED.from_id,
+		to_type = EXCLUDED.to_type,
+		to_name = EXCLUDED.to_name,
+		to_number = EXCLUDED.to_number,
+		to_id = EXCLUDED.to_id,
+		gateway_id = EXCLUDED.gateway_id,		
+		user_id = EXCLUDED.user_id,		
+		payload = EXCLUDED.payload`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
 		"Direction":   call.Direction,
@@ -49,11 +51,13 @@ on conflict (id)
 		"FromNumber":  call.GetFrom().GetNumber(),
 		"FromId":      call.GetFrom().GetId(),
 
-		"ToType":   call.GetTo().GetType(),
-		"ToName":   call.GetTo().GetName(),
-		"ToNumber": call.GetTo().GetNumber(),
-		"ToId":     call.GetTo().GetId(),
-		"Payload":  nil,
+		"ToType":    call.GetTo().GetType(),
+		"ToName":    call.GetTo().GetName(),
+		"ToNumber":  call.GetTo().GetNumber(),
+		"ToId":      call.GetTo().GetId(),
+		"GatewayId": call.GatewayId,
+		"UserId":    call.UserId,
+		"Payload":   nil,
 	})
 
 	if err != nil {
@@ -142,13 +146,14 @@ func (s SqlCallStore) MoveToHistory() *model.AppError {
 	where c.hangup_at > 0
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id
 )
 insert into cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
-                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id)
+                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id,
+							gateway_id, user_id)
 select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id
 from c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,

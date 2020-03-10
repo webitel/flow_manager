@@ -103,6 +103,8 @@ func (e *CallEndpoint) GetName() *string {
 }
 
 type CallActionInfo struct {
+	GatewayId   *int           `json:"gateway_id"`
+	UserId      *int           `json:"user_id"`
 	Direction   string         `json:"direction"`
 	Destination string         `json:"destination"`
 	From        *CallEndpoint  `json:"from"`
