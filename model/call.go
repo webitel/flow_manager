@@ -103,14 +103,12 @@ func (e *CallEndpoint) GetName() *string {
 }
 
 type CallActionInfo struct {
-	ParentId    string `json:"parent_id"`
-	Direction   string `json:"direction"`
-	Destination string `json:"destination"`
-
-	From *CallEndpoint `json:"from"`
-	To   *CallEndpoint `json:"to"`
-
-	Payload *CallVariables `json:"payload"`
+	Direction   string         `json:"direction"`
+	Destination string         `json:"destination"`
+	From        *CallEndpoint  `json:"from"`
+	To          *CallEndpoint  `json:"to"`
+	ParentId    *string        `json:"parent_id"`
+	Payload     *CallVariables `json:"payload"`
 }
 
 type CallActionRinging struct {
@@ -142,7 +140,7 @@ type CallActionHold struct {
 
 type CallActionBridge struct {
 	CallAction
-	CallActionInfo
+	BridgedId string `json:"bridged_id"`
 }
 
 type CallActionHangup struct {

@@ -52,6 +52,8 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 	from = fmt.Sprintf("sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination=%s",
 		call.Id(), call.From().Type, call.From().Id, call.Destination())
 
+	from += fmt.Sprintf(",effective_caller_id_name='%s',effective_caller_id_number='%s'", call.From().Name, call.From().Number)
+
 	dialString += "<sip_route_uri=sip:$${outbound_sip_proxy}," + from
 	for key, val := range vars {
 		dialString += fmt.Sprintf(",'%s'='%s'", key, val)
@@ -68,7 +70,7 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 			} else if e.Dnd != nil && *e.Dnd {
 				end = append(end, "error/GATEWAY_DOWN")
 			} else {
-				end = append(end, fmt.Sprintf("{%s}sofia/sip/%s", e.ToStringVariables(), *e.Destination))
+				end = append(end, fmt.Sprintf("[%s]sofia/sip/%s", e.ToStringVariables(), *e.Destination))
 			}
 		case "user":
 			if e == nil || e.Destination == nil {
@@ -76,12 +78,12 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 			} else if e.Dnd != nil && *e.Dnd {
 				end = append(end, "error/USER_BUSY")
 			} else {
-				end = append(end, fmt.Sprintf("{%s}sofia/sip/%s", e.ToStringVariables(), *e.Destination))
+				end = append(end, fmt.Sprintf("[%s]sofia/sip/%s@%s", e.ToStringVariables(), *e.Destination, call.DomainName()))
 			}
 		}
 	}
 
-	dialString += call.ParseText(strings.Join(end, separator))
+	dialString += strings.Join(end, separator)
 
 	return c.Execute(context.Background(), "bridge", dialString)
 }

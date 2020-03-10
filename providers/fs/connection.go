@@ -72,7 +72,7 @@ func (c Connection) Type() model.ConnectionType {
 
 func getDirection(str string) model.CallDirection {
 	switch str {
-	case model.CallDirectionOutbound:
+	case model.CallDirectionOutbound, "internal":
 		return model.CallDirectionOutbound
 	default:
 		return model.CallDirectionInbound
@@ -102,21 +102,38 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 }
 
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
+	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
+	if direction == "internal" {
+		if dump.Get("Call-Direction") == "outbound" {
+			direction = "inbound"
+		} else {
+			direction = "outbound"
+		}
+	}
+	c.direction = getDirection(direction)
 	c.from = &model.CallEndpoint{}
-	c.from.Number = dump.Get("Caller-Caller-ID-Number")
-	c.from.Name = dump.Get("Caller-Caller-ID-Name")
 
-	if c.gatewayId != 0 {
+	if c.gatewayId != 0 && c.userId == 0 {
 		c.from.Type = model.CallEndpointTypeDestination
+		c.from.Number = dump.Get("Caller-Caller-ID-Number")
+		c.from.Name = dump.Get("Caller-Caller-ID-Name")
 
 		c.to = &model.CallEndpoint{
-			Type: model.CallEndpointTypeGateway,
-			Id:   dump.Get("variable_sip_h_X-Webitel-Gateway-Id"),
-			Name: dump.Get("variable_sip_h_X-Webitel-Gateway"),
+			Type:   model.CallEndpointTypeGateway,
+			Id:     dump.Get("variable_sip_h_X-Webitel-Gateway-Id"),
+			Name:   dump.Get("variable_sip_h_X-Webitel-Gateway"),
+			Number: c.from.Number,
 		}
 	} else if c.userId != 0 {
-		c.from.Type = model.CallEndpointTypeUser
-
+		if direction == "inbound" {
+			//FIXME
+		} else {
+			c.from.Type = model.CallEndpointTypeUser
+			c.from.Id = fmt.Sprintf("%d", c.userId)
+			c.from.Name = dump.Get("Caller-Caller-ID-Name")
+			c.from.Number = dump.Get("Caller-Caller-ID-Number")
+		}
+		//fmt.Println(direction)
 	} else {
 		c.from.Type = "unknown"
 	}

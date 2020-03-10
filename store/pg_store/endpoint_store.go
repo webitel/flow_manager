@@ -37,6 +37,7 @@ from endpoints e
             'sip_h_X-Webitel-Direction=internal',
             'sip_h_X-Webitel-User-Id=' || u.id,
             'sip_h_X-Webitel-Domain-Id=' || u.dc,
+			'sip_h_X-Webitel-Gateway-Id=',
 
             E'effective_callee_id_name=' || coalesce(u.name, u.username) || '',
             E'effective_callee_id_number=' || coalesce(u.extension, '') || ''

@@ -24,7 +24,7 @@ func loadConfig() (*model.Config, error) {
 			DataSource:                  dataSource,
 			MaxIdleConns:                model.NewInt(5),
 			MaxOpenConns:                model.NewInt(5),
-			ConnMaxLifetimeMilliseconds: model.NewInt(300000),
+			ConnMaxLifetimeMilliseconds: model.NewInt(30000),
 			Trace:                       false,
 		},
 		DiscoverySettings: model.DiscoverySettings{

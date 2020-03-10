@@ -112,19 +112,43 @@ on conflict (id) where timestamp < :Timestamp
 	return nil
 }
 
+func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, bridged_id)
+values (:Id, :State, :Timestamp, :AppId, :DomainId, :BridgedId)
+on conflict (id) where timestamp < :Timestamp
+    do update set
+      state = :State,
+      bridged_id = :BridgedId,
+      timestamp = :Timestamp`, map[string]interface{}{
+		"Id":        call.Id,
+		"State":     call.Event,
+		"Timestamp": call.Timestamp,
+		"AppId":     call.AppId,
+		"DomainId":  call.DomainId,
+		"BridgedId": call.BridgedId,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetBridged", "store.sql_call.set_bridged.error", nil,
+			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`with c as (
     delete from cc_calls c
 	where c.hangup_at > 0
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id
 )
 insert into cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
-                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code)
-select to_timestamp(c.created_at / 1000) created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
+                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id)
+select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id
 from c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,

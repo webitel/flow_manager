@@ -17,6 +17,7 @@ type Store interface {
 type CallStore interface {
 	Save(call *model.CallActionRinging) *model.AppError
 	SetState(call *model.CallAction) *model.AppError
+	SetBridged(call *model.CallActionBridge) *model.AppError
 	SetHangup(call *model.CallActionHangup) *model.AppError
 	MoveToHistory() *model.AppError
 }

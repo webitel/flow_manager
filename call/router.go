@@ -127,7 +127,6 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	call.SetDomainName(routing.DomainName) //fixme
-
 	i := flow.New(flow.Config{
 		Name:    routing.Schema.Name,
 		Handler: r,

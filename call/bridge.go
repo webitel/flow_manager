@@ -57,9 +57,9 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 				e.Destination = model.NewString(fmt.Sprintf("%s@%s", getStringValueFromMap("dialString", endpoints[key], ""), *e.Destination))
 			}
 		case "user":
-			if e.Destination != nil {
-				e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Destination, call.DomainName()))
-			}
+			//if e.Destination != nil {
+			//	e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Destination, call.DomainName()))
+			//}
 		default:
 			wlog.Warn(fmt.Sprintf("call %s skip bridge endpoint %v - unknown type ", call.Id(), e))
 		}

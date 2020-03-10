@@ -69,6 +69,10 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 		if err := f.Store.Call().Save(action.(*model.CallActionRinging)); err != nil {
 			wlog.Error(err.Error())
 		}
+	case *model.CallActionBridge:
+		if err := f.Store.Call().SetBridged(action.(*model.CallActionBridge)); err != nil {
+			wlog.Error(err.Error())
+		}
 	case *model.CallActionHangup:
 		if err := f.Store.Call().SetHangup(action.(*model.CallActionHangup)); err != nil {
 			wlog.Error(err.Error())
