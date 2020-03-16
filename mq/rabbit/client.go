@@ -107,7 +107,7 @@ func (a *AMQP) subscribe() {
 		a.queueName,
 		"",
 		false,
-		true,
+		false,
 		false,
 		false,
 		nil,
