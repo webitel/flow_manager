@@ -6,9 +6,15 @@ import (
 )
 
 var (
-	nodeName   = flag.String("id", "1", "Node ID")
-	dataSource = flag.String("data_source", "postgres://opensips:webitel@10.9.8.111:5432/webitel?fallback_application_name=flow_manager&sslmode=disable&connect_timeout=10&search_path=call_center", "Data source")
-	consulHost = flag.String("consul", "consul:8500", "Host to consul")
+	nodeName      = flag.String("id", "1", "Node ID")
+	dataSource    = flag.String("data_source", "postgres://opensips:webitel@postgres:5432/webitel?fallback_application_name=engine&sslmode=disable&connect_timeout=10&search_path=call_center", "Data source")
+	consulHost    = flag.String("consul", "consul:8500", "Host to consul")
+	amqp          = flag.String("amqp", "amqp://webitel:webitel@rabbit:5672?heartbeat=10", "AMQP connection")
+	eslServerHost = flag.String("esl_host", "", "ESL server host")
+	eslServerPort = flag.Int("esl_port", 10030, "ESL server port")
+
+	grpcServerHost = flag.String("grpc_addr", "", "GRPC server host")
+	grpcServerPort = flag.Int("grpc_port", 0, "GRPC server port")
 )
 
 func (f *FlowManager) Config() *model.Config {
@@ -29,6 +35,17 @@ func loadConfig() (*model.Config, error) {
 		},
 		DiscoverySettings: model.DiscoverySettings{
 			Url: *consulHost,
+		},
+		MQSettings: model.MQSettings{
+			Url: *amqp,
+		},
+		Esl: model.ServeSettings{
+			Host: *eslServerHost,
+			Port: *eslServerPort,
+		},
+		Grpc: model.ServeSettings{
+			Host: *grpcServerHost,
+			Port: *grpcServerPort,
 		},
 	}
 

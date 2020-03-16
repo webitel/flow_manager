@@ -7,8 +7,16 @@ const (
 type Config struct {
 	Id                string            `json:"id"`
 	SqlSettings       SqlSettings       `json:"sql_settings"`
+	MQSettings        MQSettings        `json:"mq_settings"`
 	DiscoverySettings DiscoverySettings `json:"discovery_settings"`
 	Dev               bool              `json:"dev"`
+	Esl               ServeSettings     `json:"esl"`
+	Grpc              ServeSettings     `json:"grpc"`
+}
+
+type ServeSettings struct {
+	Host string
+	Port int
 }
 
 type DiscoverySettings struct {

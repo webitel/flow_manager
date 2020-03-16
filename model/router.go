@@ -5,6 +5,8 @@ type ApplicationRequest interface {
 	Args() interface{}
 }
 
+type ParseText func(conn Connection, text string) string
+
 type Router interface {
 	Handle(conn Connection) *AppError
 	Request(con Connection, req ApplicationRequest) (Response, *AppError)

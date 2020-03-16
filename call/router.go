@@ -58,11 +58,15 @@ func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.Call
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
+
 	return nil
 }
 
 func (r *Router) handle(conn model.Connection) {
-	call := conn.(model.Call)
+	call := &callParser{
+		Call: conn.(model.Call),
+	}
+
 	var routing *model.Routing
 	var err *model.AppError
 
@@ -75,6 +79,7 @@ func (r *Router) handle(conn model.Connection) {
 		if _, err = call.HangupAppErr(); err != nil {
 			wlog.Error(err.Error())
 		}
+
 		return
 	}
 
@@ -83,16 +88,17 @@ func (r *Router) handle(conn model.Connection) {
 		var to *model.CallEndpoint
 		to = r.ToRequired(call, call.To())
 		if to == nil {
+
 			return
 		}
 
 		switch from.Type {
 		case model.CallEndpointTypeDestination:
 			if id := to.IntId(); id == nil {
-
 				if _, err = call.HangupNoRoute(); err != nil {
 					wlog.Error(err.Error())
 				}
+
 				return
 			} else {
 				wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
@@ -103,7 +109,9 @@ func (r *Router) handle(conn model.Connection) {
 	case model.CallDirectionOutbound:
 		switch from.Type {
 		case model.CallEndpointTypeUser:
-			routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination())
+			if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
+				call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
+			}
 		}
 
 	default:
@@ -115,6 +123,7 @@ func (r *Router) handle(conn model.Connection) {
 		if _, err = call.HangupAppErr(); err != nil {
 			wlog.Error(err.Error())
 		}
+
 		return
 	}
 
@@ -123,15 +132,17 @@ func (r *Router) handle(conn model.Connection) {
 		if _, err = call.HangupNoRoute(); err != nil {
 			wlog.Error(err.Error())
 		}
+
 		return
 	}
 
+	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(flow.Config{
 		Name:    routing.Schema.Name,
 		Handler: r,
 		Apps:    routing.Schema.Schema,
-		Conn:    conn,
+		Conn:    call,
 	})
 	flow.Route(i, r)
 }

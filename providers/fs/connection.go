@@ -38,11 +38,14 @@ const (
 	HEADER_VARIABLE_DESTINATION_NAME = "variable_destination_number"
 )
 
+const (
+	UsrVarPrefix = "usr_"
+)
+
 var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
 
 type Connection struct {
 	id              string
-	uuid            string
 	nodeId          string
 	nodeName        string
 	context         string
@@ -81,7 +84,7 @@ func getDirection(str string) model.CallDirection {
 
 func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Event) *Connection {
 	connection := &Connection{
-		uuid:             dump.Get(HEADER_ID_NAME),
+		id:               dump.Get(HEADER_ID_NAME),
 		nodeId:           dump.Get(HEADER_CORE_ID_NAME),
 		nodeName:         dump.Get(HEADER_CORE_NAME),
 		context:          dump.Get(HEADER_CONTEXT_NAME),
@@ -96,21 +99,28 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		variables:        make(map[string]string),
 	}
 	connection.setCallInfo(dump)
-	connection.initDestination(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
 }
 
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
+	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
+
 	if direction == "internal" {
-		if dump.Get("Call-Direction") == "outbound" {
+		if dump.Get("Call-Direction") == "outbound" && !isOriginate {
 			direction = "inbound"
 		} else {
 			direction = "outbound"
 		}
 	}
-	c.direction = getDirection(direction)
+
+	if isOriginate {
+		c.destination = dump.Get("variable_effective_callee_id_number")
+	} else {
+		c.initDestination(dump)
+	}
+
 	c.from = &model.CallEndpoint{}
 
 	if c.gatewayId != 0 && c.userId == 0 {
@@ -153,7 +163,7 @@ func getIntFromStr(str string) int {
 }
 
 func (c *Connection) Id() string {
-	return c.uuid
+	return c.id
 }
 
 func (c *Connection) DomainId() int {
@@ -215,9 +225,13 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 		value, ok = c.variables[key]
 	} else if c.lastEvent != nil {
 		value = c.lastEvent.Get("variable_" + c.UserVariablePrefix(key))
+		if value == "" {
+			value = c.lastEvent.Get("variable_" + (key))
+		}
 		if value != "" {
 			ok = true
 		}
+
 	}
 	return
 }
@@ -366,7 +380,7 @@ func (c *Connection) Execute(ctx context.Context, app string, args interface{}) 
 		return nil, errExecuteAfterHangup
 	}
 
-	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.uuid, app, args))
+	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.Id(), app, args))
 
 	guid := uuid.NewV4()
 	var err error

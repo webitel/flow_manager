@@ -230,4 +230,5 @@ type Call interface {
 	HangupNoRoute() (Response, *AppError)
 	HangupAppErr() (Response, *AppError)
 	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint) (Response, *AppError)
+	Sleep(int) (Response, *AppError)
 }

@@ -121,9 +121,9 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 values (:Id, :State, :Timestamp, :AppId, :DomainId, :BridgedId)
 on conflict (id) where timestamp < :Timestamp
     do update set
-      state = :State,
-      bridged_id = :BridgedId,
-      timestamp = :Timestamp`, map[string]interface{}{
+      state = EXCLUDED.state,
+      bridged_id = EXCLUDED.bridged_id,
+      timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
@@ -143,7 +143,7 @@ on conflict (id) where timestamp < :Timestamp
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`with c as (
     delete from cc_calls c
-	where c.hangup_at > 0
+	where c.hangup_at > 0 and c.direction notnull
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id

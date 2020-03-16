@@ -62,12 +62,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	servers := []model.Server{
 		grpc.NewServer(&grpc.Config{
-			Host: "",
-			Port: 8043,
+			Host: fm.Config().Grpc.Host,
+			Port: fm.Config().Grpc.Port,
 		}),
 		fs.NewServer(&fs.Config{
-			Host: "",
-			Port: 10030,
+			Host: fm.Config().Esl.Host,
+			Port: fm.Config().Esl.Port,
 		}),
 	}
 
@@ -79,9 +79,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return
 	}
 
-	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(model.MQSettings{
-		Url: "amqp://webitel:webitel@10.9.8.111:5672?heartbeat=10",
-	}, fm.id))
+	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 
 	fm.cluster = NewCluster(fm)
 	if err = fm.cluster.Start(); err != nil {

@@ -59,6 +59,7 @@ func New(conf Config) *Flow {
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
+
 	parseFlowArray(i, i.currentNode, conf.Apps)
 	return i
 }

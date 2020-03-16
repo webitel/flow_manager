@@ -36,6 +36,10 @@ func (c *Connection) HangupAppErr() (model.Response, *model.AppError) {
 	return c.Execute(context.Background(), "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
 }
 
+func (c *Connection) Sleep(timeout int) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "sleep", fmt.Sprintf("%d", timeout))
+}
+
 func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint) (model.Response, *model.AppError) {
 	var dialString, separator string
 
