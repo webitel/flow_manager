@@ -73,7 +73,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
 
-	//FIXME register public interface
 	if err := fm.RegisterServers(servers...); err != nil {
 		outErr = err
 		return

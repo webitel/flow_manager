@@ -26,7 +26,7 @@ func (c *cluster) Start() error {
 	c.discovery = sd
 
 	host, port := c.app.GetPublicInterface()
-	err = sd.RegisterService(model.AppServiceName, host, port, model.AppServiceTTL, model.AppDeregesterCriticalTTL)
+	err = sd.RegisterService(model.AppServiceName, host, port, model.AppServiceTTL, model.AppDeregisterCriticalTTL)
 	if err != nil {
 		return err
 	}
@@ -35,6 +35,11 @@ func (c *cluster) Start() error {
 }
 
 func (f *FlowManager) GetPublicInterface() (string, int) {
+	for _, v := range f.servers {
+		if v.Type() == model.ConnectionTypeGrpc {
+			return v.Host(), v.Port()
+		}
+	}
 
 	return f.servers[0].Host(), f.servers[0].Port()
 }

@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/grpc/flow"
 	"github.com/webitel/wlog"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/grpc/status"
 	"net"
 	"net/http"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -36,6 +38,15 @@ func NewServer(cfg *Config) model.Server {
 	}
 }
 
+func publicAddr(lis net.Listener) (string, int) {
+	h, p, _ := net.SplitHostPort(lis.Addr().String())
+	if h == "::" {
+		h = utils.GetPublicAddr()
+	}
+	port, _ := strconv.Atoi(p)
+	return h, port
+}
+
 func (s *server) Start() *model.AppError {
 	address := s.getAddress()
 	lis, err := net.Listen("tcp", address)
@@ -48,6 +59,8 @@ func (s *server) Start() *model.AppError {
 	)
 
 	flow.RegisterFlowServiceServer(s.server, s)
+
+	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
 	go s.listen(lis)
 
