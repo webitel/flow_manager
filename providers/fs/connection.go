@@ -66,6 +66,7 @@ type Connection struct {
 	callbackMessages map[string]chan *eventsocket.Event
 	variables        map[string]string
 	hangupCause      string
+	exportVariables  []string
 	sync.RWMutex
 }
 
@@ -246,7 +247,7 @@ func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Respo
 func (c *Connection) setChannelVariables(vars model.Variables) (model.Response, *model.AppError) {
 	str := "^^"
 	for k, v := range vars {
-		str += fmt.Sprintf(`~'%s'='%v'`, k, v)
+		str += fmt.Sprintf(`~'usr_%s'='%v'`, k, v)
 	}
 
 	return c.Execute(context.Background(), "multiset", str)

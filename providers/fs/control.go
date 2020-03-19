@@ -62,6 +62,15 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 	for key, val := range vars {
 		dialString += fmt.Sprintf(",'%s'='%s'", key, val)
 	}
+
+	if len(c.exportVariables) > 0 {
+		for _, v := range c.exportVariables {
+			if val, ok := c.Get(v); ok {
+				dialString += fmt.Sprintf(",'usr_%s'='%s'", v, val)
+			}
+		}
+	}
+
 	dialString += ">"
 
 	end := make([]string, 0, len(endpoints))
@@ -98,4 +107,9 @@ func (c *Connection) Echo(delay int) (model.Response, *model.AppError) {
 	} else {
 		return c.Execute(context.Background(), "delay_echo", delay)
 	}
+}
+
+func (c *Connection) Export(vars []string) (model.Response, *model.AppError) {
+	c.exportVariables = vars
+	return model.CallResponseOK, nil
 }

@@ -231,4 +231,5 @@ type Call interface {
 	HangupAppErr() (Response, *AppError)
 	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint) (Response, *AppError)
 	Sleep(int) (Response, *AppError)
+	Export(vars []string) (Response, *AppError)
 }
