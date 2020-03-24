@@ -55,6 +55,11 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        callHandlerMiddleware(r.export),
 	}
 
+	apps["joinQueue"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.queue),
+	}
+
 	return apps
 }
 

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"github.com/webitel/call_center/grpc_api/client"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
@@ -21,6 +22,7 @@ type FlowManager struct {
 	Store       store.Store
 	servers     []model.Server
 	schemaCache utils.ObjectCache
+	cc          client.CCManager
 	stop        chan struct{}
 	stopped     chan struct{}
 
@@ -85,6 +87,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
+	fm.cc = client.NewCCManager(fm.cluster.discovery)
+	if err = fm.cc.Start(); err != nil {
+		return nil, err
+	}
+
 	return fm, outErr
 }
 
@@ -96,6 +103,10 @@ func (f *FlowManager) Shutdown() {
 
 	if f.callWatcher != nil {
 		f.callWatcher.Stop()
+	}
+
+	if f.cc != nil {
+		f.cc.Stop()
 	}
 
 	close(f.stop)

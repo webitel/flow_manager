@@ -1,47 +1,31 @@
 
 syntax = "proto3";
 
-import "google/protobuf/any.proto";
-
 package flow;
 
 service FlowService {
-    rpc RouteFlow(stream RouteFlowRequest) returns (stream RouteFlowResponse) {}
-    rpc CallCenter(stream RouteFlowRequest) returns (stream RouteFlowResponse) {}
+    rpc DistributeAttempt(DistributeAttemptRequest) returns (DistributeAttemptResponse) {}
 }
 
-message ErrorStatus {
-    string message = 1;
-    repeated google.protobuf.Any details = 2;
+message DistributeAttemptRequest {
+    int64 queue_id = 1;
+    int64 member_id = 2;
+    int64 attemptId = 3;
+    int64 schema_id = 4;
+    int64 schema_version = 5;
+
+    string destination = 6;
+
+    map<string,string> variables = 7;
+
 }
 
-message RouteFlowRequest {
-    message Request {
-        int32 schema_id = 1;
-        int64 schema_updated_at = 2;
-        int64 domain_id = 3;
+message DistributeAttemptResponse {
+    message Cancel {
+
     }
 
-    message Execute {
-        string app = 1;
-    }
+    message Confirm {
 
-    int32 seq = 1;
-    oneof route_request {
-        Execute exec = 2;
-        Request request = 3;
-    }
-}
-
-message RouteFlowResponse {
-
-    message Bye {
-        string cause = 1;
-    }
-
-    int32 seq = 1;
-    oneof resp {
-        ErrorStatus error = 2;
-        Bye bye = 3;
     }
 }

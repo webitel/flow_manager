@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/webitel/engine/auth_manager/api"
+	"github.com/webitel/flow_manager/providers/grpc/flow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"time"
@@ -21,7 +21,7 @@ type flowConnection struct {
 	name   string
 	host   string
 	client *grpc.ClientConn
-	api    api.AuthClient
+	cli    flow.FlowServiceClient
 }
 
 func NewAuthServiceConnection(name, url string) (FlowClient, error) {
@@ -37,7 +37,7 @@ func NewAuthServiceConnection(name, url string) (FlowClient, error) {
 		return nil, err
 	}
 
-	connection.api = api.NewAuthClient(connection.client)
+	connection.cli = flow.NewFlowServiceClient(connection.client)
 
 	return connection, nil
 }
@@ -60,4 +60,8 @@ func (c *flowConnection) Close() error {
 		return ErrInternal
 	}
 	return nil
+}
+
+func (c *flowConnection) s() {
+
 }

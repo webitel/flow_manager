@@ -7,7 +7,6 @@ import (
 	context "context"
 	fmt "fmt"
 	proto "github.com/golang/protobuf/proto"
-	any "github.com/golang/protobuf/ptypes/any"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -25,402 +24,219 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
-type ErrorStatus struct {
-	Message              string     `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Details              []*any.Any `protobuf:"bytes,2,rep,name=details,proto3" json:"details,omitempty"`
-	XXX_NoUnkeyedLiteral struct{}   `json:"-"`
-	XXX_unrecognized     []byte     `json:"-"`
-	XXX_sizecache        int32      `json:"-"`
+type DistributeAttemptRequest struct {
+	QueueId              int64             `protobuf:"varint,1,opt,name=queue_id,json=queueId,proto3" json:"queue_id,omitempty"`
+	MemberId             int64             `protobuf:"varint,2,opt,name=member_id,json=memberId,proto3" json:"member_id,omitempty"`
+	AttemptId            int64             `protobuf:"varint,3,opt,name=attemptId,proto3" json:"attemptId,omitempty"`
+	SchemaId             int64             `protobuf:"varint,4,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
+	SchemaVersion        int64             `protobuf:"varint,5,opt,name=schema_version,json=schemaVersion,proto3" json:"schema_version,omitempty"`
+	Destination          string            `protobuf:"bytes,6,opt,name=destination,proto3" json:"destination,omitempty"`
+	Variables            map[string]string `protobuf:"bytes,7,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	XXX_NoUnkeyedLiteral struct{}          `json:"-"`
+	XXX_unrecognized     []byte            `json:"-"`
+	XXX_sizecache        int32             `json:"-"`
 }
 
-func (m *ErrorStatus) Reset()         { *m = ErrorStatus{} }
-func (m *ErrorStatus) String() string { return proto.CompactTextString(m) }
-func (*ErrorStatus) ProtoMessage()    {}
-func (*ErrorStatus) Descriptor() ([]byte, []int) {
+func (m *DistributeAttemptRequest) Reset()         { *m = DistributeAttemptRequest{} }
+func (m *DistributeAttemptRequest) String() string { return proto.CompactTextString(m) }
+func (*DistributeAttemptRequest) ProtoMessage()    {}
+func (*DistributeAttemptRequest) Descriptor() ([]byte, []int) {
 	return fileDescriptor_51baa40a1cc6b48b, []int{0}
 }
 
-func (m *ErrorStatus) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_ErrorStatus.Unmarshal(m, b)
+func (m *DistributeAttemptRequest) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DistributeAttemptRequest.Unmarshal(m, b)
 }
-func (m *ErrorStatus) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_ErrorStatus.Marshal(b, m, deterministic)
+func (m *DistributeAttemptRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DistributeAttemptRequest.Marshal(b, m, deterministic)
 }
-func (m *ErrorStatus) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ErrorStatus.Merge(m, src)
+func (m *DistributeAttemptRequest) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DistributeAttemptRequest.Merge(m, src)
 }
-func (m *ErrorStatus) XXX_Size() int {
-	return xxx_messageInfo_ErrorStatus.Size(m)
+func (m *DistributeAttemptRequest) XXX_Size() int {
+	return xxx_messageInfo_DistributeAttemptRequest.Size(m)
 }
-func (m *ErrorStatus) XXX_DiscardUnknown() {
-	xxx_messageInfo_ErrorStatus.DiscardUnknown(m)
+func (m *DistributeAttemptRequest) XXX_DiscardUnknown() {
+	xxx_messageInfo_DistributeAttemptRequest.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ErrorStatus proto.InternalMessageInfo
+var xxx_messageInfo_DistributeAttemptRequest proto.InternalMessageInfo
 
-func (m *ErrorStatus) GetMessage() string {
+func (m *DistributeAttemptRequest) GetQueueId() int64 {
 	if m != nil {
-		return m.Message
-	}
-	return ""
-}
-
-func (m *ErrorStatus) GetDetails() []*any.Any {
-	if m != nil {
-		return m.Details
-	}
-	return nil
-}
-
-type RouteFlowRequest struct {
-	Seq int32 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
-	// Types that are valid to be assigned to RouteRequest:
-	//	*RouteFlowRequest_Exec
-	//	*RouteFlowRequest_Request_
-	RouteRequest         isRouteFlowRequest_RouteRequest `protobuf_oneof:"route_request"`
-	XXX_NoUnkeyedLiteral struct{}                        `json:"-"`
-	XXX_unrecognized     []byte                          `json:"-"`
-	XXX_sizecache        int32                           `json:"-"`
-}
-
-func (m *RouteFlowRequest) Reset()         { *m = RouteFlowRequest{} }
-func (m *RouteFlowRequest) String() string { return proto.CompactTextString(m) }
-func (*RouteFlowRequest) ProtoMessage()    {}
-func (*RouteFlowRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_51baa40a1cc6b48b, []int{1}
-}
-
-func (m *RouteFlowRequest) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RouteFlowRequest.Unmarshal(m, b)
-}
-func (m *RouteFlowRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RouteFlowRequest.Marshal(b, m, deterministic)
-}
-func (m *RouteFlowRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RouteFlowRequest.Merge(m, src)
-}
-func (m *RouteFlowRequest) XXX_Size() int {
-	return xxx_messageInfo_RouteFlowRequest.Size(m)
-}
-func (m *RouteFlowRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_RouteFlowRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RouteFlowRequest proto.InternalMessageInfo
-
-func (m *RouteFlowRequest) GetSeq() int32 {
-	if m != nil {
-		return m.Seq
+		return m.QueueId
 	}
 	return 0
 }
 
-type isRouteFlowRequest_RouteRequest interface {
-	isRouteFlowRequest_RouteRequest()
-}
-
-type RouteFlowRequest_Exec struct {
-	Exec *RouteFlowRequest_Execute `protobuf:"bytes,2,opt,name=exec,proto3,oneof"`
-}
-
-type RouteFlowRequest_Request_ struct {
-	Request *RouteFlowRequest_Request `protobuf:"bytes,3,opt,name=request,proto3,oneof"`
-}
-
-func (*RouteFlowRequest_Exec) isRouteFlowRequest_RouteRequest() {}
-
-func (*RouteFlowRequest_Request_) isRouteFlowRequest_RouteRequest() {}
-
-func (m *RouteFlowRequest) GetRouteRequest() isRouteFlowRequest_RouteRequest {
+func (m *DistributeAttemptRequest) GetMemberId() int64 {
 	if m != nil {
-		return m.RouteRequest
+		return m.MemberId
 	}
-	return nil
+	return 0
 }
 
-func (m *RouteFlowRequest) GetExec() *RouteFlowRequest_Execute {
-	if x, ok := m.GetRouteRequest().(*RouteFlowRequest_Exec); ok {
-		return x.Exec
+func (m *DistributeAttemptRequest) GetAttemptId() int64 {
+	if m != nil {
+		return m.AttemptId
 	}
-	return nil
+	return 0
 }
 
-func (m *RouteFlowRequest) GetRequest() *RouteFlowRequest_Request {
-	if x, ok := m.GetRouteRequest().(*RouteFlowRequest_Request_); ok {
-		return x.Request
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*RouteFlowRequest) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*RouteFlowRequest_Exec)(nil),
-		(*RouteFlowRequest_Request_)(nil),
-	}
-}
-
-type RouteFlowRequest_Request struct {
-	SchemaId             int32    `protobuf:"varint,1,opt,name=schema_id,json=schemaId,proto3" json:"schema_id,omitempty"`
-	SchemaUpdatedAt      int64    `protobuf:"varint,2,opt,name=schema_updated_at,json=schemaUpdatedAt,proto3" json:"schema_updated_at,omitempty"`
-	DomainId             int64    `protobuf:"varint,3,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *RouteFlowRequest_Request) Reset()         { *m = RouteFlowRequest_Request{} }
-func (m *RouteFlowRequest_Request) String() string { return proto.CompactTextString(m) }
-func (*RouteFlowRequest_Request) ProtoMessage()    {}
-func (*RouteFlowRequest_Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_51baa40a1cc6b48b, []int{1, 0}
-}
-
-func (m *RouteFlowRequest_Request) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RouteFlowRequest_Request.Unmarshal(m, b)
-}
-func (m *RouteFlowRequest_Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RouteFlowRequest_Request.Marshal(b, m, deterministic)
-}
-func (m *RouteFlowRequest_Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RouteFlowRequest_Request.Merge(m, src)
-}
-func (m *RouteFlowRequest_Request) XXX_Size() int {
-	return xxx_messageInfo_RouteFlowRequest_Request.Size(m)
-}
-func (m *RouteFlowRequest_Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_RouteFlowRequest_Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RouteFlowRequest_Request proto.InternalMessageInfo
-
-func (m *RouteFlowRequest_Request) GetSchemaId() int32 {
+func (m *DistributeAttemptRequest) GetSchemaId() int64 {
 	if m != nil {
 		return m.SchemaId
 	}
 	return 0
 }
 
-func (m *RouteFlowRequest_Request) GetSchemaUpdatedAt() int64 {
+func (m *DistributeAttemptRequest) GetSchemaVersion() int64 {
 	if m != nil {
-		return m.SchemaUpdatedAt
+		return m.SchemaVersion
 	}
 	return 0
 }
 
-func (m *RouteFlowRequest_Request) GetDomainId() int64 {
+func (m *DistributeAttemptRequest) GetDestination() string {
 	if m != nil {
-		return m.DomainId
+		return m.Destination
 	}
-	return 0
+	return ""
 }
 
-type RouteFlowRequest_Execute struct {
-	App                  string   `protobuf:"bytes,1,opt,name=app,proto3" json:"app,omitempty"`
+func (m *DistributeAttemptRequest) GetVariables() map[string]string {
+	if m != nil {
+		return m.Variables
+	}
+	return nil
+}
+
+type DistributeAttemptResponse struct {
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`
 }
 
-func (m *RouteFlowRequest_Execute) Reset()         { *m = RouteFlowRequest_Execute{} }
-func (m *RouteFlowRequest_Execute) String() string { return proto.CompactTextString(m) }
-func (*RouteFlowRequest_Execute) ProtoMessage()    {}
-func (*RouteFlowRequest_Execute) Descriptor() ([]byte, []int) {
+func (m *DistributeAttemptResponse) Reset()         { *m = DistributeAttemptResponse{} }
+func (m *DistributeAttemptResponse) String() string { return proto.CompactTextString(m) }
+func (*DistributeAttemptResponse) ProtoMessage()    {}
+func (*DistributeAttemptResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_51baa40a1cc6b48b, []int{1}
+}
+
+func (m *DistributeAttemptResponse) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DistributeAttemptResponse.Unmarshal(m, b)
+}
+func (m *DistributeAttemptResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DistributeAttemptResponse.Marshal(b, m, deterministic)
+}
+func (m *DistributeAttemptResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DistributeAttemptResponse.Merge(m, src)
+}
+func (m *DistributeAttemptResponse) XXX_Size() int {
+	return xxx_messageInfo_DistributeAttemptResponse.Size(m)
+}
+func (m *DistributeAttemptResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_DistributeAttemptResponse.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DistributeAttemptResponse proto.InternalMessageInfo
+
+type DistributeAttemptResponse_Cancel struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DistributeAttemptResponse_Cancel) Reset()         { *m = DistributeAttemptResponse_Cancel{} }
+func (m *DistributeAttemptResponse_Cancel) String() string { return proto.CompactTextString(m) }
+func (*DistributeAttemptResponse_Cancel) ProtoMessage()    {}
+func (*DistributeAttemptResponse_Cancel) Descriptor() ([]byte, []int) {
+	return fileDescriptor_51baa40a1cc6b48b, []int{1, 0}
+}
+
+func (m *DistributeAttemptResponse_Cancel) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DistributeAttemptResponse_Cancel.Unmarshal(m, b)
+}
+func (m *DistributeAttemptResponse_Cancel) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DistributeAttemptResponse_Cancel.Marshal(b, m, deterministic)
+}
+func (m *DistributeAttemptResponse_Cancel) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DistributeAttemptResponse_Cancel.Merge(m, src)
+}
+func (m *DistributeAttemptResponse_Cancel) XXX_Size() int {
+	return xxx_messageInfo_DistributeAttemptResponse_Cancel.Size(m)
+}
+func (m *DistributeAttemptResponse_Cancel) XXX_DiscardUnknown() {
+	xxx_messageInfo_DistributeAttemptResponse_Cancel.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_DistributeAttemptResponse_Cancel proto.InternalMessageInfo
+
+type DistributeAttemptResponse_Confirm struct {
+	XXX_NoUnkeyedLiteral struct{} `json:"-"`
+	XXX_unrecognized     []byte   `json:"-"`
+	XXX_sizecache        int32    `json:"-"`
+}
+
+func (m *DistributeAttemptResponse_Confirm) Reset()         { *m = DistributeAttemptResponse_Confirm{} }
+func (m *DistributeAttemptResponse_Confirm) String() string { return proto.CompactTextString(m) }
+func (*DistributeAttemptResponse_Confirm) ProtoMessage()    {}
+func (*DistributeAttemptResponse_Confirm) Descriptor() ([]byte, []int) {
 	return fileDescriptor_51baa40a1cc6b48b, []int{1, 1}
 }
 
-func (m *RouteFlowRequest_Execute) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RouteFlowRequest_Execute.Unmarshal(m, b)
+func (m *DistributeAttemptResponse_Confirm) XXX_Unmarshal(b []byte) error {
+	return xxx_messageInfo_DistributeAttemptResponse_Confirm.Unmarshal(m, b)
 }
-func (m *RouteFlowRequest_Execute) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RouteFlowRequest_Execute.Marshal(b, m, deterministic)
+func (m *DistributeAttemptResponse_Confirm) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	return xxx_messageInfo_DistributeAttemptResponse_Confirm.Marshal(b, m, deterministic)
 }
-func (m *RouteFlowRequest_Execute) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RouteFlowRequest_Execute.Merge(m, src)
+func (m *DistributeAttemptResponse_Confirm) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_DistributeAttemptResponse_Confirm.Merge(m, src)
 }
-func (m *RouteFlowRequest_Execute) XXX_Size() int {
-	return xxx_messageInfo_RouteFlowRequest_Execute.Size(m)
+func (m *DistributeAttemptResponse_Confirm) XXX_Size() int {
+	return xxx_messageInfo_DistributeAttemptResponse_Confirm.Size(m)
 }
-func (m *RouteFlowRequest_Execute) XXX_DiscardUnknown() {
-	xxx_messageInfo_RouteFlowRequest_Execute.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RouteFlowRequest_Execute proto.InternalMessageInfo
-
-func (m *RouteFlowRequest_Execute) GetApp() string {
-	if m != nil {
-		return m.App
-	}
-	return ""
+func (m *DistributeAttemptResponse_Confirm) XXX_DiscardUnknown() {
+	xxx_messageInfo_DistributeAttemptResponse_Confirm.DiscardUnknown(m)
 }
 
-type RouteFlowResponse struct {
-	Seq int32 `protobuf:"varint,1,opt,name=seq,proto3" json:"seq,omitempty"`
-	// Types that are valid to be assigned to Resp:
-	//	*RouteFlowResponse_Error
-	//	*RouteFlowResponse_Bye_
-	Resp                 isRouteFlowResponse_Resp `protobuf_oneof:"resp"`
-	XXX_NoUnkeyedLiteral struct{}                 `json:"-"`
-	XXX_unrecognized     []byte                   `json:"-"`
-	XXX_sizecache        int32                    `json:"-"`
-}
-
-func (m *RouteFlowResponse) Reset()         { *m = RouteFlowResponse{} }
-func (m *RouteFlowResponse) String() string { return proto.CompactTextString(m) }
-func (*RouteFlowResponse) ProtoMessage()    {}
-func (*RouteFlowResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_51baa40a1cc6b48b, []int{2}
-}
-
-func (m *RouteFlowResponse) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RouteFlowResponse.Unmarshal(m, b)
-}
-func (m *RouteFlowResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RouteFlowResponse.Marshal(b, m, deterministic)
-}
-func (m *RouteFlowResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RouteFlowResponse.Merge(m, src)
-}
-func (m *RouteFlowResponse) XXX_Size() int {
-	return xxx_messageInfo_RouteFlowResponse.Size(m)
-}
-func (m *RouteFlowResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_RouteFlowResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RouteFlowResponse proto.InternalMessageInfo
-
-func (m *RouteFlowResponse) GetSeq() int32 {
-	if m != nil {
-		return m.Seq
-	}
-	return 0
-}
-
-type isRouteFlowResponse_Resp interface {
-	isRouteFlowResponse_Resp()
-}
-
-type RouteFlowResponse_Error struct {
-	Error *ErrorStatus `protobuf:"bytes,2,opt,name=error,proto3,oneof"`
-}
-
-type RouteFlowResponse_Bye_ struct {
-	Bye *RouteFlowResponse_Bye `protobuf:"bytes,3,opt,name=bye,proto3,oneof"`
-}
-
-func (*RouteFlowResponse_Error) isRouteFlowResponse_Resp() {}
-
-func (*RouteFlowResponse_Bye_) isRouteFlowResponse_Resp() {}
-
-func (m *RouteFlowResponse) GetResp() isRouteFlowResponse_Resp {
-	if m != nil {
-		return m.Resp
-	}
-	return nil
-}
-
-func (m *RouteFlowResponse) GetError() *ErrorStatus {
-	if x, ok := m.GetResp().(*RouteFlowResponse_Error); ok {
-		return x.Error
-	}
-	return nil
-}
-
-func (m *RouteFlowResponse) GetBye() *RouteFlowResponse_Bye {
-	if x, ok := m.GetResp().(*RouteFlowResponse_Bye_); ok {
-		return x.Bye
-	}
-	return nil
-}
-
-// XXX_OneofWrappers is for the internal use of the proto package.
-func (*RouteFlowResponse) XXX_OneofWrappers() []interface{} {
-	return []interface{}{
-		(*RouteFlowResponse_Error)(nil),
-		(*RouteFlowResponse_Bye_)(nil),
-	}
-}
-
-type RouteFlowResponse_Bye struct {
-	Cause                string   `protobuf:"bytes,1,opt,name=cause,proto3" json:"cause,omitempty"`
-	XXX_NoUnkeyedLiteral struct{} `json:"-"`
-	XXX_unrecognized     []byte   `json:"-"`
-	XXX_sizecache        int32    `json:"-"`
-}
-
-func (m *RouteFlowResponse_Bye) Reset()         { *m = RouteFlowResponse_Bye{} }
-func (m *RouteFlowResponse_Bye) String() string { return proto.CompactTextString(m) }
-func (*RouteFlowResponse_Bye) ProtoMessage()    {}
-func (*RouteFlowResponse_Bye) Descriptor() ([]byte, []int) {
-	return fileDescriptor_51baa40a1cc6b48b, []int{2, 0}
-}
-
-func (m *RouteFlowResponse_Bye) XXX_Unmarshal(b []byte) error {
-	return xxx_messageInfo_RouteFlowResponse_Bye.Unmarshal(m, b)
-}
-func (m *RouteFlowResponse_Bye) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	return xxx_messageInfo_RouteFlowResponse_Bye.Marshal(b, m, deterministic)
-}
-func (m *RouteFlowResponse_Bye) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RouteFlowResponse_Bye.Merge(m, src)
-}
-func (m *RouteFlowResponse_Bye) XXX_Size() int {
-	return xxx_messageInfo_RouteFlowResponse_Bye.Size(m)
-}
-func (m *RouteFlowResponse_Bye) XXX_DiscardUnknown() {
-	xxx_messageInfo_RouteFlowResponse_Bye.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_RouteFlowResponse_Bye proto.InternalMessageInfo
-
-func (m *RouteFlowResponse_Bye) GetCause() string {
-	if m != nil {
-		return m.Cause
-	}
-	return ""
-}
+var xxx_messageInfo_DistributeAttemptResponse_Confirm proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*ErrorStatus)(nil), "flow.ErrorStatus")
-	proto.RegisterType((*RouteFlowRequest)(nil), "flow.RouteFlowRequest")
-	proto.RegisterType((*RouteFlowRequest_Request)(nil), "flow.RouteFlowRequest.Request")
-	proto.RegisterType((*RouteFlowRequest_Execute)(nil), "flow.RouteFlowRequest.Execute")
-	proto.RegisterType((*RouteFlowResponse)(nil), "flow.RouteFlowResponse")
-	proto.RegisterType((*RouteFlowResponse_Bye)(nil), "flow.RouteFlowResponse.Bye")
+	proto.RegisterType((*DistributeAttemptRequest)(nil), "flow.DistributeAttemptRequest")
+	proto.RegisterMapType((map[string]string)(nil), "flow.DistributeAttemptRequest.VariablesEntry")
+	proto.RegisterType((*DistributeAttemptResponse)(nil), "flow.DistributeAttemptResponse")
+	proto.RegisterType((*DistributeAttemptResponse_Cancel)(nil), "flow.DistributeAttemptResponse.Cancel")
+	proto.RegisterType((*DistributeAttemptResponse_Confirm)(nil), "flow.DistributeAttemptResponse.Confirm")
 }
 
 func init() { proto.RegisterFile("connection.proto", fileDescriptor_51baa40a1cc6b48b) }
 
 var fileDescriptor_51baa40a1cc6b48b = []byte{
-	// 428 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0x52, 0xd1, 0x6e, 0xd3, 0x30,
-	0x14, 0x6d, 0x9a, 0x76, 0x59, 0x6f, 0x85, 0xd6, 0x5a, 0x13, 0x84, 0x54, 0x42, 0x55, 0x9f, 0x0a,
-	0x0f, 0x2e, 0x2a, 0x3c, 0xf1, 0xb6, 0x54, 0x43, 0xdd, 0xab, 0x27, 0xc4, 0x63, 0xe5, 0x26, 0x77,
-	0x25, 0x52, 0x6a, 0x67, 0xb6, 0xc3, 0x96, 0x1f, 0xe1, 0x13, 0xf8, 0x03, 0xfe, 0x0f, 0x39, 0x76,
-	0xd0, 0x04, 0x85, 0x07, 0x9e, 0x6c, 0x9f, 0x7b, 0xee, 0xf1, 0xf1, 0xb9, 0x86, 0x49, 0x26, 0x85,
-	0xc0, 0xcc, 0x14, 0x52, 0xd0, 0x4a, 0x49, 0x23, 0xc9, 0xe0, 0xae, 0x94, 0x0f, 0xc9, 0xcb, 0x83,
-	0x94, 0x87, 0x12, 0x57, 0x2d, 0xb6, 0xaf, 0xef, 0x56, 0x5c, 0x34, 0x8e, 0xb0, 0xf8, 0x0c, 0xe3,
-	0x6b, 0xa5, 0xa4, 0xba, 0x35, 0xdc, 0xd4, 0x9a, 0xc4, 0x10, 0x1d, 0x51, 0x6b, 0x7e, 0xc0, 0x38,
-	0x98, 0x07, 0xcb, 0x11, 0xeb, 0x8e, 0x84, 0x42, 0x94, 0xa3, 0xe1, 0x45, 0xa9, 0xe3, 0xfe, 0x3c,
-	0x5c, 0x8e, 0xd7, 0x97, 0xd4, 0xa9, 0xd2, 0x4e, 0x95, 0x5e, 0x89, 0x86, 0x75, 0xa4, 0xc5, 0x8f,
-	0x3e, 0x4c, 0x98, 0xac, 0x0d, 0x7e, 0x2c, 0xe5, 0x03, 0xc3, 0xfb, 0x1a, 0xb5, 0x21, 0x13, 0x08,
-	0x35, 0xde, 0xb7, 0xd2, 0x43, 0x66, 0xb7, 0xe4, 0x3d, 0x0c, 0xf0, 0x11, 0xb3, 0xb8, 0x3f, 0x0f,
-	0x96, 0xe3, 0xf5, 0x2b, 0x6a, 0xfd, 0xd2, 0xdf, 0xfb, 0xe8, 0xf5, 0x23, 0x66, 0xb5, 0xc1, 0x6d,
-	0x8f, 0xb5, 0x6c, 0xf2, 0x01, 0x22, 0xe5, 0x4a, 0x71, 0xf8, 0xcf, 0x46, 0xbf, 0x6e, 0x7b, 0xac,
-	0x6b, 0x48, 0x24, 0x44, 0x9d, 0x9d, 0x19, 0x8c, 0x74, 0xf6, 0x05, 0x8f, 0x7c, 0x57, 0xe4, 0xde,
-	0xd4, 0xb9, 0x03, 0x6e, 0x72, 0xf2, 0x06, 0xa6, 0xbe, 0x58, 0x57, 0x39, 0x37, 0x98, 0xef, 0xb8,
-	0x69, 0x6d, 0x86, 0xec, 0xc2, 0x15, 0x3e, 0x39, 0xfc, 0xaa, 0x15, 0xca, 0xe5, 0x91, 0x17, 0xc2,
-	0x0a, 0x85, 0x2d, 0xe7, 0xdc, 0x01, 0x37, 0x79, 0x32, 0x83, 0xc8, 0xfb, 0xb7, 0xef, 0xe7, 0x55,
-	0xe5, 0xa3, 0xb5, 0xdb, 0xf4, 0x02, 0x9e, 0x29, 0x6b, 0x7a, 0xe7, 0xed, 0x2d, 0xbe, 0x07, 0x30,
-	0x7d, 0xf2, 0x0c, 0x5d, 0x49, 0xa1, 0xf1, 0x44, 0x70, 0xaf, 0x61, 0x88, 0x76, 0x70, 0x3e, 0xb9,
-	0xa9, 0x0b, 0xe0, 0xc9, 0x2c, 0xb7, 0x3d, 0xe6, 0x18, 0x64, 0x05, 0xe1, 0xbe, 0x41, 0x9f, 0xd4,
-	0xec, 0x8f, 0xa4, 0xdc, 0x15, 0x34, 0x6d, 0x6c, 0xbe, 0x96, 0x99, 0xcc, 0x20, 0x4c, 0x1b, 0x24,
-	0x97, 0x30, 0xcc, 0x78, 0xad, 0xbb, 0xaf, 0xe0, 0x0e, 0xe9, 0x19, 0x0c, 0x14, 0xea, 0x6a, 0xfd,
-	0x2d, 0x80, 0xb1, 0x15, 0xb8, 0x45, 0xf5, 0xb5, 0xc8, 0x90, 0xa4, 0x30, 0xfa, 0x25, 0x4a, 0x9e,
-	0x9f, 0x9e, 0x47, 0xf2, 0xe2, 0x2f, 0xb7, 0x2f, 0x7a, 0xcb, 0xe0, 0x6d, 0x40, 0x36, 0x00, 0x1b,
-	0x5e, 0x96, 0x1b, 0x14, 0x06, 0xd5, 0x7f, 0x8a, 0xec, 0xcf, 0xda, 0x0f, 0xf9, 0xee, 0x67, 0x00,
-	0x00, 0x00, 0xff, 0xff, 0x53, 0xcc, 0xb2, 0xb2, 0x0e, 0x03, 0x00, 0x00,
+	// 328 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x7c, 0x92, 0x4f, 0x4b, 0xf3, 0x40,
+	0x10, 0xc6, 0xdf, 0x34, 0xfd, 0x97, 0x29, 0x6f, 0xa9, 0x8b, 0x87, 0x34, 0x8a, 0x86, 0x82, 0xd0,
+	0x8b, 0x41, 0xea, 0x45, 0xc4, 0x8b, 0x54, 0x85, 0xe0, 0x2d, 0x42, 0xaf, 0xb2, 0x49, 0xa6, 0xb8,
+	0x98, 0xec, 0xb6, 0xbb, 0x9b, 0x94, 0x7e, 0x5c, 0xbf, 0x89, 0x64, 0x57, 0xa9, 0xa2, 0xf5, 0xb6,
+	0xf3, 0xfc, 0xe6, 0x99, 0xe1, 0x19, 0x16, 0x46, 0x99, 0xe0, 0x1c, 0x33, 0xcd, 0x04, 0x8f, 0x56,
+	0x52, 0x68, 0x41, 0xda, 0xcb, 0x42, 0x6c, 0x26, 0x6f, 0x2d, 0xf0, 0xef, 0x98, 0xd2, 0x92, 0xa5,
+	0x95, 0xc6, 0x5b, 0xad, 0xb1, 0x5c, 0xe9, 0x04, 0xd7, 0x15, 0x2a, 0x4d, 0xc6, 0xd0, 0x5f, 0x57,
+	0x58, 0xe1, 0x33, 0xcb, 0x7d, 0x27, 0x74, 0xa6, 0x6e, 0xd2, 0x33, 0x75, 0x9c, 0x93, 0x23, 0xf0,
+	0x4a, 0x2c, 0x53, 0x94, 0x0d, 0x6b, 0x19, 0xd6, 0xb7, 0x42, 0x9c, 0x93, 0x63, 0xf0, 0xa8, 0x9d,
+	0x14, 0xe7, 0xbe, 0x6b, 0xe0, 0x4e, 0x68, 0xac, 0x2a, 0x7b, 0xc1, 0x92, 0x36, 0xd6, 0xb6, 0xb5,
+	0x5a, 0x21, 0xce, 0xc9, 0x19, 0x0c, 0x3f, 0x60, 0x8d, 0x52, 0x31, 0xc1, 0xfd, 0x8e, 0xe9, 0xf8,
+	0x6f, 0xd5, 0x85, 0x15, 0x49, 0x08, 0x83, 0x1c, 0x95, 0x66, 0x9c, 0x36, 0x89, 0xfc, 0x6e, 0xe8,
+	0x4c, 0xbd, 0xe4, 0xab, 0x44, 0x1e, 0xc1, 0xab, 0xa9, 0x64, 0x34, 0x2d, 0x50, 0xf9, 0xbd, 0xd0,
+	0x9d, 0x0e, 0x66, 0xe7, 0x51, 0x13, 0x39, 0xda, 0x17, 0x37, 0x5a, 0x7c, 0xf6, 0xdf, 0x73, 0x2d,
+	0xb7, 0xc9, 0xce, 0x1f, 0xdc, 0xc0, 0xf0, 0x3b, 0x24, 0x23, 0x70, 0x5f, 0x71, 0x6b, 0xae, 0xe2,
+	0x25, 0xcd, 0x93, 0x1c, 0x42, 0xa7, 0xa6, 0x45, 0x85, 0xe6, 0x1a, 0x5e, 0x62, 0x8b, 0xeb, 0xd6,
+	0x95, 0x33, 0xb9, 0x80, 0xf1, 0x2f, 0x3b, 0xd5, 0x4a, 0x70, 0x85, 0x41, 0x1f, 0xba, 0x73, 0xca,
+	0x33, 0x2c, 0x02, 0x0f, 0x7a, 0x73, 0xc1, 0x97, 0x4c, 0x96, 0x33, 0x84, 0xc1, 0x43, 0x21, 0x36,
+	0x4f, 0x28, 0x6b, 0x96, 0x21, 0x59, 0xc0, 0xc1, 0x8f, 0x01, 0xe4, 0xe4, 0xef, 0x34, 0xc1, 0xe9,
+	0x5e, 0x6e, 0x37, 0x4f, 0xfe, 0xa5, 0x5d, 0xf3, 0x13, 0x2e, 0xdf, 0x03, 0x00, 0x00, 0xff, 0xff,
+	0x6e, 0x88, 0xee, 0x81, 0x1d, 0x02, 0x00, 0x00,
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -435,8 +251,7 @@ const _ = grpc.SupportPackageIsVersion4
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type FlowServiceClient interface {
-	RouteFlow(ctx context.Context, opts ...grpc.CallOption) (FlowService_RouteFlowClient, error)
-	CallCenter(ctx context.Context, opts ...grpc.CallOption) (FlowService_CallCenterClient, error)
+	DistributeAttempt(ctx context.Context, in *DistributeAttemptRequest, opts ...grpc.CallOption) (*DistributeAttemptResponse, error)
 }
 
 type flowServiceClient struct {
@@ -447,158 +262,59 @@ func NewFlowServiceClient(cc *grpc.ClientConn) FlowServiceClient {
 	return &flowServiceClient{cc}
 }
 
-func (c *flowServiceClient) RouteFlow(ctx context.Context, opts ...grpc.CallOption) (FlowService_RouteFlowClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_FlowService_serviceDesc.Streams[0], "/flow.FlowService/RouteFlow", opts...)
+func (c *flowServiceClient) DistributeAttempt(ctx context.Context, in *DistributeAttemptRequest, opts ...grpc.CallOption) (*DistributeAttemptResponse, error) {
+	out := new(DistributeAttemptResponse)
+	err := c.cc.Invoke(ctx, "/flow.FlowService/DistributeAttempt", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &flowServiceRouteFlowClient{stream}
-	return x, nil
-}
-
-type FlowService_RouteFlowClient interface {
-	Send(*RouteFlowRequest) error
-	Recv() (*RouteFlowResponse, error)
-	grpc.ClientStream
-}
-
-type flowServiceRouteFlowClient struct {
-	grpc.ClientStream
-}
-
-func (x *flowServiceRouteFlowClient) Send(m *RouteFlowRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *flowServiceRouteFlowClient) Recv() (*RouteFlowResponse, error) {
-	m := new(RouteFlowResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func (c *flowServiceClient) CallCenter(ctx context.Context, opts ...grpc.CallOption) (FlowService_CallCenterClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_FlowService_serviceDesc.Streams[1], "/flow.FlowService/CallCenter", opts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &flowServiceCallCenterClient{stream}
-	return x, nil
-}
-
-type FlowService_CallCenterClient interface {
-	Send(*RouteFlowRequest) error
-	Recv() (*RouteFlowResponse, error)
-	grpc.ClientStream
-}
-
-type flowServiceCallCenterClient struct {
-	grpc.ClientStream
-}
-
-func (x *flowServiceCallCenterClient) Send(m *RouteFlowRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *flowServiceCallCenterClient) Recv() (*RouteFlowResponse, error) {
-	m := new(RouteFlowResponse)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // FlowServiceServer is the server API for FlowService service.
 type FlowServiceServer interface {
-	RouteFlow(FlowService_RouteFlowServer) error
-	CallCenter(FlowService_CallCenterServer) error
+	DistributeAttempt(context.Context, *DistributeAttemptRequest) (*DistributeAttemptResponse, error)
 }
 
 // UnimplementedFlowServiceServer can be embedded to have forward compatible implementations.
 type UnimplementedFlowServiceServer struct {
 }
 
-func (*UnimplementedFlowServiceServer) RouteFlow(srv FlowService_RouteFlowServer) error {
-	return status.Errorf(codes.Unimplemented, "method RouteFlow not implemented")
-}
-func (*UnimplementedFlowServiceServer) CallCenter(srv FlowService_CallCenterServer) error {
-	return status.Errorf(codes.Unimplemented, "method CallCenter not implemented")
+func (*UnimplementedFlowServiceServer) DistributeAttempt(ctx context.Context, req *DistributeAttemptRequest) (*DistributeAttemptResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DistributeAttempt not implemented")
 }
 
 func RegisterFlowServiceServer(s *grpc.Server, srv FlowServiceServer) {
 	s.RegisterService(&_FlowService_serviceDesc, srv)
 }
 
-func _FlowService_RouteFlow_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(FlowServiceServer).RouteFlow(&flowServiceRouteFlowServer{stream})
-}
-
-type FlowService_RouteFlowServer interface {
-	Send(*RouteFlowResponse) error
-	Recv() (*RouteFlowRequest, error)
-	grpc.ServerStream
-}
-
-type flowServiceRouteFlowServer struct {
-	grpc.ServerStream
-}
-
-func (x *flowServiceRouteFlowServer) Send(m *RouteFlowResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *flowServiceRouteFlowServer) Recv() (*RouteFlowRequest, error) {
-	m := new(RouteFlowRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _FlowService_DistributeAttempt_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DistributeAttemptRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
-}
-
-func _FlowService_CallCenter_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(FlowServiceServer).CallCenter(&flowServiceCallCenterServer{stream})
-}
-
-type FlowService_CallCenterServer interface {
-	Send(*RouteFlowResponse) error
-	Recv() (*RouteFlowRequest, error)
-	grpc.ServerStream
-}
-
-type flowServiceCallCenterServer struct {
-	grpc.ServerStream
-}
-
-func (x *flowServiceCallCenterServer) Send(m *RouteFlowResponse) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *flowServiceCallCenterServer) Recv() (*RouteFlowRequest, error) {
-	m := new(RouteFlowRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
-		return nil, err
+	if interceptor == nil {
+		return srv.(FlowServiceServer).DistributeAttempt(ctx, in)
 	}
-	return m, nil
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/flow.FlowService/DistributeAttempt",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FlowServiceServer).DistributeAttempt(ctx, req.(*DistributeAttemptRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 var _FlowService_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "flow.FlowService",
 	HandlerType: (*FlowServiceServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "RouteFlow",
-			Handler:       _FlowService_RouteFlow_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
-		},
-		{
-			StreamName:    "CallCenter",
-			Handler:       _FlowService_CallCenter_Handler,
-			ServerStreams: true,
-			ClientStreams: true,
+			MethodName: "DistributeAttempt",
+			Handler:    _FlowService_DistributeAttempt_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "connection.proto",
 }

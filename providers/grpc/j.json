@@ -1,0 +1,13 @@
+[
+  {
+    "member": {
+      "action": "success",
+      "destination": "new destination",
+      "display": "new display",
+      "variables": {
+        "new var": "aaa"
+      }
+    }
+  }
+
+]
