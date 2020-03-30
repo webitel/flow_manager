@@ -10,9 +10,9 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
-	github.com/webitel/acr v0.0.0-20200121101500-d6b09a2e8bc2
-	github.com/webitel/call_center v0.0.0-20200324104702-c4b955c5a41e
+	github.com/webitel/call_center v0.0.0-20200330065352-ea7ec7fb24cf
 	github.com/webitel/engine v0.0.0-20200319094448-64bed4f54b55
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
+	go.uber.org/zap v1.14.1 // indirect
 	google.golang.org/grpc v1.26.0
 )

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 )
 
 /*
@@ -37,8 +38,12 @@ func (r *Router) queue(call model.Call, args interface{}) (model.Response, *mode
 	data, _ := json.Marshal(args)
 	json.Unmarshal(data, &q) //TODO
 
-	r.fm.JoinToInboundQueue(call.DomainId(), call.Id(), q.QueueId, q.Name, q.Priority)
-	fmt.Println(args)
+	status, err := r.fm.JoinToInboundQueue(call.DomainId(), call.Id(), q.QueueId, q.Name, q.Priority)
+	if err != nil {
+		wlog.Error(err.Error())
+		return model.CallResponseError, nil
+	}
+	fmt.Println(status)
 
 	return model.CallResponseOK, nil
 }
