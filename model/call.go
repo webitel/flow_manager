@@ -102,6 +102,13 @@ func (e *CallEndpoint) GetName() *string {
 	return nil
 }
 
+type QueueInfo struct {
+	QueueId   int   `json:"queue_id,string"`
+	AttemptId int64 `json:"attempt_id,string"`
+	TeamId    int   `json:"team_id,string"`
+	AgentId   int   `json:"agent_id,string"`
+}
+
 type CallActionInfo struct {
 	GatewayId   *int           `json:"gateway_id"`
 	UserId      *int           `json:"user_id"`
@@ -111,6 +118,7 @@ type CallActionInfo struct {
 	To          *CallEndpoint  `json:"to"`
 	ParentId    *string        `json:"parent_id"`
 	Payload     *CallVariables `json:"payload"`
+	Queue       *QueueInfo     `json:"queue"`
 }
 
 type CallActionRinging struct {
@@ -118,16 +126,44 @@ type CallActionRinging struct {
 	CallActionInfo
 }
 
-func (c *CallActionRinging) GetFrom() *CallEndpoint {
-	if c != nil {
-		return c.From
+func (r *CallActionRinging) GetQueueId() *int {
+	if r.Queue != nil {
+		return &r.Queue.QueueId
 	}
 	return nil
 }
 
-func (c *CallActionRinging) GetTo() *CallEndpoint {
-	if c != nil {
-		return c.To
+func (r *CallActionRinging) GetAttemptId() *int64 {
+	if r.Queue != nil {
+		return &r.Queue.AttemptId
+	}
+	return nil
+}
+
+func (r *CallActionRinging) GetTeamId() *int {
+	if r.Queue != nil {
+		return &r.Queue.TeamId
+	}
+	return nil
+}
+
+func (r *CallActionRinging) GetAgentId() *int {
+	if r.Queue != nil {
+		return &r.Queue.AgentId
+	}
+	return nil
+}
+
+func (r *CallActionRinging) GetFrom() *CallEndpoint {
+	if r != nil {
+		return r.From
+	}
+	return nil
+}
+
+func (r *CallActionRinging) GetTo() *CallEndpoint {
+	if r != nil {
+		return r.To
 	}
 	return nil
 }

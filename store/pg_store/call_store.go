@@ -17,9 +17,9 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, direction, destination, parent_id, timestamp, state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id)
+                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, attempt_id)
 values (:Id, :Direction, :Destination, :ParentId, :Timestamp, :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt, :GatewayId, :UserId)
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt, :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, :AttemptId)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -36,7 +36,12 @@ on conflict (id)
 		to_id = EXCLUDED.to_id,
 		gateway_id = EXCLUDED.gateway_id,		
 		user_id = EXCLUDED.user_id,		
-		payload = EXCLUDED.payload`, map[string]interface{}{
+		payload = EXCLUDED.payload,
+		queue_id = EXCLUDED.queue_id,
+		agent_id = EXCLUDED.agent_id,
+		team_id = EXCLUDED.team_id,
+		attempt_id = EXCLUDED.attempt_id
+		`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
 		"Direction":   call.Direction,
@@ -57,6 +62,10 @@ on conflict (id)
 		"ToId":      call.GetTo().GetId(),
 		"GatewayId": call.GatewayId,
 		"UserId":    call.UserId,
+		"QueueId":   call.GetQueueId(),
+		"AgentId":   call.GetAgentId(),
+		"TeamId":    call.GetTeamId(),
+		"AttemptId": call.GetAttemptId(),
 		"Payload":   nil,
 	})
 
@@ -146,14 +155,14 @@ func (s SqlCallStore) MoveToHistory() *model.AppError {
 	where c.hangup_at > 0 and c.direction notnull
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id
 )
 insert into cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
                               to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id,
-							gateway_id, user_id)
+							gateway_id, user_id, queue_id, team_id, agent_id, attempt_id)
 select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id
 from c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
