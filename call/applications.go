@@ -55,6 +55,26 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        callHandlerMiddleware(r.export),
 	}
 
+	apps["recordFile"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.recordFile),
+	}
+
+	apps["recordSession"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.recordSession),
+	}
+
+	apps["sleep"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.sleep),
+	}
+
+	apps["conference"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.conference),
+	}
+
 	apps["joinQueue"] = &model.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.queue),

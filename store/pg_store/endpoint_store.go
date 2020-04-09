@@ -65,7 +65,7 @@ from endpoints e
                 ]
             end vars
      from directory.sip_gateway g
-     where  (e.endpoint->>'type')::varchar = 'sipGateway' and  g.dc = :DomainId and
+     where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
              ( g.name = (e.endpoint->>'name')::varchar or
              g.id = (e.endpoint->'id')::bigint)
 

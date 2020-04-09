@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
+	"strconv"
 )
 
 func (r *Router) setAll(call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -38,5 +39,39 @@ func getStringValueFromMap(name string, params map[string]interface{}, def strin
 		}
 	}
 
+	return def
+}
+
+func getIntValueFromMap(name string, params map[string]interface{}, def int) int {
+	var ok bool
+	var v interface{}
+	var res int
+
+	if v, ok = params[name]; ok {
+		switch v.(type) {
+		case int:
+			return v.(int)
+		case float64:
+			return int(v.(float64))
+		case float32:
+			return int(v.(float32))
+		case string:
+			var err error
+			if res, err = strconv.Atoi(v.(string)); err == nil {
+				return res
+			}
+		}
+	}
+
+	return def
+}
+
+func getBoolValueFromMap(name string, params map[string]interface{}, def bool) bool {
+	var ok bool
+	if _, ok = params[name]; ok {
+		if _, ok = params[name].(bool); ok {
+			return params[name].(bool)
+		}
+	}
 	return def
 }

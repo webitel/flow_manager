@@ -107,6 +107,7 @@ type QueueInfo struct {
 	AttemptId int64 `json:"attempt_id,string"`
 	TeamId    int   `json:"team_id,string"`
 	AgentId   int   `json:"agent_id,string"`
+	MemberId  int64 `json:"member_id,string"`
 }
 
 type CallActionInfo struct {
@@ -150,6 +151,13 @@ func (r *CallActionRinging) GetTeamId() *int {
 func (r *CallActionRinging) GetAgentId() *int {
 	if r.Queue != nil {
 		return &r.Queue.AgentId
+	}
+	return nil
+}
+
+func (r *CallActionRinging) GetMemberIdId() *int64 {
+	if r.Queue != nil {
+		return &r.Queue.MemberId
 	}
 	return nil
 }
@@ -267,5 +275,8 @@ type Call interface {
 	HangupAppErr() (Response, *AppError)
 	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint) (Response, *AppError)
 	Sleep(int) (Response, *AppError)
+	Conference(name, profile string) (Response, *AppError)
+	RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
+	RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
 	Export(vars []string) (Response, *AppError)
 }

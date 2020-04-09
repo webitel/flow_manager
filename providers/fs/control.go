@@ -77,7 +77,7 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 
 	for _, e := range endpoints {
 		switch e.TypeName {
-		case "sipGateway":
+		case "gateway":
 			if e == nil || e.Destination == nil {
 				end = append(end, "error/UNALLOCATED_NUMBER")
 			} else if e.Dnd != nil && *e.Dnd {
@@ -112,4 +112,30 @@ func (c *Connection) Echo(delay int) (model.Response, *model.AppError) {
 func (c *Connection) Export(vars []string) (model.Response, *model.AppError) {
 	c.exportVariables = vars
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) Conference(name, profile string) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "conference", fmt.Sprintf("%s@%s++flags{nomoh|moderator}", name, profile))
+}
+
+func (c *Connection) RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "record",
+		fmt.Sprintf("http_cache://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
+			maxSec, silenceThresh, silenceHits))
+}
+
+func (c *Connection) RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
+	_, err := c.Set(map[string]interface{}{
+		"RECORD_MIN_SEC":            minSec,
+		"RECORD_STEREO":             stereo,
+		"RECORD_BRIDGE_REQ":         bridged,
+		"recording_follow_transfer": followTransfer,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return c.Execute(context.Background(), "record_session",
+		fmt.Sprintf("http_cache://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
 }
