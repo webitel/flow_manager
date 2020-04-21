@@ -18,7 +18,7 @@ func NewSqlEmailStore(sqlStore SqlStore) store.EmailStore {
 func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
 	var tasks []*model.EmailProfileTask
 
-	_, err := s.GetReplica().Select(&tasks, ` update cc_email_profiles
+	_, err := s.GetReplica().Select(&tasks, ` update cc_email_profile
  set last_activity_at = now(),
      state = 'active'
  where enabled and
@@ -65,7 +65,7 @@ func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError)
 
 	err := s.GetReplica().SelectOne(&profile, `
 select t.id, t.name, t.host, t.login, t.password, t.mailbox, t.imap_port, t.smtp_port, (extract(EPOCH from t.updated_at) * 1000)::int8 updated_at , t.flow_id, t.domain_id
-from cc_email_profiles t
+from cc_email_profile t
 where t.id = :Id`, map[string]interface{}{
 		"Id": id,
 	})
