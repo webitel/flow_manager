@@ -103,11 +103,11 @@ func (e *CallEndpoint) GetName() *string {
 }
 
 type QueueInfo struct {
-	QueueId   int   `json:"queue_id,string"`
-	AttemptId int64 `json:"attempt_id,string"`
-	TeamId    int   `json:"team_id,string"`
-	AgentId   int   `json:"agent_id,string"`
-	MemberId  int64 `json:"member_id,string"`
+	QueueId   int    `json:"queue_id,string"`
+	AttemptId int64  `json:"attempt_id,string"`
+	TeamId    *int   `json:"team_id,string"`
+	AgentId   *int   `json:"agent_id,string"`
+	MemberId  *int64 `json:"member_id,string"`
 }
 
 type CallActionInfo struct {
@@ -143,21 +143,21 @@ func (r *CallActionRinging) GetAttemptId() *int64 {
 
 func (r *CallActionRinging) GetTeamId() *int {
 	if r.Queue != nil {
-		return &r.Queue.TeamId
+		return r.Queue.TeamId
 	}
 	return nil
 }
 
 func (r *CallActionRinging) GetAgentId() *int {
 	if r.Queue != nil {
-		return &r.Queue.AgentId
+		return r.Queue.AgentId
 	}
 	return nil
 }
 
 func (r *CallActionRinging) GetMemberIdId() *int64 {
 	if r.Queue != nil {
-		return &r.Queue.MemberId
+		return r.Queue.MemberId
 	}
 	return nil
 }

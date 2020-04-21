@@ -35,3 +35,7 @@ func (s *LayeredStore) CallRouting() CallRoutingStore {
 func (s *LayeredStore) Endpoint() EndpointStore {
 	return s.DatabaseLayer.Endpoint()
 }
+
+func (s *LayeredStore) Email() EmailStore {
+	return s.DatabaseLayer.Email()
+}

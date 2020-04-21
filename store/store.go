@@ -12,6 +12,13 @@ type Store interface {
 	Schema() SchemaStore
 	CallRouting() CallRoutingStore
 	Endpoint() EndpointStore
+	Email() EmailStore
+}
+
+type EmailStore interface {
+	Save(domainId int64, m *model.Email) *model.AppError
+	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
+	GetProfile(id int) (*model.EmailProfile, *model.AppError)
 }
 
 type CallStore interface {
@@ -24,6 +31,7 @@ type CallStore interface {
 
 type SchemaStore interface {
 	Get(domainId, id int) (*model.Schema, *model.AppError)
+	GetUpdatedAt(id int) (int64, *model.AppError)
 }
 
 type CallRoutingStore interface {

@@ -24,6 +24,8 @@ func (f *FlowManager) Listen() {
 			go f.listenCallConnection(f.stop, &wg, v)
 		case model.ConnectionTypeGrpc:
 			go f.listenGrpcConnection(f.stop, &wg, v)
+		case model.ConnectionTypeEmail:
+			go f.listenInboundEmail(f.stop, &wg, v)
 		default:
 			wg.Done()
 		}
@@ -64,6 +66,25 @@ func (f *FlowManager) listenGrpcConnection(stop chan struct{}, wg *sync.WaitGrou
 			}
 
 			if err := f.GRPCRouter.Handle(c); err != nil {
+				wlog.Error(err.Error())
+			}
+		}
+	}
+}
+
+func (f *FlowManager) listenInboundEmail(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
+	defer wg.Done()
+	wlog.Info(fmt.Sprintf("listen inbound email connections..."))
+	for {
+		select {
+		case <-stop:
+			return
+		case c, ok := <-srv.Consume():
+			if !ok {
+				return
+			}
+
+			if err := f.EmailRouter.Handle(c); err != nil {
 				wlog.Error(err.Error())
 			}
 		}

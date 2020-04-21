@@ -40,10 +40,6 @@ func (s server) Name() string {
 	return "FreeSWITCH"
 }
 
-func (s *server) GetApplication(string) (*model.Application, *model.AppError) {
-	return nil, nil //FIXME
-}
-
 func (s server) Type() model.ConnectionType {
 	return model.ConnectionTypeCall
 }

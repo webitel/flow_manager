@@ -19,13 +19,12 @@ func Init(fm *app.FlowManager) {
 		fm: fm,
 	}
 
-	fm.CallRouter = &Router{
-		fm: fm,
-		apps: model.UnionApplicationMap(
-			fm.FlowRouter.Handlers(),
-			ApplicationsHandlers(router),
-		),
-	}
+	router.apps = model.UnionApplicationMap(
+		fm.FlowRouter.Handlers(),
+		ApplicationsHandlers(router),
+	)
+
+	fm.CallRouter = router
 }
 
 func (r *Router) Handlers() model.ApplicationHandlers {

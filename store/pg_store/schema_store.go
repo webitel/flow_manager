@@ -28,3 +28,17 @@ where s.domain_id = :DomainId and s.id = :Id`, map[string]interface{}{
 
 	return out, nil
 }
+
+func (s SqlSchemaStore) GetUpdatedAt(id int) (int64, *model.AppError) {
+	i, err := s.GetReplica().SelectInt(`select s.updated_at
+from acr_routing_scheme s
+where id = :Id`, map[string]interface{}{
+		"Id": id,
+	})
+
+	if err != nil {
+		return 0, model.NewAppError("SqlSchemaStore.GetUpdatedAt", "store.sql_schema.get_time.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return i, nil
+}

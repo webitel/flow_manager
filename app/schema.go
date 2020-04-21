@@ -22,3 +22,13 @@ func (f *FlowManager) GetSchema(domainId, id int, updatedAt int64) (schema *mode
 	f.schemaCache.AddWithDefaultExpires(id, schema)
 	return
 }
+
+func (f *FlowManager) GetSchemaById(domainId int, id int) (*model.Schema, *model.AppError) {
+	updatedAt, err := f.Store.Schema().GetUpdatedAt(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return f.GetSchema(domainId, id, updatedAt)
+}

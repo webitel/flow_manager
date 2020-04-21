@@ -152,10 +152,6 @@ func httpCodeToGrpc(c int) codes.Code {
 	}
 }
 
-func (s *server) GetApplication(string) (*model.Application, *model.AppError) {
-	return nil, nil //FIXME
-}
-
 func (s *server) DistributeAttempt(ctx context.Context, in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error) {
 	return nil, nil
 }

@@ -15,4 +15,5 @@ type SqlStore interface {
 	Schema() store.SchemaStore
 	CallRouting() store.CallRoutingStore
 	Endpoint() store.EndpointStore
+	Email() store.EmailStore
 }

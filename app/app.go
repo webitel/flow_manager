@@ -7,6 +7,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
+	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
@@ -31,6 +32,8 @@ type FlowManager struct {
 	FlowRouter  model.Router
 	CallRouter  model.CallRouter
 	GRPCRouter  model.GRPCRouter
+	EmailRouter model.Router
+
 	callWatcher *callWatcher
 }
 
@@ -62,6 +65,8 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	wlog.Info("server is initializing...")
 
+	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
+
 	servers := []model.Server{
 		grpc.NewServer(&grpc.Config{
 			Host: fm.Config().Grpc.Host,
@@ -71,9 +76,8 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Host: fm.Config().Esl.Host,
 			Port: fm.Config().Esl.Port,
 		}),
+		email.New(fm.Store.Email()),
 	}
-
-	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
 
 	if err := fm.RegisterServers(servers...); err != nil {
 		outErr = err
