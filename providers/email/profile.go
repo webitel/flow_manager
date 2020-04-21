@@ -62,16 +62,29 @@ func (p *Profile) Login() *model.AppError {
 		return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
 	}
 
+	return nil
+}
+
+func (p *Profile) selectMailBox() *model.AppError {
+	var err error
 	p.mbox, err = p.client.Select(p.Mailbox, false)
 	if err != nil {
-		return model.NewAppError("Email", "email.login.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return model.NewAppError("Email", "email.mailbox.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
 	return nil
 }
 
 func (p *Profile) Read() []*model.Email {
+	res := make([]*model.Email, 0)
+
 	criteria := imap.NewSearchCriteria()
 	criteria.WithoutFlags = []string{"\\Seen"}
+
+	if err := p.selectMailBox(); err != nil {
+		wlog.Error(err.Error())
+		return nil
+	}
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
@@ -92,8 +105,6 @@ func (p *Profile) Read() []*model.Email {
 		}
 		close(done)
 	}()
-
-	res := make([]*model.Email, 0)
 
 	for message := range messages {
 		e, err := p.parseMessage(message, section)
