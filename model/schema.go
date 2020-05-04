@@ -7,7 +7,7 @@ type Schema struct {
 	DomainId  int   `json:"domain_id" db:"domain_id"`
 	UpdatedAt int64 `json:"updated_at" db:"updated_at"`
 
-	Type       int          `json:"type" db:"type"`
+	Type       string       `json:"type" db:"type"`
 	DomainName string       `json:"domain_name" db:"domain_name"`
 	Name       string       `json:"name" db:"name"`
 	Schema     Applications `json:"schema" db:"schema"`

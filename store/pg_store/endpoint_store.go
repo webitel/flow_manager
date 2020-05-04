@@ -52,7 +52,7 @@ from endpoints e
 
      union all
 
-     select g.id::int8, g.name::varchar, case when g.register and g.enable then g.r_state != 3 else g.enable is false end as dnd, g.proxy destination,
+     select g.id::int8, g.name::varchar, case when g.register and g.enable then reg.state != 3 else g.enable is false end as dnd, g.proxy destination,
            case when g.register is true then
                 array['sip_h_X-Webitel-Direction=outbound',
                     E'sip_auth_username=' || g.username,
@@ -65,6 +65,7 @@ from endpoints e
                 ]
             end vars
      from directory.sip_gateway g
+        left join directory.sip_gateway_register reg on reg.id = g.id
      where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
              ( g.name = (e.endpoint->>'name')::varchar or
              g.id = (e.endpoint->'id')::bigint)

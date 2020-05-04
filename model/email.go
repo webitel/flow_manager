@@ -13,6 +13,12 @@ type Email struct {
 	InReplyTo string   `json:"in_reply_to" db:"in_reply_to"`
 	CC        []string `json:"cc" db:"cc"`
 	Body      []byte
+	AttemptId *int64 `json:"attempt_id" db:"attempt_id"`
+}
+
+type EmailAction struct {
+	FlowId    int   `json:"flow_id"`
+	AttemptId int64 `json:"attempt_id"`
 }
 
 type EmailConnection interface {
