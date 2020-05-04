@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/base32"
 	"encoding/json"
+	"fmt"
 	"github.com/pborman/uuid"
+	"strconv"
 )
 
 type AppError struct {
@@ -49,4 +51,51 @@ func NewAppError(where string, id string, params map[string]interface{}, details
 	ap.IsOAuth = false
 	//ap.Translate(translateFunc)
 	return ap
+}
+
+func InterfaceToString(_args interface{}) string {
+	return fmt.Sprintf("%v", _args)
+}
+
+func StringValueFromMap(name string, params map[string]interface{}, def string) (res string) {
+	var ok bool
+	var v interface{}
+
+	if v, ok = params[name]; ok {
+
+		switch v.(type) {
+		case map[string]interface{}:
+		case []interface{}:
+			return def
+
+		default:
+			return fmt.Sprint(v)
+		}
+	}
+
+	return def
+}
+
+func IntValueFromMap(name string, params map[string]interface{}, def int) int {
+	var ok bool
+	var v interface{}
+	var res int
+
+	if v, ok = params[name]; ok {
+		switch v.(type) {
+		case int:
+			return v.(int)
+		case float64:
+			return int(v.(float64))
+		case float32:
+			return int(v.(float32))
+		case string:
+			var err error
+			if res, err = strconv.Atoi(v.(string)); err == nil {
+				return res
+			}
+		}
+	}
+
+	return def
 }

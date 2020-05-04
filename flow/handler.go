@@ -65,6 +65,11 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        r.breakHandler,
 	}
 
+	apps["httpRequest"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.httpRequest,
+	}
+
 	return apps
 }
 
