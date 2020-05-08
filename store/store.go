@@ -13,6 +13,7 @@ type Store interface {
 	CallRouting() CallRoutingStore
 	Endpoint() EndpointStore
 	Email() EmailStore
+	Media() MediaStore
 }
 
 type EmailStore interface {
@@ -41,4 +42,8 @@ type CallRoutingStore interface {
 
 type EndpointStore interface {
 	Get(domainId int64, callerName, callerNumber string, endpoints model.Applications) ([]*model.Endpoint, *model.AppError)
+}
+
+type MediaStore interface {
+	GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
 }

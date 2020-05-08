@@ -16,4 +16,5 @@ type SqlStore interface {
 	CallRouting() store.CallRoutingStore
 	Endpoint() store.EndpointStore
 	Email() store.EmailStore
+	Media() store.MediaStore
 }

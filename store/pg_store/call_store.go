@@ -79,6 +79,7 @@ on conflict (id)
 	return nil
 }
 
+// TODO race... fix remove
 func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id)
 values (:Id, :State, :Timestamp, :AppId, :DomainId)
@@ -120,7 +121,7 @@ on conflict (id) where timestamp <= :Timestamp
 	})
 
 	if err != nil {
-		return model.NewAppError("SqlCallStore.SetState", "store.sql_call.set_state.error", nil,
+		return model.NewAppError("SqlCallStore.SetHangup", "store.sql_call.set_state.error", nil,
 			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
 	}
 

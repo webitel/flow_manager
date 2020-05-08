@@ -8,6 +8,20 @@ import (
 	"net/http"
 )
 
+type EndpointVariableArgs struct {
+	Type       string          `json:"type"`
+	Name       *string         `json:"name"`
+	Id         *int            `json:"id"`
+	Parameters model.Variables `json:"parameters"`
+}
+
+type BridgeArgs struct {
+	Strategy   string                 `json:"strategy"`
+	Codecs     []string               `json:"codecs"`
+	Parameters model.Variables        `json:"parameters"`
+	Endpoints  []EndpointVariableArgs `json:"endpoints"`
+}
+
 func (r *Router) bridge(call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var props map[string]interface{}
 	var ok bool

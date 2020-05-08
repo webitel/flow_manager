@@ -121,6 +121,8 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	} else {
 		c.initDestination(dump)
 	}
+	c.initDestination(dump)
+	//dump.PrettyPrint()
 
 	c.from = &model.CallEndpoint{}
 
@@ -409,8 +411,8 @@ func (c *Connection) Execute(ctx context.Context, app string, args interface{}) 
 	}
 
 	select {
-	case <-ctx.Done():
-		return model.CallResponse{Status: "CANCEL"}, model.NewAppError("FreeSWITCH", "provider.fs.execute.cancel", nil, "cancel", http.StatusInternalServerError)
+	//case <-ctx.Done():
+	//	return model.CallResponse{Status: "CANCEL"}, model.NewAppError("FreeSWITCH", "provider.fs.execute.cancel", nil, "cancel", http.StatusInternalServerError)
 	case <-e:
 		return model.CallResponseOK, nil
 	}

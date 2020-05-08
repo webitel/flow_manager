@@ -38,6 +38,7 @@ func (r *Router) queue(call model.Call, args interface{}) (model.Response, *mode
 	data, _ := json.Marshal(args)
 	json.Unmarshal(data, &q) //TODO
 
+	// FIXME add context
 	status, err := r.fm.JoinToInboundQueue(call.DomainId(), call.Id(), q.QueueId, q.Name, q.Priority)
 	if err != nil {
 		wlog.Error(err.Error())

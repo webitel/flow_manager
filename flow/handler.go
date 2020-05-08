@@ -70,6 +70,16 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		Handler:        r.httpRequest,
 	}
 
+	apps["string"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.stringApp,
+	}
+
+	apps["math"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.Math,
+	}
+
 	return apps
 }
 

@@ -279,4 +279,33 @@ type Call interface {
 	RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
 	Export(vars []string) (Response, *AppError)
+	FlushDTMF() (Response, *AppError)
+	StartDTMF() (Response, *AppError)
+	StopDTMF() (Response, *AppError)
+	Park(name string, in bool, lotFrom, lotTo string) (Response, *AppError)
+	Playback(files []*PlaybackFile) (Response, *AppError)
+	PlaybackAndGetDigits(files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
+	Redirect(uri []string) (Response, *AppError)
+}
+
+type PlaybackFile struct {
+	Type *string `json:"type"`
+	Id   *int    `json:"id"`
+	Name *string `json:"name"`
+}
+
+type PlaybackDigits struct {
+	SetVar    *string `json:"setVar"`
+	Min       *int    `json:"min"`
+	Max       *int    `json:"max"`
+	Tries     *int    `json:"tries"`
+	Timeout   *int    `json:"timeout"`
+	FlushDtmf bool    `json:"flushDTMF"`
+	Regexp    *string `json:"regexp"`
+}
+
+type PlaybackArgs struct {
+	Files      []*PlaybackFile `json:"files"`
+	Terminator string          `json:"terminator"`
+	GetDigits  *PlaybackDigits `json:"getDigits"`
 }

@@ -39,3 +39,7 @@ func (s *LayeredStore) Endpoint() EndpointStore {
 func (s *LayeredStore) Email() EmailStore {
 	return s.DatabaseLayer.Email()
 }
+
+func (s *LayeredStore) Media() MediaStore {
+	return s.DatabaseLayer.Media()
+}

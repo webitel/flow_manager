@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/pborman/uuid"
+	"net/url"
 	"strconv"
+	"strings"
 )
 
 type AppError struct {
@@ -98,4 +100,30 @@ func IntValueFromMap(name string, params map[string]interface{}, def int) int {
 	}
 
 	return def
+}
+
+func UrlEncoded(str string) string {
+	var res = url.Values{"": {str}}.Encode()
+
+	if len(res) < 2 {
+		return ""
+	}
+
+	return compatibleJSEncodeURIComponent(res[1:])
+	//u, err := url.ParseRequestURI(str)
+	//if err != nil {
+	//	return compatibleJSEncodeURIComponent(url.QueryEscape(str))
+	//}
+	//return compatibleJSEncodeURIComponent(u.String())
+}
+
+func compatibleJSEncodeURIComponent(str string) string {
+	resultStr := str
+	resultStr = strings.Replace(resultStr, "+", "%20", -1)
+	resultStr = strings.Replace(resultStr, "%21", "!", -1)
+	//resultStr = strings.Replace(resultStr, "%27", "'", -1)
+	resultStr = strings.Replace(resultStr, "%28", "(", -1)
+	resultStr = strings.Replace(resultStr, "%29", ")", -1)
+	resultStr = strings.Replace(resultStr, "%2A", "*", -1)
+	return resultStr
 }
