@@ -5,8 +5,9 @@ import (
 )
 
 func (r *Router) Playback(call model.Call, args interface{}) (model.Response, *model.AppError) {
-	var argv *model.PlaybackArgs
-	err := r.FromJson(testArgs(args), &argv)
+	var argv model.PlaybackArgs
+
+	err := r.Decode(call, args, &argv)
 	if err != nil {
 		return nil, err
 	}
@@ -14,7 +15,7 @@ func (r *Router) Playback(call model.Call, args interface{}) (model.Response, *m
 	if argv.Files == nil {
 		return nil, ErrorRequiredParameter("playback", "files")
 	}
-	//TODO
+
 	argv.Files, err = r.fm.GetMediaFiles(int64(call.DomainId()), &argv.Files)
 	if err != nil {
 		return nil, err

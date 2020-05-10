@@ -138,10 +138,11 @@ func (r *Router) handle(conn model.Connection) {
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(flow.Config{
-		Name:    routing.Schema.Name,
-		Handler: r,
-		Apps:    routing.Schema.Schema,
-		Conn:    call,
+		Name:     routing.Schema.Name,
+		Handler:  r,
+		Apps:     routing.Schema.Schema,
+		Conn:     call,
+		Timezone: routing.TimezoneName,
 	})
 	flow.Route(i, r)
 }

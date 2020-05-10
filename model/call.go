@@ -259,12 +259,12 @@ type Call interface {
 
 	Direction() CallDirection
 	Destination() string
-	DomainId() int
 	SetDomainName(name string)
 	DomainName() string
 
 	SetAll(vars Variables) (Response, *AppError)
 	SetNoLocal(vars Variables) (Response, *AppError)
+	UnSet(name string) (Response, *AppError)
 
 	RingReady() (Response, *AppError)
 	PreAnswer() (Response, *AppError)
@@ -275,9 +275,10 @@ type Call interface {
 	HangupAppErr() (Response, *AppError)
 	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint) (Response, *AppError)
 	Sleep(int) (Response, *AppError)
-	Conference(name, profile string) (Response, *AppError)
+	Conference(name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
+	RecordSessionStop(name, format string) (Response, *AppError)
 	Export(vars []string) (Response, *AppError)
 	FlushDTMF() (Response, *AppError)
 	StartDTMF() (Response, *AppError)
@@ -286,6 +287,8 @@ type Call interface {
 	Playback(files []*PlaybackFile) (Response, *AppError)
 	PlaybackAndGetDigits(files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
 	Redirect(uri []string) (Response, *AppError)
+	SetSounds(lang, voice string) (Response, *AppError)
+	ScheduleHangup(sec int, cause string) (Response, *AppError)
 }
 
 type PlaybackFile struct {
@@ -296,7 +299,7 @@ type PlaybackFile struct {
 
 type PlaybackDigits struct {
 	SetVar    *string `json:"setVar"`
-	Min       *int    `json:"min"`
+	Min       *int    `json:"min" def:"1"`
 	Max       *int    `json:"max"`
 	Tries     *int    `json:"tries"`
 	Timeout   *int    `json:"timeout"`
@@ -306,6 +309,6 @@ type PlaybackDigits struct {
 
 type PlaybackArgs struct {
 	Files      []*PlaybackFile `json:"files"`
-	Terminator string          `json:"terminator"`
+	Terminator string          `json:"terminator" def:"#"`
 	GetDigits  *PlaybackDigits `json:"getDigits"`
 }

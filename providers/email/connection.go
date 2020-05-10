@@ -71,6 +71,9 @@ func (c *connection) ParseText(text string) string {
 func (c *connection) Close() *model.AppError {
 	return nil
 }
+func (c *connection) DomainId() int64 {
+	return 0
+}
 
 //fixme
 func test() {

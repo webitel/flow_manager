@@ -4,7 +4,12 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+type SleepArgs int
+
 func (r *Router) sleep(call model.Call, args interface{}) (model.Response, *model.AppError) {
-	timeout, _ := args.(float64)
-	return call.Sleep(int(timeout))
+	var timeout int
+	if err := r.Decode(call, args, &timeout); err != nil {
+		return nil, err
+	}
+	return call.Sleep(timeout)
 }

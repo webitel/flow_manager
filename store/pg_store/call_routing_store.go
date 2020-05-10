@@ -15,7 +15,7 @@ func NewSqlCallRoutingStore(sqlStore SqlStore) store.CallRoutingStore {
 	return st
 }
 
-func (s SqlCallRoutingStore) FromGateway(domainId, gatewayId int) (*model.Routing, *model.AppError) {
+func (s SqlCallRoutingStore) FromGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError) {
 	var routing *model.Routing
 	err := s.GetReplica().SelectOne(&routing, `select
 				sg.id as source_id,
@@ -43,7 +43,7 @@ func (s SqlCallRoutingStore) FromGateway(domainId, gatewayId int) (*model.Routin
 	return routing, nil
 }
 
-func (s SqlCallRoutingStore) SearchToDestination(domainId int, destination string) (*model.Routing, *model.AppError) {
+func (s SqlCallRoutingStore) SearchToDestination(domainId int64, destination string) (*model.Routing, *model.AppError) {
 	var routing *model.Routing
 	err := s.GetReplica().SelectOne(&routing, `select
     r.id as source_id,

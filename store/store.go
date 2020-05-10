@@ -14,6 +14,7 @@ type Store interface {
 	Endpoint() EndpointStore
 	Email() EmailStore
 	Media() MediaStore
+	Calendar() CalendarStore
 }
 
 type EmailStore interface {
@@ -31,13 +32,13 @@ type CallStore interface {
 }
 
 type SchemaStore interface {
-	Get(domainId, id int) (*model.Schema, *model.AppError)
+	Get(domainId int64, id int) (*model.Schema, *model.AppError)
 	GetUpdatedAt(id int) (int64, *model.AppError)
 }
 
 type CallRoutingStore interface {
-	FromGateway(domainId, gatewayId int) (*model.Routing, *model.AppError)
-	SearchToDestination(domainId int, destination string) (*model.Routing, *model.AppError)
+	FromGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError)
+	SearchToDestination(domainId int64, destination string) (*model.Routing, *model.AppError)
 }
 
 type EndpointStore interface {
@@ -46,4 +47,8 @@ type EndpointStore interface {
 
 type MediaStore interface {
 	GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
+}
+
+type CalendarStore interface {
+	Check(domainId int64, id *int, name *string) (*model.Calendar, *model.AppError)
 }

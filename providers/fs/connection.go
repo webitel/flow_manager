@@ -53,7 +53,7 @@ type Connection struct {
 	stopped         bool
 	direction       model.CallDirection
 	gatewayId       int
-	domainId        int
+	domainId        int64
 	domainName      string
 	from            *model.CallEndpoint
 	to              *model.CallEndpoint
@@ -70,7 +70,7 @@ type Connection struct {
 	sync.RWMutex
 }
 
-func (c Connection) Type() model.ConnectionType {
+func (c *Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeCall
 }
 
@@ -91,7 +91,7 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		context:          dump.Get(HEADER_CONTEXT_NAME),
 		direction:        getDirection(dump.Get(HEADER_DIRECTION_NAME)),
 		gatewayId:        getIntFromStr(dump.Get(HEADER_GATEWAY_ID)),
-		domainId:         getIntFromStr(dump.Get(HEADER_DOMAIN_ID)),
+		domainId:         int64(getIntFromStr(dump.Get(HEADER_DOMAIN_ID))),
 		userId:           getIntFromStr(dump.Get(HEADER_USER_ID)),
 		connection:       baseConnection,
 		lastEvent:        dump,
@@ -169,7 +169,7 @@ func (c *Connection) Id() string {
 	return c.id
 }
 
-func (c *Connection) DomainId() int {
+func (c *Connection) DomainId() int64 {
 	return c.domainId
 }
 
@@ -246,16 +246,24 @@ func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) setChannelVariables(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setChannelVariables(pref string, vars model.Variables) (model.Response, *model.AppError) {
 	str := "^^"
 	for k, v := range vars {
-		str += fmt.Sprintf(`~'usr_%s'='%v'`, k, v)
+		str += fmt.Sprintf(`~'%s%s'='%v'`, pref, k, v)
 	}
 
 	return c.Execute(context.Background(), "multiset", str)
 }
 
-func (c Connection) UserVariablePrefix(name string) string {
+func (c *Connection) setInternal(vars model.Variables) (model.Response, *model.AppError) {
+	if c.Stopped() {
+		return model.CallResponseError, model.NewAppError("Call.setInternal", "call.app.set_internal.stopped", nil, "bad request", http.StatusBadRequest)
+	}
+
+	return c.setChannelVariables("", vars)
+}
+
+func (c *Connection) UserVariablePrefix(name string) string {
 	return fmt.Sprintf("usr_%s", name)
 }
 
@@ -267,7 +275,7 @@ func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError)
 	if c.Stopped() {
 		return c.setDisconnectedVariables(vars)
 	} else {
-		return c.setChannelVariables(vars)
+		return c.setChannelVariables(UsrVarPrefix, vars)
 	}
 }
 

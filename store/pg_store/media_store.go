@@ -51,7 +51,7 @@ from (
          ) m`, map[string]interface{}{
 		"Ids":      pq.Array(ids),
 		"Names":    pq.Array(names),
-		"DomainId": 1,
+		"DomainId": domainId,
 	})
 
 	if err != nil {

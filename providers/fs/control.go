@@ -96,7 +96,7 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 			} else if e.Dnd != nil && *e.Dnd {
 				end = append(end, "error/USER_BUSY")
 			} else {
-				end = append(end, fmt.Sprintf("[%s,absolute_codec_string='PCMA']sofia/sip/%s@%s", e.ToStringVariables(), *e.Destination, call.DomainName()))
+				end = append(end, fmt.Sprintf("[%s]sofia/sip/%s@%s", e.ToStringVariables(), *e.Destination, call.DomainName()))
 			}
 		}
 	}
@@ -119,13 +119,21 @@ func (c *Connection) Export(vars []string) (model.Response, *model.AppError) {
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Conference(name, profile string) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "conference", fmt.Sprintf("%s@%s++flags{nomoh|moderator}", name, profile))
+func (c *Connection) Conference(name, profile, pin string, tags []string) (model.Response, *model.AppError) {
+	data := fmt.Sprintf("%s_%d@%s", name, c.DomainId(), profile)
+	if pin != "" {
+		data += "+" + pin
+	}
+
+	if len(tags) > 0 {
+		data += fmt.Sprintf("+flags{%s}", strings.Join(tags, "|"))
+	}
+	return c.Execute(context.Background(), "conference", data)
 }
 
 func (c *Connection) RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
 	return c.Execute(context.Background(), "record",
-		fmt.Sprintf("http_cache://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
+		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
 			maxSec, silenceThresh, silenceHits))
 }
 
@@ -142,7 +150,12 @@ func (c *Connection) RecordSession(name, format string, minSec int, stereo, brid
 	}
 
 	return c.Execute(context.Background(), "record_session",
-		fmt.Sprintf("http_cache://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
+		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
+}
+
+func (c *Connection) RecordSessionStop(name, format string) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "stop_record_session",
+		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
 }
 
 func (c *Connection) FlushDTMF() (model.Response, *model.AppError) {
@@ -217,7 +230,29 @@ func (c *Connection) PlaybackAndGetDigits(files []*model.PlaybackFile, params *m
 		*params.Tries, *params.Timeout, "#", fileString, *params.SetVar, *params.Regexp))
 }
 
-func getFileString(domainId int, files []*model.PlaybackFile) (string, bool) {
+func (c *Connection) SetSounds(lang, voice string) (model.Response, *model.AppError) {
+	lang = strings.ToLower(lang)
+	s := strings.Split(lang, "_")
+
+	if len(s) < 1 {
+		return nil, model.NewAppError("FS", "fs.control.setSounds.err", nil, "bad lang parameter", http.StatusBadRequest)
+	}
+
+	return c.setInternal(model.Variables{
+		"sound_prefix":     `/$${sounds_dir}/` + strings.Join(s, `/`) + `/` + voice,
+		"default_language": s[0],
+	})
+}
+
+func (c *Connection) UnSet(name string) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "unset", name)
+}
+
+func (c *Connection) ScheduleHangup(sec int, cause string) (model.Response, *model.AppError) {
+	return c.Execute(context.Background(), "sched_hangup", fmt.Sprintf("+%d %s", sec, cause))
+}
+
+func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
 	fileString := make([]string, 0, len(files))
 
 	for _, v := range files {
@@ -235,20 +270,20 @@ func getFileString(domainId int, files []*model.PlaybackFile) (string, bool) {
 	}
 }
 
-func buildFileLink(domainId int, file *model.PlaybackFile) (string, bool) {
+func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 	if file.Type == nil {
 		return "", false
 	}
 
 	switch *file.Type {
 	case "audio/mp3":
-		return fmt.Sprintf("shout://10.9.8.111:10021/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, domainId), true
+		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, domainId), true
 
 	case "audio/wav":
-		return fmt.Sprintf("http_cache://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, domainId), true
+		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, domainId), true
 
 	case "video/mp4":
-		return fmt.Sprintf("http_cache://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, domainId), true
+		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, domainId), true
 
 	case "tone":
 		if file.Name == nil {

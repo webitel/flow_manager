@@ -6,7 +6,7 @@ import (
 	"github.com/webitel/wlog"
 )
 
-func (f *FlowManager) GetSchema(domainId, id int, updatedAt int64) (schema *model.Schema, err *model.AppError) {
+func (f *FlowManager) GetSchema(domainId int64, id int, updatedAt int64) (schema *model.Schema, err *model.AppError) {
 	if v, ok := f.schemaCache.Get(id); ok {
 		schema = v.(*model.Schema)
 		if schema.UpdatedAt == updatedAt {
@@ -23,7 +23,7 @@ func (f *FlowManager) GetSchema(domainId, id int, updatedAt int64) (schema *mode
 	return
 }
 
-func (f *FlowManager) GetSchemaById(domainId int, id int) (*model.Schema, *model.AppError) {
+func (f *FlowManager) GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError) {
 	updatedAt, err := f.Store.Schema().GetUpdatedAt(id)
 
 	if err != nil {

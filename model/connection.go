@@ -24,6 +24,7 @@ type Connection interface {
 	Type() ConnectionType
 	Id() string
 	NodeId() string
+	DomainId() int64
 
 	Get(key string) (string, bool)
 	Set(vars Variables) (Response, *AppError)

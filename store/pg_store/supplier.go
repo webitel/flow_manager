@@ -35,6 +35,7 @@ type SqlSupplierOldStores struct {
 	endpoint    store.EndpointStore
 	email       store.EmailStore
 	media       store.MediaStore
+	calendar    store.CalendarStore
 }
 
 type SqlSupplier struct {
@@ -62,6 +63,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)
 	supplier.oldStores.media = NewSqlMediaStore(supplier)
+	supplier.oldStores.calendar = NewSqlCalendarStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -195,4 +197,8 @@ func (ss *SqlSupplier) Email() store.EmailStore {
 
 func (ss *SqlSupplier) Media() store.MediaStore {
 	return ss.oldStores.media
+}
+
+func (ss *SqlSupplier) Calendar() store.CalendarStore {
+	return ss.oldStores.calendar
 }

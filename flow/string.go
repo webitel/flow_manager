@@ -11,65 +11,55 @@ import (
 	"net/http"
 )
 
+type StringArgs struct {
+	SetVar string        `json:"setVar"`
+	Fn     string        `json:"fn"`
+	Data   string        `json:"data"`
+	Args   []interface{} `json:"args"`
+}
+
 func (r *Router) stringApp(c model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var props map[string]interface{}
-	var ok bool
 	var vm *otto.Otto
-	var varName, fnName, data, value string
-	var argsElem []interface{}
-	var _args interface{}
+	var argv = StringArgs{}
 
-	if props, ok = args.(map[string]interface{}); !ok {
-		return nil, model.NewAppError("Flow.String", "flow.app.string.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
+	err := Decode(c, args, &argv)
+	if err != nil {
+		return nil, err
 	}
 
-	if varName = model.StringValueFromMap("setVar", props, ""); varName == "" {
-		return nil, model.NewAppError("Flow.String", "flow.app.string.valid.args", nil, fmt.Sprintf("setVar is required %v", args), http.StatusBadRequest)
+	if argv.SetVar == "" {
+		return nil, ErrorRequiredParameter("string", "setVar")
+	}
+	if argv.Fn == "" {
+		return nil, ErrorRequiredParameter("string", "fn")
 	}
 
-	if fnName = model.StringValueFromMap("fn", props, ""); fnName == "" {
-		return nil, model.NewAppError("Flow.String", "flow.app.string.valid.args", nil, fmt.Sprintf("fn is required %v", args), http.StatusBadRequest)
-	}
+	var value string
 
-	data = c.ParseText(model.StringValueFromMap("data", props, ""))
-
-	switch fnName {
+	switch argv.Fn {
 	case "reverse":
-		value = reverse(data)
+		value = reverse(argv.Data)
 		break
 	case "charAt":
-		if pos := model.IntValueFromMap("args", props, -1); pos > -1 {
-			value = charAt(data, pos)
-		}
+		value = charAt(argv.Data, GetTopIntArg(argv.Args))
 		break
 	case "base64":
-		mode := ""
-		if _args, ok = props["args"]; ok {
-			mode = model.InterfaceToString(_args)
-		}
-		value = base64Fn(mode, data)
+		value = base64Fn(GetTopStringArg(argv.Args), argv.Data)
 		break
 	case "MD5":
-		value = md5Fn(data)
+		value = md5Fn(argv.Data)
 		break
 	case "SHA-256":
-		value = sha256Fn(data)
+		value = sha256Fn(argv.Data)
 		break
 	case "SHA-512":
-		value = sha512Fn(data)
+		value = sha512Fn(argv.Data)
 		break
 	default:
-		if _args, ok = props["args"]; ok {
-			//FIXME NOW
-			//argsElem = parseArgsToArrayInterface(c, _args)
-		} else {
-			argsElem = []interface{}{}
-		}
-
 		vm = otto.New()
-		vm.Set("fnName", fnName)
-		vm.Set("args", argsElem)
-		vm.Set("data", data)
+		vm.Set("fnName", argv.Fn)
+		vm.Set("args", argv.Args)
+		vm.Set("data", argv.Data)
 		v, err := vm.Run(`
 				var value, match;
 
@@ -102,7 +92,7 @@ func (r *Router) stringApp(c model.Connection, args interface{}) (model.Response
 	}
 
 	return c.Set(map[string]interface{}{
-		varName: value,
+		argv.SetVar: value,
 	})
 }
 

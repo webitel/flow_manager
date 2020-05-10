@@ -43,3 +43,7 @@ func (s *LayeredStore) Email() EmailStore {
 func (s *LayeredStore) Media() MediaStore {
 	return s.DatabaseLayer.Media()
 }
+
+func (s *LayeredStore) Calendar() CalendarStore {
+	return s.DatabaseLayer.Calendar()
+}

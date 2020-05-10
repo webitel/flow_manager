@@ -17,4 +17,5 @@ type SqlStore interface {
 	Endpoint() store.EndpointStore
 	Email() store.EmailStore
 	Media() store.MediaStore
+	Calendar() store.CalendarStore
 }

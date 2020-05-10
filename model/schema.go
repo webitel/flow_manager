@@ -4,7 +4,7 @@ import "fmt"
 
 type Schema struct {
 	Id        int   `json:"id" db:"id"`
-	DomainId  int   `json:"domain_id" db:"domain_id"`
+	DomainId  int64 `json:"domain_id" db:"domain_id"`
 	UpdatedAt int64 `json:"updated_at" db:"updated_at"`
 
 	Type       string       `json:"type" db:"type"`

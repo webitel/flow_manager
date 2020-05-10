@@ -79,6 +79,14 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.Math,
 	}
+	apps["calendar"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.Calendar,
+	}
+	apps["list"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.List,
+	}
 
 	return apps
 }

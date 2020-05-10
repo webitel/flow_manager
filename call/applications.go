@@ -1,19 +1,9 @@
 package call
 
 import (
-	"encoding/json"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
-
-func init1() {
-	var i = 1
-	body, err := json.Marshal(i)
-	if err != nil {
-		panic(err.Error())
-	}
-	panic(string(body))
-}
 
 type callHandler func(call model.Call, args interface{}) (model.Response, *model.AppError)
 
@@ -43,6 +33,10 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 	apps["setNoLocal"] = &model.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.setNoLocal),
+	}
+	apps["unSet"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.UnSet),
 	}
 	apps["bridge"] = &model.Application{
 		AllowNoConnect: false,
@@ -95,6 +89,18 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 	apps["playback"] = &model.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.Playback),
+	}
+	apps["ringback"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.RingBack),
+	}
+	apps["setSounds"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.SetSounds),
+	}
+	apps["scheduleHangup"] = &model.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.ScheduleHangup),
 	}
 
 	return apps

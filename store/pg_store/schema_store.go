@@ -14,7 +14,7 @@ func NewSqlSchemaStore(sqlStore SqlStore) store.SchemaStore {
 	return st
 }
 
-func (s SqlSchemaStore) Get(domainId, id int) (*model.Schema, *model.AppError) {
+func (s SqlSchemaStore) Get(domainId int64, id int) (*model.Schema, *model.AppError) {
 	var out *model.Schema
 	if err := s.GetReplica().SelectOne(&out, `select s.id, s.domain_id, d.name as domain_name, s.name, s.scheme as schema, s.type, s.updated_at
 from acr_routing_scheme s

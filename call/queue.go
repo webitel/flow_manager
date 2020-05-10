@@ -1,7 +1,6 @@
 package call
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -25,7 +24,7 @@ import (
    },
 */
 
-type queueJoin struct {
+type QueueJoinArg struct {
 	Name      string `json:"name"`
 	Number    string `json:"number"`
 	Priority  int    `json:"priority"`
@@ -34,9 +33,11 @@ type queueJoin struct {
 }
 
 func (r *Router) queue(call model.Call, args interface{}) (model.Response, *model.AppError) {
-	var q queueJoin
-	data, _ := json.Marshal(args)
-	json.Unmarshal(data, &q) //TODO
+	var q QueueJoinArg
+
+	if err := r.Decode(call, args, &q); err != nil {
+		return nil, err
+	}
 
 	// FIXME add context
 	status, err := r.fm.JoinToInboundQueue(call.DomainId(), call.Id(), q.QueueId, q.Name, q.Priority)

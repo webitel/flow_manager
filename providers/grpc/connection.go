@@ -52,7 +52,7 @@ func (c *Connection) Close() *model.AppError {
 	return nil
 }
 
-func (c *Connection) DomainId() int {
+func (c *Connection) DomainId() int64 {
 	return 0
 }
 
