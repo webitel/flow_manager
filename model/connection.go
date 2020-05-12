@@ -6,6 +6,7 @@ const (
 	ConnectionTypeCall ConnectionType = iota
 	ConnectionTypeGrpc
 	ConnectionTypeEmail
+	ConnectionTypeWebChat
 )
 
 type Server interface {

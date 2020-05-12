@@ -40,41 +40,38 @@ func (r *Router) Handlers() model.ApplicationHandlers {
 func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 	var apps = make(model.ApplicationHandlers)
 
+	apps["log"] = &model.Application{
+		AllowNoConnect: true,
+		Handler:        r.Log,
+	}
 	apps["if"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.conditionHandler,
 	}
-
 	apps["switch"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.switchHandler,
 	}
-
 	apps["execute"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.execute,
 	}
-
 	apps["set"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.set,
 	}
-
 	apps["break"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.breakHandler,
 	}
-
 	apps["httpRequest"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.httpRequest,
 	}
-
 	apps["string"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.stringApp,
 	}
-
 	apps["math"] = &model.Application{
 		AllowNoConnect: true,
 		Handler:        r.Math,

@@ -47,3 +47,11 @@ func (s *LayeredStore) Media() MediaStore {
 func (s *LayeredStore) Calendar() CalendarStore {
 	return s.DatabaseLayer.Calendar()
 }
+
+func (s *LayeredStore) List() ListStore {
+	return s.DatabaseLayer.List()
+}
+
+func (s *LayeredStore) Chat() ChatStore {
+	return s.DatabaseLayer.Chat()
+}

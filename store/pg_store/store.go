@@ -18,4 +18,6 @@ type SqlStore interface {
 	Email() store.EmailStore
 	Media() store.MediaStore
 	Calendar() store.CalendarStore
+	List() store.ListStore
+	Chat() store.ChatStore
 }

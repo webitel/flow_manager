@@ -7,7 +7,6 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
-	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
@@ -76,7 +75,8 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Host: fm.Config().Esl.Host,
 			Port: fm.Config().Esl.Port,
 		}),
-		email.New(fm.Store.Email()),
+		//email.New(fm.Store.Email()),
+		//web_chat.NewServer(fm, "", 7777),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {

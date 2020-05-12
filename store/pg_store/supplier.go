@@ -36,6 +36,8 @@ type SqlSupplierOldStores struct {
 	email       store.EmailStore
 	media       store.MediaStore
 	calendar    store.CalendarStore
+	list        store.ListStore
+	chat        store.ChatStore
 }
 
 type SqlSupplier struct {
@@ -64,6 +66,8 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.email = NewSqlEmailStore(supplier)
 	supplier.oldStores.media = NewSqlMediaStore(supplier)
 	supplier.oldStores.calendar = NewSqlCalendarStore(supplier)
+	supplier.oldStores.list = NewSqlListStore(supplier)
+	supplier.oldStores.chat = NewSqlChatStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -201,4 +205,12 @@ func (ss *SqlSupplier) Media() store.MediaStore {
 
 func (ss *SqlSupplier) Calendar() store.CalendarStore {
 	return ss.oldStores.calendar
+}
+
+func (ss *SqlSupplier) List() store.ListStore {
+	return ss.oldStores.list
+}
+
+func (ss *SqlSupplier) Chat() store.ChatStore {
+	return ss.oldStores.chat
 }

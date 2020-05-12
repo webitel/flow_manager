@@ -16,7 +16,7 @@ func (r *Router) Playback(call model.Call, args interface{}) (model.Response, *m
 		return nil, ErrorRequiredParameter("playback", "files")
 	}
 
-	argv.Files, err = r.fm.GetMediaFiles(int64(call.DomainId()), &argv.Files)
+	argv.Files, err = r.fm.GetMediaFiles(call.DomainId(), &argv.Files)
 	if err != nil {
 		return nil, err
 	}

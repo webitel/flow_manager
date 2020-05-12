@@ -15,6 +15,8 @@ type Store interface {
 	Email() EmailStore
 	Media() MediaStore
 	Calendar() CalendarStore
+	List() ListStore
+	Chat() ChatStore
 }
 
 type EmailStore interface {
@@ -51,4 +53,15 @@ type MediaStore interface {
 
 type CalendarStore interface {
 	Check(domainId int64, id *int, name *string) (*model.Calendar, *model.AppError)
+}
+
+type ListStore interface {
+	CheckNumber(domainId int64, number string, listId *int, listName *string) (bool, *model.AppError)
+}
+
+type ChatStore interface {
+	CreateConversation(secretKey string, title string, name string, message string) (string, *model.AppError)
+	ConversationUnreadMessages(channelId string, limit int) ([]*model.ConversationMessage, *model.AppError)
+	ConversationPostMessage(channelId string, body string) ([]*model.ConversationMessage, *model.AppError)
+	ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError)
 }
