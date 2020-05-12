@@ -39,7 +39,7 @@ const (
 )
 
 const (
-	UsrVarPrefix = "usr_"
+	UsrVarPrefix = ""
 )
 
 var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
@@ -231,10 +231,15 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 		if value == "" {
 			value = c.lastEvent.Get("variable_" + (key))
 		}
+		if value == "" {
+			if key, ok := mapVariables[key]; ok {
+				value = c.lastEvent.Get(key)
+			}
+		}
+
 		if value != "" {
 			ok = true
 		}
-
 	}
 	return
 }
@@ -264,7 +269,7 @@ func (c *Connection) setInternal(vars model.Variables) (model.Response, *model.A
 }
 
 func (c *Connection) UserVariablePrefix(name string) string {
-	return fmt.Sprintf("usr_%s", name)
+	return UsrVarPrefix + name
 }
 
 func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
