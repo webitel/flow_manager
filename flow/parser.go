@@ -38,7 +38,11 @@ func Decode(conn model.Connection, in interface{}, out interface{}) *model.AppEr
 			case reflect.Interface:
 				return conn.ParseText(data.(string)), nil
 			case reflect.Int:
-				return conn.ParseText(data.(string)), nil
+				v := conn.ParseText(data.(string))
+				if v == "" {
+					return 0, nil
+				}
+				return v, nil
 			case reflect.Bool:
 				return conn.ParseText(data.(string)), nil
 			}
