@@ -273,7 +273,7 @@ type Call interface {
 	Hangup(cause string) (Response, *AppError)
 	HangupNoRoute() (Response, *AppError)
 	HangupAppErr() (Response, *AppError)
-	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint) (Response, *AppError)
+	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string) (Response, *AppError)
 	Sleep(int) (Response, *AppError)
 	Conference(name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)

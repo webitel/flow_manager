@@ -1,13 +1,14 @@
 package model
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
 )
 
-type ApplicationHandler func(c Connection, args interface{}) (Response, *AppError)
+type ApplicationHandler func(ctx context.Context, c Connection, args interface{}) (Response, *AppError)
 type ApplicationArgsParser func(c Connection, args ...interface{}) interface{}
 
 type ApplicationObject map[string]interface{}

@@ -1,6 +1,7 @@
 package call
 
 import (
+	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
@@ -31,12 +32,12 @@ func (r *Router) Handlers() model.ApplicationHandlers {
 	return r.apps
 }
 
-func (r *Router) Request(conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
+func (r *Router) Request(ctx context.Context, conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
-			return h.Handler(conn, h.ArgsParser(conn, req.Args()))
+			return h.Handler(ctx, conn, h.ArgsParser(conn, req.Args()))
 		} else {
-			return h.Handler(conn, req.Args())
+			return h.Handler(ctx, conn, req.Args())
 		}
 
 	}
@@ -139,10 +140,13 @@ func (r *Router) handle(conn model.Connection) {
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(flow.Config{
 		Name:     routing.Schema.Name,
+		Schema:   routing.Schema.Schema,
 		Handler:  r,
-		Apps:     routing.Schema.Schema,
 		Conn:     call,
 		Timezone: routing.TimezoneName,
 	})
-	flow.Route(i, r)
+
+	ctx, _ := context.WithCancel(context.TODO()) // CALL CONTEXT
+
+	flow.Route(ctx, i, r)
 }

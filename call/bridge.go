@@ -45,12 +45,14 @@ func (r *Router) bridge(call model.Call, args interface{}) (model.Response, *mod
 		return model.CallResponseError, model.NewAppError("Bridge", "call.bridge.valid.endpoints", nil, "bad arguments", http.StatusBadRequest)
 	}
 
+	codecs, _ := getArrayStringFromMap("codecs", props)
+
 	var e []*model.Endpoint
 	e, err = getRemoteEndpoints(r, call, endpoints)
 	if err != nil {
 		return model.CallResponseError, err
 	}
-	return call.Bridge(call, getStringValueFromMap("strategy", props, ""), nil, e)
+	return call.Bridge(call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
 }
 
 func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {
@@ -94,4 +96,25 @@ func replaceBridgeRequest(c model.Connection, arr interface{}) (model.Applicatio
 	}
 
 	return res, nil
+}
+
+func getArrayStringFromMap(name string, params map[string]interface{}) (res []string, ok bool) {
+	var tmp []interface{}
+	var i interface{}
+
+	if _, ok = params[name]; !ok {
+		return
+	}
+
+	if tmp, ok = params[name].([]interface{}); !ok {
+		return
+	}
+
+	for _, i = range tmp {
+		if _, ok = i.(string); ok {
+			res = append(res, i.(string))
+		}
+	}
+	ok = true
+	return
 }

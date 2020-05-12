@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
@@ -19,7 +20,7 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 }
 
 func emailHandlerMiddleware(h emailHandler) model.ApplicationHandler {
-	return func(c model.Connection, args interface{}) (model.Response, *model.AppError) {
+	return func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 		if c.Type() != model.ConnectionTypeEmail {
 			return nil, model.NewAppError("Email", "email.middleware.valid.type", nil, "bad type", http.StatusBadRequest)
 		}

@@ -44,8 +44,7 @@ func (c *Connection) Sleep(timeout int) (model.Response, *model.AppError) {
 	return c.Execute(context.Background(), "sleep", fmt.Sprintf("%d", timeout))
 }
 
-// todo add codecs
-func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint) (model.Response, *model.AppError) {
+func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string) (model.Response, *model.AppError) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -66,6 +65,10 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 	dialString += "<sip_route_uri=sip:$${outbound_sip_proxy}," + from
 	for key, val := range vars {
 		dialString += fmt.Sprintf(",'%s'='%s'", key, val)
+	}
+
+	if codecs != nil {
+		dialString += ",absolute_codec_string='" + strings.Join(codecs, ",") + "'"
 	}
 
 	if len(c.exportVariables) > 0 {

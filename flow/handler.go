@@ -1,102 +1,14 @@
 package flow
 
 import (
+	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
 )
 
-type Response struct {
-	Status string
-}
-
-var ResponseOK = Response{"SUCCESS"}
-
-type Router struct {
-	fm   *app.FlowManager
-	apps model.ApplicationHandlers
-}
-
-func (r Response) String() string {
-	return r.Status
-}
-
-func Init(fm *app.FlowManager) {
-	var router = &Router{
-		fm: fm,
-	}
-
-	router.apps = ApplicationsHandlers(router)
-
-	fm.FlowRouter = router
-}
-
-func (r *Router) Handlers() model.ApplicationHandlers {
-	return r.apps
-}
-
-func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
-	var apps = make(model.ApplicationHandlers)
-
-	apps["log"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.Log,
-	}
-	apps["if"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.conditionHandler,
-	}
-	apps["switch"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.switchHandler,
-	}
-	apps["execute"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.execute,
-	}
-	apps["set"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.set,
-	}
-	apps["break"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.breakHandler,
-	}
-	apps["httpRequest"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.httpRequest,
-	}
-	apps["string"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.stringApp,
-	}
-	apps["math"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.Math,
-	}
-	apps["calendar"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.Calendar,
-	}
-	apps["list"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.List,
-	}
-
-	return apps
-}
-
-func (r *Router) Handle(conn model.Connection) *model.AppError {
-	return model.NewAppError("Flow", "flow.router.not_implement", nil, "not implement", http.StatusInternalServerError)
-}
-
-func (r *Router) Request(conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
-	return nil, nil
-}
-
-func Route(i *Flow, handler app.Handler) {
+func Route(ctx context.Context, i *Flow, handler app.Handler) {
 	var req *ApplicationRequest
 	var err *model.AppError
 	var res model.Response
@@ -110,7 +22,7 @@ func Route(i *Flow, handler app.Handler) {
 			break
 		}
 
-		if res, err = handler.Request(i.conn, req); err != nil {
+		if res, err = handler.Request(ctx, i.conn, req); err != nil {
 			wlog.Error(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), err.Error()))
 		} else {
 			wlog.Debug(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.String()))

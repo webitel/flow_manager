@@ -32,6 +32,7 @@ type Flow struct {
 	Tags        map[string]*Tag
 	Functions   map[string]*Flow
 	triggers    map[string]*Flow
+	stopped     chan struct{}
 	currentNode *Node
 	gotoCounter int16
 	cancel      bool
@@ -42,7 +43,7 @@ type Config struct {
 	Timezone string
 	Name     string
 	Handler  app.Handler
-	Apps     model.Applications
+	Schema   model.Applications
 	Conn     model.Connection
 }
 
@@ -55,12 +56,12 @@ func New(conf Config) *Flow {
 	i.Functions = make(map[string]*Flow)
 	i.triggers = make(map[string]*Flow)
 	i.Tags = make(map[string]*Tag)
-
+	i.stopped = make(chan struct{})
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
 
-	parseFlowArray(i, i.currentNode, conf.Apps)
+	parseFlowArray(i, i.currentNode, conf.Schema)
 	return i
 }
 
@@ -70,6 +71,10 @@ func (i *Flow) Now() time.Time {
 	}
 
 	return time.Now()
+}
+
+func (i *Flow) WaitEnd() <-chan struct{} {
+	return i.stopped
 }
 
 type ApplicationRequest struct {
