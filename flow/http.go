@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func (r *Router) httpRequest(c model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) httpRequest(c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var props map[string]interface{}
 	var ok bool
 	var res *http.Response

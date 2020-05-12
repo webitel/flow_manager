@@ -13,89 +13,88 @@ type Response struct {
 
 var ResponseOK = Response{"SUCCESS"}
 
-type Router struct {
+type router struct {
 	fm   *app.FlowManager
-	apps model.ApplicationHandlers
+	apps ApplicationHandlers
 }
 
 func (r Response) String() string {
 	return r.Status
 }
 
-func Init(fm *app.FlowManager) {
-	var router = &Router{
+func NewRouter(fm *app.FlowManager) Router {
+	var router = &router{
 		fm: fm,
 	}
 
 	router.apps = ApplicationsHandlers(router)
-
-	fm.FlowRouter = router
+	return router
 }
 
-func (r *Router) Handlers() model.ApplicationHandlers {
+func (r *router) Handlers() ApplicationHandlers {
 	return r.apps
 }
 
-func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
-	var apps = make(model.ApplicationHandlers)
+func ApplicationsHandlers(r *router) ApplicationHandlers {
+	var apps = make(ApplicationHandlers)
 
-	apps["log"] = &model.Application{
+	apps["log"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Log),
 	}
-	apps["if"] = &model.Application{
+	apps["if"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.conditionHandler),
 	}
-	apps["switch"] = &model.Application{
+	apps["switch"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.switchHandler),
 	}
-	apps["execute"] = &model.Application{
+	apps["execute"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.execute),
 	}
-	apps["set"] = &model.Application{
+	apps["set"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.set),
 	}
-	apps["break"] = &model.Application{
+	apps["break"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.breakHandler),
 	}
-	apps["httpRequest"] = &model.Application{
+	apps["httpRequest"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.httpRequest),
 	}
-	apps["string"] = &model.Application{
+	apps["string"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.stringApp),
 	}
-	apps["math"] = &model.Application{
+	apps["math"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Math),
 	}
-	apps["calendar"] = &model.Application{
+	apps["calendar"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Calendar),
 	}
-	apps["list"] = &model.Application{
-		AllowNoConnect: true,
-		Handler:        r.doExecute(r.List),
-	}
+	//apps["list"] = &Application{
+	//	AllowNoConnect: true,
+	//	Handler:        r.doExecute(r.List),
+	//}
 
 	return apps
 }
 
-func (r *Router) Handle(conn model.Connection) *model.AppError {
+func (r *router) Handle(conn model.Connection) *model.AppError {
 	return model.NewAppError("Flow", "flow.router.not_implement", nil, "not implement", http.StatusInternalServerError)
 }
 
-func (r *Router) doExecWithContext() {
+func (r *router) doExecWithContext() {
 
 }
 
-func (r *Router) doExecute(delMe func(c model.Connection, args interface{}) (model.Response, *model.AppError)) model.ApplicationHandler {
+func (r *router) doExecute(delMe func(c model.Connection, args interface{}) (model.Response, *model.AppError)) ApplicationHandler {
 	return func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 		return delMe(c, args)
 	}

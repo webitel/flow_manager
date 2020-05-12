@@ -2,104 +2,105 @@ package call
 
 import (
 	"context"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
 
 type callHandler func(call model.Call, args interface{}) (model.Response, *model.AppError)
 
-func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
-	var apps = make(model.ApplicationHandlers)
+func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
+	var apps = make(flow.ApplicationHandlers)
 
-	apps["ringReady"] = &model.Application{
+	apps["ringReady"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.ringReady),
 	}
-	apps["preAnswer"] = &model.Application{
+	apps["preAnswer"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.preAnswer),
 	}
-	apps["answer"] = &model.Application{
+	apps["answer"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.answer),
 	}
-	apps["hangup"] = &model.Application{
+	apps["hangup"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.hangup),
 	}
-	apps["setAll"] = &model.Application{
+	apps["setAll"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.setAll),
 	}
-	apps["setNoLocal"] = &model.Application{
+	apps["setNoLocal"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.setNoLocal),
 	}
-	apps["unSet"] = &model.Application{
+	apps["unSet"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.UnSet),
 	}
-	apps["bridge"] = &model.Application{
+	apps["bridge"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.bridge),
 	}
-	apps["echo"] = &model.Application{
+	apps["echo"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.echo),
 	}
-	apps["export"] = &model.Application{
+	apps["export"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.export),
 	}
-	apps["recordFile"] = &model.Application{
+	apps["recordFile"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.recordFile),
 	}
-	apps["recordSession"] = &model.Application{
+	apps["recordSession"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.recordSession),
 	}
-	apps["sleep"] = &model.Application{
+	apps["sleep"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.sleep),
 	}
-	apps["conference"] = &model.Application{
+	apps["conference"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.conference),
 	}
-	apps["joinQueue"] = &model.Application{
+	apps["joinQueue"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.queue),
 	}
-	apps["flushDtmf"] = &model.Application{
+	apps["flushDtmf"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.dtmfFlush),
 	}
-	apps["inBandDTMF"] = &model.Application{
+	apps["inBandDTMF"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.inBandDTMF),
 	}
-	apps["park"] = &model.Application{
+	apps["park"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.park),
 	}
-	apps["sipRedirect"] = &model.Application{
+	apps["sipRedirect"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.SipRedirect),
 	}
-	apps["playback"] = &model.Application{
+	apps["playback"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.Playback),
 	}
-	apps["ringback"] = &model.Application{
+	apps["ringback"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.RingBack),
 	}
-	apps["setSounds"] = &model.Application{
+	apps["setSounds"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.SetSounds),
 	}
-	apps["scheduleHangup"] = &model.Application{
+	apps["scheduleHangup"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.ScheduleHangup),
 	}
@@ -107,7 +108,7 @@ func ApplicationsHandlers(r *Router) model.ApplicationHandlers {
 	return apps
 }
 
-func callHandlerMiddleware(h callHandler) model.ApplicationHandler {
+func callHandlerMiddleware(h callHandler) flow.ApplicationHandler {
 	return func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 		if c.Type() != model.ConnectionTypeCall {
 			return nil, model.NewAppError("Call", "call.middleware.valid.type", nil, "bad type", http.StatusBadRequest)

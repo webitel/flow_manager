@@ -8,15 +8,16 @@ type ListArgs struct {
 	Destination string
 }
 
-func (r *Router) List(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) List(scope *Flow, args interface{}) (model.Response, *model.AppError) {
 	var argv = ListArgs{}
 	var exists bool
-	err := Decode(conn, args, &argv)
+	err := Decode(scope.Connection, args, &argv)
 	if err != nil {
 		return nil, err
 	}
 
-	exists, err = r.fm.ListCheckNumber(conn.DomainId(), argv.Destination, argv.Id, argv.Name)
+	// fixme domain id in scope
+	exists, err = r.fm.ListCheckNumber(scope.Connection.DomainId(), argv.Destination, argv.Id, argv.Name)
 	if err != nil {
 		return nil, err
 	}

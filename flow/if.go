@@ -52,7 +52,7 @@ func newConditionArgs(i *Flow, parent *Node, props interface{}) *conditionArgs {
 	return args
 }
 
-func (r *Router) conditionHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) conditionHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var req *conditionArgs
 	var ok bool
 	if req, ok = args.(*conditionArgs); !ok {

@@ -14,10 +14,6 @@ type CallResponse struct {
 var CallResponseOK = &CallResponse{"SUCCESS"}
 var CallResponseError = &CallResponse{"ERROR"}
 
-type CallRouter interface {
-	Router
-}
-
 func (r CallResponse) String() string {
 	return r.Status
 }

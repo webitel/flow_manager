@@ -28,9 +28,8 @@ type FlowManager struct {
 
 	eventQueue mq.MQ
 
-	FlowRouter  model.Router
-	CallRouter  model.CallRouter
-	GRPCRouter  model.GRPCRouter
+	CallRouter  model.Router
+	GRPCRouter  model.Router
 	EmailRouter model.Router
 
 	callWatcher *callWatcher

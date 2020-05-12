@@ -7,7 +7,7 @@ import (
 
 type LogArg string
 
-func (r *Router) Log(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) Log(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var log LogArg
 	if err := Decode(conn, args, &log); err != nil {
 		return nil, err

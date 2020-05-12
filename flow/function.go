@@ -23,7 +23,7 @@ func (i *Flow) addFunction(args interface{}) *model.AppError {
 				Name:    fmt.Sprintf("function-%s", name),
 				Handler: i.handler,
 				Schema:  ArrInterfaceToArrayApplication(actions),
-				Conn:    i.conn,
+				Conn:    i.Connection,
 			})
 		}
 

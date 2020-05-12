@@ -10,7 +10,7 @@ type BreakArgs struct {
 	Flow *Flow
 }
 
-func (r *Router) breakHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) breakHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var req *BreakArgs
 	var ok bool
 

@@ -4,26 +4,23 @@ import (
 	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/app"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
 
 type Router struct {
 	fm   *app.FlowManager
-	apps model.ApplicationHandlers
+	apps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager) {
+func Init(fm *app.FlowManager, fr flow.Router) {
 	fm.GRPCRouter = &Router{
 		fm: fm,
-		apps: model.UnionApplicationMap(
-			fm.FlowRouter.Handlers(),
+		apps: flow.UnionApplicationMap(
+			fr.Handlers(),
 		),
 	}
-}
-
-func (r *Router) Handlers() model.ApplicationHandlers {
-	return r.apps
 }
 
 func (r *Router) Request(ctx context.Context, conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {

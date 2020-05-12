@@ -1,8 +1,8 @@
 package flow
 
 import (
+	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"strconv"
@@ -26,8 +26,8 @@ type Tag struct {
 
 type Flow struct {
 	timezone    *time.Location
-	handler     app.Handler
-	conn        model.Connection
+	handler     Handler
+	Connection  model.Connection
 	name        string
 	Tags        map[string]*Tag
 	Functions   map[string]*Flow
@@ -37,12 +37,13 @@ type Flow struct {
 	gotoCounter int16
 	cancel      bool
 	sync.RWMutex
+	context.Context
 }
 
 type Config struct {
 	Timezone string
 	Name     string
-	Handler  app.Handler
+	Handler  Handler
 	Schema   model.Applications
 	Conn     model.Connection
 }
@@ -51,12 +52,13 @@ func New(conf Config) *Flow {
 	i := &Flow{}
 	i.handler = conf.Handler
 	i.name = conf.Name
-	i.conn = conf.Conn
+	i.Connection = conf.Conn
 	i.currentNode = NewNode(nil)
 	i.Functions = make(map[string]*Flow)
 	i.triggers = make(map[string]*Flow)
 	i.Tags = make(map[string]*Tag)
 	i.stopped = make(chan struct{})
+	i.Context = context.Background()
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
@@ -141,7 +143,7 @@ func (i *Flow) trySetTag(tag string, parent *Node, idx int) {
 
 func (i *Flow) Goto(tag string) bool {
 	if i.gotoCounter > MAX_GOTO {
-		wlog.Warn(fmt.Sprintf("call %s max goto count!", i.conn.Id()))
+		wlog.Warn(fmt.Sprintf("call %s max goto count!", i.Connection.Id()))
 		return false
 	}
 

@@ -9,9 +9,4 @@ type ParseText func(conn Connection, text string) string
 
 type Router interface {
 	Handle(conn Connection) *AppError
-	Handlers() ApplicationHandlers
-}
-
-type GRPCRouter interface {
-	Router
 }

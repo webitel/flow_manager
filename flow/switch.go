@@ -47,7 +47,7 @@ func newSwitchArgs(i *Flow, parent *Node, props interface{}) (*SwitchArgs, *mode
 	return args, nil
 }
 
-func (r *Router) switchHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) switchHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var req *SwitchArgs
 	var ok bool
 	var newNode *Node

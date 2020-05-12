@@ -11,32 +11,32 @@ import (
 
 type Router struct {
 	fm   *app.FlowManager
-	apps model.ApplicationHandlers
+	apps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager) {
+func Init(fm *app.FlowManager, fr flow.Router) {
 	r := &Router{
 		fm: fm,
 	}
 
-	r.apps = model.UnionApplicationMap(
-		fm.FlowRouter.Handlers(),
+	r.apps = flow.UnionApplicationMap(
+		fr.Handlers(),
 		ApplicationsHandlers(r),
 	)
 
 	fm.EmailRouter = r
 }
 
-func (r *Router) Handlers() model.ApplicationHandlers {
+func (r *Router) Handlers() flow.ApplicationHandlers {
 	return r.apps
 }
 
-func (r *Router) Request(ctx context.Context, conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
+func (r *Router) Request(scope *flow.Flow, req model.ApplicationRequest) (model.Response, *model.AppError) {
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
-			return h.Handler(ctx, conn, h.ArgsParser(conn, req.Args()))
+			return h.Handler(scope, scope.Connection, h.ArgsParser(scope.Connection, req.Args()))
 		} else {
-			return h.Handler(ctx, conn, req.Args())
+			return h.Handler(scope, scope.Connection, req.Args())
 		}
 	}
 	return nil, model.NewAppError("GRPC.Request", "grpc.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
