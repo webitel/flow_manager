@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-func (r *router) httpRequest(c model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var props map[string]interface{}
 	var ok bool
 	var res *http.Response
@@ -28,7 +28,7 @@ func (r *router) httpRequest(c model.Connection, args interface{}) (model.Respon
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
 	}
 
-	req, err := buildRequest(c, props)
+	req, err := buildRequest(conn, props)
 	if err != nil {
 		return nil, err
 	}
@@ -44,14 +44,14 @@ func (r *router) httpRequest(c model.Connection, args interface{}) (model.Respon
 
 	if str := model.StringValueFromMap("responseCode", props, ""); str != "" {
 		//TODO
-		c.Set(context.Background(), model.Variables{
+		conn.Set(context.Background(), model.Variables{
 			str: strconv.Itoa(res.StatusCode),
 		})
 	}
 
 	if str = model.StringValueFromMap("exportCookie", props, ""); str != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
-			c.Set(context.Background(), model.Variables{
+			conn.Set(context.Background(), model.Variables{
 				str: strings.Join(res.Header["Set-Cookie"], ";"), // TODO internal variables ?
 			})
 		}
@@ -67,7 +67,7 @@ func (r *router) httpRequest(c model.Connection, args interface{}) (model.Respon
 
 	var exp map[string]interface{}
 	if exp, ok = props["exportVariables"].(map[string]interface{}); ok {
-		return parseHttpResponse(c, str, res.Body, exp)
+		return parseHttpResponse(conn, str, res.Body, exp)
 	}
 
 	return model.CallResponseOK, nil

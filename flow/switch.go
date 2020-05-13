@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -47,7 +48,7 @@ func newSwitchArgs(i *Flow, parent *Node, props interface{}) (*SwitchArgs, *mode
 	return args, nil
 }
 
-func (r *router) switchHandler(conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) switchHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var req *SwitchArgs
 	var ok bool
 	var newNode *Node

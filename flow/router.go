@@ -12,6 +12,7 @@ type Response struct {
 }
 
 var ResponseOK = Response{"SUCCESS"}
+var ResponseErr = Response{"FAIL"}
 
 type router struct {
 	fm   *app.FlowManager
@@ -40,7 +41,7 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 
 	apps["log"] = &Application{
 		AllowNoConnect: true,
-		Handler:        r.Log,
+		Handler:        r.doExecute(r.Log),
 	}
 	apps["if"] = &Application{
 		AllowNoConnect: true,
@@ -78,6 +79,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Calendar),
 	}
+	apps["goto"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.GotoTag),
+	}
 	//apps["list"] = &Application{
 	//	AllowNoConnect: true,
 	//	Handler:        r.doExecute(r.List),
@@ -90,10 +95,12 @@ func (r *router) Handle(conn model.Connection) *model.AppError {
 	return model.NewAppError("Flow", "flow.router.not_implement", nil, "not implement", http.StatusInternalServerError)
 }
 
-func (r *router) doExecute(delMe func(c model.Connection, args interface{}) (model.Response, *model.AppError)) ApplicationHandler {
+type flowHandler func(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError)
+
+func (r *router) doExecute(delMe flowHandler) ApplicationHandler {
 	return func(ctx context.Context, scope *Flow, args interface{}) model.ResultChannel {
 		return Do(func(result *model.Result) {
-			result.Res, result.Err = delMe(scope.Connection, args)
+			result.Res, result.Err = delMe(ctx, scope, scope.Connection, args)
 		})
 	}
 }

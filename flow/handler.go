@@ -34,6 +34,11 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 	}
 
 	for {
+		req = i.NextRequest()
+		if req == nil {
+			return
+		}
+
 		select {
 		case <-ctx.Done():
 			return
@@ -46,10 +51,6 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 
 			if i.IsCancel() || req.IsCancel() {
 				wlog.Debug(fmt.Sprintf("flow [%s] break", i.Name()))
-				return
-			}
-			req = i.NextRequest()
-			if req == nil {
 				return
 			}
 		}

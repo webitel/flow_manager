@@ -8,14 +8,12 @@ import (
 
 type LogArg string
 
-func (r *router) Log(ctx context.Context, scope *Flow, args interface{}) model.ResultChannel {
-	return Do(func(result *model.Result) {
-		var log LogArg
-		if err := Decode(scope.Connection, args, &log); err != nil {
-			result.Err = err
-		} else {
-			wlog.Info(string(log))
-			result.Res = model.CallResponseOK
-		}
-	})
+func (r *router) Log(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var log LogArg
+	if err := Decode(conn, args, &log); err != nil {
+		return nil, err
+	} else {
+		wlog.Info(string(log))
+		return model.CallResponseOK, nil
+	}
 }

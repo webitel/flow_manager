@@ -19,7 +19,7 @@ type StringArgs struct {
 	Args   []interface{} `json:"args"`
 }
 
-func (r *router) stringApp(c model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var vm *otto.Otto
 	var argv = StringArgs{}
 

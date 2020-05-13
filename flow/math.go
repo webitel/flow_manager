@@ -14,7 +14,7 @@ type MathArgs struct {
 	Fn     string `json:"fn"`
 }
 
-func (r *router) Math(c model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) Math(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var vm *otto.Otto
 	var _args interface{}
 

@@ -184,6 +184,8 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 		case "if":
 			req.args = newConditionArgs(i, root, req.args)
 			i.trySetTag(req.Tag, root, req.idx)
+			//FIXME
+			//req.setParentNode(root)
 			root.Add(req)
 
 		case "function":
@@ -208,6 +210,8 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 		default:
 			if req.Name != "" {
 				root.Add(req)
+				req.setParentNode(root)
+				i.trySetTag(req.Tag, root, req.idx)
 			} else {
 				wlog.Warn(fmt.Sprintf("bad application structure %v", v))
 			}
@@ -261,7 +265,8 @@ func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model
 	if req.Name == "" && req.Flags&ApplicationFlagBreakEnabled == ApplicationFlagBreakEnabled {
 		req.Name = "break"
 	}
-	req.setParentNode(root)
+	//FIXME
+	//req.setParentNode(root)
 	return req, nil
 }
 

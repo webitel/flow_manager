@@ -217,16 +217,6 @@ func (c *Connection) Close() *model.AppError {
 	return nil
 }
 
-func (c *Connection) SetDirection(direction string) error {
-	if c.direction == "" {
-		if _, err := c.Execute(context.Background(), "set", "webitel_direction="+direction); err != nil {
-			return err
-		}
-		c.direction = getDirection(direction)
-	}
-	return nil
-}
-
 func (c *Connection) Get(key string) (value string, ok bool) {
 	if c.Stopped() {
 		value, ok = c.variables[key]
@@ -302,7 +292,7 @@ func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Re
 func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute(ctx, "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
+		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
 			return nil, err
 		}
 	}
@@ -394,46 +384,6 @@ func (c *Connection) HangupCause() string {
 	c.RLock()
 	defer c.RUnlock()
 	return c.hangupCause
-}
-
-func (c *Connection) Execute(ctx context.Context, app string, args interface{}) (model.Response, *model.AppError) {
-	if c.Stopped() {
-		return nil, errExecuteAfterHangup
-	}
-
-	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.Id(), app, args))
-
-	guid := uuid.NewV4()
-	var err error
-
-	e := make(chan *eventsocket.Event, 1)
-
-	c.Lock()
-	c.callbackMessages[guid.String()] = e
-	c.Unlock()
-
-	_, err = c.connection.SendMsg(eventsocket.MSG{
-		"call-command":     "execute",
-		"execute-app-name": app,
-		"execute-app-arg":  fmt.Sprintf("%v", args),
-		"event-lock":       "false",
-		"Event-UUID":       guid.String(),
-	}, "", "")
-
-	if err != nil {
-		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, err.Error(), http.StatusInternalServerError)
-	}
-
-	if c.Stopped() {
-		return nil, errExecuteAfterHangup
-	}
-
-	select {
-	//case <-ctx.Done():
-	//	return model.CallResponse{Status: "CANCEL"}, model.NewAppError("FreeSWITCH", "provider.fs.execute.cancel", nil, "cancel", http.StatusInternalServerError)
-	case <-e:
-		return model.CallResponseOK, nil
-	}
 }
 
 func (c *Connection) executeWithContext(ctx context.Context, app string, args interface{}) (model.Response, *model.AppError) {
