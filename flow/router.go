@@ -40,7 +40,7 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 
 	apps["log"] = &Application{
 		AllowNoConnect: true,
-		Handler:        r.doExecute(r.Log),
+		Handler:        r.Log,
 	}
 	apps["if"] = &Application{
 		AllowNoConnect: true,
@@ -90,12 +90,10 @@ func (r *router) Handle(conn model.Connection) *model.AppError {
 	return model.NewAppError("Flow", "flow.router.not_implement", nil, "not implement", http.StatusInternalServerError)
 }
 
-func (r *router) doExecWithContext() {
-
-}
-
 func (r *router) doExecute(delMe func(c model.Connection, args interface{}) (model.Response, *model.AppError)) ApplicationHandler {
-	return func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-		return delMe(c, args)
+	return func(ctx context.Context, scope *Flow, args interface{}) model.ResultChannel {
+		return Do(func(result *model.Result) {
+			result.Res, result.Err = delMe(scope.Connection, args)
+		})
 	}
 }

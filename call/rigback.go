@@ -1,6 +1,10 @@
 package call
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/model"
+)
 
 type RingBackArgs struct {
 	All      bool
@@ -9,7 +13,7 @@ type RingBackArgs struct {
 	Transfer *model.PlaybackFile
 }
 
-func (r *Router) RingBack(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) RingBack(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv RingBackArgs
 
 	if err := r.Decode(call, args, &argv); err != nil {

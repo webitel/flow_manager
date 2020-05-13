@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/webitel/wlog"
@@ -258,33 +259,33 @@ type Call interface {
 	SetDomainName(name string)
 	DomainName() string
 
-	SetAll(vars Variables) (Response, *AppError)
-	SetNoLocal(vars Variables) (Response, *AppError)
-	UnSet(name string) (Response, *AppError)
+	SetAll(ctx context.Context, vars Variables) (Response, *AppError)
+	SetNoLocal(ctx context.Context, vars Variables) (Response, *AppError)
+	UnSet(ctx context.Context, name string) (Response, *AppError)
 
-	RingReady() (Response, *AppError)
-	PreAnswer() (Response, *AppError)
-	Answer() (Response, *AppError)
-	Echo(delay int) (Response, *AppError)
-	Hangup(cause string) (Response, *AppError)
-	HangupNoRoute() (Response, *AppError)
-	HangupAppErr() (Response, *AppError)
-	Bridge(call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string) (Response, *AppError)
-	Sleep(int) (Response, *AppError)
-	Conference(name, profile, pin string, tags []string) (Response, *AppError)
-	RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
-	RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
-	RecordSessionStop(name, format string) (Response, *AppError)
-	Export(vars []string) (Response, *AppError)
-	FlushDTMF() (Response, *AppError)
-	StartDTMF() (Response, *AppError)
-	StopDTMF() (Response, *AppError)
-	Park(name string, in bool, lotFrom, lotTo string) (Response, *AppError)
-	Playback(files []*PlaybackFile) (Response, *AppError)
-	PlaybackAndGetDigits(files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
-	Redirect(uri []string) (Response, *AppError)
-	SetSounds(lang, voice string) (Response, *AppError)
-	ScheduleHangup(sec int, cause string) (Response, *AppError)
+	RingReady(ctx context.Context) (Response, *AppError)
+	PreAnswer(ctx context.Context) (Response, *AppError)
+	Answer(ctx context.Context) (Response, *AppError)
+	Echo(ctx context.Context, delay int) (Response, *AppError)
+	Hangup(ctx context.Context, cause string) (Response, *AppError)
+	HangupNoRoute(ctx context.Context) (Response, *AppError)
+	HangupAppErr(ctx context.Context) (Response, *AppError)
+	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string) (Response, *AppError)
+	Sleep(ctx context.Context, delay int) (Response, *AppError)
+	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
+	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
+	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
+	RecordSessionStop(ctx context.Context, name, format string) (Response, *AppError)
+	Export(ctx context.Context, vars []string) (Response, *AppError)
+	FlushDTMF(ctx context.Context) (Response, *AppError)
+	StartDTMF(ctx context.Context) (Response, *AppError)
+	StopDTMF(ctx context.Context) (Response, *AppError)
+	Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (Response, *AppError)
+	Playback(ctx context.Context, files []*PlaybackFile) (Response, *AppError)
+	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
+	Redirect(ctx context.Context, uri []string) (Response, *AppError)
+	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
+	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, *AppError)
 }
 
 type PlaybackFile struct {

@@ -1,8 +1,10 @@
 package call
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"net/http"
@@ -22,7 +24,7 @@ type BridgeArgs struct {
 	Endpoints  []EndpointVariableArgs `json:"endpoints"`
 }
 
-func (r *Router) bridge(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var props map[string]interface{}
 	var ok bool
 	var endpoints model.Applications
@@ -52,7 +54,7 @@ func (r *Router) bridge(call model.Call, args interface{}) (model.Response, *mod
 	if err != nil {
 		return model.CallResponseError, err
 	}
-	return call.Bridge(call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
+	return call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
 }
 
 func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {

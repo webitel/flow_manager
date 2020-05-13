@@ -1,5 +1,7 @@
 package model
 
+import "context"
+
 type ConnectionType int8
 
 const (
@@ -27,9 +29,17 @@ type Connection interface {
 	NodeId() string
 	DomainId() int64
 
+	Context() context.Context
 	Get(key string) (string, bool)
-	Set(vars Variables) (Response, *AppError)
+	Set(ctx context.Context, vars Variables) (Response, *AppError)
 	ParseText(text string) string
 
 	Close() *AppError
 }
+
+type Result struct {
+	Err *AppError
+	Res Response
+}
+
+type ResultChannel chan Result

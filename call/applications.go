@@ -2,19 +2,19 @@ package call
 
 import (
 	"context"
+	"fmt"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
 
-type callHandler func(call model.Call, args interface{}) (model.Response, *model.AppError)
+type callHandler func(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError)
 
 func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	var apps = make(flow.ApplicationHandlers)
 
 	apps["ringReady"] = &flow.Application{
-		AllowNoConnect: false,
-		Handler:        callHandlerMiddleware(r.ringReady),
+		Handler: callHandlerMiddleware(r.ringReady),
 	}
 	apps["preAnswer"] = &flow.Application{
 		AllowNoConnect: false,
@@ -108,11 +108,25 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	return apps
 }
 
-func callHandlerMiddleware(h callHandler) flow.ApplicationHandler {
-	return func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-		if c.Type() != model.ConnectionTypeCall {
-			return nil, model.NewAppError("Call", "call.middleware.valid.type", nil, "bad type", http.StatusBadRequest)
+func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
+	if h, ok := r.apps[req.Id()]; ok {
+		if h.ArgsParser != nil {
+			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
+
+		} else {
+			return h.Handler(ctx, scope, req.Args())
 		}
-		return h(c.(model.Call), args)
+	} else {
+		return flow.Do(func(result *model.Result) {
+			result.Err = model.NewAppError("Call.Request", "call.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
+		})
+	}
+}
+
+func callHandlerMiddleware(h callHandler) flow.ApplicationHandler {
+	return func(ctx context.Context, scope *flow.Flow, args interface{}) model.ResultChannel {
+		return flow.Do(func(result *model.Result) {
+			result.Res, result.Err = h(ctx, scope, scope.Connection.(model.Call), args)
+		})
 	}
 }

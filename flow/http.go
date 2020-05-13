@@ -2,6 +2,7 @@ package flow
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/tidwall/gjson"
@@ -42,14 +43,15 @@ func (r *router) httpRequest(c model.Connection, args interface{}) (model.Respon
 	defer res.Body.Close()
 
 	if str := model.StringValueFromMap("responseCode", props, ""); str != "" {
-		c.Set(model.Variables{
+		//TODO
+		c.Set(context.Background(), model.Variables{
 			str: strconv.Itoa(res.StatusCode),
 		})
 	}
 
 	if str = model.StringValueFromMap("exportCookie", props, ""); str != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
-			c.Set(model.Variables{
+			c.Set(context.Background(), model.Variables{
 				str: strings.Join(res.Header["Set-Cookie"], ";"), // TODO internal variables ?
 			})
 		}
@@ -160,7 +162,6 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 func parseHttpResponse(c model.Connection, contentType string, response io.ReadCloser, exportVariables map[string]interface{}) (model.Response, *model.AppError) {
 	var err error
 	var body []byte
-	var appErr *model.AppError
 
 	if strings.Index(contentType, "application/json") > -1 {
 		if len(exportVariables) > 0 {
@@ -173,8 +174,8 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			for k, _ := range exportVariables {
 				vars[k] = gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, "")).String()
 			}
-			if _, appErr = c.Set(vars); appErr != nil {
-				return model.CallResponseError, appErr
+			if _, err := c.Set(context.Background(), vars); err != nil {
+				return model.CallResponseError, err
 			}
 		}
 	} else if strings.Index(contentType, "text/xml") > -1 {
@@ -197,10 +198,10 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			}
 
 			if str, ok := path.String(xml); ok {
-				if _, appErr = c.Set(model.Variables{
+				if _, err := c.Set(context.Background(), model.Variables{
 					k: str,
-				}); appErr != nil {
-					return nil, appErr
+				}); err != nil {
+					return nil, err
 				}
 			}
 		}

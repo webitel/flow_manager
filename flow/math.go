@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"context"
 	"github.com/robertkrimen/otto"
 	"github.com/webitel/flow_manager/model"
 	"math/rand"
@@ -62,7 +63,7 @@ func (r *router) Math(c model.Connection, args interface{}) (model.Response, *mo
 	}
 
 	value := model.InterfaceToString(_args)
-	return c.Set(model.Variables{
+	return c.Set(context.Background(), model.Variables{
 		argv.SetVar: value,
 	})
 }

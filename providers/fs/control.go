@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
-	"regexp"
 	"strings"
 )
 
@@ -14,37 +13,35 @@ const (
 	HANGUP_NO_ROUTE_DESTINATION     = "NO_ROUTE_DESTINATION"
 )
 
-var httpToShot = regexp.MustCompile(`https?`)
-
-func (c *Connection) Answer() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "answer", "")
+func (c *Connection) Answer(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "answer", "")
 }
 
-func (c *Connection) PreAnswer() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "pre_answer", "")
+func (c *Connection) PreAnswer(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "pre_answer", "")
 }
 
-func (c *Connection) RingReady() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "ring_ready", "")
+func (c *Connection) RingReady(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "ring_ready", "")
 }
 
-func (c *Connection) Hangup(cause string) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "hangup", cause)
+func (c *Connection) Hangup(ctx context.Context, cause string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "hangup", cause)
 }
 
-func (c *Connection) HangupNoRoute() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "hangup", HANGUP_NO_ROUTE_DESTINATION)
+func (c *Connection) HangupNoRoute(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "hangup", HANGUP_NO_ROUTE_DESTINATION)
 }
 
-func (c *Connection) HangupAppErr() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
+func (c *Connection) HangupAppErr(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
 }
 
-func (c *Connection) Sleep(timeout int) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "sleep", fmt.Sprintf("%d", timeout))
+func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "sleep", fmt.Sprintf("%d", timeout))
 }
 
-func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string) (model.Response, *model.AppError) {
+func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string) (model.Response, *model.AppError) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -106,23 +103,23 @@ func (c *Connection) Bridge(call model.Call, strategy string, vars map[string]st
 
 	dialString += strings.Join(end, separator)
 
-	return c.Execute(context.Background(), "bridge", dialString)
+	return c.executeWithContext(ctx, "bridge", dialString)
 }
 
-func (c *Connection) Echo(delay int) (model.Response, *model.AppError) {
+func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *model.AppError) {
 	if delay == 0 {
-		return c.Execute(context.Background(), "echo", "")
+		return c.executeWithContext(ctx, "echo", "")
 	} else {
-		return c.Execute(context.Background(), "delay_echo", delay)
+		return c.executeWithContext(ctx, "delay_echo", delay)
 	}
 }
 
-func (c *Connection) Export(vars []string) (model.Response, *model.AppError) {
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
 	c.exportVariables = vars
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Conference(name, profile, pin string, tags []string) (model.Response, *model.AppError) {
+func (c *Connection) Conference(ctx context.Context, name, profile, pin string, tags []string) (model.Response, *model.AppError) {
 	data := fmt.Sprintf("%s_%d@%s", name, c.DomainId(), profile)
 	if pin != "" {
 		data += "+" + pin
@@ -131,17 +128,18 @@ func (c *Connection) Conference(name, profile, pin string, tags []string) (model
 	if len(tags) > 0 {
 		data += fmt.Sprintf("+flags{%s}", strings.Join(tags, "|"))
 	}
-	return c.Execute(context.Background(), "conference", data)
+	return c.executeWithContext(ctx, "conference", data)
 }
 
-func (c *Connection) RecordFile(name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "record",
+func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "record",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
 			maxSec, silenceThresh, silenceHits))
 }
 
-func (c *Connection) RecordSession(name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
-	_, err := c.Set(map[string]interface{}{
+func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
+	// FIXME SET
+	_, err := c.Set(ctx, map[string]interface{}{
 		"RECORD_MIN_SEC":            minSec,
 		"RECORD_STEREO":             stereo,
 		"RECORD_BRIDGE_REQ":         bridged,
@@ -152,28 +150,28 @@ func (c *Connection) RecordSession(name, format string, minSec int, stereo, brid
 		return nil, err
 	}
 
-	return c.Execute(context.Background(), "record_session",
+	return c.executeWithContext(ctx, "record_session",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
 }
 
-func (c *Connection) RecordSessionStop(name, format string) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "stop_record_session",
+func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "stop_record_session",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
 }
 
-func (c *Connection) FlushDTMF() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "flush_dtmf", "")
+func (c *Connection) FlushDTMF(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "flush_dtmf", "")
 }
 
-func (c *Connection) StartDTMF() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "start_dtmf", "")
+func (c *Connection) StartDTMF(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "start_dtmf", "")
 }
 
-func (c *Connection) StopDTMF() (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "stop_dtmf", "")
+func (c *Connection) StopDTMF(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "stop_dtmf", "")
 }
 
-func (c *Connection) Park(name string, in bool, lotFrom, lotTo string) (model.Response, *model.AppError) {
+func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (model.Response, *model.AppError) {
 	var req = fmt.Sprintf("%s@%s ", c.DomainName(), name)
 	if in {
 		req += "in"
@@ -181,10 +179,10 @@ func (c *Connection) Park(name string, in bool, lotFrom, lotTo string) (model.Re
 		req += "out"
 	}
 	req += fmt.Sprintf(" %s %s", lotFrom, lotTo)
-	return c.Execute(context.Background(), "valet_park", req)
+	return c.executeWithContext(ctx, "valet_park", req)
 }
 
-func (c *Connection) Redirect(uri []string) (model.Response, *model.AppError) {
+func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response, *model.AppError) {
 	tmp := c.GetVariable("Caller-Channel-Answered-Time")
 
 	if tmp == "0" || tmp == "" {
@@ -192,19 +190,19 @@ func (c *Connection) Redirect(uri []string) (model.Response, *model.AppError) {
 	} else {
 		tmp = "deflect"
 	}
-	return c.Execute(context.Background(), tmp, strings.Join(uri, ","))
+	return c.executeWithContext(ctx, tmp, strings.Join(uri, ","))
 }
 
-func (c *Connection) Playback(files []*model.PlaybackFile) (model.Response, *model.AppError) {
+func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) (model.Response, *model.AppError) {
 	fileString, ok := getFileString(c.DomainId(), files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
+	} else {
+		return c.executeWithContext(ctx, "playback", fileString)
 	}
-
-	return c.Execute(context.Background(), "playback", fileString)
 }
 
-func (c *Connection) PlaybackAndGetDigits(files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
+func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
 	fileString, ok := getFileString(c.DomainId(), files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
@@ -229,11 +227,11 @@ func (c *Connection) PlaybackAndGetDigits(files []*model.PlaybackFile, params *m
 		params.SetVar = model.NewString("MyVar")
 	}
 
-	return c.Execute(context.Background(), "play_and_get_digits", fmt.Sprintf("%d %d %d %d %s %s silence_stream://250 %s %s", *params.Min, *params.Max,
+	return c.executeWithContext(ctx, "play_and_get_digits", fmt.Sprintf("%d %d %d %d %s %s silence_stream://250 %s %s", *params.Min, *params.Max,
 		*params.Tries, *params.Timeout, "#", fileString, *params.SetVar, *params.Regexp))
 }
 
-func (c *Connection) SetSounds(lang, voice string) (model.Response, *model.AppError) {
+func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, *model.AppError) {
 	lang = strings.ToLower(lang)
 	s := strings.Split(lang, "_")
 
@@ -241,18 +239,18 @@ func (c *Connection) SetSounds(lang, voice string) (model.Response, *model.AppEr
 		return nil, model.NewAppError("FS", "fs.control.setSounds.err", nil, "bad lang parameter", http.StatusBadRequest)
 	}
 
-	return c.setInternal(model.Variables{
+	return c.setInternal(ctx, model.Variables{
 		"sound_prefix":     `/$${sounds_dir}/` + strings.Join(s, `/`) + `/` + voice,
 		"default_language": s[0],
 	})
 }
 
-func (c *Connection) UnSet(name string) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "unset", name)
+func (c *Connection) UnSet(ctx context.Context, name string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "unset", name)
 }
 
-func (c *Connection) ScheduleHangup(sec int, cause string) (model.Response, *model.AppError) {
-	return c.Execute(context.Background(), "sched_hangup", fmt.Sprintf("+%d %s", sec, cause))
+func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "sched_hangup", fmt.Sprintf("+%d %s", sec, cause))
 }
 
 func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {

@@ -1,6 +1,8 @@
 package call
 
 import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -11,7 +13,7 @@ type ConferenceArgs struct {
 	Pin     string
 }
 
-func (r *Router) conference(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) conference(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var conf = ConferenceArgs{
 		Name:    "global",
 		Profile: "default",
@@ -22,5 +24,5 @@ func (r *Router) conference(call model.Call, args interface{}) (model.Response, 
 		return nil, err
 	}
 
-	return call.Conference(conf.Name, conf.Profile, conf.Pin, conf.Tags)
+	return call.Conference(ctx, conf.Name, conf.Profile, conf.Pin, conf.Tags)
 }

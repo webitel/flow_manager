@@ -1,10 +1,12 @@
 package call
 
 import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
-func (r *Router) Playback(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv model.PlaybackArgs
 
 	err := r.Decode(call, args, &argv)
@@ -22,8 +24,8 @@ func (r *Router) Playback(call model.Call, args interface{}) (model.Response, *m
 	}
 
 	if argv.GetDigits != nil {
-		return call.PlaybackAndGetDigits(argv.Files, argv.GetDigits)
+		return call.PlaybackAndGetDigits(ctx, argv.Files, argv.GetDigits)
 	}
 
-	return call.Playback(argv.Files)
+	return call.Playback(ctx, argv.Files)
 }

@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"context"
 	"crypto/md5"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -91,7 +92,7 @@ func (r *router) stringApp(c model.Connection, args interface{}) (model.Response
 		value = v.String()
 	}
 
-	return c.Set(map[string]interface{}{
+	return c.Set(context.Background(), map[string]interface{}{
 		argv.SetVar: value,
 	})
 }

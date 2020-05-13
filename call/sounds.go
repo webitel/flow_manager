@@ -1,13 +1,17 @@
 package call
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/model"
+)
 
 type SoundsArgs struct {
 	Voice string
 	Lang  string
 }
 
-func (r *Router) SetSounds(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) SetSounds(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv SoundsArgs
 	if err := r.Decode(call, args, &argv); err != nil {
 		return nil, err
@@ -21,5 +25,5 @@ func (r *Router) SetSounds(call model.Call, args interface{}) (model.Response, *
 		return nil, ErrorRequiredParameter("setSounds", "voice")
 	}
 
-	return call.SetSounds(argv.Lang, argv.Voice)
+	return call.SetSounds(ctx, argv.Lang, argv.Voice)
 }

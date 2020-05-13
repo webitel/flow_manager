@@ -8,32 +8,50 @@ import (
 )
 
 type Handler interface {
-	Request(ctx *Flow, req model.ApplicationRequest) (model.Response, *model.AppError)
+	Request(ctx context.Context, scope *Flow, req model.ApplicationRequest) <-chan model.Result
+}
+
+func Do(f func(result *model.Result)) model.ResultChannel {
+	storeChannel := make(model.ResultChannel, 1)
+	go func() {
+		result := model.Result{}
+		f(&result)
+		storeChannel <- result
+		close(storeChannel)
+	}()
+	return storeChannel
 }
 
 func Route(ctx context.Context, i *Flow, handler Handler) {
 	var req *ApplicationRequest
-	var err *model.AppError
-	var res model.Response
 
 	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.Connection.Id()))
 	defer wlog.Debug(fmt.Sprintf("flow \"%s\" stopped conn %s", i.name, i.Connection.Id()))
 
+	req = i.NextRequest()
+	if req == nil {
+		return
+	}
+
 	for {
-		req = i.NextRequest()
-		if req == nil {
-			break
-		}
+		select {
+		case <-ctx.Done():
+			return
+		case res := <-handler.Request(ctx, i, req):
+			if res.Err != nil {
+				wlog.Error(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.Err.Error()))
+			} else {
+				wlog.Debug(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.Res.String()))
+			}
 
-		if res, err = handler.Request(i, req); err != nil {
-			wlog.Error(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), err.Error()))
-		} else {
-			wlog.Debug(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.String()))
-		}
-
-		if i.IsCancel() || req.IsCancel() {
-			wlog.Debug(fmt.Sprintf("flow [%s] break", i.Name()))
-			break
+			if i.IsCancel() || req.IsCancel() {
+				wlog.Debug(fmt.Sprintf("flow [%s] break", i.Name()))
+				return
+			}
+			req = i.NextRequest()
+			if req == nil {
+				return
+			}
 		}
 	}
 }

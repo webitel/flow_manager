@@ -1,6 +1,8 @@
 package call
 
 import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -23,7 +25,7 @@ type RecordSessionArg struct {
 	FollowTransfer bool `json:"followTransfer"`
 }
 
-func (r *Router) recordFile(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv = RecordFileArg{
 		Name:          "recordFile",
 		Type:          "mp3",
@@ -38,18 +40,18 @@ func (r *Router) recordFile(call model.Call, args interface{}) (model.Response, 
 	}
 
 	if argv.Terminators != "" {
-		if _, err := call.Set(map[string]interface{}{
+		if _, err := call.Set(ctx, map[string]interface{}{
 			"playback_terminators": argv.Terminators,
 		}); err != nil {
 			return nil, err
 		}
 	}
 
-	return call.RecordFile(argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
+	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
 }
 
 // FIXME test record stop
-func (r *Router) recordSession(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 
 	var argv = RecordSessionArg{
 		Name:   "recordSession",
@@ -62,8 +64,8 @@ func (r *Router) recordSession(call model.Call, args interface{}) (model.Respons
 	}
 
 	if argv.Action == "stop" {
-		return call.RecordSessionStop(argv.Name, argv.Type)
+		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
 	}
 
-	return call.RecordSession(argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer)
+	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer)
 }

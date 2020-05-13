@@ -1,7 +1,6 @@
 package call
 
 import (
-	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
@@ -32,22 +31,10 @@ func (r *Router) Handlers() flow.ApplicationHandlers {
 	return r.apps
 }
 
-func (r *Router) Request(scope *flow.Flow, req model.ApplicationRequest) (model.Response, *model.AppError) {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(scope, scope.Connection, h.ArgsParser(scope.Connection, req.Args()))
-		} else {
-			return h.Handler(scope, scope.Connection, req.Args())
-		}
-
-	}
-	return nil, model.NewAppError("Call.Request", "call.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-}
-
 func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.CallEndpoint {
 	if in == nil {
 		wlog.Error(fmt.Sprintf("call %s not found to", call.Id()))
-		if _, err := call.HangupAppErr(); err != nil {
+		if _, err := call.HangupAppErr(call.Context()); err != nil {
 			wlog.Error(err.Error())
 		}
 		return nil
@@ -76,7 +63,7 @@ func (r *Router) handle(conn model.Connection) {
 	from := call.From()
 	if from == nil {
 		wlog.Error("not allowed call: from is empty")
-		if _, err = call.HangupAppErr(); err != nil {
+		if _, err = call.HangupAppErr(call.Context()); err != nil {
 			wlog.Error(err.Error())
 		}
 
@@ -95,7 +82,7 @@ func (r *Router) handle(conn model.Connection) {
 		switch from.Type {
 		case model.CallEndpointTypeDestination:
 			if id := to.IntId(); id == nil {
-				if _, err = call.HangupNoRoute(); err != nil {
+				if _, err = call.HangupNoRoute(call.Context()); err != nil {
 					wlog.Error(err.Error())
 				}
 
@@ -120,7 +107,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	if err != nil {
 		wlog.Error(err.Error())
-		if _, err = call.HangupAppErr(); err != nil {
+		if _, err = call.HangupAppErr(call.Context()); err != nil {
 			wlog.Error(err.Error())
 		}
 
@@ -129,7 +116,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	if routing == nil {
 		wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
-		if _, err = call.HangupNoRoute(); err != nil {
+		if _, err = call.HangupNoRoute(call.Context()); err != nil {
 			wlog.Error(err.Error())
 		}
 
@@ -146,6 +133,5 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 
-	ctx, _ := context.WithCancel(context.TODO()) // CALL CONTEXT
-	flow.Route(ctx, i, r)
+	flow.Route(conn.Context(), i, r)
 }

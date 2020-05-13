@@ -1,7 +1,6 @@
 package fs
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	uuid "github.com/satori/go.uuid"
@@ -45,10 +44,10 @@ const (
 var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
 
 type Connection struct {
-	id              string
-	nodeId          string
-	nodeName        string
-	context         string
+	id       string
+	nodeId   string
+	nodeName string
+	//context         string
 	destination     string
 	stopped         bool
 	direction       model.CallDirection
@@ -67,6 +66,8 @@ type Connection struct {
 	variables        map[string]string
 	hangupCause      string
 	exportVariables  []string
+	ctx              context.Context
+	cancelFn         context.CancelFunc
 	sync.RWMutex
 }
 
@@ -84,11 +85,14 @@ func getDirection(str string) model.CallDirection {
 }
 
 func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Event) *Connection {
+	ctx, cancel := context.WithCancel(context.TODO())
 	connection := &Connection{
-		id:               dump.Get(HEADER_ID_NAME),
-		nodeId:           dump.Get(HEADER_CORE_ID_NAME),
-		nodeName:         dump.Get(HEADER_CORE_NAME),
-		context:          dump.Get(HEADER_CONTEXT_NAME),
+		id:       dump.Get(HEADER_ID_NAME),
+		nodeId:   dump.Get(HEADER_CORE_ID_NAME),
+		nodeName: dump.Get(HEADER_CORE_NAME),
+		ctx:      ctx,
+		cancelFn: cancel,
+		//context:          dump.Get(HEADER_CONTEXT_NAME),
 		direction:        getDirection(dump.Get(HEADER_DIRECTION_NAME)),
 		gatewayId:        getIntFromStr(dump.Get(HEADER_GATEWAY_ID)),
 		domainId:         int64(getIntFromStr(dump.Get(HEADER_DOMAIN_ID))),
@@ -96,8 +100,8 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		connection:       baseConnection,
 		lastEvent:        dump,
 		callbackMessages: make(map[string]chan *eventsocket.Event),
-		disconnected:     make(chan struct{}),
-		variables:        make(map[string]string),
+		//disconnected:     make(chan struct{}),
+		variables: make(map[string]string),
 	}
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
@@ -189,8 +193,8 @@ func (c *Connection) ParseText(text string) string {
 	return text
 }
 
-func (c *Connection) Context() string {
-	return c.context
+func (c *Connection) Context() context.Context {
+	return c.ctx
 }
 
 func (c *Connection) InboundGatewayId() int {
@@ -251,28 +255,28 @@ func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) setChannelVariables(pref string, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars model.Variables) (model.Response, *model.AppError) {
 	str := "^^"
 	for k, v := range vars {
 		str += fmt.Sprintf(`~'%s%s'='%v'`, pref, k, v)
 	}
 
-	return c.Execute(context.Background(), "multiset", str)
+	return c.executeWithContext(ctx, "multiset", str)
 }
 
-func (c *Connection) setInternal(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setInternal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	if c.Stopped() {
-		return model.CallResponseError, model.NewAppError("Call.setInternal", "call.app.set_internal.stopped", nil, "bad request", http.StatusBadRequest)
+		return nil, model.NewAppError("Call.setInternal", "call.app.set_internal.stopped", nil, "bad request", http.StatusBadRequest)
 	}
 
-	return c.setChannelVariables("", vars)
+	return c.setChannelVariables(ctx, "", vars)
 }
 
 func (c *Connection) UserVariablePrefix(name string) string {
 	return UsrVarPrefix + name
 }
 
-func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	if len(vars) == 0 {
 		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
 	}
@@ -280,14 +284,14 @@ func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError)
 	if c.Stopped() {
 		return c.setDisconnectedVariables(vars)
 	} else {
-		return c.setChannelVariables(UsrVarPrefix, vars)
+		return c.setChannelVariables(ctx, UsrVarPrefix, vars)
 	}
 }
 
-func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`'%s'='%v'`, c.UserVariablePrefix(k), v)); err != nil {
+		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`'%s'='%v'`, c.UserVariablePrefix(k), v)); err != nil {
 			return nil, err
 		}
 	}
@@ -295,10 +299,10 @@ func (c *Connection) SetAll(vars model.Variables) (model.Response, *model.AppErr
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SetNoLocal(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
-		if _, err = c.Execute(context.Background(), "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
+		if _, err = c.Execute(ctx, "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
 			return nil, err
 		}
 	}
@@ -359,6 +363,7 @@ func (c *Connection) setEvent(event *eventsocket.Event) {
 		case EVENT_HANGUP_COMPLETE:
 			c.hangupCause = event.Get(HEADER_HANGUP_CAUSE_NAME)
 			wlog.Debug(fmt.Sprintf("call %s hangup %s", c.Id(), c.hangupCause))
+			c.cancelFn()
 			//TODO SET DISCONNECT ROUTE
 			c.connection.Send("exit")
 			c.stopped = true
@@ -431,6 +436,42 @@ func (c *Connection) Execute(ctx context.Context, app string, args interface{}) 
 	}
 }
 
+func (c *Connection) executeWithContext(ctx context.Context, app string, args interface{}) (model.Response, *model.AppError) {
+	if c.Stopped() {
+		return nil, errExecuteAfterHangup
+	}
+
+	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.Id(), app, args))
+
+	guid := uuid.NewV4()
+	var err error
+
+	e := make(chan *eventsocket.Event, 1)
+
+	c.Lock()
+	c.callbackMessages[guid.String()] = e
+	c.Unlock()
+
+	_, err = c.connection.SendMsg(eventsocket.MSG{
+		"call-command":     "execute",
+		"execute-app-name": app,
+		"execute-app-arg":  fmt.Sprintf("%v", args),
+		"event-lock":       "false",
+		"Event-UUID":       guid.String(),
+	}, "", "")
+
+	if err != nil {
+		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	select {
+	case <-e:
+		return model.CallResponseOK, nil
+	case <-ctx.Done():
+		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, "cancel", http.StatusInternalServerError)
+	}
+}
+
 func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {
 	for k, _ := range event.Header {
 		c.variables[k] = event.Get(k)
@@ -445,25 +486,7 @@ func (c *Connection) GetVariable(name string) (value string) {
 	return
 }
 
-func (c *Connection) GetGlobalVariables() (map[string]string, error) {
-	variables := make(map[string]string)
-	data, err := c.Api("global_getvar")
-	if err != nil {
-		return variables, err
-	}
-
-	rows := bytes.Split(data, []byte("\n"))
-	var val [][]byte
-	for i := 0; i < len(rows); i++ {
-		val = bytes.SplitN(rows[i], []byte("="), 2)
-		if len(val) == 2 {
-			variables[string(val[0])] = string(val[1])
-		}
-	}
-	return variables, nil
-}
-
-func (c *Connection) WaitForDisconnect() {
+func (c *Connection) WaitForDisconnect1() {
 	<-c.disconnected
 }
 

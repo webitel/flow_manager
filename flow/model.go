@@ -6,7 +6,7 @@ import (
 )
 
 type ApplicationHandlers map[string]*Application
-type ApplicationHandler func(ctx context.Context, c model.Connection, args interface{}) (model.Response, *model.AppError)
+type ApplicationHandler func(ctx context.Context, scope *Flow, args interface{}) model.ResultChannel
 type ApplicationArgsParser func(c model.Connection, args ...interface{}) interface{}
 
 type Application struct {

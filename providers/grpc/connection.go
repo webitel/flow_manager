@@ -31,6 +31,10 @@ func newConnection(ctx context.Context, variables map[string]string) *Connection
 	}
 }
 
+func (c *Connection) Context() context.Context {
+	return c.ctx
+}
+
 func (c *Connection) ParseText(text string) string {
 	return "FIXME"
 }
@@ -60,8 +64,8 @@ func (c Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeGrpc
 }
 
-func (c *Connection) Set(vars model.Variables) (model.Response, *model.AppError) {
-	return model.CallResponseOK, nil
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+	return nil, nil // TODO
 }
 
 func (c *Connection) Get(key string) (string, bool) {

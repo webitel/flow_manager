@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"context"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -10,5 +11,5 @@ func (r *router) set(conn model.Connection, args interface{}) (model.Response, *
 		return nil, err
 	}
 
-	return conn.Set(vars)
+	return conn.Set(context.Background(), vars)
 }

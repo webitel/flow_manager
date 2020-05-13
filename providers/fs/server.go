@@ -139,7 +139,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 		}
 
 		connection.connection.Close()
-		close(connection.disconnected)
+		connection.cancelFn()
 	}()
 
 	wlog.Debug(fmt.Sprintf("receive new call %s connect %v", uuid, c.RemoteAddr()))

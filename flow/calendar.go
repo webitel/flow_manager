@@ -1,6 +1,9 @@
 package flow
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"context"
+	"github.com/webitel/flow_manager/model"
+)
 
 /*
 {
@@ -47,7 +50,7 @@ func (r *router) Calendar(conn model.Connection, args interface{}) (model.Respon
 		}
 	}
 
-	return conn.Set(map[string]interface{}{
+	return conn.Set(context.Background(), map[string]interface{}{
 		argv.SetVar: value,
 	})
 }

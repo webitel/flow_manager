@@ -1,6 +1,8 @@
 package call
 
 import (
+	"context"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"strings"
 )
@@ -14,7 +16,7 @@ import (
     }
 }
 */
-func (r *Router) park(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) park(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	parameters, _ := args.(map[string]interface{})
 	if parameters == nil {
 		return model.CallResponseError, nil
@@ -41,5 +43,5 @@ func (r *Router) park(call model.Call, args interface{}) (model.Response, *model
 		toLot = call.ParseText(lots[1])
 	}
 
-	return call.Park(name, call.ParseText(auto) == "in", fromLot, toLot)
+	return call.Park(ctx, name, call.ParseText(auto) == "in", fromLot, toLot)
 }

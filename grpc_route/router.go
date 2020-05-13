@@ -2,11 +2,9 @@ package grpc_route
 
 import (
 	"context"
-	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 type Router struct {
@@ -23,15 +21,18 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	}
 }
 
-func (r *Router) Request(ctx context.Context, conn model.Connection, req model.ApplicationRequest) (model.Response, *model.AppError) {
+func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) model.ResultChannel {
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
-			return h.Handler(ctx, conn, h.ArgsParser(conn, req.Args()))
+			h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
 		} else {
-			return h.Handler(ctx, conn, req.Args())
+			return h.Handler(ctx, scope, req.Args())
 		}
+	} else {
+
 	}
-	return nil, model.NewAppError("GRPC.Request", "grpc.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
+
+	return nil
 }
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {

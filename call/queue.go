@@ -1,7 +1,9 @@
 package call
 
 import (
+	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
@@ -32,7 +34,7 @@ type QueueJoinArg struct {
 	QueueName string `json:"queue_name"`
 }
 
-func (r *Router) queue(call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var q QueueJoinArg
 
 	if err := r.Decode(call, args, &q); err != nil {
