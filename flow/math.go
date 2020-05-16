@@ -22,7 +22,7 @@ func (r *router) Math(ctx context.Context, scope *Flow, c model.Connection, args
 		Fn: "random",
 	}
 
-	err := Decode(c, args, &argv)
+	err := scope.Decode(args, &argv)
 	if err != nil {
 		return nil, err
 	}

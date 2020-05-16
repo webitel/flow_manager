@@ -25,7 +25,7 @@ type CalendarArgs struct {
 func (r *router) Calendar(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv CalendarArgs
 	var value = "false"
-	if err := Decode(conn, args, &argv); err != nil {
+	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
 

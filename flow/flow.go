@@ -1,7 +1,6 @@
 package flow
 
 import (
-	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -32,12 +31,10 @@ type Flow struct {
 	Tags        map[string]*Tag
 	Functions   map[string]*Flow
 	triggers    map[string]*Flow
-	stopped     chan struct{}
 	currentNode *Node
 	gotoCounter int16
 	cancel      bool
 	sync.RWMutex
-	context.Context
 }
 
 type Config struct {
@@ -57,8 +54,6 @@ func New(conf Config) *Flow {
 	i.Functions = make(map[string]*Flow)
 	i.triggers = make(map[string]*Flow)
 	i.Tags = make(map[string]*Tag)
-	i.stopped = make(chan struct{})
-	i.Context = context.Background()
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
@@ -67,16 +62,19 @@ func New(conf Config) *Flow {
 	return i
 }
 
-func (i *Flow) Now() time.Time {
-	if i.timezone != nil {
-		return time.Now().In(i.timezone)
-	}
+func (f *Flow) Fork(name string, schema model.Applications) *Flow {
+	i := &Flow{}
+	i.handler = f.handler
+	i.name = name
+	i.Connection = f.Connection
+	i.currentNode = NewNode(nil)
+	i.Functions = make(map[string]*Flow)
+	i.triggers = make(map[string]*Flow)
+	i.Tags = make(map[string]*Tag)
+	i.timezone = f.timezone
 
-	return time.Now()
-}
-
-func (i *Flow) WaitEnd() <-chan struct{} {
-	return i.stopped
+	parseFlowArray(i, i.currentNode, schema)
+	return i
 }
 
 type ApplicationRequest struct {
@@ -183,6 +181,7 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 		switch req.Name {
 		case "if":
 			req.args = newConditionArgs(i, root, req.args)
+			req.setParentNode(root)
 			i.trySetTag(req.Tag, root, req.idx)
 			//FIXME
 			//req.setParentNode(root)
@@ -209,8 +208,8 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 
 		default:
 			if req.Name != "" {
-				root.Add(req)
 				req.setParentNode(root)
+				root.Add(req)
 				i.trySetTag(req.Tag, root, req.idx)
 			} else {
 				wlog.Warn(fmt.Sprintf("bad application structure %v", v))
@@ -279,4 +278,12 @@ func ArrInterfaceToArrayApplication(src []interface{}) model.Applications {
 		}
 	}
 	return res
+}
+
+func InterfaceToArrayApplication(src interface{}) model.Applications {
+	if arr, ok := src.([]interface{}); ok {
+		return ArrInterfaceToArrayApplication(arr)
+	}
+
+	return nil
 }

@@ -31,3 +31,15 @@ from calendar_check_timing(:DomainId::int8, :Id::int, :Name::varchar ) as x  (na
 
 	return calendar, nil
 }
+
+func (s SqlCalendarStore) GetTimezones() ([]*model.Timezone, *model.AppError) {
+	var list []*model.Timezone
+	_, err := s.GetReplica().Select(&list, `select id, name
+from calendar_timezones`)
+	if err != nil {
+		return nil, model.NewAppError("SqlCalendarStore.GetTimezones", "store.sql_calendar.timezones.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return list, nil
+}

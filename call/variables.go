@@ -29,7 +29,7 @@ func (r *Router) setNoLocal(ctx context.Context, scope *flow.Flow, call model.Ca
 func (r *Router) UnSet(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv UnSetArg
 
-	if err := r.Decode(call, args, &argv); err != nil {
+	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 	if argv == "" {

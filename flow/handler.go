@@ -28,11 +28,6 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.Connection.Id()))
 	defer wlog.Debug(fmt.Sprintf("flow \"%s\" stopped conn %s", i.name, i.Connection.Id()))
 
-	req = i.NextRequest()
-	if req == nil {
-		return
-	}
-
 	for {
 		req = i.NextRequest()
 		if req == nil {

@@ -35,7 +35,7 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 		Terminators:   "",
 	}
 
-	if err := r.Decode(call, args, &argv); err != nil {
+	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
@@ -59,7 +59,7 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 		MinSec: 2,
 	}
 
-	if err := r.Decode(call, args, &argv); err != nil {
+	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 

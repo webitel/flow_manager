@@ -7,7 +7,7 @@ import (
 
 func (r *router) set(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var vars model.Variables
-	if err := Decode(conn, args, &vars); err != nil {
+	if err := scope.Decode(args, &vars); err != nil {
 		return nil, err
 	}
 

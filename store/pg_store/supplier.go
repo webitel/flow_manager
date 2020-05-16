@@ -3,6 +3,8 @@ package sqlstore
 import (
 	"context"
 	dbsql "database/sql"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/webitel/flow_manager/store"
 	sqltrace "log"
@@ -120,7 +122,7 @@ func setupConnection(con_type string, dataSource string, settings *model.SqlSett
 	var dbmap *gorp.DbMap
 
 	if *settings.DriverName == model.DATABASE_DRIVER_POSTGRES {
-		dbmap = &gorp.DbMap{Db: db, Dialect: &PostgresJSONDialect{}}
+		dbmap = &gorp.DbMap{Db: db, TypeConverter: typeConverter{}, Dialect: &PostgresJSONDialect{}}
 	} else {
 		wlog.Critical("failed to create dialect specific driver")
 		time.Sleep(time.Second)
@@ -172,10 +174,25 @@ func (ss *SqlSupplier) DriverName() string {
 type typeConverter struct{}
 
 func (me typeConverter) ToDb(val interface{}) (interface{}, error) {
+
 	return val, nil
 }
 
 func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
+	switch target.(type) {
+	case *model.PostBody:
+		binder := func(holder, target interface{}) error {
+			s, ok := holder.(*[]byte)
+			if !ok {
+				return errors.New("Bad request ") // fixme json
+			}
+			if *s == nil {
+				return nil
+			}
+			return json.Unmarshal(*s, target)
+		}
+		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
+	}
 	return gorp.CustomScanner{}, false
 }
 

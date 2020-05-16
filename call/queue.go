@@ -37,11 +37,10 @@ type QueueJoinArg struct {
 func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var q QueueJoinArg
 
-	if err := r.Decode(call, args, &q); err != nil {
+	if err := r.Decode(scope, args, &q); err != nil {
 		return nil, err
 	}
 
-	// FIXME add context
 	status, err := r.fm.JoinToInboundQueue(call.DomainId(), call.Id(), q.QueueId, q.Name, q.Priority)
 	if err != nil {
 		wlog.Error(err.Error())

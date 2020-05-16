@@ -9,7 +9,7 @@ import (
 func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv model.PlaybackArgs
 
-	err := r.Decode(call, args, &argv)
+	err := r.Decode(scope, args, &argv)
 	if err != nil {
 		return nil, err
 	}

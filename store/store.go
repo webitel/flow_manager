@@ -53,6 +53,7 @@ type MediaStore interface {
 
 type CalendarStore interface {
 	Check(domainId int64, id *int, name *string) (*model.Calendar, *model.AppError)
+	GetTimezones() ([]*model.Timezone, *model.AppError)
 }
 
 type ListStore interface {
@@ -60,8 +61,11 @@ type ListStore interface {
 }
 
 type ChatStore interface {
-	CreateConversation(secretKey string, title string, name string, message string) (string, *model.AppError)
+	Get(channelId string) (*model.ConversationInfo, *model.AppError)
+	CreateConversation(secretKey string, title string, name string, body model.PostBody) (model.ConversationInfo, *model.AppError)
 	ConversationUnreadMessages(channelId string, limit int) ([]*model.ConversationMessage, *model.AppError)
-	ConversationPostMessage(channelId string, body string) ([]*model.ConversationMessage, *model.AppError)
+	ConversationPostMessage(channelId string, body model.PostBody) ([]*model.ConversationMessage, *model.AppError)
 	ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError)
+	Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError)
+	Close(channelId string) *model.AppError
 }

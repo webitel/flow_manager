@@ -13,7 +13,7 @@ type SoundsArgs struct {
 
 func (r *Router) SetSounds(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv SoundsArgs
-	if err := r.Decode(call, args, &argv); err != nil {
+	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 

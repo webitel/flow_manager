@@ -25,6 +25,6 @@ import (
 	}
 */
 
-func (r *Router) Decode(conn model.Connection, in interface{}, out interface{}) *model.AppError {
-	return flow.Decode(conn, in, out)
+func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
+	return scope.Decode(in, out)
 }

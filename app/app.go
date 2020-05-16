@@ -9,9 +9,11 @@ import (
 	"github.com/webitel/flow_manager/mq/rabbit"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
+	"github.com/webitel/flow_manager/providers/web_chat"
 	"github.com/webitel/flow_manager/store"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 	"github.com/webitel/wlog"
+	"time"
 )
 
 type FlowManager struct {
@@ -22,9 +24,11 @@ type FlowManager struct {
 	Store       store.Store
 	servers     []model.Server
 	schemaCache utils.ObjectCache
-	cc          client.CCManager
-	stop        chan struct{}
-	stopped     chan struct{}
+
+	timezoneList map[int]*time.Location
+	cc           client.CCManager
+	stop         chan struct{}
+	stopped      chan struct{}
 
 	eventQueue mq.MQ
 
@@ -75,7 +79,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port: fm.Config().Esl.Port,
 		}),
 		//email.New(fm.Store.Email()),
-		//web_chat.NewServer(fm, "", 7777),
+		web_chat.NewServer(fm, "", 7777),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {
@@ -92,6 +96,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.cc = client.NewCCManager(fm.cluster.discovery)
 	if err = fm.cc.Start(); err != nil {
+		return nil, err
+	}
+
+	if err := fm.InitCacheTimezones(); err != nil {
 		return nil, err
 	}
 

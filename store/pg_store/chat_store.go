@@ -14,48 +14,49 @@ func NewSqlChatStore(sqlStore SqlStore) store.ChatStore {
 	return st
 }
 
-// FIXME change to procedure
-func (s SqlChatStore) CreateConversation(secretKey string, title string, name string, message string) (string, *model.AppError) {
-	channelId, err := s.GetMaster().SelectStr(`with conv as (
-    insert into cc_msg_conversation (title, domain_id)
-    values (:Title, (select p.domain_id
-			from cc_msg_profiles p
-			where p.secret_key = :Key))
-    returning id
-),
-part as (
-    insert into cc_msg_participants (name, conversation_id)
-    select :Name, conv.id
-    from conv
-    returning channel_id, conversation_id, name
-),
-post as (
-    insert into cc_msg_post(conversation_id, body, posted_by)
-    select p.conversation_id, :Message, p.name
-    from part p
-)
-select part.channel_id
-from part`, map[string]interface{}{
-		"Title":   title,
-		"Key":     secretKey,
-		"Name":    name,
-		"Message": message,
+func (s SqlChatStore) CreateConversation(secretKey string, title string, name string, body model.PostBody) (model.ConversationInfo, *model.AppError) {
+	var info model.ConversationInfo
+	err := s.GetMaster().SelectOne(&info, `select cc_view_timestamp(x.posted_at) activity_at,
+       x.id, x.channel_id
+from cc_msg_create_conversation(:Key, :Title, :Name, :Body)
+as x(posted_at timestamptz, id int8, channel_id text);`, map[string]interface{}{
+		"Title": title,
+		"Key":   secretKey,
+		"Name":  name,
+		"Body":  body.ToJson(),
 	})
 
 	if err != nil {
-		return "", model.NewAppError("SqlChatStore.CreateConversation", "store.sql_chat.create_conversation.error", nil,
+		return info, model.NewAppError("SqlChatStore.CreateConversation", "store.sql_chat.create_conversation.error", nil,
 			err.Error(), extractCodeFromErr(err))
 	}
 
-	return channelId, nil
+	return info, nil
 }
 
-func (s SqlChatStore) ConversationPostMessage(channelId string, body string) ([]*model.ConversationMessage, *model.AppError) {
+func (s SqlChatStore) Get(channelId string) (*model.ConversationInfo, *model.AppError) {
+	var info *model.ConversationInfo
+	err := s.GetReplica().SelectOne(&info, `select cmc.id, part.channel_id, cc_view_timestamp(cmc.activity_at) activity_at, cmc.title
+from cc_msg_participants part
+    inner join cc_msg_conversation cmc on part.conversation_id = cmc.id
+where part.channel_id = :ChannelId and cmc.closed_at is null`, map[string]interface{}{
+		"ChannelId": channelId,
+	})
+
+	if err != nil {
+		return info, model.NewAppError("SqlChatStore.Get", "store.sql_chat.get_conversation.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return info, nil
+}
+
+func (s SqlChatStore) ConversationPostMessage(channelId string, body model.PostBody) ([]*model.ConversationMessage, *model.AppError) {
 	var out []*model.ConversationMessage
 	_, err := s.GetMaster().Select(&out, `select *
-from cc_msg_post(:ChannelId, :Body)  as msg  (posted_at int8, posted_by varchar, body varchar)`, map[string]interface{}{
+from cc_msg_post(:ChannelId, :Body)  as msg  (posted_at int8, posted_by varchar, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
-		"Body":      body,
+		"Body":      body.ToJson(),
 	})
 
 	if err != nil {
@@ -69,23 +70,9 @@ from cc_msg_post(:ChannelId, :Body)  as msg  (posted_at int8, posted_by varchar,
 func (s SqlChatStore) ConversationUnreadMessages(channelId string, limit int) ([]*model.ConversationMessage, *model.AppError) {
 	var msgs []*model.ConversationMessage
 	_, err := s.GetReplica().Select(&msgs, `
-with part as (
-    update cc_msg_participants n
-        set last_activity_at  = now()
-    from cc_msg_participants o
-    where n.channel_id = :ChannelId and n.channel_id = o.channel_id
-    returning o.conversation_id, o.last_activity_at
-)
-select msg.posted_by, (extract(epoch from msg.posted_at) * 1000)::int8 posted_at, msg.body
-from part,
-     lateral (
-        select *
-        from cc_msg_post p
-        where p.conversation_id = part.conversation_id
-            and p.posted_at > part.last_activity_at
-        order by p.posted_at desc
-        limit :Limit
-) msg`, map[string]interface{}{
+select *
+from cc_msg_unread(:ChannelId, :Limit)
+    as x (posted_by varchar, posted_at int8, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
 		"Limit":     limit,
 	})
@@ -101,23 +88,9 @@ from part,
 
 func (s SqlChatStore) ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError) {
 	var msgs []*model.ConversationMessage
-	_, err := s.GetMaster().Select(&msgs, `with part as (
-    update cc_msg_participants n
-        set last_activity_at  = now()
-    from cc_msg_participants o
-    where n.channel_id = :ChannelId and n.channel_id = o.channel_id
-    returning o.conversation_id, o.last_activity_at
-)
-select msg.posted_by, (extract(epoch from msg.posted_at) * 1000)::int8 posted_at, msg.body
-from part,
-     lateral (
-        select *
-        from cc_msg_post p
-        where p.conversation_id = part.conversation_id
-        order by p.posted_at desc
-        limit :Limit
-		offset :Offset
-) msg`, map[string]interface{}{
+	_, err := s.GetMaster().Select(&msgs, `select *
+from cc_msg_history(:ChannelId, :Limit, :Offset)
+    as x (posted_by varchar, posted_at int8, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
 		"Limit":     limit,
 		"Offset":    offset * limit,
@@ -129,4 +102,55 @@ from part,
 	}
 
 	return msgs, nil
+}
+
+func (s SqlChatStore) Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError) {
+	var msgs []*model.ConversationMessageJoined
+	_, err := s.GetMaster().Select(&msgs, `with part as (
+    insert into cc_msg_participants (name, conversation_id)
+    select :Name, p.conversation_id
+    from cc_msg_participants p
+    where p.channel_id = :ChannelId
+    returning channel_id, conversation_id, name
+)
+select  (extract(epoch from msg.posted_at) * 1000)::int8 posted_at, msg.posted_by, msg.body, part.channel_id
+from part,
+     lateral (
+        select *
+        from cc_msg_post p
+        where p.conversation_id = part.conversation_id
+        order by p.posted_at desc
+        limit 20
+    ) msg`, map[string]interface{}{
+		"ChannelId": parentChannelId,
+		"Name":      name,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlChatStore.ConversationHistory", "store.sql_chat.join.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return msgs, nil
+}
+
+func (s SqlChatStore) Close(channelId string) *model.AppError {
+	_, err := s.GetMaster().Exec(`update cc_msg_conversation c
+set closed_at = now(),
+    closed_by = part.id
+from (
+    select part.id, part.conversation_id
+    from cc_msg_participants part
+    where part.channel_id = :ChannelId
+) part
+where part.conversation_id = c.id and c.closed_at is null`, map[string]interface{}{
+		"ChannelId": channelId,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlChatStore.ConversationHistory", "store.sql_chat.join.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }

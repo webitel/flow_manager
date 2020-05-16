@@ -29,22 +29,22 @@ import (
 	}
 */
 
-func Decode(conn model.Connection, in interface{}, out interface{}) *model.AppError {
-	var f mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
+func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
+	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 		if from.Kind() == reflect.String {
 			switch to.Kind() {
 			case reflect.String:
-				return conn.ParseText(data.(string)), nil
+				return f.Connection.ParseText(data.(string)), nil
 			case reflect.Interface:
-				return conn.ParseText(data.(string)), nil
+				return f.Connection.ParseText(data.(string)), nil
 			case reflect.Int:
-				v := conn.ParseText(data.(string))
+				v := f.Connection.ParseText(data.(string))
 				if v == "" {
 					return 0, nil
 				}
 				return v, nil
 			case reflect.Bool:
-				return conn.ParseText(data.(string)), nil
+				return f.Connection.ParseText(data.(string)), nil
 			}
 		}
 		return data, nil
@@ -53,7 +53,7 @@ func Decode(conn model.Connection, in interface{}, out interface{}) *model.AppEr
 	config := &mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		TagName:          "json",
-		DecodeHook:       f,
+		DecodeHook:       hook,
 		Result:           &out,
 	}
 

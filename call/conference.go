@@ -20,7 +20,7 @@ func (r *Router) conference(ctx context.Context, scope *flow.Flow, call model.Ca
 		Tags:    nil,
 	}
 
-	if err := r.Decode(call, args, &conf); err != nil {
+	if err := r.Decode(scope, args, &conf); err != nil {
 		return nil, err
 	}
 

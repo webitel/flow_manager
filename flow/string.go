@@ -23,7 +23,7 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 	var vm *otto.Otto
 	var argv = StringArgs{}
 
-	err := Decode(c, args, &argv)
+	err := scope.Decode(args, &argv)
 	if err != nil {
 		return nil, err
 	}

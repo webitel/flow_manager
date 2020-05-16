@@ -17,7 +17,7 @@ func (r *Router) ScheduleHangup(ctx context.Context, scope *flow.Flow, call mode
 		Cause:   "",
 	}
 
-	if err := r.Decode(call, args, &argv); err != nil {
+	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
