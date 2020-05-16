@@ -68,11 +68,13 @@ func (r *router) conditionHandler(ctx context.Context, scope *Flow, conn model.C
 
 	if value, err := req.vm_.Run(`_result = ` + conn.ParseText(req.expression)); err == nil {
 		if boolVal, err := value.ToBoolean(); err == nil && boolVal == true {
-			wlog.Debug(fmt.Sprintf("condition (%s) is true", req.expression))
+			req.then_.setFirst()
 			req.flow.SetRoot(req.then_)
+			wlog.Debug(fmt.Sprintf("condition (%s) is true", req.expression))
 		} else {
-			wlog.Debug(fmt.Sprintf("condition (%s) is false", req.expression))
+			req.then_.setFirst()
 			req.flow.SetRoot(req.else_)
+			wlog.Debug(fmt.Sprintf("condition (%s) is false", req.expression))
 		}
 	} else {
 		return nil, model.NewAppError("Flow.ConditionHandler", "flow.condition_if.vm_err", nil, err.Error(), http.StatusBadRequest)
