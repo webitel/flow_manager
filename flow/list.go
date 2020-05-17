@@ -38,5 +38,5 @@ func (r *router) List(ctx context.Context, scope *Flow, conn model.Connection, a
 		scope.SetCancel()
 	}
 
-	return model.CallResponseError, nil
+	return model.CallResponseOK, nil
 }

@@ -29,8 +29,8 @@ type Flow struct {
 	Connection  model.Connection
 	name        string
 	Tags        map[string]*Tag
-	Functions   map[string]*Flow
-	triggers    map[string]*Flow
+	Functions   map[string]model.Applications
+	triggers    map[string]model.Applications
 	currentNode *Node
 	gotoCounter int16
 	cancel      bool
@@ -51,8 +51,8 @@ func New(conf Config) *Flow {
 	i.name = conf.Name
 	i.Connection = conf.Conn
 	i.currentNode = NewNode(nil)
-	i.Functions = make(map[string]*Flow)
-	i.triggers = make(map[string]*Flow)
+	i.Functions = make(map[string]model.Applications)
+	i.triggers = make(map[string]model.Applications)
 	i.Tags = make(map[string]*Tag)
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
@@ -68,8 +68,8 @@ func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	i.name = name
 	i.Connection = f.Connection
 	i.currentNode = NewNode(nil)
-	i.Functions = make(map[string]*Flow)
-	i.triggers = make(map[string]*Flow)
+	i.Functions = f.Functions
+	//i.triggers = f.triggers // nil ?
 	i.Tags = make(map[string]*Tag)
 	i.timezone = f.timezone
 

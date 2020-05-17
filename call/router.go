@@ -134,4 +134,5 @@ func (r *Router) handle(conn model.Connection) {
 	})
 
 	flow.Route(conn.Context(), i, r)
+	<-conn.Context().Done()
 }

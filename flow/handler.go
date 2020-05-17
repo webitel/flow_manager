@@ -39,13 +39,13 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			return
 		case res := <-handler.Request(ctx, i, req):
 			if res.Err != nil {
-				wlog.Error(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.Err.Error()))
+				wlog.Error(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Err.Error()))
 			} else {
-				wlog.Debug(fmt.Sprintf("%v [%v] - %s", req.Id(), req.Args(), res.Res.String()))
+				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Res.String()))
 			}
 
 			if i.IsCancel() || req.IsCancel() {
-				wlog.Debug(fmt.Sprintf("flow [%s] break", i.Name()))
+				wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
 				return
 			}
 		}
