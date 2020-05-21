@@ -12,6 +12,7 @@ type Config struct {
 	Dev               bool              `json:"dev"`
 	Esl               ServeSettings     `json:"esl"`
 	Grpc              ServeSettings     `json:"grpc"`
+	WebChat           WebChatSettings   `json:"web_chat"`
 }
 
 type ServeSettings struct {
@@ -28,6 +29,11 @@ type ServiceSettings struct {
 	ListenAddress         *string
 	ListenInternalAddress *string
 	SessionCacheInMinutes *int
+}
+
+type WebChatSettings struct {
+	Host string
+	Port int
 }
 
 type SqlSettings struct {

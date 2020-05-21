@@ -15,6 +15,9 @@ var (
 
 	grpcServerHost = flag.String("grpc_addr", "", "GRPC server host")
 	grpcServerPort = flag.Int("grpc_port", 0, "GRPC server port")
+
+	webChatServerHost = flag.String("web_addr", "", "WebChat server host")
+	webChatServerPort = flag.Int("web_port", 7777, "WebChat server port")
 )
 
 func (f *FlowManager) Config() *model.Config {
@@ -46,6 +49,10 @@ func loadConfig() (*model.Config, error) {
 		Grpc: model.ServeSettings{
 			Host: *grpcServerHost,
 			Port: *grpcServerPort,
+		},
+		WebChat: model.WebChatSettings{
+			Host: *webChatServerHost,
+			Port: *webChatServerPort,
 		},
 	}
 

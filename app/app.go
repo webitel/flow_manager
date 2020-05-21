@@ -79,7 +79,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port: fm.Config().Esl.Port,
 		}),
 		//email.New(fm.Store.Email()),
-		web_chat.NewServer(fm, "", 7777),
+		web_chat.NewServer(fm, fm.Config().WebChat.Host, fm.Config().WebChat.Port),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {
