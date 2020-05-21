@@ -10,14 +10,14 @@ var (
 	dataSource    = flag.String("data_source", "postgres://opensips:webitel@postgres:5432/webitel?fallback_application_name=engine&sslmode=disable&connect_timeout=10&search_path=call_center", "Data source")
 	consulHost    = flag.String("consul", "consul:8500", "Host to consul")
 	amqp          = flag.String("amqp", "amqp://webitel:webitel@rabbit:5672?heartbeat=10", "AMQP connection")
-	eslServerHost = flag.String("esl_host", "", "ESL server host")
+	eslServerHost = flag.String("esl_host", "localhost", "ESL server host")
 	eslServerPort = flag.Int("esl_port", 10030, "ESL server port")
 
-	grpcServerHost = flag.String("grpc_addr", "", "GRPC server host")
+	grpcServerHost = flag.String("grpc_addr", "localhost", "GRPC server host")
 	grpcServerPort = flag.Int("grpc_port", 0, "GRPC server port")
 
-	webChatServerHost = flag.String("web_addr", "", "WebChat server host")
-	webChatServerPort = flag.Int("web_port", 7777, "WebChat server port")
+	webChatServerHost = flag.String("web_addr", "localhost", "WebChat server host")
+	webChatServerPort = flag.Int("web_port", 10031, "WebChat server port")
 )
 
 func (f *FlowManager) Config() *model.Config {
