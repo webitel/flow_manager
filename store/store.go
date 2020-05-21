@@ -31,6 +31,8 @@ type CallStore interface {
 	SetBridged(call *model.CallActionBridge) *model.AppError
 	SetHangup(call *model.CallActionHangup) *model.AppError
 	MoveToHistory() *model.AppError
+
+	AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError
 }
 
 type SchemaStore interface {

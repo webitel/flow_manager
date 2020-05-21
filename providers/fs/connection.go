@@ -219,8 +219,12 @@ func (c *Connection) Close() *model.AppError {
 
 func (c *Connection) Get(key string) (value string, ok bool) {
 	if c.Stopped() {
-		value, ok = c.variables[key]
-	} else if c.lastEvent != nil {
+		if value, ok = c.variables[key]; ok {
+			return
+		}
+	}
+
+	if c.lastEvent != nil {
 		value = c.lastEvent.Get("variable_" + c.UserVariablePrefix(key))
 		if value == "" {
 			value = c.lastEvent.Get("variable_" + (key))
@@ -287,6 +291,20 @@ func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Re
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) DumpExportVariables() map[string]string {
+	c.RLock()
+	defer c.RUnlock()
+
+	var res map[string]string
+	if len(c.exportVariables) > 0 {
+		res = make(map[string]string)
+		for _, v := range c.exportVariables {
+			res[v], _ = c.Get(v)
+		}
+	}
+	return res
 }
 
 func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {

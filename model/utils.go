@@ -127,3 +127,8 @@ func compatibleJSEncodeURIComponent(str string) string {
 	resultStr = strings.Replace(resultStr, "%2A", "*", -1)
 	return resultStr
 }
+
+func MapStringToJson(src map[string]string) []byte {
+	data, _ := json.Marshal(src)
+	return data
+}

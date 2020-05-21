@@ -103,13 +103,14 @@ on conflict (id) where timestamp < :Timestamp and cause isnull
 }
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code)
-values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode)
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload)
+values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode, :Variables)
 on conflict (id) where timestamp <= :Timestamp
     do update set
       state = EXCLUDED.state,
       cause = EXCLUDED.cause,
       sip_code = EXCLUDED.sip_code,
+      payload = EXCLUDED.payload,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -118,6 +119,7 @@ on conflict (id) where timestamp <= :Timestamp
 		"DomainId":  call.DomainId,
 		"Cause":     call.Cause,
 		"SipCode":   call.SipCode,
+		"Variables": call.VariablesToJson(),
 	})
 
 	if err != nil {
@@ -169,6 +171,33 @@ select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c
 from c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into cc_member(queue_id, communications, name, variables, last_hangup_at, domain_id)
+select q.id queue_id, json_build_array(jsonb_build_object('destination', :Number::varchar) ||
+                      jsonb_build_object('type', jsonb_build_object('id', :TypeId::int4))),
+       :Name::varchar,
+       :Variables::jsonb vars,
+       (extract(epoch from now() + (:HoldSec::int4 || ' sec')::interval) * 1000)::int8 lh,
+       q.domain_id
+from cc_queue q
+where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]interface{}{
+		"DomainId":  domainId,
+		"QueueId":   queueId,
+		"Number":    number,
+		"TypeId":    typeId,
+		"Name":      name,
+		"HoldSec":   holdSec,
+		"Variables": model.MapStringToJson(variables),
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.AddMemberToQueueQueue", "store.sql_call.callback_queue.error", nil,
 			err.Error(), extractCodeFromErr(err))
 	}
 

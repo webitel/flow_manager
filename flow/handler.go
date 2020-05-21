@@ -12,7 +12,7 @@ type Handler interface {
 }
 
 func Do(f func(result *model.Result)) model.ResultChannel {
-	storeChannel := make(model.ResultChannel, 1)
+	storeChannel := make(model.ResultChannel, 1) // FIXME CHANNEL
 	go func() {
 		result := model.Result{}
 		f(&result)
@@ -34,8 +34,14 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			return
 		}
 
+		if i.IsCancel() || req.IsCancel() {
+			wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
+			return
+		}
+
 		select {
 		case <-ctx.Done():
+			i.SetCancel()
 			return
 		case res := <-handler.Request(ctx, i, req):
 			if res.Err != nil {

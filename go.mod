@@ -17,7 +17,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v0.0.0-20200108173154-1c71cc93ed71
 	github.com/tidwall/gjson v1.6.0
-	github.com/webitel/call_center v0.0.0-20200512150159-ce2c70bb8f03
+	github.com/webitel/call_center v0.0.0-20200521084856-99b2957f8283
 	github.com/webitel/engine v0.0.0-20200507071437-cd023a6c5b9e
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
 	google.golang.org/grpc v1.26.0

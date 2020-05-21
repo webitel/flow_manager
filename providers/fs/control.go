@@ -116,6 +116,16 @@ func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *mode
 
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
 	c.exportVariables = vars
+
+	exp := make(map[string]interface{})
+	for _, v := range vars {
+		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
+	}
+
+	if len(exp) > 0 {
+		return c.Set(ctx, exp)
+	}
+
 	return model.CallResponseOK, nil
 }
 
@@ -169,6 +179,16 @@ func (c *Connection) StartDTMF(ctx context.Context) (model.Response, *model.AppE
 
 func (c *Connection) StopDTMF(ctx context.Context) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "stop_dtmf", "")
+}
+
+func (c *Connection) Queue(ctx context.Context) (model.Response, *model.AppError) {
+	//return c.executeWithContext(ctx, "sleep", "60000")
+	//return c.executeWithContext(ctx, "valet_park", fmt.Sprintf("queue_test %s", c.Id()))
+	return c.executeWithContext(ctx, "queue", fmt.Sprintf("queue_test %s", c.Id()))
+}
+func (c *Connection) Intercept(ctx context.Context, id string) (model.Response, *model.AppError) {
+	c.Api(fmt.Sprintf("uuid_transfer %s intercept:%s inline", c.Id(), id))
+	return model.CallResponseOK, nil
 }
 
 func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (model.Response, *model.AppError) {

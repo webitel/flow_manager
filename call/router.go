@@ -1,17 +1,20 @@
 package call
 
 import (
+	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"net/http"
+	"time"
 )
 
 type Router struct {
-	fm   *app.FlowManager
-	apps flow.ApplicationHandlers
+	fm               *app.FlowManager
+	apps             flow.ApplicationHandlers
+	disconnectedApps flow.ApplicationHandlers
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
@@ -19,8 +22,10 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 		fm: fm,
 	}
 
+	router.disconnectedApps = fr.Handlers()
+
 	router.apps = flow.UnionApplicationMap(
-		fr.Handlers(),
+		router.disconnectedApps,
 		ApplicationsHandlers(router),
 	)
 
@@ -135,4 +140,12 @@ func (r *Router) handle(conn model.Connection) {
 
 	flow.Route(conn.Context(), i, r)
 	<-conn.Context().Done()
+
+	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
+		//TODO config
+		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+		flow.Route(ctxDisc, d, r)
+		<-ctxDisc.Done()
+	}
+
 }

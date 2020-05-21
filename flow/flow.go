@@ -183,8 +183,6 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 			req.args = newConditionArgs(i, root, req.args)
 			req.setParentNode(root)
 			i.trySetTag(req.Tag, root, req.idx)
-			//FIXME
-			//req.setParentNode(root)
 			root.Add(req)
 
 		case "function":
@@ -192,7 +190,9 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 				wlog.Warn(err.Error())
 			}
 		case "trigger":
-			fmt.Println("trigger")
+			if err := i.addTrigger(req.args); err != nil {
+				wlog.Warn(err.Error())
+			}
 		case "switch":
 			if req.args, err = newSwitchArgs(i, root, req.args); err != nil {
 				wlog.Warn(err.Error())

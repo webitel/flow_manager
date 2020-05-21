@@ -24,7 +24,6 @@ func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		app:    h.app,
 		Params: ParamsFromRequest(r),
 	}
-	w.Header().Set("Content-Type", "application/json")
 	h.HandleFunc(c, w, r)
 
 	if c.Err != nil {

@@ -153,8 +153,10 @@ func (r *CallActionRinging) GetAgentId() *int {
 }
 
 func (r *CallActionRinging) GetMemberIdId() *int64 {
-	if r.Queue != nil {
-		return r.Queue.MemberId
+	if r.Queue != nil && r.Queue.MemberId != nil {
+		if *r.Queue.MemberId != 0 { //FIXME
+			return r.Queue.MemberId
+		}
 	}
 	return nil
 }
@@ -188,9 +190,18 @@ type CallActionBridge struct {
 
 type CallActionHangup struct {
 	CallAction
-	Cause         string `json:"cause"`
-	SipCode       *int   `json:"sip"`
-	OriginSuccess *bool  `json:"originate_success"`
+	Cause         string         `json:"cause"`
+	Payload       *CallVariables `json:"payload"`
+	SipCode       *int           `json:"sip"`
+	OriginSuccess *bool          `json:"originate_success"`
+}
+
+func (h *CallActionHangup) VariablesToJson() []byte {
+	if h.Payload == nil {
+		return nil
+	}
+	data, _ := json.Marshal(h.Payload)
+	return data
 }
 
 type CallVariables map[string]interface{}
@@ -286,6 +297,10 @@ type Call interface {
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
 	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, *AppError)
+
+	DumpExportVariables() map[string]string
+	Queue(ctx context.Context) (Response, *AppError)
+	Intercept(ctx context.Context, id string) (Response, *AppError)
 }
 
 type PlaybackFile struct {
