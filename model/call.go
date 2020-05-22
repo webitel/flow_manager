@@ -198,7 +198,7 @@ type CallActionHangup struct {
 
 func (h *CallActionHangup) VariablesToJson() []byte {
 	if h.Payload == nil {
-		return nil
+		return []byte("{}") //FIXME
 	}
 	data, _ := json.Marshal(h.Payload)
 	return data

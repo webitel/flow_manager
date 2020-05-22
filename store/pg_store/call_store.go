@@ -104,7 +104,7 @@ on conflict (id) where timestamp < :Timestamp and cause isnull
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload)
-values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode, :Variables)
+values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode, :Variables::json)
 on conflict (id) where timestamp <= :Timestamp
     do update set
       state = EXCLUDED.state,
@@ -131,13 +131,8 @@ on conflict (id) where timestamp <= :Timestamp
 }
 
 func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, bridged_id)
-values (:Id, :State, :Timestamp, :AppId, :DomainId, :BridgedId)
-on conflict (id) where timestamp < :Timestamp
-    do update set
-      state = EXCLUDED.state,
-      bridged_id = EXCLUDED.bridged_id,
-      timestamp = EXCLUDED.timestamp`, map[string]interface{}{
+	_, err := s.GetMaster().Exec(`call cc_call_set_bridged(:Id::varchar, :State::varchar, :Timestamp::int8, :AppId::varchar,
+    :DomainId::int8, :BridgedId::varchar)`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
