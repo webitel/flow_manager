@@ -20,6 +20,11 @@ func (r *Router) RingBack(ctx context.Context, scope *flow.Flow, call model.Call
 		return nil, err
 	}
 
-	// TODO FIXME !!!
-	return model.CallResponseError, nil
+	search := make([]*model.PlaybackFile, 0, 3)
+	search = append(search, argv.Call, argv.Hold, argv.Transfer)
+	if res, err := r.fm.GetMediaFiles(call.DomainId(), &search); err != nil {
+		return nil, err
+	} else {
+		return call.Ringback(ctx, argv.All, res[0], res[1], res[2])
+	}
 }

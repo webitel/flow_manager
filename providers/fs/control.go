@@ -273,6 +273,29 @@ func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) 
 	return c.executeWithContext(ctx, "sched_hangup", fmt.Sprintf("+%d %s", sec, cause))
 }
 
+func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, transfer *model.PlaybackFile) (model.Response, *model.AppError) {
+	vars := model.Variables{}
+	if call != nil {
+		if l, ok := buildFileLink(c.domainId, call); ok {
+			vars["ringback"] = l
+		}
+	}
+
+	if hold != nil {
+		if l, ok := buildFileLink(c.domainId, hold); ok {
+			vars["hold_music"] = l
+		}
+	}
+
+	if transfer != nil {
+		if l, ok := buildFileLink(c.domainId, transfer); ok {
+			vars["transfer_ringback"] = l
+		}
+	}
+
+	return c.Set(ctx, vars)
+}
+
 func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
 	fileString := make([]string, 0, len(files))
 
@@ -314,7 +337,7 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 
 	case "silence":
 		if file.Name == nil {
-			return "", false
+			return "silence_stream://-1", true
 		}
 		return fmt.Sprintf("silence_stream://%s", *file.Name), true
 

@@ -49,7 +49,7 @@ const (
 type CallAction struct {
 	Id        string `json:"id"`
 	AppId     string `json:"app_id"`
-	DomainId  int8   `json:"domain_id,string"`
+	DomainId  int64  `json:"domain_id,string"`
 	Timestamp int64  `json:"timestamp,string"`
 	Event     string `json:"event"`
 }
@@ -283,6 +283,7 @@ type Call interface {
 	HangupAppErr(ctx context.Context) (Response, *AppError)
 	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string) (Response, *AppError)
 	Sleep(ctx context.Context, delay int) (Response, *AppError)
+	//Voice(ctx context.Context, delay int) (Response, *AppError)
 	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
@@ -297,6 +298,7 @@ type Call interface {
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
 	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, *AppError)
+	Ringback(ctx context.Context, export bool, call, hold, transfer *PlaybackFile) (Response, *AppError)
 
 	DumpExportVariables() map[string]string
 	Queue(ctx context.Context) (Response, *AppError)
