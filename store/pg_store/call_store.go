@@ -16,10 +16,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 }
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, direction, destination, parent_id, timestamp, state, app_id, from_type, from_name,
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
                       from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, attempt_id, member_id)
-values (:Id, :Direction, :Destination, :ParentId, :Timestamp, :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, :CreatedAt, :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, :AttemptId, :MemberId)
+values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, :AttemptId, :MemberId)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -81,9 +81,9 @@ on conflict (id)
 
 // TODO race... fix remove
 func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id)
-values (:Id, :State, :Timestamp, :AppId, :DomainId)
-on conflict (id) where timestamp < :Timestamp and cause isnull
+	_, err := s.GetMaster().Exec(`insert into cc_calls(id, state, timestamp, app_id, domain_id)
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId)
+on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /1000) and cause isnull
     do update set 
       state = EXCLUDED.state,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
@@ -104,8 +104,8 @@ on conflict (id) where timestamp < :Timestamp and cause isnull
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload)
-values (:Id, :State, :Timestamp, :AppId, :DomainId, :Cause, :SipCode, :Variables::json)
-on conflict (id) where timestamp <= :Timestamp
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json)
+on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision /1000)
     do update set
       state = EXCLUDED.state,
       cause = EXCLUDED.cause,
@@ -131,7 +131,7 @@ on conflict (id) where timestamp <= :Timestamp
 }
 
 func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
-	_, err := s.GetMaster().Exec(`call cc_call_set_bridged(:Id::varchar, :State::varchar, :Timestamp::int8, :AppId::varchar,
+	_, err := s.GetMaster().Exec(`call cc_call_set_bridged(:Id::varchar, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
     :DomainId::int8, :BridgedId::varchar)`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -150,9 +150,11 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 }
 
 func (s SqlCallStore) MoveToHistory() *model.AppError {
-	_, err := s.GetMaster().Exec(`with c as (
+	_, err := s.GetMaster().Exec(`
+BEGIN;
+with c as (
     delete from cc_calls c
-	where c.hangup_at > 0 and c.direction notnull
+	where c.hangup_at < now() - '1 sec'::interval and c.direction notnull
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id
@@ -163,7 +165,8 @@ insert into cc_calls_history (created_at, id, direction, destination, parent_id,
 select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id
-from c`)
+from c;
+COMMIT;`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
 			err.Error(), extractCodeFromErr(err))

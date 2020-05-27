@@ -28,6 +28,9 @@ func (s SqlMediaStore) GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*
 	names := make([]*string, 0)
 
 	for _, v := range *req {
+		if v == nil {
+			continue
+		}
 		if v.Type == nil && (v.Id != nil || v.Name != nil) {
 			ids = append(ids, v.Id)
 			names = append(names, v.Name)
