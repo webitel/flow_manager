@@ -41,6 +41,7 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *m
 	return c.executeWithContext(ctx, "sleep", fmt.Sprintf("%d", timeout))
 }
 
+// FIXME GLOBAL VARS
 func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string) (model.Response, *model.AppError) {
 	var dialString, separator string
 
@@ -53,9 +54,11 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 	}
 
 	var from string
+	// FIXME
+	//origination_callee_id_name
 
-	from = fmt.Sprintf("sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'",
-		call.Id(), call.From().Type, call.From().Id, call.Destination())
+	from = fmt.Sprintf("sip_copy_custom_headers=false,sip_h_X-Webitel-Domain-Id=%d,sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'",
+		call.DomainId(), call.Id(), call.From().Type, call.From().Id, call.Destination())
 
 	from += fmt.Sprintf(",effective_caller_id_name='%s',effective_caller_id_number='%s'", call.From().Name, call.From().Number)
 
@@ -88,6 +91,9 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 			} else if e.Dnd != nil && *e.Dnd {
 				end = append(end, "error/GATEWAY_DOWN")
 			} else {
+				e.Id = nil
+				e.Name = e.Number
+				e.TypeName = "dest"
 				end = append(end, fmt.Sprintf("[%s]sofia/sip/%s", e.ToStringVariables(), *e.Destination))
 			}
 		case "user":

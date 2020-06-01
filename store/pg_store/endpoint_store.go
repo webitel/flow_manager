@@ -56,11 +56,13 @@ from endpoints e
                 array['sip_h_X-Webitel-Direction=outbound',
                     E'sip_auth_username=' || g.username,
                     E'sip_auth_password=' || g.password,
-                    E'sip_from_uri=' || g.account
+                    E'sip_from_uri=' || g.account,
+					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
             else
                 array[
-                    'sip_h_X-Webitel-Direction=outbound'
+                    'sip_h_X-Webitel-Direction=outbound',
+					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
             end vars
      from directory.sip_gateway g
