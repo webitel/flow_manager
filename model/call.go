@@ -194,6 +194,7 @@ type CallActionHangup struct {
 	Payload       *CallVariables `json:"payload"`
 	SipCode       *int           `json:"sip"`
 	OriginSuccess *bool          `json:"originate_success"`
+	HangupBy      *string        `json:"hangup_by"`
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
@@ -301,7 +302,7 @@ type Call interface {
 	Ringback(ctx context.Context, export bool, call, hold, transfer *PlaybackFile) (Response, *AppError)
 
 	DumpExportVariables() map[string]string
-	Queue(ctx context.Context) (Response, *AppError)
+	Queue(ctx context.Context, ringFile string) (Response, *AppError)
 	Intercept(ctx context.Context, id string) (Response, *AppError)
 }
 

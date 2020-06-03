@@ -103,14 +103,15 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 }
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json)
-on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision /1000)
+	_, err := s.GetMaster().Exec(`insert into cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload, hangup_by)
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json, :HangupBy)
+on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
       cause = EXCLUDED.cause,
       sip_code = EXCLUDED.sip_code,
       payload = EXCLUDED.payload,
+      hangup_by = EXCLUDED.hangup_by,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -119,6 +120,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision /1
 		"DomainId":  call.DomainId,
 		"Cause":     call.Cause,
 		"SipCode":   call.SipCode,
+		"HangupBy":  call.HangupBy,
 		"Variables": call.VariablesToJson(),
 	})
 

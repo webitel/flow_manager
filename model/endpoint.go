@@ -7,14 +7,15 @@ import (
 )
 
 type Endpoint struct {
-	Id          *int           `json:"id" db:"id"`
-	Name        *string        `json:"name" db:"name"`
-	Idx         int            `json:"idx" db:"idx"`
-	TypeName    string         `json:"type_name" db:"type_name"`
-	Dnd         *bool          `json:"dnd" db:"dnd"`
-	Destination *string        `json:"destination" db:"destination"`
-	Number      *string        `json:"number" db:"-"`
-	Variables   pq.StringArray `json:"variables" db:"variables"`
+	Id          *int              `json:"id" db:"id"`
+	Name        *string           `json:"name" db:"name"`
+	Idx         int               `json:"idx" db:"idx"`
+	TypeName    string            `json:"type_name" db:"type_name"`
+	Dnd         *bool             `json:"dnd" db:"dnd"`
+	Destination *string           `json:"destination" db:"destination"`
+	Number      *string           `json:"number" db:"-"`
+	Variables   pq.StringArray    `json:"variables" db:"variables"`
+	Params      map[string]string `json:"parameters"`
 }
 
 func (e *Endpoint) ToStringVariables() string {

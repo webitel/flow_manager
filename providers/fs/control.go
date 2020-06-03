@@ -187,11 +187,12 @@ func (c *Connection) StopDTMF(ctx context.Context) (model.Response, *model.AppEr
 	return c.executeWithContext(ctx, "stop_dtmf", "")
 }
 
-func (c *Connection) Queue(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) Queue(ctx context.Context, ringFile string) (model.Response, *model.AppError) {
 	//return c.executeWithContext(ctx, "sleep", "60000")
 	//return c.executeWithContext(ctx, "valet_park", fmt.Sprintf("queue_test %s", c.Id()))
-	return c.executeWithContext(ctx, "queue", fmt.Sprintf("queue_test %s", c.Id()))
+	return c.executeWithContext(ctx, "wbt_queue", ringFile)
 }
+
 func (c *Connection) Intercept(ctx context.Context, id string) (model.Response, *model.AppError) {
 	c.Api(fmt.Sprintf("uuid_transfer %s intercept:%s inline", c.Id(), id))
 	return model.CallResponseOK, nil
