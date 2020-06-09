@@ -74,7 +74,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		go flow.Route(wCtx, scope.Fork("queue-waiting", flow.ArrInterfaceToArrayApplication(q.Waiting)), r)
 	}
 
-	//go call.Queue(ctx, "http_cache://http://10.9.8.111:10021/sys/media/10/stream?domain_id=1&.wav")
+	//call.Set(ctx, model.Variables{
+	//	"exec_after_bridge_app": "socket",
+	//	"exec_after_bridge_arg": `10.10.10.25:10030`,
+	//})
 
 	if len(q.Timers) > 0 {
 		for k, t := range q.Timers {

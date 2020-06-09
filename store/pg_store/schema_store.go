@@ -17,7 +17,7 @@ func NewSqlSchemaStore(sqlStore SqlStore) store.SchemaStore {
 func (s SqlSchemaStore) Get(domainId int64, id int) (*model.Schema, *model.AppError) {
 	var out *model.Schema
 	if err := s.GetReplica().SelectOne(&out, `select s.id, s.domain_id, d.name as domain_name, s.name, s.scheme as schema, s.type, s.updated_at
-from acr_routing_scheme s
+from flow.acr_routing_scheme s
     inner join directory.wbt_domain d on d.dc = s.domain_id
 where s.domain_id = :DomainId and s.id = :Id`, map[string]interface{}{
 		"DomainId": domainId,
@@ -31,7 +31,7 @@ where s.domain_id = :DomainId and s.id = :Id`, map[string]interface{}{
 
 func (s SqlSchemaStore) GetUpdatedAt(id int) (int64, *model.AppError) {
 	i, err := s.GetReplica().SelectInt(`select s.updated_at
-from acr_routing_scheme s
+from flow.acr_routing_scheme s
 where id = :Id`, map[string]interface{}{
 		"Id": id,
 	})

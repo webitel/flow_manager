@@ -19,7 +19,7 @@ func (s SqlListStore) CheckNumber(domainId int64, number string, listId *int, li
 	var exists bool
 	err := s.GetReplica().SelectOne(&exists, `select exists(
 	   select 1
-	   from cc_list_communications c
+	   from call_center.cc_list_communications c
 	   where c.list_id = (
 		   select l.id from cc_list l
 		   where l.domain_id = :DomainId and

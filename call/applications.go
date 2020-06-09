@@ -104,6 +104,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.ScheduleHangup),
 	}
+	apps["tts"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.TTS),
+	}
 
 	return apps
 }

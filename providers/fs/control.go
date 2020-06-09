@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -188,8 +189,6 @@ func (c *Connection) StopDTMF(ctx context.Context) (model.Response, *model.AppEr
 }
 
 func (c *Connection) Queue(ctx context.Context, ringFile string) (model.Response, *model.AppError) {
-	//return c.executeWithContext(ctx, "sleep", "60000")
-	//return c.executeWithContext(ctx, "valet_park", fmt.Sprintf("queue_test %s", c.Id()))
 	return c.executeWithContext(ctx, "wbt_queue", ringFile)
 }
 
@@ -229,12 +228,57 @@ func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) 
 	}
 }
 
+func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
+	rate = "8000"
+	format = "mp3"
+
+	if writeRateVar != "" {
+		if i, err := strconv.Atoi(writeRateVar); err == nil {
+			if i == 8000 || i == 16000 {
+				format = "wav"
+				return
+			} else if i >= 22050 {
+				rate = "22050"
+			}
+		}
+	}
+	return
+}
+
+func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits) (model.Response, *model.AppError) {
+	var tmp string
+	rate, format := ttsGetCodecSettings(c.GetVariable("write_rate"))
+	if format == "mp3" {
+		tmp = "shout://$${cdr_url}/sys/tts"
+	} else {
+		tmp = "http_cache://http://$${cdr_url}/sys/tts"
+	}
+	path += "&format=" + format
+	if rate != "" {
+		path += "&rate=" + rate
+	}
+
+	if digits != nil {
+		return c.PlaybackUrlAndGetDigits(ctx, tmp+path+"."+format, digits)
+	} else {
+		return c.PlaybackUrl(ctx, tmp+path+"."+format)
+	}
+}
+
+func (c *Connection) PlaybackUrl(ctx context.Context, url string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "playback", url)
+}
+
 func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
 	fileString, ok := getFileString(c.DomainId(), files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
 	}
 
+	return c.PlaybackUrlAndGetDigits(ctx, fileString, params)
+}
+
+func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *model.PlaybackDigits) (model.Response, *model.AppError) {
 	if params.Timeout == nil {
 		params.Timeout = model.NewInt(3000)
 	}

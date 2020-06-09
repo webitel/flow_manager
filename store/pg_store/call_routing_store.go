@@ -32,8 +32,8 @@ func (s SqlCallRoutingStore) FromGateway(domainId int64, gatewayId int) (*model.
 				null as variables
 		from directory.sip_gateway sg
 				left join directory.wbt_domain d on sg.dc = d.dc
-				left join calendar_timezones ct on d.timezone_id = ct.id
-				inner join acr_routing_scheme ars on ars.id = sg.scheme_id
+				left join flow.calendar_timezones ct on d.timezone_id = ct.id
+				inner join flow.acr_routing_scheme ars on ars.id = sg.scheme_id
         where sg.id = :GatewayId and sg.dc = :DomainId`, map[string]interface{}{"GatewayId": gatewayId, "DomainId": domainId})
 
 	if err != nil {
@@ -58,10 +58,10 @@ func (s SqlCallRoutingStore) SearchToDestination(domainId int64, destination str
 	ars.updated_at as schema_updated_at,
     ars.debug,
     null as variables
-from acr_routing_outbound_call r
+from flow.acr_routing_outbound_call r
     left join directory.wbt_domain d on d.dc = r.domain_id
-    left join calendar_timezones ct on d.timezone_id = ct.id
-    inner join acr_routing_scheme ars on ars.id = r.scheme_id
+    left join flow.calendar_timezones ct on d.timezone_id = ct.id
+    inner join flow.acr_routing_scheme ars on ars.id = r.scheme_id
 where r.domain_id = :DomainId and (not r.disabled) and :Destination::varchar(50) ~ r.pattern
 order by r.pos desc
 limit 1`, map[string]interface{}{"DomainId": domainId, "Destination": destination})

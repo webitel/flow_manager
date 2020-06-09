@@ -16,9 +16,9 @@ func NewSqlChatStore(sqlStore SqlStore) store.ChatStore {
 
 func (s SqlChatStore) CreateConversation(secretKey string, title string, name string, body model.PostBody) (model.ConversationInfo, *model.AppError) {
 	var info model.ConversationInfo
-	err := s.GetMaster().SelectOne(&info, `select cc_view_timestamp(x.posted_at) activity_at,
+	err := s.GetMaster().SelectOne(&info, `select call_center.cc_view_timestamp(x.posted_at) activity_at,
        x.id, x.channel_id
-from cc_msg_create_conversation(:Key, :Title, :Name, :Body)
+from call_center.cc_msg_create_conversation(:Key, :Title, :Name, :Body)
 as x(posted_at timestamptz, id int8, channel_id text);`, map[string]interface{}{
 		"Title": title,
 		"Key":   secretKey,
@@ -37,8 +37,8 @@ as x(posted_at timestamptz, id int8, channel_id text);`, map[string]interface{}{
 func (s SqlChatStore) Get(channelId string) (*model.ConversationInfo, *model.AppError) {
 	var info *model.ConversationInfo
 	err := s.GetReplica().SelectOne(&info, `select cmc.id, part.channel_id, cc_view_timestamp(cmc.activity_at) activity_at, cmc.title
-from cc_msg_participants part
-    inner join cc_msg_conversation cmc on part.conversation_id = cmc.id
+from call_center.cc_msg_participants part
+    inner join call_center.cc_msg_conversation cmc on part.conversation_id = cmc.id
 where part.channel_id = :ChannelId and cmc.closed_at is null`, map[string]interface{}{
 		"ChannelId": channelId,
 	})
@@ -54,7 +54,7 @@ where part.channel_id = :ChannelId and cmc.closed_at is null`, map[string]interf
 func (s SqlChatStore) ConversationPostMessage(channelId string, body model.PostBody) ([]*model.ConversationMessage, *model.AppError) {
 	var out []*model.ConversationMessage
 	_, err := s.GetMaster().Select(&out, `select *
-from cc_msg_post(:ChannelId, :Body)  as msg  (posted_at int8, posted_by varchar, body jsonb)`, map[string]interface{}{
+from call_center.cc_msg_post(:ChannelId, :Body)  as msg  (posted_at int8, posted_by varchar, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
 		"Body":      body.ToJson(),
 	})
@@ -71,7 +71,7 @@ func (s SqlChatStore) ConversationUnreadMessages(channelId string, limit int) ([
 	var msgs []*model.ConversationMessage
 	_, err := s.GetReplica().Select(&msgs, `
 select *
-from cc_msg_unread(:ChannelId, :Limit)
+from call_center.cc_msg_unread(:ChannelId, :Limit)
     as x (posted_by varchar, posted_at int8, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
 		"Limit":     limit,
@@ -89,7 +89,7 @@ from cc_msg_unread(:ChannelId, :Limit)
 func (s SqlChatStore) ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError) {
 	var msgs []*model.ConversationMessage
 	_, err := s.GetMaster().Select(&msgs, `select *
-from cc_msg_history(:ChannelId, :Limit, :Offset)
+from call_center.cc_msg_history(:ChannelId, :Limit, :Offset)
     as x (posted_by varchar, posted_at int8, body jsonb)`, map[string]interface{}{
 		"ChannelId": channelId,
 		"Limit":     limit,
@@ -107,9 +107,9 @@ from cc_msg_history(:ChannelId, :Limit, :Offset)
 func (s SqlChatStore) Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError) {
 	var msgs []*model.ConversationMessageJoined
 	_, err := s.GetMaster().Select(&msgs, `with part as (
-    insert into cc_msg_participants (name, conversation_id)
+    insert into call_center.cc_msg_participants (name, conversation_id)
     select :Name, p.conversation_id
-    from cc_msg_participants p
+    from call_center.cc_msg_participants p
     where p.channel_id = :ChannelId
     returning channel_id, conversation_id, name
 )
@@ -117,7 +117,7 @@ select  (extract(epoch from msg.posted_at) * 1000)::int8 posted_at, msg.posted_b
 from part,
      lateral (
         select *
-        from cc_msg_post p
+        from call_center.cc_msg_post p
         where p.conversation_id = part.conversation_id
         order by p.posted_at desc
         limit 20
@@ -135,12 +135,12 @@ from part,
 }
 
 func (s SqlChatStore) Close(channelId string) *model.AppError {
-	_, err := s.GetMaster().Exec(`update cc_msg_conversation c
+	_, err := s.GetMaster().Exec(`update call_center.cc_msg_conversation c
 set closed_at = now(),
     closed_by = part.id
 from (
     select part.id, part.conversation_id
-    from cc_msg_participants part
+    from call_center.cc_msg_participants part
     where part.channel_id = :ChannelId
 ) part
 where part.conversation_id = c.id and c.closed_at is null`, map[string]interface{}{

@@ -296,6 +296,10 @@ type Call interface {
 	Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (Response, *AppError)
 	Playback(ctx context.Context, files []*PlaybackFile) (Response, *AppError)
 	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
+	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
+	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)
+	TTS(ctx context.Context, path string, digits *PlaybackDigits) (Response, *AppError)
+
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
 	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, *AppError)
@@ -304,12 +308,23 @@ type Call interface {
 	DumpExportVariables() map[string]string
 	Queue(ctx context.Context, ringFile string) (Response, *AppError)
 	Intercept(ctx context.Context, id string) (Response, *AppError)
+	GetVariable(string) string
 }
 
 type PlaybackFile struct {
 	Type *string `json:"type"`
 	Id   *int    `json:"id"`
 	Name *string `json:"name"`
+}
+
+type TTS struct {
+	Key   string `json:"key"`
+	Token string `json:"token"`
+
+	Provider   string `json:"provider"`
+	Text       string `json:"text"`
+	TextType   string `json:"textType"`
+	Terminator string `json:"terminator"`
 }
 
 type PlaybackDigits struct {

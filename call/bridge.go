@@ -54,7 +54,26 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 	if err != nil {
 		return model.CallResponseError, err
 	}
-	return call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
+	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
+	if err != nil {
+		return res, err
+	}
+
+	//TODO variable_last_bridge_hangup_cause variable_bridge_hangup_cause
+	if call.GetVariable("variable_bridge_hangup_cause") == "NORMAL_CLEARING" && call.GetVariable("variable_hangup_after_bridge") == "true" {
+		scope.SetCancel()
+	}
+
+	//TODO
+	if call.GetVariable("variable_last_bridge_hangup_cause") == "ORIGINATOR_CANCEL" &&
+		call.GetVariable("variable_originate_disposition") == "ORIGINATOR_CANCEL" &&
+		call.GetVariable("variable_sip_redirect_dialstring") != "" &&
+		call.GetVariable("variable_webitel_detect_redirect") != "false" {
+		wlog.Warn(fmt.Sprintf("call %s detect sip redirect to %s, break this route", call.Id(), call.GetVariable("variable_sip_redirect_dialstring")))
+		scope.SetCancel()
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {
