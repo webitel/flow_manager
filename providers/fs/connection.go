@@ -58,6 +58,7 @@ type Connection struct {
 	from            *model.CallEndpoint
 	to              *model.CallEndpoint
 	systemDirection string
+	schemaId        *int
 
 	userId           int
 	disconnected     chan struct{}
@@ -104,9 +105,23 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		//disconnected:     make(chan struct{}),
 		variables: make(map[string]string),
 	}
+	connection.initIvrQueue(dump)
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
+}
+
+func (c *Connection) IVRQueueId() *int {
+	return c.schemaId
+}
+
+func (c *Connection) initIvrQueue(event *eventsocket.Event) {
+	s := event.Get("variable_cc_queue_id")
+	if s != "" && event.Get("variable_cc_queue_type") == "ivr" {
+		if i, err := strconv.Atoi(s); err == nil {
+			c.schemaId = &i
+		}
+	}
 }
 
 func (c *Connection) IsTransfer() bool {
@@ -460,6 +475,8 @@ func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {
 }
 
 func (c *Connection) GetVariable(name string) (value string) {
+	c.RLock()
+	defer c.RUnlock()
 	if c.lastEvent != nil {
 		value = c.lastEvent.Get(name)
 	}

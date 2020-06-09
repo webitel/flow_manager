@@ -15,6 +15,35 @@ func NewSqlCallRoutingStore(sqlStore SqlStore) store.CallRoutingStore {
 	return st
 }
 
+func (s SqlCallRoutingStore) FromQueue(domainId int64, queueId int) (*model.Routing, *model.AppError) {
+	var routing *model.Routing
+	err := s.GetReplica().SelectOne(&routing, `select
+        sg.id as source_id,
+        sg.name as source_name,
+        '' as source_data,
+        d.dc as domain_id,
+        d.name as domain_name,
+        coalesce(d.timezone_id, 287) timezone_id,
+        coalesce(ct.name, 'UTC') as timezone_name,
+        sg.schema_id scheme_id,
+        ars.name as scheme_name,
+        ars.updated_at as schema_updated_at,
+        ars.debug,
+        null as variables
+from call_center.cc_queue sg
+        left join directory.wbt_domain d on sg.domain_id = d.dc
+        left join flow.calendar c on c.id = sg.calendar_id
+        left join flow.calendar_timezones ct on d.timezone_id = ct.id
+        inner join flow.acr_routing_scheme ars on ars.id = sg.schema_id
+where sg.id = :QueueId and sg.domain_id = :DomainId`, map[string]interface{}{"QueueId": queueId, "DomainId": domainId})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlCallRoutingStore.FromQueue", "store.sql_call_routing.from_queue.error", nil,
+			fmt.Sprintf("domainId=%v queueId=%v, %v", domainId, queueId, err.Error()), extractCodeFromErr(err))
+	}
+	return routing, nil
+}
+
 func (s SqlCallRoutingStore) FromGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError) {
 	var routing *model.Routing
 	err := s.GetReplica().SelectOne(&routing, `select

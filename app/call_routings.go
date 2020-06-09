@@ -29,3 +29,17 @@ func (f *FlowManager) SearchOutboundToDestinationRouting(domainId int64, dest st
 
 	return routing, nil
 }
+
+func (f *FlowManager) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError) {
+	routing, err := f.Store.CallRouting().FromQueue(domainId, queueId)
+	if err != nil {
+		return nil, err
+	}
+
+	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return routing, nil
+}

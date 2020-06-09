@@ -62,12 +62,20 @@ func (r *Router) handle(conn model.Connection) {
 	var routing *model.Routing
 	var err *model.AppError
 
-	if call.IsTransfer() {
+	queueId := call.IVRQueueId()
+
+	if call.IsTransfer() && queueId == nil {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.Destination()))
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
 			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
 		}
+	} else if queueId != nil {
+		wlog.Info(fmt.Sprintf("call %s [%d %s] is ivr from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
+			call.From().String(), call.Destination()))
+
+		routing, err = r.fm.SearchOutboundFromQueueRouting(call.DomainId(), *queueId)
+
 	} else {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] from: [%s] to: [%s] destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.To().String(), call.Destination()))
@@ -128,10 +136,11 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if routing == nil {
-		wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
-		if _, err = call.HangupNoRoute(call.Context()); err != nil {
-			wlog.Error(err.Error())
-		}
+		routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination())
+		//wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
+		//if _, err = call.HangupNoRoute(call.Context()); err != nil {
+		//	wlog.Error(err.Error())
+		//}
 
 		return
 	}

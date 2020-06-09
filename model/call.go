@@ -271,6 +271,7 @@ type Call interface {
 	SetDomainName(name string)
 	DomainName() string
 	Dump()
+	IVRQueueId() *int
 
 	SetAll(ctx context.Context, vars Variables) (Response, *AppError)
 	SetNoLocal(ctx context.Context, vars Variables) (Response, *AppError)
