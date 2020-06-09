@@ -270,6 +270,7 @@ type Call interface {
 	Destination() string
 	SetDomainName(name string)
 	DomainName() string
+	Dump()
 
 	SetAll(ctx context.Context, vars Variables) (Response, *AppError)
 	SetNoLocal(ctx context.Context, vars Variables) (Response, *AppError)

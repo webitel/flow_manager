@@ -54,9 +54,16 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 	if err != nil {
 		return model.CallResponseError, err
 	}
+
+	t := call.GetVariable("variable_transfer_history")
+
 	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
 	if err != nil {
 		return res, err
+	}
+
+	if t != call.GetVariable("variable_transfer_history") {
+		scope.SetCancel()
 	}
 
 	//TODO variable_last_bridge_hangup_cause variable_bridge_hangup_cause
@@ -72,6 +79,7 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		wlog.Warn(fmt.Sprintf("call %s detect sip redirect to %s, break this route", call.Id(), call.GetVariable("variable_sip_redirect_dialstring")))
 		scope.SetCancel()
 	}
+	//call.Dump()
 
 	return model.CallResponseOK, nil
 }

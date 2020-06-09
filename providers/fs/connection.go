@@ -113,6 +113,10 @@ func (c *Connection) IsTransfer() bool {
 	return c.transfer
 }
 
+func (c *Connection) Dump() {
+	c.lastEvent.PrettyPrint()
+}
+
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
