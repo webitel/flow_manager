@@ -47,6 +47,7 @@ type Connection struct {
 	id       string
 	nodeId   string
 	nodeName string
+	transfer bool
 	//context         string
 	destination     string
 	stopped         bool
@@ -108,9 +109,14 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 	return connection
 }
 
+func (c *Connection) IsTransfer() bool {
+	return c.transfer
+}
+
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
+	c.transfer = dump.Get("variable_transfer_source") != ""
 
 	if direction == "internal" {
 		if dump.Get("Call-Direction") == "outbound" && !isOriginate {
@@ -143,7 +149,10 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 		}
 	} else if c.userId != 0 {
 		if direction == "inbound" {
-			//FIXME
+			c.from.Type = model.CallEndpointTypeUser
+			c.from.Id = fmt.Sprintf("%d", c.userId)
+			c.from.Name = dump.Get("Caller-Caller-ID-Name")
+			c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		} else {
 			c.from.Type = model.CallEndpointTypeUser
 			c.from.Id = fmt.Sprintf("%d", c.userId)

@@ -62,52 +62,60 @@ func (r *Router) handle(conn model.Connection) {
 	var routing *model.Routing
 	var err *model.AppError
 
-	wlog.Info(fmt.Sprintf("call %s [%d %s] from: [%s] to: [%s] destination %s", call.Id(), call.DomainId(), call.Direction(),
-		call.From().String(), call.To().String(), call.Destination()))
-
-	from := call.From()
-	if from == nil {
-		wlog.Error("not allowed call: from is empty")
-		if _, err = call.HangupAppErr(call.Context()); err != nil {
-			wlog.Error(err.Error())
+	if call.IsTransfer() {
+		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
+			call.From().String(), call.Destination()))
+		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
+			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
 		}
+	} else {
+		wlog.Info(fmt.Sprintf("call %s [%d %s] from: [%s] to: [%s] destination %s", call.Id(), call.DomainId(), call.Direction(),
+			call.From().String(), call.To().String(), call.Destination()))
 
-		return
-	}
-
-	switch call.Direction() {
-	case model.CallDirectionInbound:
-		var to *model.CallEndpoint
-		to = r.ToRequired(call, call.To())
-		if to == nil {
+		from := call.From()
+		if from == nil {
+			wlog.Error("not allowed call: from is empty")
+			if _, err = call.HangupAppErr(call.Context()); err != nil {
+				wlog.Error(err.Error())
+			}
 
 			return
 		}
 
-		switch from.Type {
-		case model.CallEndpointTypeDestination:
-			if id := to.IntId(); id == nil {
-				if _, err = call.HangupNoRoute(call.Context()); err != nil {
-					wlog.Error(err.Error())
-				}
+		switch call.Direction() {
+		case model.CallDirectionInbound:
+			var to *model.CallEndpoint
+			to = r.ToRequired(call, call.To())
+			if to == nil {
 
 				return
-			} else {
-				wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
-				routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
 			}
 
-		}
-	case model.CallDirectionOutbound:
-		switch from.Type {
-		case model.CallEndpointTypeUser:
-			if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
-				call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
-			}
-		}
+			switch from.Type {
+			case model.CallEndpointTypeDestination:
+				if id := to.IntId(); id == nil {
+					if _, err = call.HangupNoRoute(call.Context()); err != nil {
+						wlog.Error(err.Error())
+					}
 
-	default:
-		err = model.NewAppError("Call.Handle", "call.router.valid.direction", nil, fmt.Sprintf("no handler direction %s", call.Direction()), http.StatusInternalServerError)
+					return
+				} else {
+					wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
+					routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
+				}
+
+			}
+		case model.CallDirectionOutbound:
+			switch from.Type {
+			case model.CallEndpointTypeUser:
+				if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
+					call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
+				}
+			}
+
+		default:
+			err = model.NewAppError("Call.Handle", "call.router.valid.direction", nil, fmt.Sprintf("no handler direction %s", call.Direction()), http.StatusInternalServerError)
+		}
 	}
 
 	if err != nil {

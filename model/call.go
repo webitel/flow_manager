@@ -265,7 +265,7 @@ type Call interface {
 	//ParentType() *string //TODO transfer logic
 	From() *CallEndpoint
 	To() *CallEndpoint
-
+	IsTransfer() bool
 	Direction() CallDirection
 	Destination() string
 	SetDomainName(name string)
