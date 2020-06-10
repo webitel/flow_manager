@@ -55,3 +55,7 @@ func (s *LayeredStore) List() ListStore {
 func (s *LayeredStore) Chat() ChatStore {
 	return s.DatabaseLayer.Chat()
 }
+
+func (s *LayeredStore) Queue() QueueStore {
+	return s.DatabaseLayer.Queue()
+}

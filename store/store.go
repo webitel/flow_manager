@@ -17,6 +17,7 @@ type Store interface {
 	Calendar() CalendarStore
 	List() ListStore
 	Chat() ChatStore
+	Queue() QueueStore
 }
 
 type EmailStore interface {
@@ -71,4 +72,8 @@ type ChatStore interface {
 	ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError)
 	Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError)
 	Close(channelId string) *model.AppError
+}
+
+type QueueStore interface {
+	Statistics(domainId int64, search *model.SearchQueue, metric string) (float64, *model.AppError)
 }
