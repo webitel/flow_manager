@@ -228,6 +228,13 @@ func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) 
 	}
 }
 
+func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (model.Response, *model.AppError) {
+	return c.Set(ctx, model.Variables{
+		"transfer_to_schema_id": fmt.Sprintf("%d", schemaId),
+		"transfer_after_bridge": fmt.Sprintf("%s:XML:default", c.Destination()),
+	})
+}
+
 func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
 	rate = "8000"
 	format = "mp3"

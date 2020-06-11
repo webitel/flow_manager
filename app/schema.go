@@ -24,11 +24,25 @@ func (f *FlowManager) GetSchema(domainId int64, id int, updatedAt int64) (schema
 }
 
 func (f *FlowManager) GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError) {
-	updatedAt, err := f.Store.Schema().GetUpdatedAt(id)
+	updatedAt, err := f.Store.Schema().GetUpdatedAt(domainId, id)
 
 	if err != nil {
 		return nil, err
 	}
 
 	return f.GetSchema(domainId, id, updatedAt)
+}
+
+func (f *FlowManager) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError) {
+	routing, err := f.Store.Schema().GetTransferredRouting(domainId, schemaId)
+	if err != nil {
+		return nil, err
+	}
+
+	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return routing, nil
 }

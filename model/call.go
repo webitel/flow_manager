@@ -272,6 +272,9 @@ type Call interface {
 	DomainName() string
 	Dump()
 	IVRQueueId() *int
+	TransferSchemaId() *int
+
+	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, *AppError)
 
 	SetAll(ctx context.Context, vars Variables) (Response, *AppError)
 	SetNoLocal(ctx context.Context, vars Variables) (Response, *AppError)

@@ -11,24 +11,6 @@ import (
 	"time"
 )
 
-/*
-   {
-       "joinQueue": {
-           "bucket_id": null,
-           "joined": [
-               {
-                   "sleep": "1000"
-               }
-           ],
-           "name": "DEFAULT FROM",
-           "number": "DEFAULT FROM",
-           "priority": 1,
-           "queue_id": 11,
-           "queue_name": "INBOUND"
-       }
-   },
-*/
-
 type Queue struct {
 	Id   int32
 	Name string
@@ -41,14 +23,15 @@ type WaitingMusic struct {
 }
 
 type QueueJoinArg struct {
-	Name      string        `json:"name"`
-	Number    string        `json:"number"`
-	Priority  int32         `json:"priority"`
-	Queue     Queue         `json:"queue"`
-	Ringtone  WaitingMusic  `json:"ringtone"`
-	Waiting   []interface{} `json:"waiting"`
-	Reporting []interface{} `json:"reporting"`
-	Timers    []TimerArgs   `json:"timers"`
+	Name                string              `json:"name"`
+	Number              string              `json:"number"`
+	Priority            int32               `json:"priority"`
+	Queue               Queue               `json:"queue"`
+	Ringtone            WaitingMusic        `json:"ringtone"`
+	Waiting             []interface{}       `json:"waiting"`
+	Reporting           []interface{}       `json:"reporting"`
+	Timers              []TimerArgs         `json:"timers"`
+	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
 }
 
 type TimerArgs struct {
@@ -74,11 +57,6 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		go flow.Route(wCtx, scope.Fork("queue-waiting", flow.ArrInterfaceToArrayApplication(q.Waiting)), r)
 	}
 
-	//call.Set(ctx, model.Variables{
-	//	"exec_after_bridge_app": "socket",
-	//	"exec_after_bridge_arg": `10.10.10.25:10030`,
-	//})
-
 	if len(q.Timers) > 0 {
 		for k, t := range q.Timers {
 			t.name = fmt.Sprintf("queue-timer-%d", k)
@@ -87,11 +65,20 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	}
 
 	defer func() {
+		//fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		if wCancel != nil {
 			wCancel()
 			wCancel = nil
 		}
 	}()
+
+	if q.TransferAfterBridge != nil && q.TransferAfterBridge.Id != nil {
+		if _, err := call.SetTransferAfterBridge(ctx, *q.TransferAfterBridge.Id); err != nil {
+			return nil, err
+		}
+	}
+
+	t := call.GetVariable("variable_transfer_history")
 
 	ctx2 := context.Background()
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
@@ -115,6 +102,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		return model.CallResponseOK, nil
 	}
 
+	// TODO bug close stream channel
 	for {
 		var msg cc.QueueEvent
 		err = res.RecvMsg(&msg)
@@ -141,6 +129,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			}
 			break
 		}
+	}
+
+	if t != call.GetVariable("variable_transfer_history") {
+		scope.SetCancel()
 	}
 
 	return model.CallResponseOK, nil

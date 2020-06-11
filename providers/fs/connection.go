@@ -48,6 +48,7 @@ type Connection struct {
 	nodeId   string
 	nodeName string
 	transfer bool
+	dialPlan string
 	//context         string
 	destination     string
 	stopped         bool
@@ -59,6 +60,7 @@ type Connection struct {
 	to              *model.CallEndpoint
 	systemDirection string
 	schemaId        *int
+	transferSchema  int
 
 	userId           int
 	disconnected     chan struct{}
@@ -89,12 +91,12 @@ func getDirection(str string) model.CallDirection {
 func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Event) *Connection {
 	ctx, cancel := context.WithCancel(context.TODO())
 	connection := &Connection{
-		id:       dump.Get(HEADER_ID_NAME),
-		nodeId:   dump.Get(HEADER_CORE_ID_NAME),
-		nodeName: dump.Get(HEADER_CORE_NAME),
-		ctx:      ctx,
-		cancelFn: cancel,
-		//context:          dump.Get(HEADER_CONTEXT_NAME),
+		id:               dump.Get(HEADER_ID_NAME),
+		nodeId:           dump.Get(HEADER_CORE_ID_NAME),
+		nodeName:         dump.Get(HEADER_CORE_NAME),
+		ctx:              ctx,
+		cancelFn:         cancel,
+		dialPlan:         dump.Get(HEADER_CONTEXT_NAME),
 		direction:        getDirection(dump.Get(HEADER_DIRECTION_NAME)),
 		gatewayId:        getIntFromStr(dump.Get(HEADER_GATEWAY_ID)),
 		domainId:         int64(getIntFromStr(dump.Get(HEADER_DOMAIN_ID))),
@@ -106,13 +108,10 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		variables: make(map[string]string),
 	}
 	connection.initIvrQueue(dump)
+	connection.initTransferSchema(dump)
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
-}
-
-func (c *Connection) IVRQueueId() *int {
-	return c.schemaId
 }
 
 func (c *Connection) initIvrQueue(event *eventsocket.Event) {
@@ -124,8 +123,31 @@ func (c *Connection) initIvrQueue(event *eventsocket.Event) {
 	}
 }
 
+func (c *Connection) initTransferSchema(event *eventsocket.Event) {
+	c.transferSchema, _ = strconv.Atoi(event.Get("variable_transfer_to_schema_id"))
+	if c.transferSchema != 0 {
+		//c.executeWithContext(c.ctx, "unset", "transfer_to_schema_id")
+	}
+}
+
+func (c *Connection) TransferSchemaId() *int {
+	if c.dialPlan == "default" && c.transferSchema != 0 {
+		return &c.transferSchema
+	}
+
+	return nil
+}
+
+func (c *Connection) IVRQueueId() *int {
+	return c.schemaId
+}
+
 func (c *Connection) IsTransfer() bool {
 	return c.transfer
+}
+
+func (c *Connection) DialPlan() string {
+	return c.dialPlan
 }
 
 func (c *Connection) Dump() {

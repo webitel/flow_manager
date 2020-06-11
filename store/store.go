@@ -38,7 +38,8 @@ type CallStore interface {
 
 type SchemaStore interface {
 	Get(domainId int64, id int) (*model.Schema, *model.AppError)
-	GetUpdatedAt(id int) (int64, *model.AppError)
+	GetUpdatedAt(domainId int64, id int) (int64, *model.AppError)
+	GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError)
 }
 
 type CallRoutingStore interface {
@@ -75,5 +76,5 @@ type ChatStore interface {
 }
 
 type QueueStore interface {
-	Statistics(domainId int64, search *model.SearchQueue, metric string) (float64, *model.AppError)
+	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError)
 }

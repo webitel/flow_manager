@@ -15,37 +15,49 @@ func NewSqlQueueStore(sqlStore SqlStore) store.QueueStore {
 	return st
 }
 
-func (s SqlQueueStore) Statistics(domainId int64, search *model.SearchQueue, metric string) (float64, *model.AppError) {
-	var f = ""
+func (s SqlQueueStore) HistoryCallHoldStatistics(domainId int64, search *model.SearchQueueCompleteStatistics, metric string) (float64, *model.AppError) {
+	return 0, nil
+}
 
-	switch metric {
-	case "avg":
-		f = "extract( epoch  from avg(bridged_at - joined_at))"
-	case "max":
-		f = "extract( epoch  from max(bridged_at - joined_at))"
-	case "min":
-		f = "extract( epoch  from min(bridged_at - joined_at))"
-	case "count":
-		f = "count(*)"
+func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError) {
+	var agg = ""
+
+	switch search.Metric {
+	case "avg", "max", "min":
 	default:
-		return 0, model.NewAppError("SqlQueueStore.Statistics", "store.sql_queue.stats.valid", nil,
+		return 0, model.NewAppError("SqlQueueStore.HistoryStatistics", "store.sql_queue.stats.valid", nil,
 			"bad metrics", http.StatusBadRequest)
 	}
 
-	res, err := s.GetReplica().SelectFloat(`select `+f+`
-	from cc_member_attempt_history h
+	switch search.Field {
+	case "wait_time":
+		agg = "extract(epoch from " + search.Metric + "(case when a.bridged_at isnull then (a.leaving_at - a.joined_at) else (a.bridged_at - a.joined_at) end))"
+	case "talk_time":
+		agg = "extract(epoch from " + search.Metric + "(a.hangup_at - a.bridged_at ))"
+	default:
+		return 0, model.NewAppError("SqlQueueStore.HistoryStatistics", "store.sql_queue.field.valid", nil,
+			"bad field", http.StatusBadRequest)
+	}
+
+	res, err := s.GetReplica().SelectFloat(`select `+agg+`
+	from cc_member_attempt_history a
 	where queue_id = (
 		select q.id
 		from cc_queue q
 		where q.domain_id = :DomainId::int8 and (q.id = :QueueId::int or q.name = :QueueName::varchar)
 		limit 1
-	) and leaving_at between now() - (:Min::int || ' min')::interval and now()
-	  and (:BucketId::int isnull or h.bucket_id = :BucketId)`, map[string]interface{}{
-		"DomainId":  domainId,
-		"QueueId":   search.Id,
-		"QueueName": search.Name,
-		"BucketId":  search.BucketId,
-		"Min":       search.LastMinutes,
+	) and joined_at between now() - (:Min::int || ' min')::interval and now()
+	  and ((:BucketId::int isnull and :BucketName::varchar isnull) or a.bucket_id = (
+	      select b.id
+	      from call_center.cc_bucket b
+	      where b.domain_id = :DomainId::int8 and (b.id = :BucketId::int or b.name = :BucketName::varchar)
+        ))`, map[string]interface{}{
+		"DomainId":   domainId,
+		"QueueId":    search.QueueId,
+		"QueueName":  search.QueueName,
+		"BucketId":   search.BucketId,
+		"BucketName": search.BucketName,
+		"Min":        search.LastMinutes,
 	})
 
 	if err != nil {
