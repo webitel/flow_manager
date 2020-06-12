@@ -41,6 +41,7 @@ type SqlSupplierOldStores struct {
 	list        store.ListStore
 	chat        store.ChatStore
 	queue       store.QueueStore
+	member      store.MemberStore
 }
 
 type SqlSupplier struct {
@@ -72,6 +73,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.list = NewSqlListStore(supplier)
 	supplier.oldStores.chat = NewSqlChatStore(supplier)
 	supplier.oldStores.queue = NewSqlQueueStore(supplier)
+	supplier.oldStores.member = NewSqlMemberStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -236,4 +238,8 @@ func (ss *SqlSupplier) Chat() store.ChatStore {
 
 func (ss *SqlSupplier) Queue() store.QueueStore {
 	return ss.oldStores.queue
+}
+
+func (ss *SqlSupplier) Member() store.MemberStore {
+	return ss.oldStores.member
 }

@@ -108,6 +108,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.TTS),
 	}
+	apps["ccPosition"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.QueueCallPosition),
+	}
 
 	return apps
 }

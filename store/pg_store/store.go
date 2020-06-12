@@ -20,4 +20,6 @@ type SqlStore interface {
 	Calendar() store.CalendarStore
 	List() store.ListStore
 	Chat() store.ChatStore
+	Queue() store.QueueStore
+	Member() store.MemberStore
 }

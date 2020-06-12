@@ -18,6 +18,7 @@ type Store interface {
 	List() ListStore
 	Chat() ChatStore
 	Queue() QueueStore
+	Member() MemberStore
 }
 
 type EmailStore interface {
@@ -77,4 +78,8 @@ type ChatStore interface {
 
 type QueueStore interface {
 	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError)
+}
+
+type MemberStore interface {
+	CallPosition(callId string) (int64, *model.AppError)
 }
