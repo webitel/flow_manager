@@ -153,7 +153,6 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`
-BEGIN;
 with c as (
     delete from call_center.cc_calls c
 	where c.hangup_at < now() - '1 sec'::interval and c.direction notnull
@@ -167,11 +166,8 @@ insert into call_center.cc_calls_history (created_at, id, direction, destination
 							gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by)
 select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, (
-            case when c.parent_id isnull and c.bridged_id notnull then c.hold_sec + (select c2.hold_sec from c c2 where c2.id = c.bridged_id) else c.hold_sec end
-       ), c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by
-from c;
-COMMIT;`)
+       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by
+from c;`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
 			err.Error(), extractCodeFromErr(err))
