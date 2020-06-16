@@ -122,11 +122,11 @@ func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *mode
 }
 
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	c.exportVariables = vars
-
 	exp := make(map[string]interface{})
 	for _, v := range vars {
 		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
+
+		c.exportVariables = append(c.exportVariables, v)
 	}
 
 	if len(exp) > 0 {
