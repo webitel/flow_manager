@@ -378,7 +378,7 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 	}
 
 	switch *file.Type {
-	case "audio/mp3":
+	case "audio/mp3", "audio/mpeg":
 		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, domainId), true
 
 	case "audio/wav":
