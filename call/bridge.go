@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -102,7 +103,11 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 				e.Number = model.NewString(getStringValueFromMap("dialString", endpoints[key], ""))
 				e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Number, *e.Destination))
 			}
+
+			e.Variables = getVars(endpoints[key], e.Variables)
+
 		case "user":
+			e.Variables = getVars(endpoints[key], e.Variables)
 			//if e.Destination != nil {
 			//e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Destination, call.DomainName()))
 			//}
@@ -147,4 +152,14 @@ func getArrayStringFromMap(name string, params map[string]interface{}) (res []st
 	}
 	ok = true
 	return
+}
+
+func getVars(src model.ApplicationObject, res pq.StringArray) pq.StringArray {
+	if v, ok := src["parameters"].(map[string]interface{}); ok {
+		for k, vv := range v {
+			res = append(res, fmt.Sprintf("'%s'='%s'", k, vv))
+		}
+	}
+
+	return res
 }
