@@ -26,7 +26,7 @@ from (
         from cc_member_attempt a2
         where a2.member_call_id = :CallId 
         limit 1
-    ) and a.bridged_at isnull and a.hangup_at isnull
+    ) and a.bridged_at isnull and a.leaving_at isnull
     order by (extract(epoch from now() -  a.joined_at) + a.weight) desc
 ) a
 where a.member_call_id = :CallId`, map[string]interface{}{
