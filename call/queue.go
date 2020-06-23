@@ -27,6 +27,7 @@ type QueueJoinArg struct {
 	Number              string              `json:"number"`
 	Priority            int32               `json:"priority"`
 	Queue               Queue               `json:"queue"`
+	BucketId            int32               `json:"bucket_id"` // TODO
 	Ringtone            WaitingMusic        `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
@@ -93,6 +94,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			Type: q.Ringtone.Type,
 		},
 		Priority:  q.Priority,
+		BucketId:  q.BucketId,
 		Variables: call.DumpExportVariables(),
 		DomainId:  call.DomainId(),
 	})
@@ -121,10 +123,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			}
 
 		case *cc.QueueEvent_Leaving:
+			call.Set(ctx, model.Variables{
+				"cc_result": msg.Data.(*cc.QueueEvent_Leaving).Leaving.Result,
+			})
 			if len(q.Reporting) > 0 {
-				call.Set(ctx, model.Variables{
-					"cc_result": msg.Data.(*cc.QueueEvent_Leaving).Leaving.Result,
-				})
 				flow.Route(context.Background(), scope.Fork("queue-reporting", flow.ArrInterfaceToArrayApplication(q.Reporting)), r)
 			}
 			break
