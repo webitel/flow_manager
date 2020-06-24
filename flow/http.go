@@ -3,6 +3,7 @@ package flow
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"github.com/tidwall/gjson"
@@ -36,6 +37,15 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	client := &http.Client{
 		Timeout: time.Duration(model.IntValueFromMap("timeout", props, 1000)) * time.Millisecond,
 	}
+
+	if model.StringValueFromMap("insecureSkipVerify", props, "") == "true" {
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+
 	res, httpErr = client.Do(req)
 	if httpErr != nil {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, httpErr.Error(), http.StatusBadRequest)
