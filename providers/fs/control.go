@@ -351,7 +351,25 @@ func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, tran
 		}
 	}
 
+	if export {
+		vars["export_vars"] = "hold_music,ringback,transfer_ringback"
+	}
+
 	return c.Set(ctx, vars)
+}
+
+func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+	var err *model.AppError
+	for k, v := range vars {
+		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf("%s=%s", k, v)); err != nil {
+			break
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
