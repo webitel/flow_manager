@@ -352,7 +352,7 @@ func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, tran
 	}
 
 	if export {
-		vars["export_vars"] = "hold_music,ringback,transfer_ringback"
+		vars["bridge_export_vars"] = "hold_music,ringback,transfer_ringback"
 	}
 
 	return c.Set(ctx, vars)
