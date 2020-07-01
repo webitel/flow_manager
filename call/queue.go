@@ -17,9 +17,9 @@ type Queue struct {
 }
 
 type WaitingMusic struct {
-	Id   int32
-	Name string
-	Type string
+	Id   *int32
+	Name *string
+	Type *string
 }
 
 type QueueJoinArg struct {
@@ -28,7 +28,7 @@ type QueueJoinArg struct {
 	Priority            int32               `json:"priority"`
 	Queue               Queue               `json:"queue"`
 	BucketId            int32               `json:"bucket_id"` // TODO
-	Ringtone            WaitingMusic        `json:"ringtone"`
+	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
 	Timers              []TimerArgs         `json:"timers"`
@@ -80,6 +80,25 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	}
 
 	t := call.GetVariable("variable_transfer_history")
+	var ringtone *cc.CallJoinToQueueRequest_WaitingMusic
+
+	//FIXME
+	if q.Ringtone.Name != nil || q.Ringtone.Id != nil {
+		var err *model.AppError
+		req := make([]*model.PlaybackFile, 1, 1)
+		req[0] = &model.PlaybackFile{
+			Id:   q.Ringtone.Id,
+			Name: q.Ringtone.Name,
+		}
+		if req, err = r.fm.GetMediaFiles(call.DomainId(), &req); err != nil {
+			return nil, err
+		} else if req != nil && req[0] != nil {
+			ringtone = &cc.CallJoinToQueueRequest_WaitingMusic{
+				Id:   int32(*req[0].Id),
+				Type: *req[0].Type,
+			}
+		}
+	}
 
 	ctx2 := context.Background()
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
@@ -88,15 +107,11 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			Id:   q.Queue.Id,
 			Name: q.Queue.Name,
 		},
-		WaitingMusic: &cc.CallJoinToQueueRequest_WaitingMusic{
-			Id:   q.Ringtone.Id,
-			Name: q.Ringtone.Name,
-			Type: q.Ringtone.Type,
-		},
-		Priority:  q.Priority,
-		BucketId:  q.BucketId,
-		Variables: call.DumpExportVariables(),
-		DomainId:  call.DomainId(),
+		WaitingMusic: ringtone,
+		Priority:     q.Priority,
+		BucketId:     q.BucketId,
+		Variables:    call.DumpExportVariables(),
+		DomainId:     call.DomainId(),
 	})
 
 	if err != nil {
