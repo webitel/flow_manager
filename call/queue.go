@@ -12,8 +12,8 @@ import (
 )
 
 type Queue struct {
-	Id   int32
-	Name string
+	Id   int    `json:"id"`
+	Name string `json:"name"`
 }
 
 type WaitingMusic struct {
@@ -66,7 +66,6 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	}
 
 	defer func() {
-		//fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 		if wCancel != nil {
 			wCancel()
 			wCancel = nil
@@ -104,7 +103,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),
 		Queue: &cc.CallJoinToQueueRequest_Queue{
-			Id:   q.Queue.Id,
+			Id:   int32(q.Queue.Id),
 			Name: q.Queue.Name,
 		},
 		WaitingMusic: ringtone,
