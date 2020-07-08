@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
@@ -153,5 +154,21 @@ func httpCodeToGrpc(c int) codes.Code {
 }
 
 func (s *server) DistributeAttempt(ctx context.Context, in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error) {
-	return nil, nil
+	conn := newConnection(ctx, make(map[string]string))
+
+	var result *flow.DistributeAttemptResponse
+
+	conn.schemaId = int(in.SchemaId)
+	conn.domainId = in.DomainId
+
+	s.consume <- conn
+
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("ctx done")
+	case r := <-conn.result:
+		result, _ = r.(*flow.DistributeAttemptResponse)
+	}
+
+	return result, nil
 }

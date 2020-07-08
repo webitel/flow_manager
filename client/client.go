@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/providers/grpc/flow"
 	"github.com/webitel/wlog"
 	"sync"
 )
@@ -12,9 +13,18 @@ const (
 	WatcherInterval = 5 * 1000
 )
 
+type DoDistributeRequest struct {
+}
+
 type FlowManager interface {
 	Start() error
 	Stop()
+
+	Queue() QueueApi
+}
+
+type QueueApi interface {
+	DoDistributeAttempt(in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error)
 }
 
 type flowManager struct {
@@ -25,15 +35,21 @@ type flowManager struct {
 	startOnce sync.Once
 	stop      chan struct{}
 	stopped   chan struct{}
+
+	queue QueueApi
 }
 
 func NewFlowManager(serviceDiscovery discovery.ServiceDiscovery) FlowManager {
-	return &flowManager{
+	fm := &flowManager{
 		stop:             make(chan struct{}),
 		stopped:          make(chan struct{}),
 		poolConnections:  discovery.NewPoolConnections(),
 		serviceDiscovery: serviceDiscovery,
 	}
+
+	fm.queue = NewQueueApi(fm)
+
+	return fm
 }
 
 func (am *flowManager) Start() error {
@@ -81,17 +97,9 @@ func (am *flowManager) Stop() {
 	<-am.stopped
 }
 
-func (am *flowManager) getAuthClient() (FlowClient, error) {
-	conn, err := am.poolConnections.Get(discovery.StrategyRoundRobin)
-	if err != nil {
-		return nil, err
-	}
-	return conn.(FlowClient), nil
-}
-
 func (am *flowManager) registerConnection(v *discovery.ServiceConnection) {
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
-	client, err := NewAuthServiceConnection(v.Id, addr)
+	client, err := NewFlowConnection(v.Id, addr)
 	if err != nil {
 		wlog.Error(fmt.Sprintf("connection %s [%s] error: %s", v.Id, addr, err.Error()))
 		return
@@ -113,4 +121,17 @@ func (am *flowManager) wakeUp() {
 		}
 	}
 	am.poolConnections.RecheckConnections()
+}
+
+func (cc *flowManager) getRandomClient() (*fConnection, error) {
+	cli, err := cc.poolConnections.Get(discovery.StrategyRoundRobin)
+	if err != nil {
+		return nil, err
+	}
+
+	return cli.(*fConnection), nil
+}
+
+func (am *flowManager) Queue() QueueApi {
+	return am.queue
 }

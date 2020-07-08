@@ -2,12 +2,17 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"github.com/webitel/flow_manager/model"
+	"regexp"
+	"sync"
 )
 
 type Connection struct {
 	id        string
 	nodeId    string
+	domainId  int64
+	schemaId  int
 	variables map[string]string
 	stop      chan struct{}
 	ctx       context.Context
@@ -16,10 +21,14 @@ type Connection struct {
 	request interface{}
 
 	event chan interface{}
+
+	sync.RWMutex
 }
 
-func NewConnection(ctx context.Context, variables map[string]string) model.Connection {
-	return newConnection(ctx, variables)
+var compileVar *regexp.Regexp
+
+func init() {
+	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 }
 
 func newConnection(ctx context.Context, variables map[string]string) *Connection {
@@ -36,7 +45,20 @@ func (c *Connection) Context() context.Context {
 }
 
 func (c *Connection) ParseText(text string) string {
-	return "FIXME"
+	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
+		r := compileVar.FindStringSubmatch(varName)
+		if len(r) > 0 {
+			out, _ = c.Get(r[1])
+		}
+
+		return
+	})
+
+	return text
+}
+
+func (c *Connection) Result(result interface{}) {
+	c.result <- result
 }
 
 func (c *Connection) Id() string {
@@ -47,8 +69,8 @@ func (c *Connection) NodeId() string {
 	return c.nodeId
 }
 
-func (c *Connection) Execute(ctx context.Context, name string, args interface{}) (model.Response, *model.AppError) {
-	return model.CallResponseOK, nil
+func (c *Connection) SchemaId() int {
+	return c.schemaId
 }
 
 func (c *Connection) Close() *model.AppError {
@@ -57,7 +79,7 @@ func (c *Connection) Close() *model.AppError {
 }
 
 func (c *Connection) DomainId() int64 {
-	return 0
+	return c.domainId
 }
 
 func (c Connection) Type() model.ConnectionType {
@@ -65,10 +87,24 @@ func (c Connection) Type() model.ConnectionType {
 }
 
 func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
-	return nil, nil // TODO
+	c.Lock()
+	defer c.Unlock()
+
+	for k, v := range vars {
+		c.variables[k] = fmt.Sprintf("%v", v) // TODO
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func (c *Connection) Get(key string) (string, bool) {
+	c.RLock()
+	defer c.RUnlock()
+
+	if v, ok := c.variables[key]; ok {
+		return fmt.Sprintf("%v", v), true
+	}
+
 	return "", false
 }
 

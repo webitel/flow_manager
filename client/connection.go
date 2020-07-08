@@ -7,61 +7,48 @@ import (
 	"time"
 )
 
-type FlowClient interface {
-	Name() string
-	Close() error
-	Ready() bool
-}
-
-const (
-	ConnectionTimeout = 2 * time.Second
-)
-
-type flowConnection struct {
+type fConnection struct {
 	name   string
 	host   string
 	client *grpc.ClientConn
-	cli    flow.FlowServiceClient
+
+	queue flow.FlowServiceClient
 }
 
-func NewAuthServiceConnection(name, url string) (FlowClient, error) {
+func NewFlowConnection(name, url string) (*fConnection, error) {
 	var err error
-	connection := &flowConnection{
+	connection := &fConnection{
 		name: name,
 		host: url,
 	}
 
-	connection.client, err = grpc.Dial(url, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(ConnectionTimeout))
+	connection.client, err = grpc.Dial(url, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(2*time.Second))
 
 	if err != nil {
 		return nil, err
 	}
 
-	connection.cli = flow.NewFlowServiceClient(connection.client)
+	connection.queue = flow.NewFlowServiceClient(connection.client)
 
 	return connection, nil
 }
 
-func (c *flowConnection) Ready() bool {
-	switch c.client.GetState() {
+func (conn *fConnection) Ready() bool {
+	switch conn.client.GetState() {
 	case connectivity.Idle, connectivity.Ready:
 		return true
 	}
 	return false
 }
 
-func (c *flowConnection) Name() string {
-	return c.name
+func (conn *fConnection) Name() string {
+	return conn.name
 }
 
-func (c *flowConnection) Close() error {
-	err := c.client.Close()
+func (conn *fConnection) Close() error {
+	err := conn.client.Close()
 	if err != nil {
 		return ErrInternal
 	}
 	return nil
-}
-
-func (c *flowConnection) s() {
-
 }

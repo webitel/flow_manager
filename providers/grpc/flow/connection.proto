@@ -8,24 +8,32 @@ service FlowService {
 }
 
 message DistributeAttemptRequest {
-    int64 queue_id = 1;
-    int64 member_id = 2;
-    int64 attemptId = 3;
-    int64 schema_id = 4;
-    int64 schema_version = 5;
+    int32 schema_id = 1;
+    int64 domain_id = 2;
 
-    string destination = 6;
+    string destination = 3;
+    string display = 4;
 
-    map<string,string> variables = 7;
+    map<string,string> variables = 5;
 
 }
 
 message DistributeAttemptResponse {
     message Cancel {
-
+        string description = 1;
+        uint32 next_distribute_sec = 2;
+        bool stop = 3;
     }
 
     message Confirm {
-
+        string destination = 1;
+        string display = 2;
     }
+
+    oneof result {
+        Cancel cancel = 1;
+        Confirm confirm = 2;
+    }
+
+    map<string,string> variables = 3;
 }

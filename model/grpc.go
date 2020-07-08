@@ -1,5 +1,7 @@
 package model
 
 type GRPCConnection interface {
-	Id() string
+	Connection
+	SchemaId() int
+	Result(result interface{})
 }
