@@ -2,10 +2,11 @@ package flow
 
 import (
 	"context"
+	"fmt"
 	"github.com/webitel/flow_manager/model"
 )
 
-type GetQueueInfo struct {
+type GetQueueMetrics struct {
 	Bucket      *model.SearchEntity `json:"bucket"`
 	Queue       *model.SearchEntity `json:"queue"`
 	Metric      string              `json:"metric"`
@@ -15,9 +16,15 @@ type GetQueueInfo struct {
 	Calls       string `json:"calls"` // ?????
 }
 
+type GetQueueInfo struct {
+	Queue *model.SearchEntity `json:"queue"`
+	Set   string
+	Field string `json:"field"`
+}
+
 func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv GetQueueInfo
-	var res float64
+	var res *model.QueueData
 
 	err := scope.Decode(args, &argv)
 	if err != nil {
@@ -29,6 +36,49 @@ func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connecti
 	}
 	if argv.Set == "" {
 		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "set")
+	}
+	if argv.Field == "" {
+		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "field")
+	}
+
+	res, err = r.fm.Store.Queue().GetQueueData(c.DomainId(), argv.Queue)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(res)
+
+	var set = ""
+
+	switch argv.Field {
+	case "enabled":
+		set = fmt.Sprintf("%v", res.Enabled)
+	case "type":
+		set = fmt.Sprintf("%v", res.Type)
+	case "priority":
+		set = fmt.Sprintf("%v", res.Priority)
+	}
+
+	return c.Set(ctx, model.Variables{
+		argv.Set: set,
+	})
+
+}
+
+func (r *router) getQueueMetrics(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv GetQueueMetrics
+	var res float64
+
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+
+	if argv.Queue == nil {
+		return model.CallResponseError, ErrorRequiredParameter("getQueueMetrics", "queue")
+	}
+	if argv.Set == "" {
+		return model.CallResponseError, ErrorRequiredParameter("getQueueMetrics", "set")
 	}
 
 	switch argv.Calls {

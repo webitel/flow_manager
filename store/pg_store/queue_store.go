@@ -66,3 +66,21 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 
 	return res, nil
 }
+
+func (s SqlQueueStore) GetQueueData(domainId int64, search *model.SearchEntity) (*model.QueueData, *model.AppError) {
+	var res *model.QueueData
+	err := s.GetReplica().SelectOne(&res, `select q.type, q.enabled, q.priority
+from cc_queue q
+where q.domain_id = :DomainId and (q.id = :Id or q.name = :Name) 
+limit 1`, map[string]interface{}{
+		"DomainId": domainId,
+		"Id":       search.Id,
+		"Name":     search.Name,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlQueueStore.GetQueueData", "store.sql_queue.data.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return res, nil
+}

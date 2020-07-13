@@ -99,6 +99,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.callbackQueue),
 	}
+	apps["getQueueMetrics"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.getQueueMetrics),
+	}
 	apps["getQueueInfo"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.getQueueInfo),

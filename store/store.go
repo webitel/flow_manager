@@ -78,6 +78,7 @@ type ChatStore interface {
 
 type QueueStore interface {
 	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError)
+	GetQueueData(domainId int64, search *model.SearchEntity) (*model.QueueData, *model.AppError)
 }
 
 type MemberStore interface {
