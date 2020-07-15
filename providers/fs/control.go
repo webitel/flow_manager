@@ -58,8 +58,9 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 	// FIXME
 	//origination_callee_id_name
 
-	from = fmt.Sprintf("sip_copy_custom_headers=false,sip_h_X-Webitel-Domain-Id=%d,sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'",
-		call.DomainId(), call.Id(), call.From().Type, call.From().Id, call.Destination())
+	from = fmt.Sprintf("sip_copy_custom_headers=false,sip_h_X-Webitel-Domain-Id=%d,sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'"+
+		",wbt_from_number='%s',wbt_from_name='%s'",
+		call.DomainId(), call.Id(), call.From().Type, call.From().Id, call.Destination(), call.From().Number, call.From().Name)
 
 	from += fmt.Sprintf(",effective_caller_id_name='%s',effective_caller_id_number='%s'", call.From().Name, call.From().Number)
 
@@ -356,6 +357,10 @@ func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, tran
 	}
 
 	return c.Set(ctx, vars)
+}
+
+func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model.Response, *model.AppError) {
+	return model.CallResponseOK, nil
 }
 
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
