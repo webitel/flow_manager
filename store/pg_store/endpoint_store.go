@@ -47,7 +47,7 @@ from endpoints e
      from directory.wbt_user u
      where (e.endpoint->>'type')::varchar = 'user' and u.dc = :DomainId and
            ( u.extension = (e.endpoint->>'extension')::varchar or
-             u.id = (e.endpoint->'id')::bigint)
+             u.id = (e.endpoint->>'id')::bigint)
 
      union all
 
@@ -69,7 +69,7 @@ from endpoints e
         left join directory.sip_gateway_register reg on reg.id = g.id
      where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
              ( g.name = (e.endpoint->>'name')::varchar or
-             g.id = (e.endpoint->'id')::bigint)
+             g.id = (e.endpoint->>'id')::bigint)
 
      limit 1
  ) res on true
