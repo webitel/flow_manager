@@ -107,6 +107,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.getQueueInfo),
 	}
+	apps["classifier"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.classifierHandler),
+	}
 
 	return apps
 }

@@ -314,6 +314,8 @@ type Call interface {
 	Queue(ctx context.Context, ringFile string) (Response, *AppError)
 	Intercept(ctx context.Context, id string) (Response, *AppError)
 	GetVariable(string) string
+
+	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
 }
 
 type PlaybackFile struct {
@@ -342,8 +344,12 @@ type PlaybackDigits struct {
 	Regexp    *string `json:"regexp"`
 }
 
+type GetSpeech struct {
+}
+
 type PlaybackArgs struct {
 	Files      []*PlaybackFile `json:"files"`
 	Terminator string          `json:"terminator" def:"#"`
 	GetDigits  *PlaybackDigits `json:"getDigits"`
+	GetSpeech  *GetSpeech      `json:"getSpeech"`
 }
