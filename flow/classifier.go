@@ -1,13 +1,16 @@
 package flow
 
 import (
-	"bytes"
 	"context"
+	"github.com/euskadi31/go-tokenizer"
 	"github.com/webitel/flow_manager/model"
+	"strings"
 )
 
+var tok = tokenizer.New()
+
 type ClassifierArgs struct {
-	Cluster map[string][][]byte `json:"cluster"`
+	Cluster map[string][]string `json:"cluster"`
 	Input   string              `json:"input"`
 	Set     string              `json:"set"`
 }
@@ -18,10 +21,11 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 		return nil, err
 	}
 
-	input := bytes.ToLower([]byte(argv.Input))
+	tokens := tok.Tokenize(strings.ToLower(argv.Input))
+
 	for cluster, elems := range argv.Cluster {
 		for _, word := range elems {
-			if bytes.Index(input, bytes.ToLower(word)) > -1 {
+			if inArr(tokens, strings.ToLower(word)) {
 				return conn.Set(ctx, model.Variables{
 					argv.Set: cluster,
 				})
@@ -30,4 +34,15 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func inArr(tokens []string, val string) bool {
+
+	for _, v := range tokens {
+		if v == val {
+			return true
+		}
+	}
+
+	return false
 }

@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go v0.57.0
 	github.com/emersion/go-imap v1.0.4
 	github.com/emersion/go-message v0.11.2
+	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/golang/protobuf v1.4.1
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
