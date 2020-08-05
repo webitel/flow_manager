@@ -316,6 +316,7 @@ type Call interface {
 	GetVariable(string) string
 
 	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
+	GoogleTranscribe(ctx context.Context) (Response, *AppError)
 }
 
 type PlaybackFile struct {

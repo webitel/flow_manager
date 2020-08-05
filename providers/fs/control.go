@@ -363,6 +363,14 @@ func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) GoogleTranscribe(ctx context.Context) (model.Response, *model.AppError) {
+	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s start uk-UA interim", c.id)); err != nil {
+		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {

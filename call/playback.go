@@ -23,7 +23,11 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 		return nil, err
 	}
 
-	if argv.GetDigits != nil {
+	if argv.GetSpeech != nil {
+		if _, err := call.GoogleTranscribe(ctx); err != nil {
+			return nil, err
+		}
+	} else if argv.GetDigits != nil {
 		return call.PlaybackAndGetDigits(ctx, argv.Files, argv.GetDigits)
 	}
 
