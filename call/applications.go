@@ -112,6 +112,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.QueueCallPosition),
 	}
+	apps["updateCid"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.UpdateCid),
+	}
 
 	return apps
 }

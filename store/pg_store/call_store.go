@@ -204,3 +204,20 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 
 	return nil
 }
+
+func (s SqlCallStore) UpdateFrom(id string, name, number *string) *model.AppError {
+	_, err := s.GetMaster().Exec(`update cc_calls
+set from_number = coalesce(:Number, from_number),
+    from_name = coalesce(:Name, from_name)
+where id = :Id`, map[string]interface{}{
+		"Number": number,
+		"Name":   name,
+		"Id":     id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.UpdateFrom", "store.sql_call.update_from.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}

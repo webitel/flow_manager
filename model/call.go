@@ -317,6 +317,8 @@ type Call interface {
 
 	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
 	GoogleTranscribe(ctx context.Context) (Response, *AppError)
+
+	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
 }
 
 type PlaybackFile struct {

@@ -91,3 +91,7 @@ func (c *callWatcher) storeHangupCalls() {
 		time.Sleep(time.Second * 5)
 	}
 }
+
+func (c *FlowManager) UpdateCallFrom(id string, name, number *string) *model.AppError {
+	return c.Store.Call().UpdateFrom(id, name, number)
+}
