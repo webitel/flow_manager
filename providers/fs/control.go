@@ -376,12 +376,16 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res m
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_name=%s", *name)); err != nil {
 			return nil, err
 		}
+
+		c.from.Name = *name
 	}
 
 	if number != nil {
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_number=%s", *number)); err != nil {
 			return nil, err
 		}
+
+		c.from.Number = *number
 	}
 
 	return
