@@ -91,10 +91,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.SetTimezone),
 	}
-	//apps["sleep"] = &Application{
-	//	AllowNoConnect: true,
-	//	Handler:        r.doExecute(r.sleep),
-	//}
+	apps["softSleep"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.sleep),
+	}
 	apps["callbackQueue"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.callbackQueue),

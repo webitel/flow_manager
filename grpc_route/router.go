@@ -6,6 +6,7 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 	"net/http"
 )
 
@@ -44,11 +45,17 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 
+	go r.handle(conn)
+	return nil
+}
+
+func (r *Router) handle(conn model.Connection) {
 	gr := conn.(model.GRPCConnection)
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), gr.SchemaId())
 	if err != nil {
-		return err
+		wlog.Error(err.Error())
+		return
 	}
 
 	i := flow.New(flow.Config{
@@ -60,8 +67,6 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 	})
 
 	flow.Route(conn.Context(), i, r)
-
-	return nil
 }
 
 func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
