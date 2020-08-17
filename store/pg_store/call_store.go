@@ -221,3 +221,17 @@ where id = :Id`, map[string]interface{}{
 
 	return nil
 }
+
+func (s SqlCallStore) SaveTranscribe(callId, transcribe string) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into cc_calls_transcribe (call_id, transcribe)
+values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
+		"CallId":     callId,
+		"Transcribe": transcribe,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SaveTranscribe", "store.sql_call.save_transcribe.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}

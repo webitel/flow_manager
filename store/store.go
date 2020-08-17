@@ -36,6 +36,7 @@ type CallStore interface {
 	UpdateFrom(id string, name, number *string) *model.AppError
 
 	AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError
+	SaveTranscribe(callId, transcribe string) *model.AppError
 }
 
 type SchemaStore interface {

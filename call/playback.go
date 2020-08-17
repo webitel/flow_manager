@@ -27,6 +27,15 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 		if _, err := call.GoogleTranscribe(ctx); err != nil {
 			return nil, err
 		}
+		if _, err := call.Playback(ctx, argv.Files); err != nil {
+			return nil, err
+		}
+
+		if err = r.fm.Store.Call().SaveTranscribe(call.Id(), call.GetVariable("variable_google_transcript")); err != nil {
+			return nil, err
+		}
+		return model.CallResponseOK, nil
+
 	} else if argv.GetDigits != nil {
 		return call.PlaybackAndGetDigits(ctx, argv.Files, argv.GetDigits)
 	}
