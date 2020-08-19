@@ -28,15 +28,19 @@ type server struct {
 	server          *grpc.Server
 	didFinishListen chan struct{}
 	consume         chan model.Connection
+	chatApi         *chatApi
 	startOnce       sync.Once
 }
 
 func NewServer(cfg *Config) model.Server {
-	return &server{
+	srv := &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan model.Connection),
 	}
+	srv.chatApi = NewChatApi(srv)
+
+	return srv
 }
 
 func publicAddr(lis net.Listener) (string, int) {
@@ -60,6 +64,7 @@ func (s *server) Start() *model.AppError {
 	)
 
 	flow.RegisterFlowServiceServer(s.server, s)
+	flow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
