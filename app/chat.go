@@ -40,6 +40,21 @@ func (fm *FlowManager) PushChatToQueue(domainId int64, channelId string, queueId
 func (fm *FlowManager) JoinToConversation(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError) {
 	return fm.Store.Chat().Join(parentChannelId, name)
 }
+
 func (fm *FlowManager) CloseConversation(channelId string) *model.AppError {
 	return fm.Store.Chat().Close(channelId)
+}
+
+func (fm *FlowManager) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError) {
+	routing, err := fm.Store.Chat().RoutingFromProfile(domainId, profileId)
+	if err != nil {
+		return nil, err
+	}
+
+	routing.Schema, err = fm.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+
+	return routing, nil
 }

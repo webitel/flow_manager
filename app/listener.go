@@ -65,9 +65,17 @@ func (f *FlowManager) listenGrpcConnection(stop chan struct{}, wg *sync.WaitGrou
 				return
 			}
 
-			if err := f.GRPCRouter.Handle(c); err != nil {
-				wlog.Error(err.Error())
+			switch c.Type() {
+			case model.ConnectionTypeChat:
+				if err := f.ChatRouter.Handle(c); err != nil {
+					wlog.Error(err.Error())
+				}
+			default:
+				if err := f.GRPCRouter.Handle(c); err != nil {
+					wlog.Error(err.Error())
+				}
 			}
+
 		}
 	}
 }

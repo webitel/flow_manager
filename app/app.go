@@ -9,7 +9,6 @@ import (
 	"github.com/webitel/flow_manager/mq/rabbit"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
-	"github.com/webitel/flow_manager/providers/web_chat"
 	"github.com/webitel/flow_manager/store"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 	"github.com/webitel/wlog"
@@ -35,6 +34,7 @@ type FlowManager struct {
 	CallRouter  model.Router
 	GRPCRouter  model.Router
 	EmailRouter model.Router
+	ChatRouter  model.Router
 
 	callWatcher *callWatcher
 }
@@ -78,8 +78,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Host: fm.Config().Esl.Host,
 			Port: fm.Config().Esl.Port,
 		}),
-		//email.New(fm.Store.Email()),
-		web_chat.NewServer(fm, fm.Config().WebChat.Host, fm.Config().WebChat.Port),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {

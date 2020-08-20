@@ -9,6 +9,7 @@ const (
 	ConnectionTypeGrpc
 	ConnectionTypeEmail
 	ConnectionTypeWebChat
+	ConnectionTypeChat
 )
 
 type Server interface {

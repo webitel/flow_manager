@@ -76,6 +76,8 @@ type ChatStore interface {
 	ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError)
 	Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError)
 	Close(channelId string) *model.AppError
+
+	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
 }
 
 type QueueStore interface {
