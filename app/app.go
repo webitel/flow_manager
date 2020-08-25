@@ -92,6 +92,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
+	//todo fixme
+	if err := servers[0].Cluster(fm.cluster.discovery); err != nil {
+		outErr = err
+		return
+	}
+
 	fm.cc = client.NewCCManager(fm.cluster.discovery)
 	if err = fm.cc.Start(); err != nil {
 		return nil, err

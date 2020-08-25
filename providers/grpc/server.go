@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/grpc/workflow"
@@ -30,6 +31,7 @@ type server struct {
 	consume         chan model.Connection
 	chatApi         *chatApi
 	startOnce       sync.Once
+	chatManager     *chatManager
 }
 
 func NewServer(cfg *Config) model.Server {
@@ -50,6 +52,16 @@ func publicAddr(lis net.Listener) (string, int) {
 	}
 	port, _ := strconv.Atoi(p)
 	return h, port
+}
+
+//todo del me
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+	s.chatManager = NewChatManager(discovery)
+	if err := s.chatManager.Start(); err != nil {
+		return model.NewAppError("GRPC", "grpc.chat.client_manager.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return nil
 }
 
 func (s *server) Start() *model.AppError {

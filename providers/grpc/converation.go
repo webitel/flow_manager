@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/providers/grpc/client"
 	"github.com/webitel/wlog"
+	"net/http"
 	"sync"
+	"time"
 )
 
-type conversationClient struct {
-	id string
+type conversationClient interface {
+	Id() string
 }
 
 type message struct {
@@ -20,7 +23,7 @@ type conversation struct {
 	profileId int64
 	domainId  int64
 	variables map[string]string
-	client    *conversationClient
+	client    client.FlowClientServiceClient
 	mx        sync.RWMutex
 	ctx       context.Context
 	messages  []*message
@@ -28,22 +31,19 @@ type conversation struct {
 	confirmation map[string]chan []string
 
 	chat *chatApi
-
-	inbound chan (message)
 }
 
-func NewConversation(id, domainId, profileId int64) *conversation {
+func NewConversation(client *ChatClientConnection, id, domainId, profileId int64) *conversation {
 	return &conversation{
 		id:           id,
 		profileId:    profileId,
 		domainId:     domainId,
 		variables:    make(map[string]string),
-		client:       nil,
+		client:       client.api,
 		mx:           sync.RWMutex{},
 		ctx:          context.Background(),
 		messages:     make([]*message, 5),
 		confirmation: make(map[string]chan []string),
-		inbound:      make(chan message),
 	}
 }
 
@@ -56,7 +56,8 @@ func (c *conversation) Id() string {
 }
 
 func (c *conversation) NodeId() string {
-	return c.client.id
+	//TODO
+	return "FIXME"
 }
 
 func (c *conversation) DomainId() int64 {
@@ -80,6 +81,15 @@ func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Res
 }
 
 func (c *conversation) ParseText(text string) string {
+	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
+		r := compileVar.FindStringSubmatch(varName)
+		if len(r) > 0 {
+			out, _ = c.Get(r[1])
+		}
+
+		return
+	})
+
 	return text
 }
 
@@ -96,11 +106,92 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
-func (c *conversation) Stop(err *model.AppError) {
+func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
+	_, err := c.client.SendMessage(ctx, &client.SendMessageRequest{
+		ConversationId: c.id,
+		Messages: &client.Message{
+			Type: "text", // FIXME
+			Value: &client.Message_TextMessage_{
+				TextMessage: &client.Message_TextMessage{
+					Text: text,
+				},
+			},
+		},
+	})
+
 	if err != nil {
-		wlog.Error(fmt.Sprintf("conversation %s stop with error: %s", c.id, err.Error()))
+		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *conversation) WaitMessage(ctx context.Context, timeout int) ([]string, *model.AppError) {
+	id := model.NewId()
+
+	res, err := c.client.WaitMessage(ctx, &client.WaitMessageRequest{
+		ConversationId: c.id,
+		ConfirmationId: id,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("Conversation.WaitMessage", "conv.wait.msg.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	if len(res.Messages) > 0 {
+		//FIXME save msg
+		msgs := make([]string, 0, len(res.Messages))
+		for _, m := range res.Messages {
+			switch x := m.Value.(type) {
+			case *client.Message_TextMessage_:
+				msgs = append(msgs, x.TextMessage.Text)
+			}
+		}
+
+		return msgs, nil
+	}
+
+	if timeout == 0 {
+		timeout = int(res.TimeoutSec)
+	}
+
+	t := time.After(time.Second * time.Duration(timeout))
+
+	wlog.Debug(fmt.Sprintf("conversation %d wait message %s", c.id, time.Second*time.Duration(timeout)))
+
+	ch := make(chan []string)
+	c.mx.Lock()
+	c.confirmation[id] = ch
+	c.mx.Unlock()
+
+	select {
+	case <-t:
+		wlog.Debug(fmt.Sprintf("conversation %d wait message: timeout", c.id))
+		break
+	case msgs := <-ch:
+		wlog.Debug(fmt.Sprintf("conversation %d receive message: %s", c.id, msgs))
+		return msgs, nil
+	}
+
+	return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Timeout", http.StatusInternalServerError)
+}
+
+func (c *conversation) Stop(err *model.AppError) {
+	var cause = ""
+	if err != nil {
+		wlog.Error(fmt.Sprintf("conversation %d stop with error: %s", c.id, err.Error()))
+		cause = err.Id
+	}
+
+	_, e := c.client.CloseConversation(c.ctx, &client.CloseConversationRequest{
+		ConversationId: c.id,
+		Cause:          cause,
+	})
+
+	if e != nil {
+		wlog.Error(e.Error())
 	}
 
 	c.chat.conversations.Remove(c.id)
-	wlog.Error("TODO")
+	wlog.Debug(fmt.Sprintf("close conversation %d", c.id))
 }

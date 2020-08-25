@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package webitel.chat.service.flowadapter;
+package client;
 
 service FlowClientService {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
@@ -42,7 +42,8 @@ message WaitMessageRequest {
 
 message WaitMessageResponse {
     int64 timeout_sec = 1;
-    Error error = 2;
+    repeated Message messages = 2;
+    Error error = 3;
 }
 
 message CloseConversationRequest {

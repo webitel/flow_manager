@@ -2,6 +2,7 @@ package fs
 
 import (
 	"fmt"
+	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 	"github.com/webitel/wlog"
@@ -38,6 +39,10 @@ func NewServer(cfg *Config) model.Server {
 
 func (s server) Name() string {
 	return "FreeSWITCH"
+}
+
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+	return nil
 }
 
 func (s server) Type() model.ConnectionType {

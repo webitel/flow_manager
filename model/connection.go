@@ -1,6 +1,9 @@
 package model
 
-import "context"
+import (
+	"context"
+	"github.com/webitel/engine/discovery"
+)
 
 type ConnectionType int8
 
@@ -20,6 +23,7 @@ type Server interface {
 	Port() int
 	Consume() <-chan Connection
 	Type() ConnectionType
+	Cluster(discovery discovery.ServiceDiscovery) *AppError
 }
 
 type Variables map[string]interface{}

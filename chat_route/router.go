@@ -19,6 +19,8 @@ type Conversation interface {
 	model.Connection
 	ProfileId() int64
 	Stop(*model.AppError)
+	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
+	WaitMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
@@ -28,6 +30,7 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 
 	router.apps = flow.UnionApplicationMap(
 		fr.Handlers(),
+		ApplicationsHandlers(router),
 	)
 
 	fm.ChatRouter = router

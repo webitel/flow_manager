@@ -36,8 +36,12 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 			},
 		}, nil
 	}
+	client, err := s.chatManager.getClient()
+	if err != nil {
+		return nil, err
+	}
 
-	conv := NewConversation(req.ConversationId, req.DomainId, req.ProfileId)
+	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId)
 	conv.chat = s
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
@@ -89,28 +93,18 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 	if ok {
 		delete(conv.confirmation, req.ConfirmationId)
 	}
-	conv.mx.Unlock()
+	conv.mx.RUnlock()
 
 	if !ok {
 		return &workflow.ConfirmationMessageResponse{
 			Error: &workflow.Error{
 				Id:      "chat.grpc.conversation.confirmation.not_found",
-				Message: fmt.Sprintf("Confirmation %d not found", req.ConfirmationId),
+				Message: fmt.Sprintf("Confirmation %s not found", req.ConfirmationId),
 			},
 		}, nil
 	}
 
-	msgs := make([]string, len(req.Messages), len(req.Messages))
-
-	// TODO
-	for _, m := range req.Messages {
-		switch x := m.Value.(type) {
-		case *workflow.Message_TextMessage_:
-			msgs = append(msgs, x.TextMessage.Text)
-		}
-	}
-
-	conf <- msgs
+	conf <- messageToText(req.Messages...)
 
 	return &workflow.ConfirmationMessageResponse{}, nil
 }
@@ -123,4 +117,17 @@ func (s *chatApi) getConversation(id int64) (*conversation, *model.AppError) {
 	}
 
 	return conv.(*conversation), nil
+}
+
+func messageToText(messages ...*workflow.Message) []string {
+	msgs := make([]string, 0, len(messages))
+
+	for _, m := range messages {
+		switch x := m.Value.(type) {
+		case *workflow.Message_TextMessage_:
+			msgs = append(msgs, x.TextMessage.Text)
+		}
+	}
+
+	return msgs
 }
