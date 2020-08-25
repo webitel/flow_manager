@@ -2,7 +2,7 @@ package client
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/providers/grpc/flow"
+	"github.com/webitel/flow_manager/providers/grpc/workflow"
 )
 
 type queueApi struct {
@@ -15,7 +15,7 @@ func NewQueueApi(m *flowManager) QueueApi {
 	}
 }
 
-func (api *queueApi) DoDistributeAttempt(in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error) {
+func (api *queueApi) DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
 	cli, err := api.cli.getRandomClient()
 	if err != nil {
 		return nil, err

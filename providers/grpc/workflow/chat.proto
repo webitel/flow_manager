@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package flow;
+package workflow;
 
 service FlowChatServerService {
     rpc Start(StartRequest) returns (StartResponse) {}

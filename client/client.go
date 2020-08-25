@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/flow"
+	"github.com/webitel/flow_manager/providers/grpc/workflow"
 	"github.com/webitel/wlog"
 	"sync"
 )
@@ -24,7 +24,7 @@ type FlowManager interface {
 }
 
 type QueueApi interface {
-	DoDistributeAttempt(in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error)
+	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
 }
 
 type flowManager struct {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/flow"
+	"github.com/webitel/flow_manager/providers/grpc/workflow"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -63,8 +63,8 @@ func (s *server) Start() *model.AppError {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	)
 
-	flow.RegisterFlowServiceServer(s.server, s)
-	flow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
+	workflow.RegisterFlowServiceServer(s.server, s)
+	workflow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
@@ -158,10 +158,10 @@ func httpCodeToGrpc(c int) codes.Code {
 	}
 }
 
-func (s *server) DistributeAttempt(ctx context.Context, in *flow.DistributeAttemptRequest) (*flow.DistributeAttemptResponse, error) {
+func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
 	conn := newConnection(ctx, make(map[string]string))
 
-	var result *flow.DistributeAttemptResponse
+	var result *workflow.DistributeAttemptResponse
 
 	conn.schemaId = int(in.SchemaId)
 	conn.domainId = in.DomainId
@@ -172,7 +172,7 @@ func (s *server) DistributeAttempt(ctx context.Context, in *flow.DistributeAttem
 	case <-ctx.Done():
 		return nil, errors.New("ctx done")
 	case r := <-conn.result:
-		result, _ = r.(*flow.DistributeAttemptResponse)
+		result, _ = r.(*workflow.DistributeAttemptResponse)
 	}
 
 	return result, nil

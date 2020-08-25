@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/flow"
+	"github.com/webitel/flow_manager/providers/grpc/workflow"
 	"net/http"
 )
 
@@ -27,10 +27,10 @@ func NewChatApi(s *server) *chatApi {
 	}
 }
 
-func (s *chatApi) Start(ctx context.Context, req *flow.StartRequest) (*flow.StartResponse, error) {
+func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workflow.StartResponse, error) {
 	if _, ok := s.conversations.Get(req.ConversationId); ok {
-		return &flow.StartResponse{
-			Error: &flow.Error{
+		return &workflow.StartResponse{
+			Error: &workflow.Error{
 				Id:      "grpc.chat.start.valid.conversation_id",
 				Message: fmt.Sprintf("Conversation %d already exists", req.ConversationId),
 			},
@@ -44,42 +44,42 @@ func (s *chatApi) Start(ctx context.Context, req *flow.StartRequest) (*flow.Star
 
 	s.server.consume <- conv
 
-	return &flow.StartResponse{}, nil
+	return &workflow.StartResponse{}, nil
 }
 
-func (s *chatApi) Break(ctx context.Context, req *flow.BreakRequest) (*flow.BreakResponse, error) {
+func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
 	conv, err := s.getConversation(req.ConversationId)
 	if err != nil {
-		return &flow.BreakResponse{
-			Error: &flow.Error{
+		return &workflow.BreakResponse{
+			Error: &workflow.Error{
 				Id:      err.Id,
-				Message: err.Message,
+				Message: err.Error(),
 			},
 		}, nil
 	}
 
 	if err := conv.Break(); err != nil {
-		return &flow.BreakResponse{
-			Error: &flow.Error{
+		return &workflow.BreakResponse{
+			Error: &workflow.Error{
 				Id:      err.Id,
-				Message: err.Message,
+				Message: err.Error(),
 			},
 		}, nil
 	}
 
-	return &flow.BreakResponse{}, nil
+	return &workflow.BreakResponse{}, nil
 }
 
-func (s *chatApi) ConfirmationMessage(ctx context.Context, req *flow.ConfirmationMessageRequest) (*flow.ConfirmationMessageResponse, error) {
+func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
 	var conf chan []string
 	var ok bool
 
 	conv, err := s.getConversation(req.ConversationId)
 	if err != nil {
-		return &flow.ConfirmationMessageResponse{
-			Error: &flow.Error{
+		return &workflow.ConfirmationMessageResponse{
+			Error: &workflow.Error{
 				Id:      err.Id,
-				Message: err.Message,
+				Message: err.Error(),
 			},
 		}, nil
 	}
@@ -92,8 +92,8 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *flow.Confirmatio
 	conv.mx.Unlock()
 
 	if !ok {
-		return &flow.ConfirmationMessageResponse{
-			Error: &flow.Error{
+		return &workflow.ConfirmationMessageResponse{
+			Error: &workflow.Error{
 				Id:      "chat.grpc.conversation.confirmation.not_found",
 				Message: fmt.Sprintf("Confirmation %d not found", req.ConfirmationId),
 			},
@@ -105,14 +105,14 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *flow.Confirmatio
 	// TODO
 	for _, m := range req.Messages {
 		switch x := m.Value.(type) {
-		case *flow.Message_TextMessage_:
+		case *workflow.Message_TextMessage_:
 			msgs = append(msgs, x.TextMessage.Text)
 		}
 	}
 
 	conf <- msgs
 
-	return &flow.ConfirmationMessageResponse{}, nil
+	return &workflow.ConfirmationMessageResponse{}, nil
 }
 
 func (s *chatApi) getConversation(id int64) (*conversation, *model.AppError) {

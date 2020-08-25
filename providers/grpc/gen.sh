@@ -1,4 +1,4 @@
 
-protoc -I ./flow --go_out=plugins=grpc:./flow ./flow/*.proto
+protoc -I ./workflow --go_out=plugins=grpc:./workflow ./workflow/*.proto
 
 protoc -I ./client --go_out=plugins=grpc:./client ./client/*.proto

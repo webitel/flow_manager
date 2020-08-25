@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	flow2 "github.com/webitel/flow_manager/providers/grpc/flow"
+	flow2 "github.com/webitel/flow_manager/providers/grpc/workflow"
 )
 
 type DoDistributeCancelArgs struct {

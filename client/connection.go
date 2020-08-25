@@ -1,7 +1,7 @@
 package client
 
 import (
-	"github.com/webitel/flow_manager/providers/grpc/flow"
+	"github.com/webitel/flow_manager/providers/grpc/workflow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"time"
@@ -12,7 +12,7 @@ type fConnection struct {
 	host   string
 	client *grpc.ClientConn
 
-	queue flow.FlowServiceClient
+	queue workflow.FlowServiceClient
 }
 
 func NewFlowConnection(name, url string) (*fConnection, error) {
@@ -28,7 +28,7 @@ func NewFlowConnection(name, url string) (*fConnection, error) {
 		return nil, err
 	}
 
-	connection.queue = flow.NewFlowServiceClient(connection.client)
+	connection.queue = workflow.NewFlowServiceClient(connection.client)
 
 	return connection, nil
 }
