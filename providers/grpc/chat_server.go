@@ -51,7 +51,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 	return &workflow.StartResponse{}, nil
 }
 
-func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
+func (s *chatApi) Break(_ context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
 	conv, err := s.getConversation(req.ConversationId)
 	if err != nil {
 		return &workflow.BreakResponse{
@@ -74,7 +74,7 @@ func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workf
 	return &workflow.BreakResponse{}, nil
 }
 
-func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
+func (s *chatApi) ConfirmationMessage(_ context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
 	var conf chan []string
 	var ok bool
 

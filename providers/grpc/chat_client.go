@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ChatClientService = "webitel.chat.service.flowclient"
+	ChatClientService = "webitel.chat.flowclient"
 	WatcherInterval   = 5 * 1000
 )
 
