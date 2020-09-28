@@ -12,7 +12,7 @@ import (
 )
 
 var (
-	ChatClientService = "webitel.chat.flowclient"
+	ChatClientService = "webitel.chat.server"
 	WatcherInterval   = 5 * 1000
 )
 
@@ -30,7 +30,7 @@ type ChatClientConnection struct {
 	name   string
 	host   string
 	client *grpc.ClientConn
-	api    client.FlowClientServiceClient
+	api    client.ChatServiceClient
 }
 
 func NewChatManager(serviceDiscovery discovery.ServiceDiscovery) *chatManager {
@@ -55,7 +55,7 @@ func NewChatClientConnection(name, url string) (*ChatClientConnection, error) {
 		return nil, err
 	}
 
-	connection.api = client.NewFlowClientServiceClient(connection.client)
+	connection.api = client.NewChatServiceClient(connection.client)
 
 	return connection, nil
 }

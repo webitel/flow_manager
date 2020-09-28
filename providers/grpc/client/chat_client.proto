@@ -2,10 +2,30 @@ syntax = "proto3";
 
 package client;
 
-service FlowClientService {
+
+service ChatService {
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
-    rpc WaitMessage(WaitMessageRequest) returns (WaitMessageResponse) {}
+    rpc StartConversation(StartConversationRequest) returns (StartConversationResponse) {}
     rpc CloseConversation(CloseConversationRequest) returns (CloseConversationResponse) {}
+    rpc JoinConversation(JoinConversationRequest) returns (JoinConversationResponse) {}
+    rpc LeaveConversation(LeaveConversationRequest) returns (LeaveConversationResponse) {}
+    rpc InviteToConversation(InviteToConversationRequest) returns (InviteToConversationResponse) {}
+    rpc DeclineInvitation(DeclineInvitationRequest) returns (DeclineInvitationResponse) {}
+
+    rpc WaitMessage(WaitMessageRequest) returns (WaitMessageResponse) {}
+
+    rpc GetConversationByID(GetConversationByIDRequest) returns (GetConversationByIDResponse) {}
+    rpc GetProfiles(GetProfilesRequest) returns (GetProfilesResponse) {}
+    rpc GetProfileByID(GetProfileByIDRequest) returns (GetProfileByIDResponse) {}
+    rpc CreateProfile(CreateProfileRequest) returns (CreateProfileResponse) {}
+    rpc DeleteProfile(DeleteProfileRequest) returns (DeleteProfileResponse) {}
+    rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {}
+    rpc CheckSession(CheckSessionRequest) returns (CheckSessionResponse) {}
+}
+
+message Error {
+    string id = 1;
+    string message = 2;
 }
 
 message Message {
@@ -21,18 +41,13 @@ message Message {
     }
 }
 
-message Error {
-    string id = 1;
-    string message = 2;
-}
-
-message SendMessageRequest {
-    int64 conversation_id = 1;
-    Message messages = 2;
-}
-
-message SendMessageResponse {
-    Error error = 1;
+message Profile {
+    int64 id = 1;
+    string name = 2;
+    string type = 3;
+    int64 domain_id = 4;
+    int64 schema_id = 5;
+    map<string, string>  variables = 6;
 }
 
 message WaitMessageRequest {
@@ -46,11 +61,138 @@ message WaitMessageResponse {
     Error error = 3;
 }
 
+message CheckSessionRequest {
+    string external_id = 1;
+    int64 profile_id = 2;
+    string username = 3;
+}
+
+message CheckSessionResponse {
+    bool exists = 1;
+    int64 channel_id = 2;
+    int64 client_id = 3;
+}
+
+message User {
+    int64 user_id = 1;
+    string type = 2;
+    string connection = 3;
+    bool internal = 4;
+}
+
+message SendMessageRequest {
+    // User from = 1;
+    Message message = 1;
+    int64 channel_id = 2;
+    bool from_flow = 3;
+    int64 conversation_id = 4;
+}
+
+message SendMessageResponse {
+}
+
+message StartConversationRequest {
+    User user = 1;
+    int64 domain_id = 2;
+}
+message StartConversationResponse {
+    int64 conversation_id = 1;
+    int64 channel_id = 2;
+}
+
 message CloseConversationRequest {
     int64 conversation_id = 1;
-    string cause = 2;
+    int64 closer_channel_id = 2;
+    bool from_flow = 3;
+    string cause = 4;
 }
 
 message CloseConversationResponse {
+}
+
+message JoinConversationRequest {
+    int64 invite_id = 1;
+    // User user = 1;
+    // int64 conversation_id = 2;
+}
+message JoinConversationResponse {
+    int64 channel_id = 1;
+}
+
+message LeaveConversationRequest {
+    int64 channel_id = 1;
+    int64 conversation_id = 2;
+}
+message LeaveConversationResponse {
+}
+
+message InviteToConversationRequest {
+    User user = 1;
+    int64 conversation_id = 2;
+    int64 inviter_channel_id = 3;
+}
+message InviteToConversationResponse {
+    int64 invite_id = 1;
+}
+
+message DeclineInvitationRequest {
+    int64 invite_id = 1;
+    int64 user_id = 2;
+    int64 conversation_id = 3;
+}
+message DeclineInvitationResponse {
+}
+
+message GetConversationByIDRequest {
+    int64 conversation_id = 1;
+}
+
+message GetConversationByIDResponse {
+    int64 id = 1;
+    int64 domain_id = 2;
+    string title = 3;
+}
+
+message GetProfilesRequest {
+    string type = 1;
+    int64 domain_id = 2;
+}
+
+message GetProfilesResponse {
+    repeated Profile profiles = 1;
+}
+
+message GetProfileByIDRequest {
+    int64 profile_id = 1;
+}
+
+message GetProfileByIDResponse {
+    Profile profile = 1;
+}
+
+message CreateProfileRequest {
+    Profile item = 1;
+}
+
+message CreateProfileResponse {
+    Profile item = 1;
+    Error error = 2;
+}
+
+message DeleteProfileRequest {
+    int64 id = 1;
+}
+
+message DeleteProfileResponse {
     Error error = 1;
+}
+
+message UpdateProfileRequest {
+    int64 id = 1;
+    Profile item = 2;
+}
+
+message UpdateProfileResponse {
+    Profile item = 1;
+    Error error = 2;
 }

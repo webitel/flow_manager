@@ -23,7 +23,7 @@ type conversation struct {
 	profileId int64
 	domainId  int64
 	variables map[string]string
-	client    client.FlowClientServiceClient
+	client    client.ChatServiceClient
 	mx        sync.RWMutex
 	ctx       context.Context
 	messages  []*message
@@ -109,7 +109,7 @@ func (c *conversation) ProfileId() int64 {
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
-		Messages: &client.Message{
+		Message: &client.Message{
 			Type: "text", // FIXME
 			Value: &client.Message_TextMessage_{
 				TextMessage: &client.Message_TextMessage{
