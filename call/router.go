@@ -162,7 +162,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		//TODO config
-		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()
 	}

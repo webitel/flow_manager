@@ -109,6 +109,7 @@ func (c *conversation) ProfileId() int64 {
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
+		FromFlow:       true,
 		Message: &client.Message{
 			Type: "text", // FIXME
 			Value: &client.Message_TextMessage_{
@@ -185,6 +186,7 @@ func (c *conversation) Stop(err *model.AppError) {
 
 	_, e := c.client.CloseConversation(c.ctx, &client.CloseConversationRequest{
 		ConversationId: c.id,
+		FromFlow:       true,
 		Cause:          cause,
 	})
 
