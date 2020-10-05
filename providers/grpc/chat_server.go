@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
@@ -107,6 +108,26 @@ func (s *chatApi) ConfirmationMessage(_ context.Context, req *workflow.Confirmat
 	conf <- messageToText(req.Messages...)
 
 	return &workflow.ConfirmationMessageResponse{}, nil
+}
+
+func (s *chatApi) BreakBridge(_ context.Context, in *workflow.BreakBridgeRequest) (*workflow.BreakBridgeResponse, error) {
+	conv, err := s.getConversation(in.ConversationId)
+	if err != nil {
+		return nil, err
+	}
+
+	defer conv.mx.Unlock()
+	conv.mx.Lock()
+	if conv.chBridge == nil {
+		return nil, errors.New("bridge not found")
+	}
+
+	close(conv.chBridge)
+	conv.chBridge = nil
+
+	return &workflow.BreakBridgeResponse{
+		Error: nil,
+	}, nil
 }
 
 func (s *chatApi) getConversation(id int64) (*conversation, *model.AppError) {

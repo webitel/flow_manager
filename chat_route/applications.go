@@ -17,6 +17,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["waitMessage"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.waitMessage),
 	}
+	apps["bridge"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.bridge),
+	}
 
 	return apps
 }

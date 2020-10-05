@@ -27,6 +27,7 @@ type conversation struct {
 	mx        sync.RWMutex
 	ctx       context.Context
 	messages  []*message
+	chBridge  chan struct{}
 
 	confirmation map[string]chan []string
 
@@ -40,6 +41,7 @@ func NewConversation(client *ChatClientConnection, id, domainId, profileId int64
 		domainId:     domainId,
 		variables:    make(map[string]string),
 		client:       client.api,
+		chBridge:     nil,
 		mx:           sync.RWMutex{},
 		ctx:          context.Background(),
 		messages:     make([]*message, 5),
@@ -196,4 +198,31 @@ func (c *conversation) Stop(err *model.AppError) {
 
 	c.chat.conversations.Remove(c.id)
 	wlog.Debug(fmt.Sprintf("close conversation %d", c.id))
+}
+
+func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError {
+
+	if c.chBridge != nil {
+		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
+	}
+	c.chBridge = make(chan struct{})
+
+	res, err := c.client.InviteToConversation(ctx, &client.InviteToConversationRequest{
+		User: &client.User{
+			UserId:   userId,
+			Type:     "webitel",
+			Internal: true,
+		},
+		ConversationId: c.id,
+	})
+
+	if err != nil {
+		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	<-c.chBridge
+
+	fmt.Println(res.InviteId)
+
+	return nil
 }

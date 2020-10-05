@@ -5,7 +5,16 @@ package workflow;
 service FlowChatServerService {
     rpc Start(StartRequest) returns (StartResponse) {}
     rpc Break(BreakRequest) returns (BreakResponse) {}
+    rpc BreakBridge(BreakBridgeRequest) returns (BreakBridgeResponse) {}
     rpc ConfirmationMessage(ConfirmationMessageRequest) returns (ConfirmationMessageResponse) {}
+}
+
+message BreakBridgeRequest {
+    int64 conversation_id = 1;
+}
+
+message BreakBridgeResponse {
+    Error error = 1;
 }
 
 message Message {

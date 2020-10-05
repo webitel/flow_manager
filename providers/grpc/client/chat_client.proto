@@ -4,12 +4,14 @@ package client;
 
 
 service ChatService {
+    // bridge
+    rpc InviteToConversation(InviteToConversationRequest) returns (InviteToConversationResponse) {}
+
     rpc SendMessage(SendMessageRequest) returns (SendMessageResponse) {}
     rpc StartConversation(StartConversationRequest) returns (StartConversationResponse) {}
     rpc CloseConversation(CloseConversationRequest) returns (CloseConversationResponse) {}
     rpc JoinConversation(JoinConversationRequest) returns (JoinConversationResponse) {}
     rpc LeaveConversation(LeaveConversationRequest) returns (LeaveConversationResponse) {}
-    rpc InviteToConversation(InviteToConversationRequest) returns (InviteToConversationResponse) {}
     rpc DeclineInvitation(DeclineInvitationRequest) returns (DeclineInvitationResponse) {}
 
     rpc WaitMessage(WaitMessageRequest) returns (WaitMessageResponse) {}
@@ -131,6 +133,7 @@ message InviteToConversationRequest {
     int64 conversation_id = 2;
     int64 inviter_channel_id = 3;
 }
+
 message InviteToConversationResponse {
     int64 invite_id = 1;
 }
