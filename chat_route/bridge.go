@@ -19,7 +19,7 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, conv Conversation
 		return nil, err
 	}
 
-	wlog.Debug(fmt.Sprintf("conversation %d bridge to %d", conv.Id(), argv.UserId))
+	wlog.Debug(fmt.Sprintf("conversation %s bridge to %d", conv.Id(), argv.UserId))
 
 	if err := conv.Bridge(ctx, argv.UserId); err != nil {
 		return nil, err

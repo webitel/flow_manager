@@ -11,6 +11,7 @@ service FlowChatServerService {
 
 message BreakBridgeRequest {
     int64 conversation_id = 1;
+    string cause = 2;
 }
 
 message BreakBridgeResponse {
