@@ -130,7 +130,7 @@ func (s *chatApi) BreakBridge(_ context.Context, in *workflow.BreakBridgeRequest
 	}, nil
 }
 
-func (s *chatApi) getConversation(id int64) (*conversation, *model.AppError) {
+func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {
 	conv, ok := s.conversations.Get(id)
 	if !ok {
 		return nil, model.NewAppError("Chat", "grpc.chat.conversation.not_found", nil,
@@ -145,8 +145,8 @@ func messageToText(messages ...*workflow.Message) []string {
 
 	for _, m := range messages {
 		switch x := m.Value.(type) {
-		case *workflow.Message_TextMessage_:
-			msgs = append(msgs, x.TextMessage.Text)
+		case *workflow.Message_Text:
+			msgs = append(msgs, x.Text)
 		}
 	}
 

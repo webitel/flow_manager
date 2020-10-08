@@ -19,7 +19,7 @@ type message struct {
 }
 
 type conversation struct {
-	id        int64
+	id        string
 	profileId int64
 	domainId  int64
 	variables map[string]string
@@ -34,7 +34,7 @@ type conversation struct {
 	chat *chatApi
 }
 
-func NewConversation(client *ChatClientConnection, id, domainId, profileId int64) *conversation {
+func NewConversation(client *ChatClientConnection, id string, domainId, profileId int64) *conversation {
 	return &conversation{
 		id:           id,
 		profileId:    profileId,
@@ -54,7 +54,7 @@ func (c conversation) Type() model.ConnectionType {
 }
 
 func (c *conversation) Id() string {
-	return fmt.Sprintf("%d", c.id) //todo
+	return c.id
 }
 
 func (c *conversation) NodeId() string {
@@ -114,10 +114,8 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 		FromFlow:       true,
 		Message: &client.Message{
 			Type: "text", // FIXME
-			Value: &client.Message_TextMessage_{
-				TextMessage: &client.Message_TextMessage{
-					Text: text,
-				},
+			Value: &client.Message_Text{
+				Text: text,
 			},
 		},
 	})
@@ -146,8 +144,8 @@ func (c *conversation) WaitMessage(ctx context.Context, timeout int) ([]string, 
 		msgs := make([]string, 0, len(res.Messages))
 		for _, m := range res.Messages {
 			switch x := m.Value.(type) {
-			case *client.Message_TextMessage_:
-				msgs = append(msgs, x.TextMessage.Text)
+			case *client.Message_Text:
+				msgs = append(msgs, x.Text)
 			}
 		}
 
@@ -160,7 +158,7 @@ func (c *conversation) WaitMessage(ctx context.Context, timeout int) ([]string, 
 
 	t := time.After(time.Second * time.Duration(timeout))
 
-	wlog.Debug(fmt.Sprintf("conversation %d wait message %s", c.id, time.Second*time.Duration(timeout)))
+	wlog.Debug(fmt.Sprintf("conversation %s wait message %s", c.id, time.Second*time.Duration(timeout)))
 
 	ch := make(chan []string)
 	c.mx.Lock()
@@ -213,6 +211,8 @@ func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError
 			Type:     "webitel",
 			Internal: true,
 		},
+		DomainId:       c.domainId,
+		TimeoutSec:     10,
 		ConversationId: c.id,
 	})
 
