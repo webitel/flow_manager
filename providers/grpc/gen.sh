@@ -1,1 +1,0 @@
-protoc -I ./client --go_out=plugins=grpc:./client ./client/*.proto

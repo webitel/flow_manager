@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/client"
+	client "github.com/webitel/protos/chat"
 	"github.com/webitel/wlog"
 	"net/http"
 	"sync"
