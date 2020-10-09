@@ -7,7 +7,7 @@ import (
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/workflow"
+	"github.com/webitel/protos/workflow"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

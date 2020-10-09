@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/grpc/workflow"
+	"github.com/webitel/protos/workflow"
 	"net/http"
 )
 

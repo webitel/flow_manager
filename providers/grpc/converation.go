@@ -99,7 +99,14 @@ func (c *conversation) Close() *model.AppError {
 	return nil // fixme
 }
 
+// FIXME close bridge
 func (c *conversation) Break() *model.AppError {
+	c.mx.Lock()
+	if c.chBridge != nil {
+		close(c.chBridge)
+	}
+	c.mx.Unlock()
+
 	c.ctx.Done() //todo
 	return nil
 }
@@ -195,7 +202,7 @@ func (c *conversation) Stop(err *model.AppError) {
 	}
 
 	c.chat.conversations.Remove(c.id)
-	wlog.Debug(fmt.Sprintf("close conversation %d", c.id))
+	wlog.Debug(fmt.Sprintf("close conversation %s", c.id))
 }
 
 func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError {
@@ -212,7 +219,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError
 			Internal: true,
 		},
 		DomainId:       c.domainId,
-		TimeoutSec:     10,
+		TimeoutSec:     0,
 		ConversationId: c.id,
 	})
 

@@ -22,9 +22,10 @@ require (
 	github.com/tidwall/gjson v1.6.0
 	github.com/webitel/call_center v0.0.0-20200708113542-ce02d2971627
 	github.com/webitel/engine v0.0.0-20200507071437-cd023a6c5b9e
+	github.com/webitel/protos v0.0.0-20201009113807-3d8fc0ae5c85
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
 	google.golang.org/api v0.25.0
 	google.golang.org/genproto v0.0.0-20200521103424-e9a78aa275b7
-	google.golang.org/grpc v1.29.1
+	google.golang.org/grpc v1.33.0
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
