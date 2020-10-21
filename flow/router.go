@@ -111,6 +111,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.classifierHandler),
 	}
+	apps["js"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.Js),
+	}
 
 	return apps
 }

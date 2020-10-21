@@ -26,6 +26,7 @@ type conversation struct {
 	client    client.ChatServiceClient
 	mx        sync.RWMutex
 	ctx       context.Context
+	cancel    context.CancelFunc
 	messages  []*message
 	chBridge  chan struct{}
 
@@ -35,6 +36,7 @@ type conversation struct {
 }
 
 func NewConversation(client *ChatClientConnection, id string, domainId, profileId int64) *conversation {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &conversation{
 		id:           id,
 		profileId:    profileId,
@@ -43,7 +45,8 @@ func NewConversation(client *ChatClientConnection, id string, domainId, profileI
 		client:       client.api,
 		chBridge:     nil,
 		mx:           sync.RWMutex{},
-		ctx:          context.Background(),
+		ctx:          ctx,
+		cancel:       cancel,
 		messages:     make([]*message, 5),
 		confirmation: make(map[string]chan []string),
 	}
@@ -107,7 +110,8 @@ func (c *conversation) Break() *model.AppError {
 	}
 	c.mx.Unlock()
 
-	c.ctx.Done() //todo
+	c.cancel()
+	//c.ctx.Done() //todo
 	return nil
 }
 
@@ -219,7 +223,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError
 			Internal: true,
 		},
 		DomainId:       c.domainId,
-		TimeoutSec:     0,
+		TimeoutSec:     10,
 		ConversationId: c.id,
 	})
 

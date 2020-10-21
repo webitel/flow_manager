@@ -89,12 +89,12 @@ func (s *chatApi) ConfirmationMessage(_ context.Context, req *workflow.Confirmat
 		}, nil
 	}
 
-	conv.mx.RLock()
+	conv.mx.Lock()
 	conf, ok = conv.confirmation[req.ConfirmationId]
 	if ok {
 		delete(conv.confirmation, req.ConfirmationId)
 	}
-	conv.mx.RUnlock()
+	conv.mx.Unlock()
 
 	if !ok {
 		return &workflow.ConfirmationMessageResponse{

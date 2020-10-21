@@ -50,6 +50,34 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 		return data, nil
 	}
 
+	return f.decode(in, out, hook)
+}
+
+func (f *Flow) DecodeSrc(in interface{}, out interface{}) *model.AppError {
+	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
+		if from.Kind() == reflect.String {
+			switch to.Kind() {
+			case reflect.String:
+				return data.(string), nil
+			case reflect.Interface:
+				return data.(string), nil
+			case reflect.Int:
+				v := data.(string)
+				if v == "" {
+					return 0, nil
+				}
+				return v, nil
+			case reflect.Bool:
+				return data.(string), nil
+			}
+		}
+		return data, nil
+	}
+
+	return f.decode(in, out, hook)
+}
+
+func (f *Flow) decode(in interface{}, out interface{}, hook mapstructure.DecodeHookFuncType) *model.AppError {
 	config := &mapstructure.DecoderConfig{
 		WeaklyTypedInput: true,
 		TagName:          "json",
