@@ -2,7 +2,8 @@ package client
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/providers/grpc/workflow"
+	// "github.com/webitel/flow_manager/providers/grpc/workflow"
+	"github.com/webitel/protos/workflow"
 )
 
 type queueApi struct {
