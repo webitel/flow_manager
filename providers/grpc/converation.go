@@ -225,6 +225,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError
 		DomainId:       c.domainId,
 		TimeoutSec:     10,
 		ConversationId: c.id,
+		FromFlow:       true,
 	})
 
 	if err != nil {

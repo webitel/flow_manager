@@ -1,7 +1,8 @@
 package client
 
 import (
-	"github.com/webitel/flow_manager/providers/grpc/workflow"
+	// "github.com/webitel/flow_manager/providers/grpc/workflow"
+	"github.com/webitel/protos/workflow"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"time"
