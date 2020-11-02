@@ -3,9 +3,9 @@ package call
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/call_center/grpc_api/cc"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
 	"io"
 	"time"

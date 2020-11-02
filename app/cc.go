@@ -2,8 +2,8 @@ package app
 
 import (
 	"context"
-	"github.com/webitel/call_center/grpc_api/cc"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/protos/cc"
 )
 
 func (fm *FlowManager) JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error) {
