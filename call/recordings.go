@@ -13,6 +13,7 @@ type RecordFileArg struct {
 	SilenceThresh int    `json:"silenceThresh"`
 	SilenceHits   int    `json:"silenceHits"`
 	Terminators   string `json:"terminators"`
+	VoiceMail     bool   `json:"voiceMail"`
 }
 
 type RecordSessionArg struct {
@@ -45,6 +46,10 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 		}); err != nil {
 			return nil, err
 		}
+	}
+
+	if argv.VoiceMail {
+		call.Push(ctx, "wbt_tags", "vm")
 	}
 
 	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)

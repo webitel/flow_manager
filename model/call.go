@@ -195,6 +195,7 @@ type CallActionHangup struct {
 	SipCode       *int           `json:"sip"`
 	OriginSuccess *bool          `json:"originate_success"`
 	HangupBy      *string        `json:"hangup_by"`
+	Tags          []string       `json:"tags"`
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
@@ -319,6 +320,7 @@ type Call interface {
 	GoogleTranscribe(ctx context.Context) (Response, *AppError)
 
 	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
+	Push(ctx context.Context, name, tag string) (Response, *AppError)
 }
 
 type PlaybackFile struct {

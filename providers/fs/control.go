@@ -209,6 +209,10 @@ func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lo
 	return c.executeWithContext(ctx, "valet_park", req)
 }
 
+func (c *Connection) Push(ctx context.Context, name, tag string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "push", fmt.Sprintf("%s=%s", name, tag))
+}
+
 func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response, *model.AppError) {
 	tmp := c.GetVariable("Caller-Channel-Answered-Time")
 

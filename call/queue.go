@@ -91,7 +91,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		}
 		if req, err = r.fm.GetMediaFiles(call.DomainId(), &req); err != nil {
 			return nil, err
-		} else if req != nil && req[0] != nil {
+		} else if req != nil && req[0] != nil && req[0].Type != nil {
 			ringtone = &cc.CallJoinToQueueRequest_WaitingMusic{
 				Id:   int32(*req[0].Id),
 				Type: *req[0].Type,

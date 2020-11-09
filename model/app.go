@@ -4,6 +4,8 @@ import "time"
 
 var AppServiceName = "workflow"
 
+const HeaderFromServiceName = "From-Service"
+
 const SchemaCacheSize = 10000
 const SchemaCacheExpire = (60 * 60) * 24 // 24 hour
 

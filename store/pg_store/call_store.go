@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -103,8 +104,8 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 }
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload, hangup_by)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json, :HangupBy)
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload, hangup_by, tags)
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json, :HangupBy, :Tags)
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
@@ -112,6 +113,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       sip_code = EXCLUDED.sip_code,
       payload = EXCLUDED.payload,
       hangup_by = EXCLUDED.hangup_by,
+	  tags = EXCLUDED.tags,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -121,6 +123,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"Cause":     call.Cause,
 		"SipCode":   call.SipCode,
 		"HangupBy":  call.HangupBy,
+		"Tags":      pq.Array(call.Tags),
 		"Variables": call.VariablesToJson(),
 	})
 
@@ -160,15 +163,15 @@ with c as (
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id,
-	   c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration
+	   c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration, c.tags
 )
 insert into call_center.cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
                               to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id,
-							gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by, transfer_from, transfer_to, amd_result, amd_duration)
+							gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by, transfer_from, transfer_to, amd_result, amd_duration, tags)
 select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, 
-		c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration
+		c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration, c.tags
 from c;`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
