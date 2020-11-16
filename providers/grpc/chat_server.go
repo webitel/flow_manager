@@ -44,6 +44,9 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 
 	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId)
 	conv.chat = s
+	if req.Variables != nil {
+		conv.variables = req.Variables
+	}
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
 
