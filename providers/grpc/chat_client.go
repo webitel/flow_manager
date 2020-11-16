@@ -1,12 +1,15 @@
 package grpc
 
 import (
+	"context"
 	"fmt"
 	"github.com/webitel/engine/discovery"
+	"github.com/webitel/flow_manager/model"
 	client "github.com/webitel/protos/chat"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
+	"google.golang.org/grpc/metadata"
 	"sync"
 	"time"
 )
@@ -42,6 +45,16 @@ func NewChatManager(serviceDiscovery discovery.ServiceDiscovery) *chatManager {
 	}
 }
 
+type serviceInterceptor struct {
+	name string
+}
+
+func (cm *ChatClientConnection) UnaryClientInterceptor(ctx context.Context, method string, req interface{}, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+	// Create a new context with the token and make the first request
+	serviceCtx := metadata.AppendToOutgoingContext(ctx, model.HeaderFromServiceName, model.AppServiceName)
+	return invoker(serviceCtx, method, req, reply, cc, opts...)
+}
+
 func NewChatClientConnection(name, url string) (*ChatClientConnection, error) {
 	var err error
 	connection := &ChatClientConnection{
@@ -49,7 +62,13 @@ func NewChatClientConnection(name, url string) (*ChatClientConnection, error) {
 		host: url,
 	}
 
-	connection.client, err = grpc.Dial(url, grpc.WithInsecure(), grpc.WithBlock(), grpc.WithTimeout(time.Second*5))
+	connection.client, err = grpc.Dial(
+		url,
+		grpc.WithInsecure(),
+		grpc.WithBlock(),
+		grpc.WithTimeout(time.Second*5),
+		grpc.WithUnaryInterceptor(connection.UnaryClientInterceptor),
+	)
 
 	if err != nil {
 		return nil, err

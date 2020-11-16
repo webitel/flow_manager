@@ -102,7 +102,6 @@ func (c *conversation) Close() *model.AppError {
 	return nil // fixme
 }
 
-// FIXME close bridge
 func (c *conversation) Break() *model.AppError {
 	c.mx.Lock()
 	if c.chBridge != nil {
@@ -122,7 +121,6 @@ func (c *conversation) ProfileId() int64 {
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
-		FromFlow:       true,
 		Message: &client.Message{
 			Type: "text", // FIXME
 			Value: &client.Message_Text{
@@ -197,7 +195,6 @@ func (c *conversation) Stop(err *model.AppError) {
 
 	_, e := c.client.CloseConversation(c.ctx, &client.CloseConversationRequest{
 		ConversationId: c.id,
-		FromFlow:       true,
 		Cause:          cause,
 	})
 
@@ -209,7 +206,7 @@ func (c *conversation) Stop(err *model.AppError) {
 	wlog.Debug(fmt.Sprintf("close conversation %s", c.id))
 }
 
-func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError {
+func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
 
 	if c.chBridge != nil {
 		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
@@ -223,9 +220,8 @@ func (c *conversation) Bridge(ctx context.Context, userId int64) *model.AppError
 			Internal: true,
 		},
 		DomainId:       c.domainId,
-		TimeoutSec:     10,
+		TimeoutSec:     int64(timeout),
 		ConversationId: c.id,
-		FromFlow:       true,
 	})
 
 	if err != nil {

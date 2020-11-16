@@ -22,7 +22,7 @@ require (
 	github.com/webitel/call_center v0.0.0-20201102084311-f729d71719b8
 	github.com/webitel/engine v0.0.0-20200507071437-cd023a6c5b9e
 	github.com/webitel/protos/cc v0.0.0-20201029223651-e8f525109e77
-	github.com/webitel/protos/chat v0.0.0-20201029223651-e8f525109e77
+	github.com/webitel/protos/chat v0.0.0-20201103011904-ddf3ee3ff9b8
 	github.com/webitel/protos/workflow v0.0.0-20201029223651-e8f525109e77
 	// github.com/webitel/protos v0.0.0-20201020090657-f27a3ec3e5e0
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e

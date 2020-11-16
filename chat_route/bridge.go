@@ -9,7 +9,8 @@ import (
 )
 
 type Bridge struct {
-	UserId int64 `json:"userId"`
+	UserId  int64 `json:"userId"`
+	Timeout int   `json:"timeout"`
 }
 
 func (r *Router) bridge(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -21,7 +22,7 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, conv Conversation
 
 	wlog.Debug(fmt.Sprintf("conversation %s bridge to %d", conv.Id(), argv.UserId))
 
-	if err := conv.Bridge(ctx, argv.UserId); err != nil {
+	if err := conv.Bridge(ctx, argv.UserId, argv.Timeout); err != nil {
 		return nil, err
 	}
 
