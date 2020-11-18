@@ -116,6 +116,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.UpdateCid),
 	}
+	apps["markIVR"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.MarkIVR),
+	}
 
 	return apps
 }
