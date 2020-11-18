@@ -177,10 +177,10 @@ func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]strin
 
 	select {
 	case <-t:
-		wlog.Debug(fmt.Sprintf("conversation %d wait message: timeout", c.id))
+		wlog.Debug(fmt.Sprintf("conversation %s wait message: timeout", c.id))
 		break
 	case msgs := <-ch:
-		wlog.Debug(fmt.Sprintf("conversation %d receive message: %s", c.id, msgs))
+		wlog.Debug(fmt.Sprintf("conversation %s receive message: %s", c.id, msgs))
 		return msgs, nil
 	}
 
