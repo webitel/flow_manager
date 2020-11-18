@@ -136,9 +136,10 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) WaitMessage(ctx context.Context, timeout int) ([]string, *model.AppError) {
+func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
 
+	// TODO rename server api
 	res, err := c.client.WaitMessage(ctx, &client.WaitMessageRequest{
 		ConversationId: c.id,
 		ConfirmationId: id,

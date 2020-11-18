@@ -20,7 +20,7 @@ type Conversation interface {
 	ProfileId() int64
 	Stop(*model.AppError)
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
-	WaitMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
+	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
 }
 

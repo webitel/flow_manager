@@ -7,19 +7,19 @@ import (
 	"strings"
 )
 
-type WaitMessage struct {
+type ReceiveMessage struct {
 	Timeout int
 	Set     string
 }
 
-func (r *Router) waitMessage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
-	var argv WaitMessage
+func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
+	var argv ReceiveMessage
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
-	msgs, err := conv.WaitMessage(ctx, argv.Timeout)
+	msgs, err := conv.ReceiveMessage(ctx, argv.Timeout)
 	if err != nil {
 		return nil, err
 	}
