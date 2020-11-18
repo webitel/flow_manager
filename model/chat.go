@@ -18,6 +18,11 @@ const (
 	conversationClosedEvent  = "closed"
 )
 
+const (
+	// TODO
+	ConversationStartMessageVariable = "start_message"
+)
+
 type Conversation struct {
 	Id         int64     `json:"id" db:"id"`
 	Title      string    `json:"title" db:"title"`

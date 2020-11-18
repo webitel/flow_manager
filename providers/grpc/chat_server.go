@@ -8,6 +8,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/workflow"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -46,6 +47,13 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 	conv.chat = s
 	if req.Variables != nil {
 		conv.variables = req.Variables
+	}
+
+	if req.Message != nil {
+		// TODO
+		conv.Set(ctx, model.Variables{
+			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
+		})
 	}
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
