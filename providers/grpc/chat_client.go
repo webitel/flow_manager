@@ -135,8 +135,8 @@ func (cm *chatManager) registerConnection(v *discovery.ServiceConnection) {
 	wlog.Debug(fmt.Sprintf("register connection %s [%s]", client.Name(), addr))
 }
 
-func (cm *chatManager) getClient() (*ChatClientConnection, error) {
-	conn, err := cm.poolConnections.Get(discovery.StrategyRoundRobin)
+func (cm *chatManager) getClient(name string) (*ChatClientConnection, error) {
+	conn, err := cm.poolConnections.GetById(name)
 	if err != nil {
 		return nil, err
 	}

@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/workflow"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 	"strings"
 )
@@ -15,6 +17,11 @@ const (
 	activeConversationCacheSize = 50000
 	maximumInactiveChat         = 60 * 60 * 24 // day
 	confirmationBuffer          = 100
+)
+
+var (
+	microServiceHeaderName = "Micro-From-Service"
+	microServiceHeaderId   = "Micro-From-Id"
 )
 
 type chatApi struct {
@@ -29,6 +36,24 @@ func NewChatApi(s *server) *chatApi {
 	}
 }
 
+func compactHeaderValue(src []string) string {
+	if len(src) > 0 {
+		return src[0]
+	}
+
+	return ""
+}
+
+func (s *chatApi) getClientFromRequest(ctx context.Context) (*ChatClientConnection, error) {
+	if m, ok := metadata.FromIncomingContext(ctx); ok {
+		id := fmt.Sprintf("%s-%s", compactHeaderValue(m.Get(microServiceHeaderName)),
+			compactHeaderValue(m.Get(microServiceHeaderId)))
+		return s.chatManager.getClient(id)
+	}
+
+	return nil, discovery.ErrNotFoundConnection
+}
+
 func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workflow.StartResponse, error) {
 	if _, ok := s.conversations.Get(req.ConversationId); ok {
 		return &workflow.StartResponse{
@@ -38,7 +63,8 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 			},
 		}, nil
 	}
-	client, err := s.chatManager.getClient()
+
+	client, err := s.getClientFromRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
