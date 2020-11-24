@@ -3,9 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
+	client "github.com/webitel/engine/chat_manager/chat"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/chat"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
@@ -30,7 +30,7 @@ type chatManager struct {
 }
 
 type ChatClientConnection struct {
-	name   string
+	id     string
 	host   string
 	client *grpc.ClientConn
 	api    client.ChatServiceClient
@@ -55,10 +55,10 @@ func (cm *ChatClientConnection) UnaryClientInterceptor(ctx context.Context, meth
 	return invoker(serviceCtx, method, req, reply, cc, opts...)
 }
 
-func NewChatClientConnection(name, url string) (*ChatClientConnection, error) {
+func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 	var err error
 	connection := &ChatClientConnection{
-		name: name,
+		id:   id,
 		host: url,
 	}
 
@@ -159,7 +159,7 @@ func (cm *chatManager) wakeUp() {
 }
 
 func (cc *ChatClientConnection) Name() string {
-	return cc.name
+	return cc.id
 }
 
 func (cc *ChatClientConnection) Ready() bool {

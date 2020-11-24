@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 	"fmt"
+	client "github.com/webitel/engine/chat_manager/chat"
 	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/chat"
 	"github.com/webitel/wlog"
 	"net/http"
 	"sync"
@@ -31,6 +31,7 @@ type conversation struct {
 	chBridge  chan struct{}
 
 	confirmation map[string]chan []string
+	nodeId       string
 
 	chat *chatApi
 }
@@ -49,6 +50,7 @@ func NewConversation(client *ChatClientConnection, id string, domainId, profileI
 		cancel:       cancel,
 		messages:     make([]*message, 5),
 		confirmation: make(map[string]chan []string),
+		nodeId:       client.Name(),
 	}
 }
 
@@ -61,8 +63,7 @@ func (c *conversation) Id() string {
 }
 
 func (c *conversation) NodeId() string {
-	//TODO
-	return "FIXME"
+	return c.nodeId
 }
 
 func (c *conversation) DomainId() int64 {
@@ -185,6 +186,10 @@ func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]strin
 	}
 
 	return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Timeout", http.StatusInternalServerError)
+}
+
+func (c *conversation) NodeName() string {
+	return c.NodeId()
 }
 
 func (c *conversation) Stop(err *model.AppError) {

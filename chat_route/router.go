@@ -22,6 +22,7 @@ type Conversation interface {
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
 	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
+	NodeName() string
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
