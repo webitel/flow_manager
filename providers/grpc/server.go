@@ -171,7 +171,13 @@ func httpCodeToGrpc(c int) codes.Code {
 }
 
 func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
-	conn := newConnection(ctx, make(map[string]string))
+	var vars map[string]string = in.Variables
+
+	if vars == nil {
+		vars = make(map[string]string)
+	}
+
+	conn := newConnection(ctx, vars)
 
 	var result *workflow.DistributeAttemptResponse
 
