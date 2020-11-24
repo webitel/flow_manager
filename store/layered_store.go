@@ -63,3 +63,7 @@ func (s *LayeredStore) Queue() QueueStore {
 func (s *LayeredStore) Member() MemberStore {
 	return s.DatabaseLayer.Member()
 }
+
+func (s *LayeredStore) User() UserStore {
+	return s.DatabaseLayer.User()
+}

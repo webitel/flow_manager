@@ -42,6 +42,7 @@ type SqlSupplierOldStores struct {
 	chat        store.ChatStore
 	queue       store.QueueStore
 	member      store.MemberStore
+	user        store.UserStore
 }
 
 type SqlSupplier struct {
@@ -74,6 +75,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.chat = NewSqlChatStore(supplier)
 	supplier.oldStores.queue = NewSqlQueueStore(supplier)
 	supplier.oldStores.member = NewSqlMemberStore(supplier)
+	supplier.oldStores.user = NewSqlUserStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -184,7 +186,8 @@ func (me typeConverter) ToDb(val interface{}) (interface{}, error) {
 
 func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 	switch target.(type) {
-	case *model.PostBody:
+	case *model.PostBody,
+		*model.Variables:
 		binder := func(holder, target interface{}) error {
 			s, ok := holder.(*[]byte)
 			if !ok {
@@ -242,4 +245,8 @@ func (ss *SqlSupplier) Queue() store.QueueStore {
 
 func (ss *SqlSupplier) Member() store.MemberStore {
 	return ss.oldStores.member
+}
+
+func (ss *SqlSupplier) User() store.UserStore {
+	return ss.oldStores.user
 }

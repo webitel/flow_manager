@@ -19,6 +19,11 @@ type Store interface {
 	Chat() ChatStore
 	Queue() QueueStore
 	Member() MemberStore
+	User() UserStore
+}
+
+type UserStore interface {
+	GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, *model.AppError)
 }
 
 type EmailStore interface {

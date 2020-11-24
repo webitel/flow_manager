@@ -115,6 +115,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Js),
 	}
+	apps["userInfo"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.GetUser),
+	}
 
 	return apps
 }
