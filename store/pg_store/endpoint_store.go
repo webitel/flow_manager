@@ -61,6 +61,7 @@ from endpoints e
                 ]
             else
                 array[
+					'sip_from_host=' || g.host,
                     'sip_h_X-Webitel-Direction=outbound',
 					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
