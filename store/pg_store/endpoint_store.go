@@ -61,7 +61,7 @@ from endpoints e
                 ]
             else
                 array[
-					'sip_invite_domain=' || g.host,
+					'sip_invite_domain=' || regexp_replace(g.host, '([a-zA-Z+.\-\d]+):?.*', '\1'),
                     'sip_h_X-Webitel-Direction=outbound',
 					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
