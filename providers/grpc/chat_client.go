@@ -126,13 +126,13 @@ func (cm *chatManager) Stop() {
 
 func (cm *chatManager) registerConnection(v *discovery.ServiceConnection) {
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
-	client, err := NewChatClientConnection(v.Id, addr)
+	c, err := NewChatClientConnection(v.Id, addr)
 	if err != nil {
 		wlog.Error(fmt.Sprintf("connection %s [%s] error: %s", v.Id, addr, err.Error()))
 		return
 	}
-	cm.poolConnections.Append(client)
-	wlog.Debug(fmt.Sprintf("register connection %s [%s]", client.Name(), addr))
+	cm.poolConnections.Append(c)
+	wlog.Debug(fmt.Sprintf("register connection %s [%s]", c.Name(), addr))
 }
 
 func (cm *chatManager) getClient(name string) (*ChatClientConnection, error) {
