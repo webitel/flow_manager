@@ -34,17 +34,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 		return nil, err
 	}
 
-	client := &http.Client{
-		Timeout: time.Duration(model.IntValueFromMap("timeout", props, 1000)) * time.Millisecond,
-	}
-
-	if model.StringValueFromMap("insecureSkipVerify", props, "") == "true" {
-		client.Transport = &http.Transport{
-			TLSClientConfig: &tls.Config{
-				InsecureSkipVerify: true,
-			},
-		}
-	}
+	client := buildHttpClient(props)
 
 	res, httpErr = client.Do(req)
 	if httpErr != nil {
@@ -81,6 +71,36 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func buildHttpClient(props map[string]interface{}) *http.Client {
+	client := &http.Client{
+		Timeout: time.Duration(model.IntValueFromMap("timeout", props, 1000)) * time.Millisecond,
+	}
+
+	skipVerify := model.StringValueFromMap("insecureSkipVerify", props, "") == "true"
+	renegotiation := model.StringValueFromMap("renegotiation", props, "")
+
+	if skipVerify || renegotiation != "" {
+		t := &tls.Config{
+			InsecureSkipVerify: skipVerify,
+		}
+
+		switch renegotiation {
+		case "renegotiateNever":
+			t.Renegotiation = tls.RenegotiateNever
+		case "renegotiateOnceAsClient":
+			t.Renegotiation = tls.RenegotiateOnceAsClient
+		case "renegotiateFreelyAsClient":
+			t.Renegotiation = tls.RenegotiateFreelyAsClient
+		}
+
+		client.Transport = &http.Transport{
+			TLSClientConfig: t,
+		}
+	}
+
+	return client
 }
 
 func buildRequest(c model.Connection, props map[string]interface{}) (*http.Request, *model.AppError) {
