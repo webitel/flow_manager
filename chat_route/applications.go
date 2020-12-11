@@ -14,11 +14,17 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendText"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendText),
 	}
+	apps["sendFile"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendFile),
+	}
 	apps["recvMessage"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.recvMessage),
 	}
 	apps["bridge"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.bridge),
+	}
+	apps["joinQueue"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
 
 	return apps

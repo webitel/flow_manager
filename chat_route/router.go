@@ -21,6 +21,7 @@ type Conversation interface {
 	Stop(*model.AppError)
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
 	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
+	SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
 	NodeName() string
 }
@@ -79,7 +80,7 @@ func (r *Router) handle(conn model.Connection) {
 	flow.Route(conn.Context(), i, r)
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		//TODO config
+		//TODO config, bug all deadline...
 		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()

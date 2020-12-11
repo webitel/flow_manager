@@ -89,8 +89,8 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 	return &workflow.StartResponse{}, nil
 }
 
-func (s *chatApi) Break(_ context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
-	conv, err := s.getConversation(req.ConversationId)
+func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
+	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
 	if err != nil {
 		return &workflow.BreakResponse{
 			Error: &workflow.Error{
@@ -112,11 +112,11 @@ func (s *chatApi) Break(_ context.Context, req *workflow.BreakRequest) (*workflo
 	return &workflow.BreakResponse{}, nil
 }
 
-func (s *chatApi) ConfirmationMessage(_ context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
+func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
 	var conf chan []string
 	var ok bool
 
-	conv, err := s.getConversation(req.ConversationId)
+	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
 	if err != nil {
 		return &workflow.ConfirmationMessageResponse{
 			Error: &workflow.Error{
@@ -147,8 +147,8 @@ func (s *chatApi) ConfirmationMessage(_ context.Context, req *workflow.Confirmat
 	return &workflow.ConfirmationMessageResponse{}, nil
 }
 
-func (s *chatApi) BreakBridge(_ context.Context, in *workflow.BreakBridgeRequest) (*workflow.BreakBridgeResponse, error) {
-	conv, err := s.getConversation(in.ConversationId)
+func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeRequest) (*workflow.BreakBridgeResponse, error) {
+	conv, err := s.getConversationFromRequest(ctx, in.ConversationId)
 	if err != nil {
 		return nil, err
 	}
@@ -171,10 +171,31 @@ func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {
 	conv, ok := s.conversations.Get(id)
 	if !ok {
 		return nil, model.NewAppError("Chat", "grpc.chat.conversation.not_found", nil,
-			fmt.Sprintf("Conversation %d not found", id), http.StatusNotFound)
+			fmt.Sprintf("Conversation %s not found", id), http.StatusNotFound)
 	}
 
 	return conv.(*conversation), nil
+}
+
+func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*conversation, *model.AppError) {
+	var conv *conversation
+	var appErr *model.AppError
+	var err error
+	var cli *ChatClientConnection
+
+	conv, appErr = s.getConversation(id)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	cli, err = s.getClientFromRequest(ctx)
+	if err != nil {
+		return nil, model.NewAppError("Chat", "grpc.chat.client.not_found", nil,
+			err.Error(), http.StatusNotFound)
+	}
+
+	conv.actualizeClient(cli)
+	return conv, nil
 }
 
 func messageToText(messages ...*workflow.Message) []string {

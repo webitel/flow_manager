@@ -23,7 +23,7 @@ type conversation struct {
 	profileId int64
 	domainId  int64
 	variables map[string]string
-	client    client.ChatServiceClient
+	client    *ChatClientConnection
 	mx        sync.RWMutex
 	ctx       context.Context
 	cancel    context.CancelFunc
@@ -43,7 +43,7 @@ func NewConversation(client *ChatClientConnection, id string, domainId, profileI
 		profileId:    profileId,
 		domainId:     domainId,
 		variables:    make(map[string]string),
-		client:       client.api,
+		client:       client,
 		chBridge:     nil,
 		mx:           sync.RWMutex{},
 		ctx:          ctx,
@@ -120,7 +120,7 @@ func (c *conversation) ProfileId() int64 {
 }
 
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
-	_, err := c.client.SendMessage(ctx, &client.SendMessageRequest{
+	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type: "text", // FIXME
@@ -137,11 +137,32 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
+func (c *conversation) SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError) {
+	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+		ConversationId: c.id,
+		Message: &client.Message{
+			Type: "file", // FIXME
+			Value: &client.Message_File_{
+				File: &client.Message_File{
+					Url: url,
+					//MimeType: "" -- fixme
+				},
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
 
 	// TODO rename server api
-	res, err := c.client.WaitMessage(ctx, &client.WaitMessageRequest{
+	res, err := c.client.api.WaitMessage(ctx, &client.WaitMessageRequest{
 		ConversationId: c.id,
 		ConfirmationId: id,
 	})
@@ -199,7 +220,7 @@ func (c *conversation) Stop(err *model.AppError) {
 		cause = err.Id
 	}
 
-	_, e := c.client.CloseConversation(c.ctx, &client.CloseConversationRequest{
+	_, e := c.client.api.CloseConversation(c.ctx, &client.CloseConversationRequest{
 		ConversationId: c.id,
 		Cause:          cause,
 	})
@@ -219,7 +240,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 	}
 	c.chBridge = make(chan struct{})
 
-	res, err := c.client.InviteToConversation(ctx, &client.InviteToConversationRequest{
+	res, err := c.client.api.InviteToConversation(ctx, &client.InviteToConversationRequest{
 		User: &client.User{
 			UserId:   userId,
 			Type:     "webitel",
@@ -239,4 +260,13 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 	fmt.Println(res.InviteId)
 
 	return nil
+}
+
+func (c *conversation) actualizeClient(cli *ChatClientConnection) {
+	if cli.Name() != c.client.Name() {
+		c.mx.Lock()
+		wlog.Debug(fmt.Sprintf("conversation [%s] changed client from \"%s\" to \"%s\"", c.id, c.client.Name(), cli.Name()))
+		c.client = cli
+		c.mx.Unlock()
+	}
 }

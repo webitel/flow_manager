@@ -367,6 +367,11 @@ func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "cv_bug", "start zidx=0 debug=0 neighbors=1 skip=1 abs=9 scaleto=wh allclear png=igor.png ticker=#cccccc:#54d41e:/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed.ttf:4%:1:igor:'Hello test test' allflat")
+	//return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
+}
+
 func (c *Connection) GoogleTranscribe(ctx context.Context) (model.Response, *model.AppError) {
 	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s start uk-UA interim", c.id)); err != nil {
 		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)

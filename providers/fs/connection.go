@@ -37,6 +37,7 @@ const (
 	HEADER_VARIABLE_DESTINATION_NAME = "variable_destination_number"
 )
 
+// коли юзр то не прцюэ трансфер на оцынку
 const (
 	UsrVarPrefix = ""
 )
