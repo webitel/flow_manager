@@ -20,7 +20,8 @@ func (r *router) execute(ctx context.Context, scope *Flow, conn model.Connection
 		return nil, ErrorRequiredParameter("execute", "name")
 	}
 
-	if fnScope, err := scope.FunctionScope(argv.Name); err != nil {
+	fnScope, err := scope.FunctionScope(argv.Name)
+	if err != nil {
 		return nil, err
 	} else {
 		if argv.Async {
@@ -28,6 +29,10 @@ func (r *router) execute(ctx context.Context, scope *Flow, conn model.Connection
 		} else {
 			Route(ctx, fnScope, scope.handler)
 		}
+	}
+
+	if fnScope.IsCancel() {
+		scope.SetCancel()
 	}
 
 	return ResponseOK, nil
