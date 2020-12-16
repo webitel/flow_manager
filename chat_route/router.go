@@ -23,6 +23,7 @@ type Conversation interface {
 	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
 	SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
+	Export(ctx context.Context, vars []string) (model.Response, *model.AppError)
 	NodeName() string
 }
 
@@ -79,15 +80,15 @@ func (r *Router) handle(conn model.Connection) {
 
 	flow.Route(conn.Context(), i, r)
 
+	// todo
+	conv.Stop(nil)
+
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		//TODO config, bug all deadline...
+		//TODO config
 		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()
 	}
-
-	conv.Stop(nil)
-
 }
 
 func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {

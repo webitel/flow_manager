@@ -26,6 +26,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
+	apps["export"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.export),
+	}
 
 	return apps
 }

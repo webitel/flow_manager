@@ -30,8 +30,9 @@ type conversation struct {
 	messages  []*message
 	chBridge  chan struct{}
 
-	confirmation map[string]chan []string
-	nodeId       string
+	confirmation    map[string]chan []string
+	exportVariables []string
+	nodeId          string
 
 	chat *chatApi
 }
@@ -233,12 +234,37 @@ func (c *conversation) Stop(err *model.AppError) {
 	wlog.Debug(fmt.Sprintf("close conversation %s", c.id))
 }
 
+func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+	exp := make(map[string]interface{})
+	for _, v := range vars {
+		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
+
+		c.exportVariables = append(c.exportVariables, v)
+	}
+
+	if len(exp) > 0 {
+		return c.Set(ctx, exp)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
 
 	if c.chBridge != nil {
 		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
 	}
 	c.chBridge = make(chan struct{})
+
+	vars := make(map[string]string)
+
+	if len(c.exportVariables) > 0 {
+		for _, v := range c.exportVariables {
+			if val, ok := c.Get(v); ok {
+				vars[v] = val
+			}
+		}
+	}
 
 	res, err := c.client.api.InviteToConversation(ctx, &client.InviteToConversationRequest{
 		User: &client.User{
@@ -248,6 +274,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 		},
 		DomainId:       c.domainId,
 		TimeoutSec:     int64(timeout),
+		Variables:      vars,
 		ConversationId: c.id,
 	})
 
