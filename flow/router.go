@@ -119,6 +119,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.GetUser),
 	}
+	apps["sendEmail"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.sendEmail),
+	}
 
 	return apps
 }
