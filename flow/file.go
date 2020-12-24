@@ -28,7 +28,7 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 		server = server[:len(server)-1]
 	}
 
-	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "/download", conn.Id(), conn.DomainId(), argv.Timeout*1000)
+	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", conn.Id(), conn.DomainId(), argv.Timeout*1000)
 	if err != nil {
 		return nil, err
 	}
