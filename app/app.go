@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"github.com/webitel/call_center/grpc_api/client"
+	presign "github.com/webitel/engine/presign"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
@@ -37,6 +38,7 @@ type FlowManager struct {
 	ChatRouter  model.Router
 
 	callWatcher *callWatcher
+	cert        presign.PreSign
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -96,6 +98,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if err := servers[0].Cluster(fm.cluster.discovery); err != nil {
 		outErr = err
 		return
+	}
+
+	if config.PreSignedCertificateLocation != "" {
+		if fm.cert, err = presign.NewPreSigned(config.PreSignedCertificateLocation); err != nil {
+			return nil, err
+		}
 	}
 
 	fm.cc = client.NewCCManager(fm.cluster.discovery)

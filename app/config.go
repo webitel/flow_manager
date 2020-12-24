@@ -18,6 +18,8 @@ var (
 
 	webChatServerHost = flag.String("web_addr", "localhost", "WebChat server host")
 	webChatServerPort = flag.Int("web_port", 10031, "WebChat server port")
+
+	presignedCertFile = flag.String("presigned_cert", "/opt/storage/key.pem", "Location to pre signed certificate")
 )
 
 func (f *FlowManager) Config() *model.Config {
@@ -36,6 +38,7 @@ func loadConfig() (*model.Config, error) {
 			ConnMaxLifetimeMilliseconds: model.NewInt(30000),
 			Trace:                       false,
 		},
+		PreSignedCertificateLocation: *presignedCertFile,
 		DiscoverySettings: model.DiscoverySettings{
 			Url: *consulHost,
 		},
