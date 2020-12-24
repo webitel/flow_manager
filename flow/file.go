@@ -8,7 +8,7 @@ import (
 
 type GenerateLinkArgs struct {
 	Server  string `json:"server"`
-	Timeout int64  `json:"expire"` // sec ?
+	Timeout int64  `json:"timeout"` // sec ?
 	Set     string `json:"set"`
 }
 
