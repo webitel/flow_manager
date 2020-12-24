@@ -7,9 +7,9 @@ import (
 )
 
 type GenerateLinkArgs struct {
-	Server  string `json:"server"`
-	Timeout int64  `json:"timeout"` // sec ?
-	Set     string `json:"set"`
+	Server string `json:"server"`
+	Expire int64  `json:"expire"` // sec ?
+	Set    string `json:"set"`
 }
 
 func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -28,7 +28,7 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 		server = server[:len(server)-1]
 	}
 
-	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", conn.Id(), conn.DomainId(), argv.Timeout*1000)
+	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", conn.Id(), conn.DomainId(), argv.Expire*1000)
 	if err != nil {
 		return nil, err
 	}
