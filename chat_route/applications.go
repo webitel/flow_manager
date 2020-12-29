@@ -29,6 +29,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["export"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.export),
 	}
+	apps["menu"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.Menu),
+	}
 
 	return apps
 }

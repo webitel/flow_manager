@@ -7,12 +7,18 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
+	"io"
 )
 
+type Queue struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+}
+
 type QueueJoinArg struct {
-	Priority int32               `json:"priority"`
-	Bucket   *model.SearchEntity `json:"bucket"`
-	Queue    *model.SearchEntity `json:"queue"`
+	Priority int32 `json:"priority"`
+	BucketId int32 `json:"bucket_id"` // TODO
+	Queue    Queue `json:"queue"`
 	//Timers              []TimerArgs         `json:"timers"`
 }
 
@@ -23,22 +29,17 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		return nil, err
 	}
 
-	var wCancel context.CancelFunc
-	var wCtx context.Context
-	wCtx, wCancel = context.WithCancel(ctx)
-
-	defer func() {
-		if wCancel != nil {
-			wCancel()
-			wCancel = nil
-		}
-	}()
-
 	ctx2 := context.Background()
 	res, err := r.fm.JoinChatToInboundQueue(ctx2, &cc.ChatJoinToQueueRequest{
-		Priority:       q.Priority,
-		DomainId:       conv.DomainId(),
 		ConversationId: conv.Id(),
+		Queue: &cc.ChatJoinToQueueRequest_Queue{
+			Id:   int32(q.Queue.Id),
+			Name: q.Queue.Name,
+		},
+		Priority:  q.Priority,
+		BucketId:  q.BucketId,
+		Variables: conv.DumpExportVariables(),
+		DomainId:  conv.DomainId(),
 	})
 
 	if err != nil {
@@ -46,7 +47,28 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		return model.CallResponseOK, nil
 	}
 
-	fmt.Println(res, wCtx)
+	// TODO bug close stream channel
+	for {
+		var msg cc.QueueEvent
+		err = res.RecvMsg(&msg)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			wlog.Error(err.Error())
+			return model.CallResponseError, nil
+		}
+
+		switch msg.Data.(type) {
+		case *cc.QueueEvent_Bridged:
+			fmt.Println("BRIDGED")
+
+		case *cc.QueueEvent_Leaving:
+			conv.Set(ctx, model.Variables{
+				"cc_result": msg.Data.(*cc.QueueEvent_Leaving).Leaving.Result,
+			})
+			break
+		}
+	}
 
 	return model.CallResponseOK, nil
 }

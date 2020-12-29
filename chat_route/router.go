@@ -20,10 +20,12 @@ type Conversation interface {
 	ProfileId() int64
 	Stop(*model.AppError)
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
-	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
+	SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError)
 	SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError)
+	ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
 	Export(ctx context.Context, vars []string) (model.Response, *model.AppError)
+	DumpExportVariables() map[string]string
 	NodeName() string
 }
 

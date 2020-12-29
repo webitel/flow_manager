@@ -74,14 +74,6 @@ type ListStore interface {
 }
 
 type ChatStore interface {
-	Get(channelId string) (*model.ConversationInfo, *model.AppError)
-	CreateConversation(secretKey string, title string, name string, body model.PostBody) (model.ConversationInfo, *model.AppError)
-	ConversationUnreadMessages(channelId string, limit int) ([]*model.ConversationMessage, *model.AppError)
-	ConversationPostMessage(channelId string, body model.PostBody) ([]*model.ConversationMessage, *model.AppError)
-	ConversationHistory(channelId string, limit, offset int) ([]*model.ConversationMessage, *model.AppError)
-	Join(parentChannelId string, name string) ([]*model.ConversationMessageJoined, *model.AppError)
-	Close(channelId string) *model.AppError
-
 	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
 }
 

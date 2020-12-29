@@ -3,9 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
-	client "github.com/webitel/engine/chat_manager/chat"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
+	client "github.com/webitel/protos/engine/chat"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"

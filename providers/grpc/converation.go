@@ -3,8 +3,8 @@ package grpc
 import (
 	"context"
 	"fmt"
-	client "github.com/webitel/engine/chat_manager/chat"
 	"github.com/webitel/flow_manager/model"
+	client "github.com/webitel/protos/engine/chat"
 	"github.com/webitel/wlog"
 	"net/http"
 	"sync"
@@ -120,14 +120,13 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
+//todo check not closed
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type: "text", // FIXME
-			Value: &client.Message_Text{
-				Text: text,
-			},
+			Text: text,
 		},
 	})
 
@@ -138,16 +137,49 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
+func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
+	req := &client.Message{
+		Type:    menu.Type,
+		Text:    menu.Text,
+		Buttons: make([]*client.Buttons, 0, len(menu.Buttons)),
+	}
+	//menu.Set // fixme
+
+	for _, v := range menu.Buttons {
+		btns := make([]*client.Button, 0, len(v))
+		for _, b := range v {
+			btns = append(btns, &client.Button{
+				Text: b.Text,
+				Type: b.Type,
+				Url:  b.Url,
+				Code: b.Code,
+			})
+		}
+		req.Buttons = append(req.Buttons, &client.Buttons{
+			Button: btns,
+		})
+	}
+
+	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+		Message:        req,
+		ConversationId: c.Id(),
+	})
+	if err != nil {
+		return nil, model.NewAppError("Conversation.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+
+}
+
+// todo from media file
 func (c *conversation) SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type: "file", // FIXME
-			Value: &client.Message_File_{
-				File: &client.Message_File{
-					Url: url,
-					//MimeType: "" -- fixme
-				},
+			File: &client.File{
+				Url: url,
 			},
 		},
 	})
@@ -176,10 +208,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]strin
 		//FIXME save msg
 		msgs := make([]string, 0, len(res.Messages))
 		for _, m := range res.Messages {
-			switch x := m.Value.(type) {
-			case *client.Message_Text:
-				msgs = append(msgs, x.Text)
-			}
+			msgs = append(msgs, m.Text)
 		}
 
 		return msgs, nil
@@ -287,6 +316,20 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 	fmt.Println(res.InviteId)
 
 	return nil
+}
+
+func (c *conversation) DumpExportVariables() map[string]string {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	var res map[string]string
+	if len(c.exportVariables) > 0 {
+		res = make(map[string]string)
+		for _, v := range c.exportVariables {
+			res[v], _ = c.Get(v)
+		}
+	}
+	return res
 }
 
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {

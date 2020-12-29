@@ -7,6 +7,7 @@ import (
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/protos/engine/chat"
 	"github.com/webitel/protos/workflow"
 	"google.golang.org/grpc/metadata"
 	"net/http"
@@ -56,12 +57,7 @@ func (s *chatApi) getClientFromRequest(ctx context.Context) (*ChatClientConnecti
 
 func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workflow.StartResponse, error) {
 	if _, ok := s.conversations.Get(req.ConversationId); ok {
-		return &workflow.StartResponse{
-			Error: &workflow.Error{
-				Id:      "grpc.chat.start.valid.conversation_id",
-				Message: fmt.Sprintf("Conversation %d already exists", req.ConversationId),
-			},
-		}, nil
+		return nil, errors.New(fmt.Sprintf("Conversation %d already exists", req.ConversationId))
 	}
 
 	client, err := s.getClientFromRequest(ctx)
@@ -71,15 +67,16 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 
 	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId)
 	conv.chat = s
-	if req.Variables != nil {
-		conv.variables = req.Variables
-	}
 
 	if req.Message != nil {
 		// TODO
 		conv.Set(ctx, model.Variables{
 			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
 		})
+
+		if req.Message.Variables != nil {
+			conv.variables = req.Message.Variables
+		}
 	}
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
@@ -92,21 +89,11 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
 	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
 	if err != nil {
-		return &workflow.BreakResponse{
-			Error: &workflow.Error{
-				Id:      err.Id,
-				Message: err.Error(),
-			},
-		}, nil
+		return nil, err
 	}
 
 	if err := conv.Break(); err != nil {
-		return &workflow.BreakResponse{
-			Error: &workflow.Error{
-				Id:      err.Id,
-				Message: err.Error(),
-			},
-		}, nil
+		return nil, err
 	}
 
 	return &workflow.BreakResponse{}, nil
@@ -118,12 +105,7 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 
 	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
 	if err != nil {
-		return &workflow.ConfirmationMessageResponse{
-			Error: &workflow.Error{
-				Id:      err.Id,
-				Message: err.Error(),
-			},
-		}, nil
+		return nil, err
 	}
 
 	conv.mx.Lock()
@@ -134,12 +116,7 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 	conv.mx.Unlock()
 
 	if !ok {
-		return &workflow.ConfirmationMessageResponse{
-			Error: &workflow.Error{
-				Id:      "chat.grpc.conversation.confirmation.not_found",
-				Message: fmt.Sprintf("Confirmation %s not found", req.ConfirmationId),
-			},
-		}, nil
+		return nil, model.NewAppError("ConfirmationMessage", "chat.confirmation_message.not_found", nil, "Not found", http.StatusNotFound)
 	}
 
 	conf <- messageToText(req.Messages...)
@@ -162,9 +139,7 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 	close(conv.chBridge)
 	conv.chBridge = nil
 
-	return &workflow.BreakBridgeResponse{
-		Error: nil,
-	}, nil
+	return &workflow.BreakBridgeResponse{}, nil
 }
 
 func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {
@@ -198,14 +173,11 @@ func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*c
 	return conv, nil
 }
 
-func messageToText(messages ...*workflow.Message) []string {
+func messageToText(messages ...*chat.Message) []string {
 	msgs := make([]string, 0, len(messages))
 
 	for _, m := range messages {
-		switch x := m.Value.(type) {
-		case *workflow.Message_Text:
-			msgs = append(msgs, x.Text)
-		}
+		msgs = append(msgs, m.Text)
 	}
 
 	return msgs

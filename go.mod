@@ -20,9 +20,10 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.6.0
 	github.com/webitel/call_center v0.0.0-20201209121729-86a4fba98d5d
-	github.com/webitel/engine v0.0.0-20201216150738-70c0ed985c39
+	github.com/webitel/engine v0.0.0-20201229081853-f0832da3adcc
 	github.com/webitel/protos/cc v0.0.0-20201211125418-3d7d9b05c841
-	github.com/webitel/protos/workflow v0.0.0-20201029223651-e8f525109e77
+	github.com/webitel/protos/engine v0.0.0-20201229081651-74c4198d5a9a
+	github.com/webitel/protos/workflow v0.0.0-20201229081651-74c4198d5a9a
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
 	google.golang.org/api v0.25.0
 	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3
