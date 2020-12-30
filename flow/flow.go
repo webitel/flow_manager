@@ -77,6 +77,12 @@ func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	return i
 }
 
+type Limiter struct {
+	count    uint32
+	max      uint32
+	failover string
+}
+
 type ApplicationRequest struct {
 	BaseNode
 	args    interface{}
@@ -84,6 +90,18 @@ type ApplicationRequest struct {
 	Name    string
 	DebugId string
 	Tag     string
+	limiter *Limiter
+}
+
+func (l *Limiter) MaxCount() bool {
+	// todo mutex ?
+
+	if l.count >= l.max {
+		return true
+	}
+	l.count++
+
+	return false
 }
 
 func (a *ApplicationRequest) IsCancel() bool {
@@ -243,6 +261,10 @@ func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model
 			case int:
 				req.Tag = strconv.Itoa(fieldValue.(int))
 			}
+		case "limit":
+			if lim, ok := fieldValue.(map[string]interface{}); ok && lim != nil {
+				req.limiter = newLimiter(lim)
+			}
 		default:
 			if req.Name == "" {
 				req.Name = fieldName
@@ -267,6 +289,21 @@ func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model
 	//FIXME
 	//req.setParentNode(root)
 	return req, nil
+}
+
+func newLimiter(args map[string]interface{}) *Limiter {
+	max, _ := args["max"].(float64)
+	failover, _ := args["failover"].(string)
+
+	if max > 0 && len(failover) > 0 {
+		return &Limiter{
+			count:    0,
+			max:      uint32(max),
+			failover: failover,
+		}
+	}
+
+	return nil
 }
 
 func ArrInterfaceToArrayApplication(src []interface{}) model.Applications {

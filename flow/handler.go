@@ -39,6 +39,16 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			return
 		}
 
+		if req.limiter != nil {
+			if req.limiter.MaxCount() {
+				wlog.Debug(fmt.Sprintf("flow \"%s\" app=\"%s\" max limit %d goto [%s]", i.Name(), req.Name, req.limiter.max, req.limiter.failover))
+				if !i.Goto(req.limiter.failover) {
+					return
+				}
+				continue
+			}
+		}
+
 		select {
 		case <-ctx.Done():
 			i.SetCancel()
