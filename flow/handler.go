@@ -46,6 +46,8 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 					return
 				}
 				continue
+			} else {
+				req.limiter.AddIteration()
 			}
 		}
 

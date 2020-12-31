@@ -95,13 +95,15 @@ type ApplicationRequest struct {
 
 func (l *Limiter) MaxCount() bool {
 	// todo mutex ?
-
 	if l.count >= l.max {
 		return true
 	}
-	l.count++
 
 	return false
+}
+
+func (l *Limiter) AddIteration() {
+	l.count++
 }
 
 func (a *ApplicationRequest) IsCancel() bool {
