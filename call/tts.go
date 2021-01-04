@@ -21,6 +21,7 @@ type TTSArgs struct {
 	TextType   string                `json:"textType"`
 	Terminator string                `json:"terminator"`
 	GetDigits  *model.PlaybackDigits `json:"getDigits"`
+	GetSpeech  *model.GetSpeech      `json:"get_speech"`
 }
 
 func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -65,6 +66,21 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 	}
 
 	q += "&text=" + UrlEncoded(argv.Text)
+
+	if argv.GetSpeech != nil {
+		if _, err := call.GoogleTranscribe(ctx); err != nil {
+			return nil, err
+		}
+
+		if _, err := call.TTS(ctx, q, argv.GetDigits); err != nil {
+			return nil, err
+		}
+
+		if err := r.fm.Store.Call().SaveTranscribe(call.Id(), call.GetVariable("variable_google_transcript")); err != nil {
+			return nil, err
+		}
+		return model.CallResponseOK, nil
+	}
 
 	return call.TTS(ctx, q, argv.GetDigits)
 }
