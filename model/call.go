@@ -304,7 +304,7 @@ type Call interface {
 	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
 	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
 	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)
-	TTS(ctx context.Context, path string, digits *PlaybackDigits) (Response, *AppError)
+	TTS(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
 
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
@@ -351,6 +351,7 @@ type PlaybackDigits struct {
 }
 
 type GetSpeech struct {
+	Timeout int `json:"timeout"`
 }
 
 type PlaybackArgs struct {

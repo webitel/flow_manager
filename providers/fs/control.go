@@ -257,7 +257,7 @@ func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
 	return
 }
 
-func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits) (model.Response, *model.AppError) {
+func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	var tmp string
 	rate, format := ttsGetCodecSettings(c.GetVariable("write_rate"))
 	if format == "mp3" {
@@ -270,10 +270,18 @@ func (c *Connection) TTS(ctx context.Context, path string, digits *model.Playbac
 		path += "&rate=" + rate
 	}
 
-	if digits != nil {
-		return c.PlaybackUrlAndGetDigits(ctx, tmp+path+"."+format, digits)
+	var url string
+
+	if timeout > 0 {
+		url = fmt.Sprintf("file_string://%s!silence_stream://%d", tmp+path+"."+format, timeout)
 	} else {
-		return c.PlaybackUrl(ctx, tmp+path+"."+format)
+		url = tmp + path + "." + format
+	}
+
+	if digits != nil {
+		return c.PlaybackUrlAndGetDigits(ctx, url, digits)
+	} else {
+		return c.PlaybackUrl(ctx, url)
 	}
 }
 

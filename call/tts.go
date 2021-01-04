@@ -72,7 +72,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			return nil, err
 		}
 
-		if _, err := call.TTS(ctx, q, argv.GetDigits); err != nil {
+		if _, err := call.TTS(ctx, q, argv.GetDigits, argv.GetSpeech.Timeout); err != nil {
 			return nil, err
 		}
 
@@ -82,7 +82,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return model.CallResponseOK, nil
 	}
 
-	return call.TTS(ctx, q, argv.GetDigits)
+	return call.TTS(ctx, q, argv.GetDigits, 0)
 }
 
 func ttsAddCredential(key, token string) string {
