@@ -21,7 +21,7 @@ type TTSArgs struct {
 	TextType   string                `json:"textType"`
 	Terminator string                `json:"terminator"`
 	GetDigits  *model.PlaybackDigits `json:"getDigits"`
-	GetSpeech  *model.GetSpeech      `json:"get_speech"`
+	GetSpeech  *model.GetSpeech      `json:"getSpeech"`
 }
 
 func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
