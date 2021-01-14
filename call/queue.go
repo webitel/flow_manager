@@ -8,7 +8,6 @@ import (
 	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
 	"io"
-	"time"
 )
 
 type Queue struct {
@@ -31,16 +30,8 @@ type QueueJoinArg struct {
 	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
-	Timers              []TimerArgs         `json:"timers"`
+	Timers              []flow.TimerArgs    `json:"timers"`
 	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
-}
-
-type TimerArgs struct {
-	name     string
-	Interval int           `json:"interval"`
-	Tries    int           `json:"tries"`
-	Offset   int           `json:"offset"`
-	Actions  []interface{} `json:"actions"`
 }
 
 func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -60,8 +51,8 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 
 	if len(q.Timers) > 0 {
 		for k, t := range q.Timers {
-			t.name = fmt.Sprintf("queue-timer-%d", k)
-			go r.timer(wCtx, t, scope)
+			t.Name = fmt.Sprintf("queue-timer-%d", k)
+			go scope.Timer(wCtx, t, r)
 		}
 	}
 
@@ -152,39 +143,4 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	}
 
 	return model.CallResponseOK, nil
-}
-
-func (r *Router) timer(ctx context.Context, t TimerArgs, scope *flow.Flow) {
-	if t.Interval == 0 {
-		// TODO set default ?
-		return
-	}
-
-	if t.Tries == 0 {
-		// todo set default ?
-		t.Tries = 999
-	}
-
-	interval := time.Duration(t.Interval)
-	timer := time.NewTimer(time.Second * interval)
-	tries := 0
-	defer wlog.Debug(fmt.Sprintf("timer [%s] stopped", t.name))
-	f := scope.Fork(t.name, flow.ArrInterfaceToArrayApplication(t.Actions))
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-timer.C:
-			tries++
-			flow.Route(ctx, f, r)
-
-			interval += time.Duration(t.Offset)
-			if tries >= t.Tries || interval < 1 {
-				timer.Stop()
-				return
-			}
-			timer = time.NewTimer(time.Second * interval)
-		}
-	}
 }

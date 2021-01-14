@@ -19,9 +19,9 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.6.0
-	github.com/webitel/call_center v0.0.0-20201229085041-7d7cd0fe6643
+	github.com/webitel/call_center v0.0.0-20210114122850-34459b3572e1
 	github.com/webitel/engine v0.0.0-20201229081853-f0832da3adcc
-	github.com/webitel/protos/cc v0.0.0-20201211125418-3d7d9b05c841
+	github.com/webitel/protos/cc v0.0.0-20210114122421-ff3c8de4bdd2
 	github.com/webitel/protos/engine v0.0.0-20201229081651-74c4198d5a9a
 	github.com/webitel/protos/workflow v0.0.0-20201229081651-74c4198d5a9a
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
