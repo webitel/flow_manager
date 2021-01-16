@@ -87,8 +87,8 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		}
 	}()
 
-	ctx2 := context.Background()
-	res, err := r.fm.JoinChatToInboundQueue(ctx2, &cc.ChatJoinToQueueRequest{
+	//ctx2 := context.Background()
+	res, err := r.fm.JoinChatToInboundQueue(ctx, &cc.ChatJoinToQueueRequest{
 		ConversationId: conv.Id(),
 		Queue: &cc.ChatJoinToQueueRequest_Queue{
 			Id:   int32(q.Queue.Id),
