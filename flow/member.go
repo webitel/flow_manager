@@ -1,8 +1,7 @@
-package call
+package flow
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -10,10 +9,10 @@ type queuePosition struct {
 	Set string `json:"set"`
 }
 
-func (r *Router) QueueCallPosition(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *router) QueueCallPosition(ctx context.Context, scope *Flow, call model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv queuePosition
 
-	if err := r.Decode(scope, args, &argv); err != nil {
+	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
 

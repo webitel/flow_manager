@@ -127,6 +127,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.generateLink),
 	}
+	apps["ccPosition"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.QueueCallPosition),
+	}
 
 	return apps
 }
