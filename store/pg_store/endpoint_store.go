@@ -33,7 +33,7 @@ func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, e
 select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables 
 from endpoints e
  left join lateral (
-     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, u.dnd, u.extension as destination, array[
+     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, uss.dnd, u.extension as destination, array[
             'sip_h_X-Webitel-Direction=internal',
             'sip_h_X-Webitel-User-Id=' || u.id,
             'sip_h_X-Webitel-Domain-Id=' || u.dc,
@@ -45,6 +45,7 @@ from endpoints e
             --E'origination_caller_id_number="' || :CallerNumber || '"'
         ]::text[] variables
      from directory.wbt_user u
+		left join directory.wbt_user_status uss on uss.user_id = u.id
      where (e.endpoint->>'type')::varchar = 'user' and u.dc = :DomainId and
            ( u.extension = (e.endpoint->>'extension')::varchar or
              u.id = (e.endpoint->>'id')::bigint)
