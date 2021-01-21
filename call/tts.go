@@ -5,7 +5,6 @@ import (
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"net/url"
-	"strconv"
 	"strings"
 )
 
@@ -13,11 +12,17 @@ type TTSArgs struct {
 	Key   string `json:"key"`
 	Token string `json:"token"`
 
-	Provider   string                `json:"provider"`
-	Language   string                `json:"language"`
-	Voice      string                `json:"voice"`
-	Text       string                `json:"text"`
-	Region     string                `json:"region"`
+	Provider string `json:"provider"`
+	Language string `json:"language"`
+	Voice    string `json:"voice"`
+	Text     string `json:"text"`
+	Region   string `json:"region"`
+	//google
+	SpeakingRate     string `json:"speakingRate"`
+	Pitch            string `json:"pitch"`
+	VolumeGainDb     string `json:"volumeGainDb"`
+	EffectsProfileId string `json:"effectsProfileId"`
+
 	TextType   string                `json:"textType"`
 	Terminator string                `json:"terminator"`
 	GetDigits  *model.PlaybackDigits `json:"getDigits"`
@@ -41,6 +46,22 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		q = "/polly?"
 	case "microsoft":
 		q = "/microsoft?"
+	case "google":
+		q = "/google?"
+
+		if argv.SpeakingRate != "" {
+			q += "&speakingRate=" + argv.SpeakingRate
+		}
+		if argv.SpeakingRate != "" {
+			q += "&pitch=" + argv.Pitch
+		}
+		if argv.SpeakingRate != "" {
+			q += "&volumeGainDb=" + argv.VolumeGainDb
+		}
+		if argv.SpeakingRate != "" {
+			q += "&effectsProfileId=" + argv.EffectsProfileId
+		}
+
 	default:
 		q = "/?"
 	}
@@ -83,30 +104,6 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 	}
 
 	return call.TTS(ctx, q, argv.GetDigits, 0)
-}
-
-func ttsAddCredential(key, token string) string {
-	if key != "" && token != "" {
-		return "&key=" + UrlEncoded(key) + "&token=" + UrlEncoded(token)
-	}
-	return ""
-}
-
-func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
-	rate = "8000"
-	format = "mp3"
-
-	if writeRateVar != "" {
-		if i, err := strconv.Atoi(writeRateVar); err == nil {
-			if i == 8000 || i == 16000 {
-				format = ".wav"
-				return
-			} else if i >= 22050 {
-				rate = "22050"
-			}
-		}
-	}
-	return
 }
 
 func UrlEncoded(str string) string {
