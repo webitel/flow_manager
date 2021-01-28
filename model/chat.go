@@ -15,6 +15,7 @@ type ChatButton struct {
 type ChatMenuArgs struct {
 	Type    string         `json:"type"` // type
 	Buttons [][]ChatButton `json:"buttons"`
+	Inline  [][]ChatButton `json:"inline"`
 	Text    string         `json:"text"`
 	Set     string         `json:"set"`
 }

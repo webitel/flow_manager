@@ -112,7 +112,6 @@ func (c *conversation) Break() *model.AppError {
 	c.mx.Unlock()
 
 	c.cancel()
-	//c.ctx.Done() //todo
 	return nil
 }
 
@@ -137,9 +136,10 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
+//todo refactoring
 func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
 	req := &client.Message{
-		Type:    menu.Type,
+		Type:    "text",
 		Text:    menu.Text,
 		Buttons: make([]*client.Buttons, 0, len(menu.Buttons)),
 	}
