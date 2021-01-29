@@ -19,6 +19,8 @@ var (
 	webChatServerHost = flag.String("web_addr", "localhost", "WebChat server host")
 	webChatServerPort = flag.Int("web_port", 10031, "WebChat server port")
 
+	recordSample = flag.Int("record_sample", 0, "Set the sample rate of the recording")
+
 	presignedCertFile = flag.String("presigned_cert", "/opt/storage/key.pem", "Location to pre signed certificate")
 )
 
@@ -57,6 +59,10 @@ func loadConfig() (*model.Config, error) {
 			Host: *webChatServerHost,
 			Port: *webChatServerPort,
 		},
+	}
+
+	if recordSample != nil && *recordSample != 0 {
+		config.Record.Sample = *recordSample
 	}
 
 	return config, nil

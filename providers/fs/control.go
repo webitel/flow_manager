@@ -150,6 +150,13 @@ func (c *Connection) Conference(ctx context.Context, name, profile, pin string, 
 }
 
 func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+
+	if c.resample != 0 && !c.IsSetResample() {
+		c.Set(ctx, model.Variables{
+			"record_sample_rate": c.resample,
+		})
+	}
+
 	return c.executeWithContext(ctx, "record",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
 			maxSec, silenceThresh, silenceHits))
@@ -157,12 +164,19 @@ func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec
 
 func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
 	// FIXME SET
-	_, err := c.Set(ctx, map[string]interface{}{
+
+	vrs := map[string]interface{}{
 		"RECORD_MIN_SEC":            minSec,
 		"RECORD_STEREO":             stereo,
 		"RECORD_BRIDGE_REQ":         bridged,
 		"recording_follow_transfer": followTransfer,
-	})
+	}
+
+	if c.resample != 0 && !c.IsSetResample() {
+		vrs["record_sample_rate"] = c.resample
+	}
+
+	_, err := c.Set(ctx, vrs)
 
 	if err != nil {
 		return nil, err

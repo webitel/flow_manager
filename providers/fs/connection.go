@@ -61,6 +61,7 @@ type Connection struct {
 	to              *model.CallEndpoint
 	systemDirection string
 	schemaId        *int
+	resample        int
 	transferSchema  int
 
 	userId           int
@@ -517,6 +518,10 @@ func (c *Connection) SendEvent(m map[string]string, name string) error {
 
 func (c *Connection) DumpVariables() map[string]string {
 	return c.variables
+}
+
+func (c *Connection) IsSetResample() bool {
+	return c.GetVariable("variable_record_sample_rate") != ""
 }
 
 //fixme

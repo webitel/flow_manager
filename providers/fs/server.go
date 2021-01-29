@@ -18,8 +18,9 @@ const (
 )
 
 type Config struct {
-	Host string
-	Port int
+	Host           string
+	Port           int
+	RecordResample int
 }
 
 type server struct {
@@ -55,6 +56,12 @@ func (s *server) Start() *model.AppError {
 	if err != nil {
 		return model.NewAppError(s.Name(), "fs.start_server.error", nil, err.Error(), http.StatusInternalServerError)
 	}
+
+	// todo validate ?
+	if s.cfg.RecordResample != 0 {
+		wlog.Info(fmt.Sprintf("recordings resample to %d Hz", s.cfg.RecordResample))
+	}
+
 	s.listener = lis
 	go s.listen(lis)
 	return nil
@@ -120,6 +127,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 	}
 
 	connection := newConnection(c, e)
+	connection.resample = s.cfg.RecordResample
 
 	defer func() {
 

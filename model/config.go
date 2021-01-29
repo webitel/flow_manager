@@ -5,7 +5,10 @@ const (
 )
 
 type Config struct {
-	Id                           string            `json:"id"`
+	Id     string `json:"id"`
+	Record struct {
+		Sample int `json:"sample"`
+	} `json:"record"`
 	SqlSettings                  SqlSettings       `json:"sql_settings"`
 	MQSettings                   MQSettings        `json:"mq_settings"`
 	DiscoverySettings            DiscoverySettings `json:"discovery_settings"`

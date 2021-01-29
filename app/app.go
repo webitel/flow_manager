@@ -77,8 +77,9 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port: fm.Config().Grpc.Port,
 		}),
 		fs.NewServer(&fs.Config{
-			Host: fm.Config().Esl.Host,
-			Port: fm.Config().Esl.Port,
+			Host:           fm.Config().Esl.Host,
+			Port:           fm.Config().Esl.Port,
+			RecordResample: fm.Config().Record.Sample,
 		}),
 	}
 
