@@ -37,7 +37,8 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				return f.Connection.ParseText(data.(string)), nil
 			case reflect.Interface:
 				return f.Connection.ParseText(data.(string)), nil
-			case reflect.Int:
+			//fixme added more types
+			case reflect.Int, reflect.Uint:
 				v := f.Connection.ParseText(data.(string))
 				if v == "" {
 					return 0, nil
