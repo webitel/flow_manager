@@ -78,7 +78,7 @@ from (
     select
        `+strings.Join(f, ", ")+`
     from cc_member m
-    where m.queue_id = (
+    where m.queue_id in (
         select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
