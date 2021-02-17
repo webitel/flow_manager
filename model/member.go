@@ -6,10 +6,10 @@ type Member struct {
 }
 
 type SearchMember struct {
-	QueueId     uint32  `json:"queue_id"`
+	QueueId     int     `json:"queue_id"`
 	Destination *string `json:"destination"`
 	Name        *string `json:"name"`
 	Today       *bool   `json:"today"`
 	Completed   *bool   `json:"completed"`
-	BucketId    *uint32 `json:"bucket_id"`
+	BucketId    *int    `json:"bucket_id"`
 }
