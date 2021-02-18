@@ -9,3 +9,7 @@ func (fm *FlowManager) GetCallPosition(callId string) (int64, *model.AppError) {
 func (f *FlowManager) GetMemberProperties(domainId int64, search *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError) {
 	return f.Store.Member().GetProperties(domainId, search, mapRes)
 }
+
+func (f *FlowManager) PatchMembers(domainId int64, search *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
+	return f.Store.Member().PatchMembers(domainId, search, patch)
+}

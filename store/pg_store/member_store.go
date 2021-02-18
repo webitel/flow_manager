@@ -103,3 +103,52 @@ from (
 
 	return t.Variables, nil
 }
+
+func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
+	i, err := s.GetMaster().SelectNullInt(`with m as (
+    update cc_member m
+    set name = coalesce(:UName::varchar, name),
+        priority = coalesce(:UPriority::int, priority),
+        bucket_id = coalesce(:UBucketId::int, bucket_id),
+        ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else ready_at end,
+        stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else stop_cause end,
+        stop_at = case when :UStopCause::varchar notnull then now() else stop_at end,
+        variables = case when :UVariables::jsonb notnull then variables || :UVariables::jsonb else variables end
+    where m.queue_id in (
+        select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
+    )
+    and (:Name::varchar isnull or m.name ilike :Name)
+    and (:Today::bool isnull or (:Today and m.created_at >= ((date_part('epoch'::text, now()::date) * (1000)::double precision))::bigint))
+    and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
+    and (:BucketId::int isnull or m.bucket_id = :BucketId)
+    and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
+    returning id
+)
+select count(*)
+from m`, map[string]interface{}{
+		"DomainId":    domainId,
+		"QueueIds":    pq.Array(req.QueueIds),
+		"Name":        req.Name,
+		"Today":       req.Today,
+		"Completed":   req.Completed,
+		"BucketId":    req.BucketId,
+		"Destination": req.Destination,
+
+		"UName":      patch.Name,
+		"UPriority":  patch.Priority,
+		"UBucketId":  patch.BucketId,
+		"UReadyAt":   patch.ReadyAt,
+		"UStopCause": patch.StopCause,
+		"UVariables": patch.Variables.ToJson(),
+	})
+
+	if err != nil {
+		return 0, model.NewAppError("SqlMemberStore.PatchMembers", "store.sql_member.patch.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	if i.Valid {
+		return int(i.Int64), nil
+	}
+
+	return 0, nil
+}

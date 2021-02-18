@@ -13,3 +13,12 @@ type SearchMember struct {
 	Completed   *bool   `json:"completed"`
 	BucketId    *int    `json:"bucket_id"`
 }
+
+type PatchMember struct {
+	Name      *string    `json:"name"`
+	Priority  *int       `json:"priority"`
+	BucketId  *int       `json:"bucket_id"`
+	ReadyAt   *int64     `json:"ready_at"`
+	StopCause *string    `json:"stop_cause"`
+	Variables *Variables `json:"variables"`
+}

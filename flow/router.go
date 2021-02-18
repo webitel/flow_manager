@@ -135,6 +135,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.GetMember),
 	}
+	apps["patchMembers"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.PatchMembers),
+	}
 
 	return apps
 }

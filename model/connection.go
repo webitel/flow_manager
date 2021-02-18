@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/webitel/engine/discovery"
 )
 
@@ -48,3 +49,11 @@ type Result struct {
 }
 
 type ResultChannel chan Result
+
+func (v *Variables) ToJson() []byte {
+	if v == nil {
+		return nil
+	}
+	d, _ := json.Marshal(v)
+	return d
+}
