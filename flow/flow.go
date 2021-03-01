@@ -69,7 +69,7 @@ func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	i.Connection = f.Connection
 	i.currentNode = NewNode(nil)
 	i.Functions = f.Functions
-	//i.triggers = f.triggers // nil ?
+	i.triggers = f.triggers // nil ?
 	i.Tags = make(map[string]*Tag)
 	i.timezone = f.timezone
 
