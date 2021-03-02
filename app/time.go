@@ -16,8 +16,8 @@ func (fm *FlowManager) InitCacheTimezones() *model.AppError {
 	fm.timezoneList = make(map[int]*time.Location, len(list))
 
 	for _, v := range list {
-		if loc, err := time.LoadLocation(v.Name); err != nil {
-			wlog.Error(fmt.Sprintf("bad database timezone name %s, skip cache", v.Name))
+		if loc, err := time.LoadLocation(v.SysName); err != nil {
+			wlog.Error(fmt.Sprintf("bad database timezone name %s, skip cache", v.SysName))
 		} else {
 			fm.timezoneList[v.Id] = loc
 		}

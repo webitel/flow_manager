@@ -26,7 +26,7 @@ func (s SqlChatStore) RoutingFromProfile(domainId, profileId int64) (*model.Rout
 		p.domain_id as domain_id,
 		d.name as domain_name,
 		coalesce(d.timezone_id, 287) timezone_id,
-		coalesce(ct.name, 'UTC') as timezone_name,
+		coalesce(ct.sys_name, 'UTC') as timezone_name,
 		p.schema_id as scheme_id,
 		ars.name as scheme_name,
 		ars.updated_at as schema_updated_at,

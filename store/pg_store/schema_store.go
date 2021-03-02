@@ -53,7 +53,7 @@ func (s SqlSchemaStore) GetTransferredRouting(domainId int64, schemaId int) (*mo
         d.dc as domain_id,
         d.name as domain_name,
         coalesce(d.timezone_id, 287) timezone_id,
-        coalesce(ct.name, 'UTC') as timezone_name,
+        coalesce(ct.sys_name, 'UTC') as timezone_name,
         sg.id scheme_id,
         sg.name as scheme_name,
         sg.updated_at as schema_updated_at,
