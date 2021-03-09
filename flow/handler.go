@@ -34,7 +34,7 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			return
 		}
 
-		if i.IsCancel() || req.IsCancel() {
+		if i.IsCancel() {
 			wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
 			return
 		}
@@ -62,7 +62,12 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Res.String()))
 			}
 
-			if i.IsCancel() || req.IsCancel() {
+			if req.IsCancel() {
+				i.SetCancel()
+				wlog.Debug(fmt.Sprintf("flow \"%s\" set break from application \"%s\"", i.Name(), req.Name))
+			}
+
+			if i.IsCancel() {
 				wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
 				return
 			}

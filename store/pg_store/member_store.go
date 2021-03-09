@@ -104,6 +104,7 @@ from (
 	return t.Variables, nil
 }
 
+// todo variables
 func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
 	i, err := s.GetMaster().SelectNullInt(`with m as (
     update cc_member m
@@ -113,7 +114,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
         ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else ready_at end,
         stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else stop_cause end,
         stop_at = case when :UStopCause::varchar notnull then now() else stop_at end,
-        variables = case when :UVariables::jsonb notnull then variables || :UVariables::jsonb else variables end
+        variables = case when (:UVariables::jsonb) notnull then variables || :UVariables::jsonb else variables end
     where m.queue_id in (
         select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
