@@ -164,7 +164,6 @@ func (r *Router) handle(conn model.Connection) {
 		//TODO config
 		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 		flow.Route(ctxDisc, d, r)
-		<-ctxDisc.Done()
 	}
 
 }

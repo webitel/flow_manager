@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
@@ -168,30 +167,4 @@ func httpCodeToGrpc(c int) codes.Code {
 	default:
 		return codes.Internal
 	}
-}
-
-func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
-	var vars map[string]string = in.Variables
-
-	if vars == nil {
-		vars = make(map[string]string)
-	}
-
-	conn := newConnection(ctx, vars)
-
-	var result *workflow.DistributeAttemptResponse
-
-	conn.schemaId = int(in.SchemaId)
-	conn.domainId = in.DomainId
-
-	s.consume <- conn
-
-	select {
-	case <-ctx.Done():
-		return nil, errors.New("ctx done")
-	case r := <-conn.result:
-		result, _ = r.(*workflow.DistributeAttemptResponse)
-	}
-
-	return result, nil
 }

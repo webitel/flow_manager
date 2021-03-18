@@ -54,7 +54,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), gr.SchemaId())
 	if err != nil {
-		wlog.Error(err.Error())
+		wlog.Error(fmt.Sprintf("connection %s, error: %s", conn.Id(), err.Error()))
 		return
 	}
 

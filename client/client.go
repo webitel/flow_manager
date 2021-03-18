@@ -26,6 +26,7 @@ type FlowManager interface {
 
 type QueueApi interface {
 	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
+	StartFlow(in *workflow.StartFlowRequest) (string, error)
 }
 
 type flowManager struct {
