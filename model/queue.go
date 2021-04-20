@@ -19,6 +19,7 @@ type SearchQueueCompleteStatistics struct {
 	LastMinutes int
 	Metric      string
 	Field       string
+	SlSec       int
 }
 
 type SearchQueueActiveStatistics struct {

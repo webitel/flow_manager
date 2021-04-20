@@ -14,6 +14,7 @@ type GetQueueMetrics struct {
 	Set         string
 	Field       string `json:"field"` // ?????
 	Calls       string `json:"calls"` // ?????
+	SlSec       int    `json:"slSec"`
 }
 
 type GetQueueInfo struct {
@@ -94,6 +95,7 @@ func (r *router) getQueueMetrics(ctx context.Context, scope *Flow, c model.Conne
 				LastMinutes: argv.LastMinutes,
 				Metric:      argv.Metric,
 				Field:       argv.Field,
+				SlSec:       argv.SlSec,
 			}
 
 			if argv.Bucket != nil {
