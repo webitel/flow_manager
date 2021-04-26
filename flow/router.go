@@ -143,6 +143,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.schema),
 	}
+	apps["lastBridged"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.lastBridged),
+	}
 
 	return apps
 }

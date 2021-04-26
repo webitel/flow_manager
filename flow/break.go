@@ -11,7 +11,7 @@ type BreakArgs struct {
 	Flow *Flow
 }
 
-func (r *router) breakHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) breakHandler(_ context.Context, _ *Flow, _ model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var req *BreakArgs
 	var ok bool
 

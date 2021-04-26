@@ -238,3 +238,62 @@ values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 
 	return nil
 }
+
+func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string) (string, *model.AppError) {
+	n, err := s.GetReplica().SelectNullStr(`select exten
+from (
+         select h.created_at, case when h.direction = 'inbound' then h.to_number else h.from_number end exten
+         from cc_calls_history h
+         where (domain_id = :DomainId and created_at > now() - (:Hours::varchar || ' hours')::interval)
+           and (
+                 (domain_id = :DomainId and destination ~~* :Number::varchar)
+                 or (domain_id = :DomainId and to_number ~~* :Number::varchar)
+                 or (domain_id = :DomainId and from_number ~~* :Number::varchar)
+             )
+           and h.parent_id isnull
+           and (
+                 ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
+                  (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
+                  (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
+                 (
+                         case
+                             when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
+                                     h.attempt_id notnull and case :Dialer
+                                                                  when 'bridged' then h.bridged_at notnull
+                                                                  when 'attempt' then h.bridged_at isnull
+                                                                  else true end
+                             else false end
+                         or case
+                                when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
+                                        h.direction = 'inbound' and case :Inbound
+                                                                        when 'bridged' then h.bridged_at notnull
+                                                                        when 'attempt' then h.bridged_at isnull
+                                                                        else true end
+                                else false end
+                         or case
+                                when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
+                                        h.direction = 'outbound' and case :Outbound
+                                                                         when 'bridged' then h.bridged_at notnull
+                                                                         when 'attempt' then h.bridged_at isnull
+                                                                         else true end
+                                else false end
+                     )
+             )
+         order by h.created_at desc
+     ) h
+order by h.created_at desc
+limit 1`, map[string]interface{}{
+		"DomainId": domainId,
+		"Hours":    hours,
+		"Number":   number,
+		"Dialer":   dialer,
+		"Inbound":  inbound,
+		"Outbound": outbound,
+	})
+
+	if err != nil {
+		return "", model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return n.String, nil
+}
