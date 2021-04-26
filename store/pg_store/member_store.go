@@ -119,7 +119,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
         select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
-    and (:Today::bool isnull or (:Today and m.created_at >= ((date_part('epoch'::text, now()::date) * (1000)::double precision))::bigint))
+    and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
     and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
