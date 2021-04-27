@@ -32,7 +32,7 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 
 	switch search.Field {
 	case "sl":
-		agg = fmt.Sprintf(`(count(*) filter ( where bridged_at notnull and bridged_at - joined_at < interval '%d sec'))::decimal / count(*)::decimal`,
+		agg = fmt.Sprintf(`((count(*) filter ( where bridged_at notnull and bridged_at - joined_at < interval '%d sec'))::decimal / count(*)::decimal) * 100`,
 			search.SlSec)
 	case "wait_time":
 		agg = "extract(epoch from " + search.Metric + "(case when a.bridged_at isnull then (a.leaving_at - a.joined_at) else (a.bridged_at - a.joined_at) end))"
