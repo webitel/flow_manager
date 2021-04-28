@@ -15,6 +15,7 @@ type EndpointVariableArgs struct {
 	Type       string          `json:"type"`
 	Name       *string         `json:"name"`
 	Id         *int            `json:"id"`
+	Idle       bool            `json:"idle"`
 	Parameters model.Variables `json:"parameters"`
 }
 
