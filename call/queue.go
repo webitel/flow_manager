@@ -27,6 +27,7 @@ type QueueJoinArg struct {
 	Priority            int32               `json:"priority"`
 	Queue               Queue               `json:"queue"`
 	BucketId            int32               `json:"bucket_id"` // TODO
+	StickyAgentId       int32               `json:"stickyAgentId"`
 	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
@@ -97,11 +98,12 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			Id:   int32(q.Queue.Id),
 			Name: q.Queue.Name,
 		},
-		WaitingMusic: ringtone,
-		Priority:     q.Priority,
-		BucketId:     q.BucketId,
-		Variables:    call.DumpExportVariables(),
-		DomainId:     call.DomainId(),
+		WaitingMusic:  ringtone,
+		Priority:      q.Priority,
+		BucketId:      q.BucketId,
+		Variables:     call.DumpExportVariables(),
+		DomainId:      call.DomainId(),
+		StickyAgentId: q.StickyAgentId,
 	})
 
 	if err != nil {
