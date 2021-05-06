@@ -53,13 +53,14 @@ type Queue struct {
 }
 
 type QueueJoinArg struct {
-	Priority int32            `json:"priority"`
-	BucketId int32            `json:"bucket_id"` // TODO
-	Queue    Queue            `json:"queue"`
-	Timers   []flow.TimerArgs `json:"timers"`
-	Offering []interface{}    `json:"offering"`
-	Missed   []interface{}    `json:"missed"`
-	Bridged  []interface{}    `json:"bridged"`
+	Priority      int32            `json:"priority"`
+	BucketId      int32            `json:"bucket_id"` // TODO
+	Queue         Queue            `json:"queue"`
+	StickyAgentId int32            `json:"stickyAgentId"`
+	Timers        []flow.TimerArgs `json:"timers"`
+	Offering      []interface{}    `json:"offering"`
+	Missed        []interface{}    `json:"missed"`
+	Bridged       []interface{}    `json:"bridged"`
 }
 
 func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -94,10 +95,11 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 			Id:   int32(q.Queue.Id),
 			Name: q.Queue.Name,
 		},
-		Priority:  q.Priority,
-		BucketId:  q.BucketId,
-		Variables: conv.DumpExportVariables(),
-		DomainId:  conv.DomainId(),
+		Priority:      q.Priority,
+		BucketId:      q.BucketId,
+		Variables:     conv.DumpExportVariables(),
+		DomainId:      conv.DomainId(),
+		StickyAgentId: q.StickyAgentId,
 	})
 
 	if err != nil {
