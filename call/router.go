@@ -54,6 +54,13 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 	return nil
 }
 
+func (e *Router) notFoundRoute(call model.Call) {
+	wlog.Warn(fmt.Sprintf("call %s not found route schema", call.Id()))
+	if _, err := call.HangupNoRoute(call.Context()); err != nil {
+		wlog.Error(err.Error())
+	}
+}
+
 func (r *Router) handle(conn model.Connection) {
 	call := &callParser{
 		Call: conn.(model.Call),
@@ -130,19 +137,20 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if err != nil {
-		wlog.Error(err.Error())
-		if _, err = call.HangupAppErr(call.Context()); err != nil {
+		if err == model.ErrNotFoundRoute {
+			r.notFoundRoute(call)
+		} else {
 			wlog.Error(err.Error())
+			if _, err = call.HangupAppErr(call.Context()); err != nil {
+				wlog.Error(err.Error())
+			}
 		}
 
 		return
 	}
 
 	if routing == nil {
-		wlog.Error(fmt.Sprintf("call %s not found routing", call.Id()))
-		if _, err = call.HangupNoRoute(call.Context()); err != nil {
-			wlog.Error(err.Error())
-		}
+		r.notFoundRoute(call)
 
 		return
 	}

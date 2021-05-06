@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"database/sql"
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
@@ -38,6 +39,9 @@ from call_center.cc_queue sg
 where sg.id = :QueueId and sg.domain_id = :DomainId`, map[string]interface{}{"QueueId": queueId, "DomainId": domainId})
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, model.ErrNotFoundRoute
+		}
 		return nil, model.NewAppError("SqlCallRoutingStore.FromQueue", "store.sql_call_routing.from_queue.error", nil,
 			fmt.Sprintf("domainId=%v queueId=%v, %v", domainId, queueId, err.Error()), extractCodeFromErr(err))
 	}
@@ -66,6 +70,9 @@ func (s SqlCallRoutingStore) FromGateway(domainId int64, gatewayId int) (*model.
         where sg.id = :GatewayId and sg.dc = :DomainId`, map[string]interface{}{"GatewayId": gatewayId, "DomainId": domainId})
 
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, model.ErrNotFoundRoute
+		}
 		return nil, model.NewAppError("SqlCallRoutingStore.FromGateway", "store.sql_call_routing.from_gateway.error", nil,
 			fmt.Sprintf("domainId=%v gatewayId=%v, %v", domainId, gatewayId, err.Error()), extractCodeFromErr(err))
 	}
@@ -95,6 +102,10 @@ where r.domain_id = :DomainId and (not r.disabled) and :Destination::varchar(50)
 order by r.pos desc
 limit 1`, map[string]interface{}{"DomainId": domainId, "Destination": destination})
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, model.ErrNotFoundRoute
+		}
+
 		return nil, model.NewAppError("SqlCallRoutingStore.SearchToDestination", "store.sql_call_routing.search_dest.error", nil,
 			fmt.Sprintf("domainId=%v dest=%v, %v", domainId, destination, err.Error()), extractCodeFromErr(err))
 	}
