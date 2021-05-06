@@ -74,6 +74,7 @@ type Connection struct {
 	exportVariables  []string
 	ctx              context.Context
 	cancelFn         context.CancelFunc
+	hookBridged      chan struct{} //todo
 	sync.RWMutex
 }
 
@@ -427,11 +428,35 @@ func (c *Connection) setEvent(event *eventsocket.Event) {
 			//TODO SET DISCONNECT ROUTE
 			c.connection.Send("exit")
 			c.stopped = true
+		case EVENT_BRIDGE:
+			wlog.Debug(fmt.Sprintf("call %s receive event %s", c.Id(), EVENT_BRIDGE))
+			c.sendHookBridged()
 		default:
 			wlog.Debug(fmt.Sprintf("call %s receive event %s", c.Id(), event.Get(HEADER_EVENT_NAME)))
 		}
 	} else if event.Get(HEADER_CONTENT_TYPE_NAME) == "text/disconnect-notice" && event.Get(HEADER_CONTENT_DISPOSITION_NAME) == "Disconnected" {
 
+	}
+}
+
+func (c *Connection) sendHookBridged() {
+	if c.hookBridged != nil {
+		c.hookBridged <- struct{}{}
+		c.closeHookBridge()
+		wlog.Debug(fmt.Sprintf("call %s send hook %s", c.Id(), EVENT_BRIDGE))
+	}
+}
+
+func (c *Connection) setHookBridged(ch chan struct{}) {
+	if c.hookBridged == nil {
+		c.hookBridged = ch
+	}
+}
+
+func (c *Connection) closeHookBridge() {
+	if c.hookBridged != nil {
+		close(c.hookBridged)
+		c.hookBridged = nil
 	}
 }
 

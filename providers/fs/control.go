@@ -43,7 +43,7 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *m
 }
 
 // FIXME GLOBAL VARS
-func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string) (model.Response, *model.AppError) {
+func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string, hook chan struct{}) (model.Response, *model.AppError) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -110,6 +110,13 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 	}
 
 	dialString += strings.Join(end, separator)
+
+	if hook != nil {
+		// todo
+		c.Lock()
+		c.setHookBridged(hook)
+		c.Unlock()
+	}
 
 	return c.executeWithContext(ctx, "bridge", dialString)
 }

@@ -24,6 +24,7 @@ type BridgeArgs struct {
 	Codecs     []string               `json:"codecs"`
 	Parameters model.Variables        `json:"parameters"`
 	Endpoints  []EndpointVariableArgs `json:"endpoints"`
+	Bridged    []interface{}          `json:"bridged"`
 }
 
 func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -58,8 +59,21 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 	}
 
 	t := call.GetVariable("variable_transfer_history")
+	var br chan struct{} = nil
 
-	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs)
+	if hookApps, ok := props["bridged"].([]interface{}); ok {
+		br = make(chan struct{})
+		go func() {
+			select {
+			case _, ok := <-br:
+				if ok {
+					go flow.Route(ctx, scope.Fork("hook-bridged", flow.ArrInterfaceToArrayApplication(hookApps)), r)
+				}
+			}
+		}()
+	}
+
+	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs, br)
 	if err != nil {
 		return res, err
 	}

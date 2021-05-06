@@ -15,6 +15,7 @@ const (
 	EVENT_HANGUP_COMPLETE  = "CHANNEL_HANGUP_COMPLETE"
 	EVENT_EXECUTE_COMPLETE = "CHANNEL_EXECUTE_COMPLETE"
 	EVENT_ANSWER           = "CHANNEL_ANSWER"
+	EVENT_BRIDGE           = "CHANNEL_BRIDGE"
 )
 
 type Config struct {
@@ -120,7 +121,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 		return
 	}
 
-	_, err = c.Send(fmt.Sprintf("events plain %s %s %s", EVENT_HANGUP_COMPLETE, EVENT_EXECUTE_COMPLETE, EVENT_ANSWER))
+	_, err = c.Send(fmt.Sprintf("events plain %s %s %s %s", EVENT_HANGUP_COMPLETE, EVENT_EXECUTE_COMPLETE, EVENT_ANSWER, EVENT_BRIDGE))
 	if err != nil {
 		wlog.Error(fmt.Sprintf("call %s events error: %s", uuid, err.Error()))
 		return
@@ -138,6 +139,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 		}
 
 		connection.Lock()
+		connection.closeHookBridge()
 		if len(connection.callbackMessages) > 0 {
 			for k, v := range connection.callbackMessages {
 				v <- &eventsocket.Event{}

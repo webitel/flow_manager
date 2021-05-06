@@ -288,7 +288,7 @@ type Call interface {
 	Hangup(ctx context.Context, cause string) (Response, *AppError)
 	HangupNoRoute(ctx context.Context) (Response, *AppError)
 	HangupAppErr(ctx context.Context) (Response, *AppError)
-	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string) (Response, *AppError)
+	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string, hook chan struct{}) (Response, *AppError)
 	Sleep(ctx context.Context, delay int) (Response, *AppError)
 	//Voice(ctx context.Context, delay int) (Response, *AppError)
 	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
