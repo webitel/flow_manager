@@ -22,11 +22,15 @@ type WaitingMusic struct {
 }
 
 type QueueJoinArg struct {
-	Name                string              `json:"name"`
-	Number              string              `json:"number"`
-	Priority            int32               `json:"priority"`
-	Queue               Queue               `json:"queue"`
-	BucketId            int32               `json:"bucket_id"` // TODO
+	Name     string `json:"name"`
+	Number   string `json:"number"`
+	Priority int32  `json:"priority"`
+	Queue    Queue  `json:"queue"`
+	BucketId int32  `json:"bucket_id"` // TODO
+	Agent    *struct {
+		Id        *int32  `json:"id"`
+		Extension *string `json:"extension"`
+	}
 	StickyAgentId       int32               `json:"stickyAgentId"`
 	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
@@ -37,6 +41,7 @@ type QueueJoinArg struct {
 
 func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var q QueueJoinArg
+	var stickyAgentId int32
 
 	if err := r.Decode(scope, args, &q); err != nil {
 		return nil, err
@@ -91,6 +96,18 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		}
 	}
 
+	if q.Agent != nil {
+		if q.Agent.Extension != nil && q.Agent.Id == nil {
+			q.Agent.Id, _ = r.fm.GetAgentIdByExtension(call.DomainId(), *q.Agent.Extension)
+		}
+
+		if q.Agent.Id != nil {
+			stickyAgentId = *q.Agent.Id
+		}
+	} else {
+		stickyAgentId = q.StickyAgentId
+	}
+
 	ctx2 := context.Background()
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),
@@ -103,7 +120,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		BucketId:      q.BucketId,
 		Variables:     call.DumpExportVariables(),
 		DomainId:      call.DomainId(),
-		StickyAgentId: q.StickyAgentId,
+		StickyAgentId: stickyAgentId,
 	})
 
 	if err != nil {

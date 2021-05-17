@@ -76,3 +76,26 @@ from (
 
 	return t.Variables, nil
 }
+
+func (s SqlUserStore) GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError) {
+	res, err := s.GetReplica().SelectNullInt(`select a.id
+from directory.wbt_user u
+    inner join call_center.cc_agent a on a.user_id = u.id
+where u.dc = :DomainId
+    and u.extension = :Extension
+limit 1`, map[string]interface{}{
+		"DomainId":  domainId,
+		"Extension": extension,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlUserStore.GetAgentIdByExtension", "store.sql_user.get_agent.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	if res.Valid && res.Int64 > 0 {
+		r := int32(res.Int64)
+		return &r, nil
+	}
+
+	return nil, nil
+}

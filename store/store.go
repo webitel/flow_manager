@@ -24,6 +24,7 @@ type Store interface {
 
 type UserStore interface {
 	GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, *model.AppError)
+	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
 }
 
 type EmailStore interface {
