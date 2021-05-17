@@ -34,6 +34,12 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 			val = "u.extension::varchar as " + pq.QuoteIdentifier(k)
 		case "dnd":
 			val = "u.dnd::varchar as " + pq.QuoteIdentifier(k)
+		case "agent_id":
+			val = `(select a.id::text
+				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "agent_status":
+			val = `(select a.status::text
+				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
 		default:
 
 			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
