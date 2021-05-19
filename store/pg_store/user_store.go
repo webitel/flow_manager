@@ -40,6 +40,20 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 		case "agent_status":
 			val = `(select a.status::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "super_extension":
+			val = `(select su.extension::text
+from cc_agent a
+    inner join cc_agent s on s.id = a.supervisor_id
+    inner join directory.wbt_user su on su.id = s.user_id
+where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+
+		case "admin_extension":
+			val = `(select su.extension::text
+from cc_agent a
+    inner join cc_team t on t.id = a.team_id
+    inner join cc_agent s on s.id = t.admin_id
+    inner join directory.wbt_user su on su.id = s.user_id
+where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
 		default:
 
 			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
