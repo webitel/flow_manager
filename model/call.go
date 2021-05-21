@@ -100,7 +100,7 @@ func (e *CallEndpoint) GetName() *string {
 }
 
 type QueueInfo struct {
-	QueueId   int    `json:"queue_id,string"`
+	QueueId   *int   `json:"queue_id,string"`
 	AttemptId int64  `json:"attempt_id,string"`
 	TeamId    *int   `json:"team_id,string"`
 	AgentId   *int   `json:"agent_id,string"`
@@ -126,7 +126,7 @@ type CallActionRinging struct {
 
 func (r *CallActionRinging) GetQueueId() *int {
 	if r.Queue != nil {
-		return &r.Queue.QueueId
+		return r.Queue.QueueId
 	}
 	return nil
 }

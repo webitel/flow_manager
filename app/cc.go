@@ -17,3 +17,7 @@ func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJo
 func (fm *FlowManager) AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError {
 	return fm.Store.Call().AddMemberToQueueQueue(domainId, queueId, number, name, typeId, holdSec, variables)
 }
+
+func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error) {
+	return fm.cc.Member().CallJoinToAgent(ctx, in)
+}

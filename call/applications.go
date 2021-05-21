@@ -120,6 +120,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.CV),
 	}
+	apps["joinAgent"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.joinAgent),
+	}
 
 	return apps
 }
