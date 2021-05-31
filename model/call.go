@@ -117,6 +117,7 @@ type CallActionInfo struct {
 	ParentId    *string        `json:"parent_id"`
 	Payload     *CallVariables `json:"payload"`
 	Queue       *QueueInfo     `json:"queue"`
+	GranteeId   *int           `json:"grantee_id"`
 }
 
 type CallActionRinging struct {

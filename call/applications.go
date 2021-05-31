@@ -124,6 +124,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.joinAgent),
 	}
+	apps["setGrantee"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.SetGrantee),
+	}
 
 	return apps
 }

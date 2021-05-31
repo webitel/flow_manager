@@ -22,6 +22,10 @@ type Store interface {
 	User() UserStore
 }
 
+type CacheStore interface {
+	Set(key interface{}, value interface{}) *model.AppError
+}
+
 type UserStore interface {
 	GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, *model.AppError)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
@@ -45,6 +49,7 @@ type CallStore interface {
 	SaveTranscribe(callId, transcribe string) *model.AppError
 
 	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string) (string, *model.AppError)
+	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
 }
 
 type SchemaStore interface {

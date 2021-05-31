@@ -18,9 +18,11 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, attempt_id, member_id)
+                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, 
+					  attempt_id, member_id, grantee_id)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, :AttemptId, :MemberId)
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, 
+		:AttemptId, :MemberId, :GranteeId)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -42,7 +44,8 @@ on conflict (id)
 		agent_id = EXCLUDED.agent_id,
 		team_id = EXCLUDED.team_id,
 		attempt_id = EXCLUDED.attempt_id,
-		member_id = EXCLUDED.member_id
+		member_id = EXCLUDED.member_id,
+		grantee_Id = EXCLUDED.grantee_Id
 		`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
@@ -69,6 +72,7 @@ on conflict (id)
 		"TeamId":    call.GetTeamId(),
 		"AttemptId": call.GetAttemptId(),
 		"MemberId":  call.GetMemberIdId(),
+		"GranteeId": call.GranteeId,
 		"Payload":   nil,
 	})
 
@@ -296,4 +300,20 @@ limit 1`, map[string]interface{}{
 	}
 
 	return n.String, nil
+}
+
+func (s SqlCallStore) SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError {
+	_, err := s.GetMaster().Exec(`update call_center.cc_calls
+set grantee_id = :GranteeId
+where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
+		"DomainId":  domainId,
+		"GranteeId": granteeId,
+		"Id":        id,
+	})
+
+	if err != nil {
+		model.NewAppError("SqlCallStore.SetGranteeId", "store.sql_call.set_grantee.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }
