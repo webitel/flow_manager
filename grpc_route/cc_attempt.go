@@ -22,6 +22,16 @@ type DoDistributeConfirmArgs struct {
 	Export []string `json:"export"`
 }
 
+type AfterAttemptSuccess struct {
+	Export []string `json:"export"`
+}
+
+type AfterAttemptAbandoned struct {
+	MaxAttempts        uint32   `json:"maxAttempts"`
+	WaitBetweenRetries uint32   `json:"waitBetweenRetries"`
+	Export             []string `json:"export"`
+}
+
 func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
 	var argv DoDistributeCancelArgs
 
@@ -57,6 +67,47 @@ func (r *Router) confirm(ctx context.Context, scope *flow.Flow, conn model.GRPCC
 			Confirm: &flow2.DistributeAttemptResponse_Confirm{
 				Destination: argv.Destination,
 				Display:     argv.Display,
+			},
+		},
+		Variables: exportVars(conn, argv.Export),
+	})
+
+	scope.SetCancel()
+
+	return model.CallResponseOK, nil
+}
+
+func (r *Router) success(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
+	var argv AfterAttemptSuccess
+
+	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	conn.Result(&flow2.ResultAttemptResponse{
+		Result: &flow2.ResultAttemptResponse_Success_{
+			Success: &flow2.ResultAttemptResponse_Success{},
+		},
+		Variables: exportVars(conn, argv.Export),
+	})
+
+	scope.SetCancel()
+
+	return model.CallResponseOK, nil
+}
+
+func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
+	var argv AfterAttemptAbandoned
+
+	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	conn.Result(&flow2.ResultAttemptResponse{
+		Result: &flow2.ResultAttemptResponse_Abandoned_{
+			Abandoned: &flow2.ResultAttemptResponse_Abandoned{
+				MaxAttempts:        argv.MaxAttempts,
+				WaitBetweenRetries: argv.WaitBetweenRetries,
 			},
 		},
 		Variables: exportVars(conn, argv.Export),

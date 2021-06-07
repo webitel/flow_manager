@@ -17,7 +17,9 @@ type Connection struct {
 	stop      chan struct{}
 	ctx       context.Context
 
-	result  chan interface{}
+	result chan interface{}
+	cancel context.CancelFunc
+
 	request interface{}
 
 	event chan interface{}
@@ -32,12 +34,14 @@ func init() {
 }
 
 func newConnection(ctx context.Context, variables map[string]string) *Connection {
-	return &Connection{
-		ctx:       ctx,
+	c := &Connection{
 		variables: variables,
 		stop:      make(chan struct{}),
 		result:    make(chan interface{}),
 	}
+	c.ctx, c.cancel = context.WithCancel(ctx)
+
+	return c
 }
 
 func (c *Connection) Context() context.Context {
@@ -74,7 +78,7 @@ func (c *Connection) SchemaId() int {
 }
 
 func (c *Connection) Close() *model.AppError {
-	c.ctx.Done()
+	c.cancel()
 	return nil
 }
 

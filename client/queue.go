@@ -25,6 +25,15 @@ func (api *queueApi) DoDistributeAttempt(in *workflow.DistributeAttemptRequest) 
 	return cli.queue.DistributeAttempt(context.Background(), in)
 }
 
+func (api *queueApi) ResultAttempt(in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error) {
+	cli, err := api.cli.getRandomClient()
+	if err != nil {
+		return nil, err
+	}
+
+	return cli.queue.ResultAttempt(context.Background(), in)
+}
+
 func (api *queueApi) StartFlow(in *workflow.StartFlowRequest) (string, error) {
 	var res *workflow.StartFlowResponse
 	cli, err := api.cli.getRandomClient()

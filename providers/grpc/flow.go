@@ -39,6 +39,35 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 	return result, nil
 }
 
+func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error) {
+	var vars = in.Variables
+
+	if vars == nil {
+		vars = make(map[string]string)
+	}
+
+	conn := newConnection(ctx, vars)
+
+	var result *workflow.ResultAttemptResponse
+
+	conn.schemaId = int(in.SchemaId)
+	conn.domainId = in.DomainId
+	conn.id = model.NewId()
+
+	s.consume <- conn
+
+	select {
+	case <-ctx.Done():
+		return nil, errors.New("ctx done")
+	case <-conn.ctx.Done():
+		return nil, errors.New("error: server close connection")
+	case r := <-conn.result:
+		result, _ = r.(*workflow.ResultAttemptResponse)
+	}
+
+	return result, nil
+}
+
 func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*workflow.StartFlowResponse, error) {
 	var vars = in.Variables
 

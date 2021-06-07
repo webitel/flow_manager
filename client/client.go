@@ -26,6 +26,7 @@ type FlowManager interface {
 
 type QueueApi interface {
 	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
+	ResultAttempt(in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error)
 	StartFlow(in *workflow.StartFlowRequest) (string, error)
 }
 

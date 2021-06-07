@@ -17,6 +17,12 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["confirm"] = &flow.Application{
 		Handler: grpcHandlerMiddleware(r.confirm),
 	}
+	apps["abandoned"] = &flow.Application{
+		Handler: grpcHandlerMiddleware(r.abandoned),
+	}
+	apps["success"] = &flow.Application{
+		Handler: grpcHandlerMiddleware(r.success),
+	}
 
 	return apps
 }

@@ -23,7 +23,7 @@ require (
 	github.com/webitel/engine v0.0.0-20201229081853-f0832da3adcc
 	github.com/webitel/protos/cc v0.0.0-20210521073006-4964fa579ea2
 	github.com/webitel/protos/engine v0.0.0-20210126151454-4ec5503e5790
-	github.com/webitel/protos/workflow v0.0.0-20210318110202-d914a54df431
+	github.com/webitel/protos/workflow v0.0.0-20210607084712-007db41ae25f
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
 	google.golang.org/api v0.25.0
 	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3

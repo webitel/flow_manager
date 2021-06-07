@@ -13,6 +13,7 @@ type Handler interface {
 
 func Do(f func(result *model.Result)) model.ResultChannel {
 	storeChannel := make(model.ResultChannel, 1) // FIXME CHANNEL
+
 	go func() {
 		result := model.Result{}
 		f(&result)

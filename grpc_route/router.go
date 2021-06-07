@@ -55,6 +55,7 @@ func (r *Router) handle(conn model.Connection) {
 	s, err := r.fm.GetSchemaById(conn.DomainId(), gr.SchemaId())
 	if err != nil {
 		wlog.Error(fmt.Sprintf("connection %s, error: %s", conn.Id(), err.Error()))
+		conn.Close()
 		return
 	}
 
@@ -67,6 +68,8 @@ func (r *Router) handle(conn model.Connection) {
 	})
 
 	flow.Route(conn.Context(), i, r)
+
+	conn.Close()
 }
 
 func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
