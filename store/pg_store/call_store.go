@@ -250,7 +250,7 @@ from (
          select h.created_at, case when h.direction = 'inbound' then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
          from cc_calls_history h
          where (domain_id = :DomainId and created_at > now() - (:Hours::varchar || ' hours')::interval)
-		   and (:QueueIds::int[] isnull or h.queue_id = any(:QueueIds))	
+		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))	
            and (
                  (domain_id = :DomainId and destination ~~* :Number::varchar)
                  or (domain_id = :DomainId and to_number ~~* :Number::varchar)
