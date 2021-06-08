@@ -18,7 +18,8 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20191219234010-c382bd3c16ff
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
-	github.com/tidwall/gjson v1.6.0
+	github.com/tidwall/gjson v1.8.0
+	github.com/tidwall/pretty v1.1.1 // indirect
 	github.com/webitel/call_center v0.0.0-20210521073927-9b6192b3ca88
 	github.com/webitel/engine v0.0.0-20201229081853-f0832da3adcc
 	github.com/webitel/protos/cc v0.0.0-20210521073006-4964fa579ea2

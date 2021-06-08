@@ -48,7 +48,7 @@ type CallStore interface {
 	AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError
 	SaveTranscribe(callId, transcribe string) *model.AppError
 
-	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string) (string, *model.AppError)
+	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError)
 	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
 }
 

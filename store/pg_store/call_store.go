@@ -243,12 +243,14 @@ values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string) (string, *model.AppError) {
-	n, err := s.GetReplica().SelectNullStr(`select exten
+func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError) {
+	var res *model.LastBridged
+	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension, queue_id, agent_id
 from (
-         select h.created_at, case when h.direction = 'inbound' then h.to_number else h.from_number end exten
+         select h.created_at, case when h.direction = 'inbound' then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
          from cc_calls_history h
          where (domain_id = :DomainId and created_at > now() - (:Hours::varchar || ' hours')::interval)
+		   and (:QueueIds::int[] isnull or h.queue_id = any(:QueueIds))	
            and (
                  (domain_id = :DomainId and destination ~~* :Number::varchar)
                  or (domain_id = :DomainId and to_number ~~* :Number::varchar)
@@ -293,13 +295,14 @@ limit 1`, map[string]interface{}{
 		"Dialer":   dialer,
 		"Inbound":  inbound,
 		"Outbound": outbound,
+		"QueueIds": pq.Array(queueIds),
 	})
 
 	if err != nil {
-		return "", model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
+		return nil, model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
-	return n.String, nil
+	return res, nil
 }
 
 func (s SqlCallStore) SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError {

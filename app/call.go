@@ -102,6 +102,6 @@ func (c *FlowManager) UpdateCallFrom(id string, name, number *string) *model.App
 	return c.Store.Call().UpdateFrom(id, name, number)
 }
 
-func (c *FlowManager) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string) (string, *model.AppError) {
-	return c.Store.Call().LastBridgedExtension(domainId, number, hours, dialer, inbound, outbound)
+func (c *FlowManager) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError) {
+	return c.Store.Call().LastBridgedExtension(domainId, number, hours, dialer, inbound, outbound, queueIds)
 }
