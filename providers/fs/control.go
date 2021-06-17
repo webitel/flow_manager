@@ -176,6 +176,7 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 		"RECORD_MIN_SEC":            minSec,
 		"RECORD_STEREO":             stereo,
 		"RECORD_BRIDGE_REQ":         bridged,
+		"media_bug_answer_req":      bridged,
 		"recording_follow_transfer": followTransfer,
 	}
 
