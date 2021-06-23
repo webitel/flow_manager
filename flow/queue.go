@@ -23,6 +23,11 @@ type GetQueueInfo struct {
 	Field string `json:"field"`
 }
 
+type GetQueueAgents struct {
+	Queue *model.SearchEntity `json:"queue"`
+	Set   model.Variables     `json:"set"`
+}
+
 func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv GetQueueInfo
 	var res *model.QueueData
@@ -127,4 +132,25 @@ func (r *router) getQueueMetrics(ctx context.Context, scope *Flow, c model.Conne
 	return c.Set(ctx, model.Variables{
 		argv.Set: res,
 	})
+}
+
+func (r *router) getQueueAgents(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv GetQueueAgents
+	var res model.Variables
+
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+
+	if argv.Queue == nil || argv.Queue.Id == nil {
+		return model.CallResponseError, ErrorRequiredParameter("getQueueAgent", "queue")
+	}
+
+	res, err = r.fm.Store.Queue().GetQueueAgents(c.DomainId(), *argv.Queue.Id, argv.Set)
+	if err != nil {
+		return model.CallResponseError, err
+	}
+
+	return c.Set(ctx, res)
 }

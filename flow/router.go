@@ -147,6 +147,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.lastBridged),
 	}
+	apps["getQueueAgents"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.getQueueAgents),
+	}
 
 	return apps
 }

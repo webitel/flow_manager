@@ -2,9 +2,11 @@ package sqlstore
 
 import (
 	"fmt"
+	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"net/http"
+	"strings"
 )
 
 type SqlQueueStore struct {
@@ -101,4 +103,56 @@ limit 1`, map[string]interface{}{
 	}
 
 	return res, nil
+}
+
+func (s SqlQueueStore) GetQueueAgents(domainId int64, queueId int, mapRes model.Variables) (model.Variables, *model.AppError) {
+	var t *properties
+	f := make([]string, 0)
+
+	for k, v := range mapRes {
+		switch v {
+		case "count", "online", "offline", "pause", "waiting":
+			f = append(f, fmt.Sprintf("%s as %s", v, pq.QuoteIdentifier(k)))
+		}
+	}
+
+	if len(f) == 0 {
+		return nil, model.NewAppError("SqlQueueStore.GetQueueAgents", "store.sql_queue.agents.app_error", nil, "bad request", http.StatusBadRequest)
+	}
+
+	err := s.GetReplica().SelectOne(&t, `select row_to_json(t.*) as variables
+from (
+    select
+        `+strings.Join(f, ", ")+`
+    from (
+        SELECT
+            count(*)::varchar as count,
+            (count(*) filter ( where a.status = 'offline' ))::varchar as offline,
+            (count(*) filter ( where a.status = 'online' ))::varchar as online,
+            (count(*) filter ( where a.status = 'pause' ))::varchar as pause,
+            (count(*) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
+        FROM call_center.cc_queue q
+             JOIN call_center.cc_agent a ON q.team_id = a.team_id
+             left join call_center.cc_agent_channel ac on ac.agent_id = a.id
+        WHERE q.id = :Id and q.domain_id = :DomainId
+            and (EXISTS(SELECT qs.queue_id
+                      FROM call_center.cc_queue_skill qs
+                               JOIN call_center.cc_skill_in_agent csia ON csia.skill_id = qs.skill_id
+                      WHERE qs.enabled
+                        AND csia.enabled
+                        AND csia.agent_id = a.id
+                        AND qs.queue_id = q.id
+                        AND csia.capacity >= qs.min_capacity
+                        AND csia.capacity <= qs.max_capacity))
+             ) t
+) t`, map[string]interface{}{
+		"Id":       queueId,
+		"DomainId": domainId,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlQueueStore.GetQueueAgents", "store.sql_queue.agents.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return t.Variables, nil
 }
