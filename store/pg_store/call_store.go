@@ -108,8 +108,8 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 }
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload, hangup_by, tags)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json, :HangupBy, :Tags)
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, sip_code, payload, hangup_by, tags, amd_result)
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, :SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult)
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
@@ -118,6 +118,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       payload = EXCLUDED.payload,
       hangup_by = EXCLUDED.hangup_by,
 	  tags = EXCLUDED.tags,
+	  amd_result = EXCLUDED.amd_result,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -127,6 +128,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"Cause":     call.Cause,
 		"SipCode":   call.SipCode,
 		"HangupBy":  call.HangupBy,
+		"AmdResult": call.AmdResult,
 		"Tags":      pq.Array(call.Tags),
 		"Variables": call.VariablesToJson(),
 	})

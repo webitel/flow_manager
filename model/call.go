@@ -197,6 +197,7 @@ type CallActionHangup struct {
 	OriginSuccess *bool          `json:"originate_success"`
 	HangupBy      *string        `json:"hangup_by"`
 	Tags          []string       `json:"tags"`
+	AmdResult     *string        `json:"amd_result"`
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
