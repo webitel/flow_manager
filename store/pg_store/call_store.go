@@ -247,16 +247,18 @@ values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 
 func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError) {
 	var res *model.LastBridged
+	// fixme extension dialer logic
 	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension, queue_id, agent_id
 from (
-         select h.created_at, case when h.direction = 'inbound' then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
+         select h.created_at, case when h.direction = 'inbound' or q.type = any(array[4,5]::smallint[]) then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
          from cc_calls_history h
-         where (domain_id = :DomainId and created_at > now() - (:Hours::varchar || ' hours')::interval)
+ 			left join cc_queue q on q.id = h.queue_id
+         where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
 		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))	
            and (
-                 (domain_id = :DomainId and destination ~~* :Number::varchar)
-                 or (domain_id = :DomainId and to_number ~~* :Number::varchar)
-                 or (domain_id = :DomainId and from_number ~~* :Number::varchar)
+                 (h.domain_id = :DomainId and destination ~~* :Number::varchar)
+                 or (h.domain_id = :DomainId and to_number ~~* :Number::varchar)
+                 or (h.domain_id = :DomainId and from_number ~~* :Number::varchar)
              )
            and h.parent_id isnull
            and (
