@@ -43,7 +43,7 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 		case "super_extension":
 			val = `(select su.extension::text
 from cc_agent a
-    inner join cc_agent s on s.id = a.supervisor_id
+    inner join cc_agent s on s.id = a.supervisor_ids[1]
     inner join directory.wbt_user su on su.id = s.user_id
 where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
 
