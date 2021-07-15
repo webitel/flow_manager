@@ -19,8 +19,9 @@ type JoinAgentArgs struct {
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
 	}
-	Bridged []interface{} `json:"bridged"`
-	Timeout int32         `json:"timeout"`
+	Bridged   []interface{} `json:"bridged"`
+	Timeout   int32         `json:"timeout"`
+	QueueName string        `json:"queue_name"`
 }
 
 func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -59,6 +60,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 		WaitingMusic: nil,
 		Timeout:      argv.Timeout,
 		Variables:    call.DumpExportVariables(),
+		QueueName:    argv.QueueName,
 	}
 
 	if argv.Processing != nil && argv.Processing.Enabled {
