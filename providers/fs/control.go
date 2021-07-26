@@ -410,6 +410,14 @@ func (c *Connection) GoogleTranscribe(ctx context.Context) (model.Response, *mod
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, *model.AppError) {
+	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s stop", c.id)); err != nil {
+		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribeStop.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res model.Response, err *model.AppError) {
 	if name != nil {
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_name=%s", *name)); err != nil {

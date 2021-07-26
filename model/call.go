@@ -320,6 +320,7 @@ type Call interface {
 
 	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
 	GoogleTranscribe(ctx context.Context) (Response, *AppError)
+	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
 
 	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
 	Push(ctx context.Context, name, tag string) (Response, *AppError)
