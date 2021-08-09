@@ -132,7 +132,7 @@ from (
             (count(*) filter ( where a.status = 'pause' ))::varchar as pause,
             (count(*) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
         FROM call_center.cc_queue q
-             JOIN call_center.cc_agent a ON q.team_id = a.team_id
+             left JOIN call_center.cc_agent a ON q.team_id = a.team_id
              left join call_center.cc_agent_channel ac on ac.agent_id = a.id
         WHERE q.id = :Id and q.domain_id = :DomainId
             and (EXISTS(SELECT qs.queue_id
