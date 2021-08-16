@@ -125,25 +125,21 @@ from (
     select
         `+strings.Join(f, ", ")+`
     from (
-        SELECT
-            count(*)::varchar as count,
-            (count(*) filter ( where a.status = 'offline' ))::varchar as offline,
-            (count(*) filter ( where a.status = 'online' ))::varchar as online,
-            (count(*) filter ( where a.status = 'pause' ))::varchar as pause,
-            (count(*) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
-        FROM call_center.cc_queue q
-             left JOIN call_center.cc_agent a ON q.team_id = a.team_id
-             left join call_center.cc_agent_channel ac on ac.agent_id = a.id
-        WHERE q.id = :Id and q.domain_id = :DomainId
-            and (EXISTS(SELECT qs.queue_id
-                      FROM call_center.cc_queue_skill qs
-                               JOIN call_center.cc_skill_in_agent csia ON csia.skill_id = qs.skill_id
-                      WHERE qs.enabled
-                        AND csia.enabled
-                        AND csia.agent_id = a.id
-                        AND qs.queue_id = q.id
-                        AND csia.capacity >= qs.min_capacity
-                        AND csia.capacity <= qs.max_capacity))
+        SELECT count( distinct a.id)::varchar                                                              as count,
+			   (count(distinct a.id) filter ( where a.status = 'offline' ))::varchar                      as offline,
+			   (count(distinct a.id) filter ( where a.status = 'online' ))::varchar                       as online,
+			   (count(distinct a.id) filter ( where a.status = 'pause' ))::varchar                        as pause,
+			   (count(distinct a.id) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
+		from call_center.cc_queue q
+				 inner join cc_queue_skill qs on qs.queue_id = q.id
+				 inner join cc_skill_in_agent sa
+							on sa.skill_id = qs.skill_id and sa.capacity between qs.min_capacity and qs.max_capacity
+				 inner join cc_agent a on a.id = sa.agent_id and (q.team_id isnull or q.team_id = a.team_id)
+				 left join call_center.cc_agent_channel ac on ac.agent_id = a.id
+		where q.domain_id = :DomainId
+		  and q.id = :Id
+		  and qs.enabled
+		  and sa.enabled
              ) t
 ) t`, map[string]interface{}{
 		"Id":       queueId,
