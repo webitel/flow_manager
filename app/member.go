@@ -13,3 +13,7 @@ func (f *FlowManager) GetMemberProperties(domainId int64, search *model.SearchMe
 func (f *FlowManager) PatchMembers(domainId int64, search *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
 	return f.Store.Member().PatchMembers(domainId, search, patch)
 }
+
+func (f *FlowManager) EWTPuzzle(domainId int64, callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError) {
+	return f.Store.Member().EWTPuzzle(callId, min, queueIds, bucketIds)
+}

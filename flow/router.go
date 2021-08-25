@@ -151,6 +151,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.getQueueAgents),
 	}
+	apps["ewt"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.EWTCall),
+	}
 
 	return apps
 }

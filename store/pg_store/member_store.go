@@ -43,6 +43,56 @@ where a.member_call_id = :CallId`, map[string]interface{}{
 	return pos, nil
 }
 
+func (s SqlMemberStore) EWTPuzzle(callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError) {
+	ewt, err := s.GetMaster().SelectFloat(`with att as (
+    select a.pos, a.queue_id, a.bucket_id
+    from (
+             select row_number()
+                    over (order by (extract(epoch from now() - a.joined_at) + a.weight) desc) pos,
+                    a.member_call_id,
+                    a.queue_id,
+                    a.bucket_id
+             from cc_member_attempt a
+             where a.queue_id = (
+                 select a2.queue_id
+                 from cc_member_attempt a2
+                 where a2.member_call_id = :CallId
+                 limit 1
+             )
+               and a.bridged_at isnull
+               and a.leaving_at isnull
+             order by (extract(epoch from now() - a.joined_at) + a.weight) desc
+         ) a
+    where a.member_call_id = :CallId
+    limit 1
+)
+select (coalesce(extract(epoch from avg(awt)), 0.0) * coalesce(max(att.pos), 0.0))::int8 as awt
+from att
+left join lateral (
+      select bridged_at - joined_at awt
+      from cc_member_attempt_history a
+      where a.queue_id = any(:QueueIds::int[])
+        and case when :BucketIds::int[] notnull then a.bucket_id = any(:BucketIds::int[]) else a.bucket_id isnull end
+        and a.bridged_at notnull
+        and a.agent_id notnull
+        and a.leaving_at > now() - (:Min || ' min')::interval
+      order by leaving_at desc
+      limit 2
+) s on true;`, map[string]interface{}{
+		"CallId":    callId,
+		"Min":       min,
+		"QueueIds":  pq.Array(queueIds),
+		"BucketIds": pq.Array(bucketIds),
+	})
+
+	if err != nil {
+		return 0,
+			model.NewAppError("SqlMemberStore.EWTPuzzle", "store.sql_member.ewt_puzzle.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return ewt, nil
+}
+
 func (s SqlMemberStore) GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError) {
 	f := make([]string, 0)
 

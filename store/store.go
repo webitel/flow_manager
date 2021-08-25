@@ -93,6 +93,7 @@ type QueueStore interface {
 
 type MemberStore interface {
 	CallPosition(callId string) (int64, *model.AppError)
+	EWTPuzzle(callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError)
 	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError)
 	PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError)
 }
