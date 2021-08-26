@@ -9,6 +9,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"net/http"
+	"strings"
 )
 
 type EndpointVariableArgs struct {
@@ -20,11 +21,12 @@ type EndpointVariableArgs struct {
 }
 
 type BridgeArgs struct {
-	Strategy   string                 `json:"strategy"`
-	Codecs     []string               `json:"codecs"`
-	Parameters model.Variables        `json:"parameters"`
-	Endpoints  []EndpointVariableArgs `json:"endpoints"`
-	Bridged    []interface{}          `json:"bridged"`
+	Strategy     string                 `json:"strategy"`
+	SendOnAnswer string                 `json:"sendOnAnswer"`
+	Codecs       []string               `json:"codecs"`
+	Parameters   model.Variables        `json:"parameters"`
+	Endpoints    []EndpointVariableArgs `json:"endpoints"`
+	Bridged      []interface{}          `json:"bridged"`
 }
 
 func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -73,7 +75,14 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		}()
 	}
 
-	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), nil, e, codecs, br)
+	// todo
+	var vars map[string]string
+	if sendOnAnswer, ok := props["sendOnAnswer"].(string); ok {
+		vars = make(map[string]string)
+		vars["execute_on_answer"] = "send_dtmf " + strings.Replace(sendOnAnswer, "'", "", -1)
+	}
+
+	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), vars, e, codecs, br)
 	if err != nil {
 		return res, err
 	}
