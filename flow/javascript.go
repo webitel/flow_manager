@@ -60,7 +60,7 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 	result, err := vm.Run(`
 		var LocalDate = function() {
 			var t = _LocalDateParameters();
-			return new Date(t[0], t[1], t[2], t[3], t[4], t[5])
+			return new Date(t[0], t[1] - 1, t[2], t[3], t[4], t[5])
 		};
 		(function(LocalDate) {` + argv.Data + `})(LocalDate)`)
 	if err != nil {
