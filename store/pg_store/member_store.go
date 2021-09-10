@@ -22,10 +22,10 @@ func (s SqlMemberStore) CallPosition(callId string) (int64, *model.AppError) {
 from (
     select row_number()
         over (order by (extract(epoch from now() -  a.joined_at) + a.weight) desc) pos, a.member_call_id
-    from cc_member_attempt a
+    from call_center.cc_member_attempt a
     where a.queue_id = (
         select a2.queue_id
-        from cc_member_attempt a2
+        from call_center.cc_member_attempt a2
         where a2.member_call_id = :CallId 
         limit 1
     ) and a.bridged_at isnull and a.leaving_at isnull
@@ -52,10 +52,10 @@ func (s SqlMemberStore) EWTPuzzle(callId string, min int, queueIds []int, bucket
                     a.member_call_id,
                     a.queue_id,
                     a.bucket_id
-             from cc_member_attempt a
+             from call_center.cc_member_attempt a
              where a.queue_id = (
                  select a2.queue_id
-                 from cc_member_attempt a2
+                 from call_center.cc_member_attempt a2
                  where a2.member_call_id = :CallId
                  limit 1
              )
@@ -70,7 +70,7 @@ select (coalesce(extract(epoch from avg(awt)), 0.0) * coalesce(max(att.pos), 0.0
 from att
 left join lateral (
       select bridged_at - joined_at awt
-      from cc_member_attempt_history a
+      from call_center.cc_member_attempt_history a
       where a.queue_id = any(:QueueIds::int[])
         and case when :BucketIds::int[] notnull then a.bucket_id = any(:BucketIds::int[]) else a.bucket_id isnull end
         and a.bridged_at notnull
@@ -129,9 +129,9 @@ func (s SqlMemberStore) GetProperties(domainId int64, req *model.SearchMember, m
 from (
     select
        `+strings.Join(f, ", ")+`
-    from cc_member m
+    from call_center.cc_member m
     where m.queue_id in (
-        select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
+        select id from call_center.cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
     and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
@@ -159,7 +159,7 @@ from (
 // todo variables
 func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
 	i, err := s.GetMaster().SelectNullInt(`with m as (
-    update cc_member m
+    update call_center.cc_member m
     set name = coalesce(:UName::varchar, name),
         priority = coalesce(:UPriority::int, priority),
         bucket_id = coalesce(:UBucketId::int, bucket_id),
@@ -168,7 +168,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
         stop_at = case when :UStopCause::varchar notnull then now() else stop_at end,
         variables = case when (:UVariables::jsonb) notnull then variables || :UVariables::jsonb else variables end
     where m.queue_id in (
-        select id from cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
+        select id from call_center.cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
     and (:Today::bool isnull or (:Today and m.created_at >= now()::date))

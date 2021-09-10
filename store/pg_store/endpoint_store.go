@@ -45,7 +45,7 @@ from endpoints e
 		left join directory.wbt_user_status uss on uss.user_id = u.id
 		left join lateral (
 		   select true as d
-		   from cc_calls c
+		   from call_center.cc_calls c
 		   where c.user_id = u.id and c.hangup_at isnull and c.direction notnull
 		   limit 1
 		) x on not uss.dnd and (e.endpoint->>'idle')::bool

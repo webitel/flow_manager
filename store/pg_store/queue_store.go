@@ -46,10 +46,10 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 	}
 
 	fmt.Println(`select ` + agg + `
-	from cc_member_attempt_history a
+	from call_center.cc_member_attempt_history a
 	where queue_id = (
 		select q.id
-		from cc_queue q
+		from call_center.cc_queue q
 		where q.domain_id = :DomainId::int8 and (q.id = :QueueId::int or q.name = :QueueName::varchar)
 		limit 1
 	) and joined_at between now() - (:Min::int || ' min')::interval and now()
@@ -60,10 +60,10 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
         ))`)
 
 	res, err := s.GetReplica().SelectFloat(`select `+agg+`
-	from cc_member_attempt_history a
+	from call_center.cc_member_attempt_history a
 	where queue_id = (
 		select q.id
-		from cc_queue q
+		from call_center.cc_queue q
 		where q.domain_id = :DomainId::int8 and (q.id = :QueueId::int or q.name = :QueueName::varchar)
 		limit 1
 	) and joined_at between now() - (:Min::int || ' min')::interval and now()
@@ -90,7 +90,7 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 func (s SqlQueueStore) GetQueueData(domainId int64, search *model.SearchEntity) (*model.QueueData, *model.AppError) {
 	var res *model.QueueData
 	err := s.GetReplica().SelectOne(&res, `select q.type, q.enabled, q.priority
-from cc_queue q
+from call_center.cc_queue q
 where q.domain_id = :DomainId and (q.id = :Id or q.name = :Name) 
 limit 1`, map[string]interface{}{
 		"DomainId": domainId,
@@ -131,10 +131,10 @@ from (
 			   (count(distinct a.id) filter ( where a.status = 'pause' ))::varchar                        as pause,
 			   (count(distinct a.id) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
 		from call_center.cc_queue q
-				 inner join cc_queue_skill qs on qs.queue_id = q.id
-				 inner join cc_skill_in_agent sa
+				 inner join call_center.cc_queue_skill qs on qs.queue_id = q.id
+				 inner join call_center.cc_skill_in_agent sa
 							on sa.skill_id = qs.skill_id and sa.capacity between qs.min_capacity and qs.max_capacity
-				 inner join cc_agent a on a.id = sa.agent_id and (q.team_id isnull or q.team_id = a.team_id)
+				 inner join call_center.cc_agent a on a.id = sa.agent_id and (q.team_id isnull or q.team_id = a.team_id)
 				 left join call_center.cc_agent_channel ac on ac.agent_id = a.id
 		where q.domain_id = :DomainId
 		  and q.id = :Id

@@ -165,7 +165,7 @@ func (s SqlCallStore) MoveToHistory() *model.AppError {
 with c as (
     delete from call_center.cc_calls c
 	where c.hangup_at < now() - '1 sec'::interval and c.direction notnull
-        and not exists(select 1 from cc_member_attempt att where att.id = c.attempt_id)
+        and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
     returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
        c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
        c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id,
@@ -217,7 +217,7 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 }
 
 func (s SqlCallStore) UpdateFrom(id string, name, number *string) *model.AppError {
-	_, err := s.GetMaster().Exec(`update cc_calls
+	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set from_number = coalesce(:Number, from_number),
     from_name = coalesce(:Name, from_name)
 where id = :Id`, map[string]interface{}{
@@ -234,7 +234,7 @@ where id = :Id`, map[string]interface{}{
 }
 
 func (s SqlCallStore) SaveTranscribe(callId, transcribe string) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into cc_calls_transcribe (call_id, transcribe)
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_transcribe (call_id, transcribe)
 values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 		"CallId":     callId,
 		"Transcribe": transcribe,
@@ -253,8 +253,8 @@ func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string,
 	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension, queue_id, agent_id
 from (
          select h.created_at, case when h.direction = 'inbound' or q.type = any(array[4,5]::smallint[]) then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
-         from cc_calls_history h
- 			left join cc_queue q on q.id = h.queue_id
+         from call_center.cc_calls_history h
+ 			left join call_center.cc_queue q on q.id = h.queue_id
          where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
 		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))	
            and (

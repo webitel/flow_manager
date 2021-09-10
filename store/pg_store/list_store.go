@@ -21,7 +21,7 @@ func (s SqlListStore) CheckNumber(domainId int64, number string, listId *int, li
 	   select 1
 	   from call_center.cc_list_communications c
 	   where c.list_id = (
-		   select l.id from cc_list l
+		   select l.id from call_center.cc_list l
 		   where l.domain_id = :DomainId and
 				 (l.id = :ListId or l.name = :Name)
 		   limit 1
