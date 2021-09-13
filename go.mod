@@ -20,9 +20,9 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.8.0
 	github.com/tidwall/pretty v1.1.1 // indirect
-	github.com/webitel/call_center v0.0.0-20210715132258-524a65c4d689
+	github.com/webitel/call_center v0.0.0-20210913120010-a315d7b8c147
 	github.com/webitel/engine v0.0.0-20210618144234-cc4ac480c364
-	github.com/webitel/protos/cc v0.0.0-20210715130845-09446a17f8fd
+	github.com/webitel/protos/cc v0.0.0-20210913110322-88eb3bdf0db9
 	github.com/webitel/protos/engine v0.0.0-20210618142934-0e88f093dc55
 	github.com/webitel/protos/workflow v0.0.0-20210618142934-0e88f093dc55
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
