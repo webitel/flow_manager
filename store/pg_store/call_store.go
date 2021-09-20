@@ -162,25 +162,103 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`
-with c as (
+with del_calls as materialized (
     delete from call_center.cc_calls c
-	where c.hangup_at < now() - '1 sec'::interval and c.direction notnull
-        and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
-    returning c.created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
-       c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id,
-	   c.queue_id, c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration, c.tags, c.grantee_id, c.hold
+        where c.hangup_at < now() - '1 sec'::interval
+            and c.direction notnull
+            and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
+            and case
+                    when c.parent_id notnull then not exists(select 1
+                                                             from call_center.cc_calls cp
+                                                             where cp.id = cp.parent_id
+                                                               and cp.hangup_at isnull) else true end
+        returning *
 )
-insert into call_center.cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name, from_number, from_id,
-                              to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at, hangup_at, hold_sec, cause, sip_code, bridged_id,
-							gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by, transfer_from, transfer_to, amd_result, amd_duration,
-							tags, grantee_id, "hold")
-select c.created_at created_at, c.id, c.direction, c.destination, c.parent_id, c.app_id, c.from_type, c.from_name, c.from_number, c.from_id,
-       c.to_type, c.to_name, c.to_number, c.to_id, c.payload, c.domain_id,
-       c.answered_at, c.bridged_at, c.hangup_at, c.hold_sec, c.cause, c.sip_code, c.bridged_id, c.gateway_id, c.user_id, c.queue_id, 
-		c.team_id, c.agent_id, c.attempt_id, c.member_id, c.hangup_by, c.transfer_from, c.transfer_to, c.amd_result, c.amd_duration, 
-		c.tags, c.grantee_id, c.hold
-from c;`)
+insert
+into call_center.cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name,
+                                   from_number, from_id,
+                                   to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at,
+                                   hangup_at, hold_sec, cause, sip_code, bridged_id,
+                                   gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
+                                   transfer_from, transfer_to, amd_result, amd_duration,
+                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids)
+select c.created_at created_at,
+       c.id,
+       c.direction,
+       c.destination,
+       c.parent_id,
+       c.app_id,
+       c.from_type,
+       c.from_name,
+       c.from_number,
+       c.from_id,
+       c.to_type,
+       c.to_name,
+       c.to_number,
+       c.to_id,
+       c.payload,
+       c.domain_id,
+       c.answered_at,
+       c.bridged_at,
+       c.hangup_at,
+       c.hold_sec,
+       c.cause,
+       c.sip_code,
+       c.bridged_id,
+       c.gateway_id,
+       c.user_id,
+       c.queue_id,
+       c.team_id,
+       c.agent_id,
+       c.attempt_id,
+       c.member_id,
+       c.hangup_by,
+       c.transfer_from,
+       c.transfer_to,
+       c.amd_result,
+       c.amd_duration,
+       c.tags,
+       c.grantee_id,
+       c.hold,
+       c.user_ids,
+       c.agent_ids,
+       c.gateway_ids,
+       c.queue_ids,
+       c.team_ids
+from (
+         select (t.r).*,
+                case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
+                case when (t.r).user_id isnull then t.user_ids else (t.r).user_id || t.user_ids end     user_ids,
+                case
+                    when (t.r).gateway_id isnull then t.gateway_ids
+                    else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
+                case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
+                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids
+         from (
+                  select c                                                             r,
+                         array_agg(distinct ch.user_id)
+                         filter ( where c.parent_id isnull and ch.user_id notnull )    user_ids,
+                         array_agg(distinct ch.agent_id)
+                         filter ( where c.parent_id isnull and ch.agent_id notnull )   agent_ids,
+                         array_agg(distinct ch.queue_id)
+                         filter ( where c.parent_id isnull and ch.queue_id notnull )   queue_ids,
+                         array_agg(distinct ch.gateway_id)
+                         filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
+                         array_agg(distinct ch.team_id)
+                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids
+                  from del_calls c
+                           left join del_calls ch on ch.parent_id = c.id
+                  where c.hangup_at < now() - '1 sec'::interval
+                    and c.direction notnull
+                    and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
+                    and case
+                            when c.parent_id notnull then not exists(select 1
+                                                                     from call_center.cc_calls cp
+                                                                     where cp.id = cp.parent_id
+                                                                       and cp.hangup_at isnull) else true end
+                  group by 1
+              ) t
+     ) c;`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
 			err.Error(), extractCodeFromErr(err))
