@@ -35,6 +35,7 @@ type QueueJoinArg struct {
 	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
+	Bridged             []interface{}       `json:"bridged"`
 	Timers              []flow.TimerArgs    `json:"timers"`
 	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
 }
@@ -144,6 +145,9 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			if wCancel != nil {
 				wCancel()
 				wCancel = nil
+				if len(q.Bridged) > 0 {
+					flow.Route(context.Background(), scope.Fork("queue-bridged", flow.ArrInterfaceToArrayApplication(q.Bridged)), r)
+				}
 			}
 
 		case *cc.QueueEvent_Leaving:
