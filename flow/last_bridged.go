@@ -50,6 +50,10 @@ func (r *router) lastBridged(ctx context.Context, scope *Flow, c model.Connectio
 			if lastBridged.QueueId != nil {
 				vars[k] = fmt.Sprintf("%d", *lastBridged.QueueId)
 			}
+		case "created_at":
+			vars[k] = lastBridged.CreatedAt
+		case "description":
+			vars[k] = lastBridged.Description
 		}
 	}
 

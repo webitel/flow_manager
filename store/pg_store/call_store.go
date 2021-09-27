@@ -328,17 +328,26 @@ values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError) {
 	var res *model.LastBridged
 	// fixme extension dialer logic
-	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension, queue_id, agent_id
+	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension,
+       queue_id,
+       agent_id,
+       coalesce(description, '') as description,
+       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') created_at
 from (
-         select h.created_at, case when h.direction = 'inbound' or q.type = any(array[4,5]::smallint[]) then h.to_number else h.from_number end as extension, h.queue_id, h.agent_id
+         select h.created_at,
+                case when h.direction = 'inbound' or q.type = any(array[4,5]::smallint[]) then h.to_number else h.from_number end as extension,
+                h.queue_id,
+                ah.agent_id,
+                ah.description
          from call_center.cc_calls_history h
  			left join call_center.cc_queue q on q.id = h.queue_id
+            left join call_center.cc_member_attempt_history ah on ah.domain_id = h.domain_id and ah.member_call_id = h.id
          where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
-		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))	
+		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))
            and (
-                 (h.domain_id = :DomainId and destination ~~* :Number::varchar)
-                 or (h.domain_id = :DomainId and to_number ~~* :Number::varchar)
-                 or (h.domain_id = :DomainId and from_number ~~* :Number::varchar)
+                 (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
+                 or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
+                 or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
              )
            and h.parent_id isnull
            and (
