@@ -22,6 +22,7 @@ type TTSArgs struct {
 	Pitch            string `json:"pitch"`
 	VolumeGainDb     string `json:"volumeGainDb"`
 	EffectsProfileId string `json:"effectsProfileId"`
+	KeyLocation      string `json:"keyLocation"`
 
 	TextType   string                `json:"textType"`
 	Terminator string                `json:"terminator"`
@@ -60,6 +61,9 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		}
 		if argv.SpeakingRate != "" {
 			q += "&effectsProfileId=" + argv.EffectsProfileId
+		}
+		if argv.KeyLocation != "" {
+			q += "&keyLocation=" + UrlEncoded(argv.KeyLocation)
 		}
 
 	default:
