@@ -59,7 +59,7 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 
 	var argv = RecordSessionArg{
-		Name:   "recordSession",
+		Name:   "${caller_id_number}_${destination_number}.mp3",
 		Type:   "mp3",
 		MinSec: 2,
 	}
