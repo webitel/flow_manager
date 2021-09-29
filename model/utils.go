@@ -132,3 +132,8 @@ func MapStringToJson(src map[string]string) []byte {
 	data, _ := json.Marshal(src)
 	return data
 }
+
+func InterfaceToJson(i interface{}) []byte {
+	v, _ := json.Marshal(i)
+	return v
+}

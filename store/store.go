@@ -20,6 +20,7 @@ type Store interface {
 	Queue() QueueStore
 	Member() MemberStore
 	User() UserStore
+	Log() LogStore
 }
 
 type CacheStore interface {
@@ -96,4 +97,8 @@ type MemberStore interface {
 	EWTPuzzle(callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError)
 	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError)
 	PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError)
+}
+
+type LogStore interface {
+	Save(schemaId int, connId string, log interface{}) *model.AppError
 }

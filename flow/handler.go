@@ -25,6 +25,7 @@ func Do(f func(result *model.Result)) model.ResultChannel {
 
 func Route(ctx context.Context, i *Flow, handler Handler) {
 	var req *ApplicationRequest
+	var s int64
 
 	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.Connection.Id()))
 	defer wlog.Debug(fmt.Sprintf("flow \"%s\" stopped conn %s", i.name, i.Connection.Id()))
@@ -52,11 +53,16 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			}
 		}
 
+		s = model.GetMillis()
+
 		select {
 		case <-ctx.Done():
 			i.SetCancel()
 			return
 		case res := <-handler.Request(ctx, i, req):
+			if req.log != nil {
+				i.PushSteepLog(req.log.Name, s)
+			}
 			if res.Err != nil {
 				wlog.Error(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Err.Error()))
 			} else {

@@ -108,6 +108,17 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	} else {
 		stickyAgentId = q.StickyAgentId
 	}
+	vars := call.DumpExportVariables()
+
+	/*
+		l := scope.Logs()
+		if len(l) > 0 {
+			//var res []*model.StepLog
+			//scope.Decode(scope.Logs(), res)1
+			d, _ := json.Marshal(l)
+			vars["wbt_ivr_log"] = string(d)
+		}
+	*/
 
 	ctx2 := context.Background()
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
@@ -119,7 +130,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		WaitingMusic:  ringtone,
 		Priority:      q.Priority,
 		BucketId:      q.BucketId,
-		Variables:     call.DumpExportVariables(),
+		Variables:     vars,
 		DomainId:      call.DomainId(),
 		StickyAgentId: stickyAgentId,
 	})

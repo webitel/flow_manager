@@ -43,6 +43,7 @@ type SqlSupplierOldStores struct {
 	queue       store.QueueStore
 	member      store.MemberStore
 	user        store.UserStore
+	log         store.LogStore
 }
 
 type SqlSupplier struct {
@@ -76,6 +77,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.queue = NewSqlQueueStore(supplier)
 	supplier.oldStores.member = NewSqlMemberStore(supplier)
 	supplier.oldStores.user = NewSqlUserStore(supplier)
+	supplier.oldStores.log = NewSqlLogStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -248,4 +250,8 @@ func (ss *SqlSupplier) Member() store.MemberStore {
 
 func (ss *SqlSupplier) User() store.UserStore {
 	return ss.oldStores.user
+}
+
+func (ss *SqlSupplier) Log() store.LogStore {
+	return ss.oldStores.log
 }

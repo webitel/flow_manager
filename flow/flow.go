@@ -34,6 +34,7 @@ type Flow struct {
 	currentNode *Node
 	gotoCounter int16
 	cancel      bool
+	logs        []*model.StepLog
 	sync.RWMutex
 }
 
@@ -54,12 +55,35 @@ func New(conf Config) *Flow {
 	i.Functions = make(map[string]model.Applications)
 	i.triggers = make(map[string]model.Applications)
 	i.Tags = make(map[string]*Tag)
+	i.logs = make([]*model.StepLog, 0, 1)
+
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
 
 	parseFlowArray(i, i.currentNode, conf.Schema)
 	return i
+}
+
+func (f *Flow) PushSteepLog(name string, s int64) {
+	f.Lock()
+	f.logs = append(f.logs, &model.StepLog{
+		Name:  name,
+		Start: s,
+		Stop:  model.GetMillis(),
+	})
+	f.Unlock()
+}
+
+func (f *Flow) Logs() []*model.StepLog {
+	f.RLock()
+	defer f.RUnlock()
+
+	if len(f.logs) > 0 {
+		return f.logs
+	}
+
+	return nil
 }
 
 func (f *Flow) Fork(name string, schema model.Applications) *Flow {
@@ -83,6 +107,10 @@ type Limiter struct {
 	failover string
 }
 
+type Log struct {
+	Name string
+}
+
 type ApplicationRequest struct {
 	BaseNode
 	args    interface{}
@@ -91,6 +119,7 @@ type ApplicationRequest struct {
 	DebugId string
 	Tag     string
 	limiter *Limiter
+	log     *Log
 }
 
 func (l *Limiter) MaxCount() bool {
@@ -267,6 +296,10 @@ func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model
 			if lim, ok := fieldValue.(map[string]interface{}); ok && lim != nil {
 				req.limiter = newLimiter(lim)
 			}
+		case "trace":
+			if l, ok := fieldValue.(map[string]interface{}); ok && l != nil {
+				req.log = newLog(l)
+			}
 		default:
 			if req.Name == "" {
 				req.Name = fieldName
@@ -302,6 +335,17 @@ func newLimiter(args map[string]interface{}) *Limiter {
 			count:    0,
 			max:      uint32(max),
 			failover: failover,
+		}
+	}
+
+	return nil
+}
+
+func newLog(args map[string]interface{}) *Log {
+	name, _ := args["name"].(string)
+	if name != "" {
+		return &Log{
+			Name: name,
 		}
 	}
 

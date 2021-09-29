@@ -67,3 +67,7 @@ func (s *LayeredStore) Member() MemberStore {
 func (s *LayeredStore) User() UserStore {
 	return s.DatabaseLayer.User()
 }
+
+func (s *LayeredStore) Log() LogStore {
+	return s.DatabaseLayer.Log()
+}

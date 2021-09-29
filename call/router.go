@@ -174,4 +174,6 @@ func (r *Router) handle(conn model.Connection) {
 		flow.Route(ctxDisc, d, r)
 	}
 
+	r.fm.StoreLog(routing.SchemaId, conn.Id(), i.Logs())
+
 }

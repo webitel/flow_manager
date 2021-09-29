@@ -22,4 +22,5 @@ type SqlStore interface {
 	Chat() store.ChatStore
 	Queue() store.QueueStore
 	Member() store.MemberStore
+	Log() store.LogStore
 }
