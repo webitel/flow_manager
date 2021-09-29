@@ -5,8 +5,9 @@ const (
 )
 
 type Config struct {
-	Id     string `json:"id"`
-	Record struct {
+	Id          string `json:"id"`
+	ExternalSql bool   `json:"external_sql"`
+	Record      struct {
 		Sample int `json:"sample"`
 	} `json:"record"`
 	SqlSettings                  SqlSettings       `json:"sql_settings"`

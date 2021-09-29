@@ -51,13 +51,16 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	fm := &FlowManager{
-		config:        config,
-		id:            fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
-		servers:       make([]model.Server, 0, 1),
-		schemaCache:   utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
-		stop:          make(chan struct{}),
-		stopped:       make(chan struct{}),
-		ExternalStore: cachelayer.NewExternalStoreManager(),
+		config:      config,
+		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
+		servers:     make([]model.Server, 0, 1),
+		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
+		stop:        make(chan struct{}),
+		stopped:     make(chan struct{}),
+	}
+
+	if config.ExternalSql {
+		fm.ExternalStore = cachelayer.NewExternalStoreManager()
 	}
 
 	fm.Log = wlog.NewLogger(&wlog.LoggerConfiguration{

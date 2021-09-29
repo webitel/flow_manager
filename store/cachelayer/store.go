@@ -1,6 +1,7 @@
 package cachelayer
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
@@ -48,8 +49,8 @@ func (e *ExternalStoreManager) Connect(driver, dns string) (*ExternalDb, *model.
 	return e.Connect(driver, dns)
 }
 
-func (d *ExternalDb) Query(text string, params []interface{}) (map[string]interface{}, *model.AppError) {
-	rows, err := d.db.Query(text, params...)
+func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{}) (map[string]interface{}, *model.AppError) {
+	rows, err := d.db.QueryContext(ctx, text, params...)
 
 	if err != nil {
 		return nil, model.NewAppError("Cache.Query", "cache.query.err", nil, err.Error(), http.StatusInternalServerError)

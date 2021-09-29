@@ -22,6 +22,7 @@ var (
 	recordSample = flag.Int("record_sample", 0, "Set the sample rate of the recording")
 
 	presignedCertFile = flag.String("presigned_cert", "/opt/storage/key.pem", "Location to pre signed certificate")
+	externalSql       = flag.Bool("external_sql", false, "Enable external sql query")
 )
 
 func (f *FlowManager) Config() *model.Config {
@@ -31,7 +32,8 @@ func (f *FlowManager) Config() *model.Config {
 func loadConfig() (*model.Config, error) {
 	flag.Parse()
 	config := &model.Config{
-		Id: *nodeName,
+		Id:          *nodeName,
+		ExternalSql: *externalSql,
 		SqlSettings: model.SqlSettings{
 			DriverName:                  model.NewString("postgres"),
 			DataSource:                  dataSource,

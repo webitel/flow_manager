@@ -3,7 +3,6 @@ package store
 import (
 	"database/sql"
 	"github.com/webitel/flow_manager/model"
-	_ "github.com/webitel/flow_manager/store/cachelayer"
 )
 
 var ErrNoRows = sql.ErrNoRows
