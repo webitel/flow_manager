@@ -11,19 +11,21 @@ import (
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 	"github.com/webitel/wlog"
 	"time"
 )
 
 type FlowManager struct {
-	Log         *wlog.Logger
-	id          string
-	config      *model.Config
-	cluster     *cluster
-	Store       store.Store
-	servers     []model.Server
-	schemaCache utils.ObjectCache
+	Log           *wlog.Logger
+	id            string
+	config        *model.Config
+	cluster       *cluster
+	Store         store.Store
+	ExternalStore *cachelayer.ExternalStoreManager
+	servers       []model.Server
+	schemaCache   utils.ObjectCache
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
@@ -49,12 +51,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	fm := &FlowManager{
-		config:      config,
-		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
-		servers:     make([]model.Server, 0, 1),
-		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
-		stop:        make(chan struct{}),
-		stopped:     make(chan struct{}),
+		config:        config,
+		id:            fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
+		servers:       make([]model.Server, 0, 1),
+		schemaCache:   utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
+		stop:          make(chan struct{}),
+		stopped:       make(chan struct{}),
+		ExternalStore: cachelayer.NewExternalStoreManager(),
 	}
 
 	fm.Log = wlog.NewLogger(&wlog.LoggerConfiguration{

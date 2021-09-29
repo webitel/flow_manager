@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
+	"time"
 )
 
 type Handler interface {
@@ -25,7 +26,7 @@ func Do(f func(result *model.Result)) model.ResultChannel {
 
 func Route(ctx context.Context, i *Flow, handler Handler) {
 	var req *ApplicationRequest
-	var s int64
+	var s time.Time
 
 	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.Connection.Id()))
 	defer wlog.Debug(fmt.Sprintf("flow \"%s\" stopped conn %s", i.name, i.Connection.Id()))
@@ -53,7 +54,7 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			}
 		}
 
-		s = model.GetMillis()
+		s = time.Now()
 
 		select {
 		case <-ctx.Done():
@@ -61,12 +62,12 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 			return
 		case res := <-handler.Request(ctx, i, req):
 			if req.log != nil {
-				i.PushSteepLog(req.log.Name, s)
+				i.PushSteepLog(req.log.Name, s.UnixNano()/1000)
 			}
 			if res.Err != nil {
-				wlog.Error(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Err.Error()))
+				wlog.Error(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Err.Error(), time.Since(s)))
 			} else {
-				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s", i.Name(), req.Id(), req.Args(), res.Res.String()))
+				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Res.String(), time.Since(s)))
 			}
 
 			if req.IsCancel() {

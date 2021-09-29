@@ -8,6 +8,7 @@ require (
 	github.com/emersion/go-message v0.11.2
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/gorilla/handlers v1.4.2
 	github.com/gorilla/mux v1.7.4

@@ -155,6 +155,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.EWTCall),
 	}
+	apps["sql"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.SqlHandler),
+	}
 
 	return apps
 }
