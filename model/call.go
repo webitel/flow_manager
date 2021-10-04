@@ -325,6 +325,7 @@ type Call interface {
 	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
 	Push(ctx context.Context, name, tag string) (Response, *AppError)
 	Cv(ctx context.Context) (Response, *AppError)
+	Stopped() bool
 }
 
 type PlaybackFile struct {

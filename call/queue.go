@@ -120,6 +120,11 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		}
 	*/
 
+	// TODO
+	if call.Stopped() {
+		return model.CallResponseError, nil
+	}
+
 	ctx2 := context.Background()
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),
