@@ -273,7 +273,7 @@ select q.id queue_id, json_build_array(jsonb_build_object('destination', :Number
                       jsonb_build_object('type', jsonb_build_object('id', :TypeId::int4))),
        :Name::varchar,
        :Variables::jsonb vars,
-       (extract(epoch from now() + (:HoldSec::int4 || ' sec')::interval) * 1000)::int8 lh,
+       case when not :HoldSec::int4 isnull then now() + (:HoldSec::int4 || ' sec')::interval else null end lh,
        q.domain_id
 from call_center.cc_queue q
 where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]interface{}{
