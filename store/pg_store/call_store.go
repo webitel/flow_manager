@@ -268,7 +268,7 @@ from (
 }
 
 func (s SqlCallStore) AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, last_hangup_at, domain_id)
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, ready_at, domain_id)
 select q.id queue_id, json_build_array(jsonb_build_object('destination', :Number::varchar) ||
                       jsonb_build_object('type', jsonb_build_object('id', :TypeId::int4))),
        :Name::varchar,
