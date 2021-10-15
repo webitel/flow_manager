@@ -128,6 +128,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.SetGrantee),
 	}
+	apps["setUser"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.SetUser),
+	}
 
 	return apps
 }

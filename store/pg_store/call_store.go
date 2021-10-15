@@ -413,3 +413,19 @@ where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
 
 	return nil
 }
+
+func (s SqlCallStore) SetUserId(domainId int64, id string, userId int64) *model.AppError {
+	_, err := s.GetMaster().Exec(`update call_center.cc_calls
+set user_id = :UserId
+where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
+		"DomainId": domainId,
+		"UserId":   userId,
+		"Id":       id,
+	})
+
+	if err != nil {
+		model.NewAppError("SqlCallStore.SetUserId", "store.sql_call.set_user_id.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}

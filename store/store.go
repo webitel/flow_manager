@@ -51,6 +51,7 @@ type CallStore interface {
 
 	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError)
 	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
+	SetUserId(domainId int64, id string, userId int64) *model.AppError
 }
 
 type SchemaStore interface {
