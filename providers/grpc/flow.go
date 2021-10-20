@@ -34,6 +34,7 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 		return nil, errors.New("ctx done")
 	case r := <-conn.result:
 		result, _ = r.(*workflow.DistributeAttemptResponse)
+		result.Id = conn.id
 	}
 
 	return result, nil
@@ -63,6 +64,7 @@ func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 		return nil, errors.New("error: server close connection")
 	case r := <-conn.result:
 		result, _ = r.(*workflow.ResultAttemptResponse)
+		result.Id = conn.id
 	}
 
 	return result, nil
