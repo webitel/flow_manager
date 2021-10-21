@@ -35,6 +35,7 @@ type QueueJoinArg struct {
 	Ringtone            model.PlaybackFile  `json:"ringtone"`
 	Waiting             []interface{}       `json:"waiting"`
 	Reporting           []interface{}       `json:"reporting"`
+	Offering            []interface{}       `json:"offering"`
 	Bridged             []interface{}       `json:"bridged"`
 	Timers              []flow.TimerArgs    `json:"timers"`
 	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
@@ -156,7 +157,16 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 			return model.CallResponseError, nil
 		}
 
-		switch msg.Data.(type) {
+		switch e := msg.Data.(type) {
+		case *cc.QueueEvent_Offering:
+			if len(q.Offering) > 0 {
+				call.Set(ctx, model.Variables{
+					"cc_agent_name":    e.Offering.AgentName,
+					"cc_agent_call_id": e.Offering.AgentCallId,
+					"cc_agent_id":      fmt.Sprintf("%d", e.Offering.AgentId),
+				})
+				flow.Route(context.Background(), scope.Fork("queue-offering", flow.ArrInterfaceToArrayApplication(q.Offering)), r)
+			}
 		case *cc.QueueEvent_Bridged:
 			if wCancel != nil {
 				wCancel()
@@ -168,7 +178,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 
 		case *cc.QueueEvent_Leaving:
 			call.Set(ctx, model.Variables{
-				"cc_result": msg.Data.(*cc.QueueEvent_Leaving).Leaving.Result,
+				"cc_result": e.Leaving.Result,
 			})
 			if len(q.Reporting) > 0 {
 				flow.Route(context.Background(), scope.Fork("queue-reporting", flow.ArrInterfaceToArrayApplication(q.Reporting)), r)
