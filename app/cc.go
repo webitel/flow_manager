@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
+	"net/http"
 )
 
 func (fm *FlowManager) JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error) {
@@ -20,4 +21,25 @@ func (fm *FlowManager) AddMemberToQueueQueue(domainId int64, queueId int, number
 
 func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error) {
 	return fm.cc.Member().CallJoinToAgent(ctx, in)
+}
+
+func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64, extension string) *model.AppError {
+	agentId, err := fm.Store.User().GetAgentIdByExtension(domainId, extension)
+	if err != nil {
+		return err
+	}
+
+	if agentId == nil {
+		return nil
+	}
+
+	_, perr := fm.cc.Member().CancelAgentDistribute(ctx, &cc.CancelAgentDistributeRequest{
+		AgentId: *agentId,
+	})
+
+	if perr != nil {
+		return model.NewAppError("App", "CancelUserDistribute", nil, err.Error(), http.StatusNotFound)
+	}
+
+	return nil
 }

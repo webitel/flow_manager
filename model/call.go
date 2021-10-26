@@ -43,6 +43,7 @@ const (
 	CallActionBridgeName  = "bridge"
 	CallActionHoldName    = "hold"
 	CallActionDtmfName    = "dtmf"
+	CallActionSTTName     = "stt"
 	CallActionHangupName  = "hangup"
 )
 
@@ -198,6 +199,13 @@ type CallActionHangup struct {
 	HangupBy      *string        `json:"hangup_by"`
 	Tags          []string       `json:"tags"`
 	AmdResult     *string        `json:"amd_result"`
+	RecordStart   *int64         `json:"record_start,string"`
+	RecordStop    *int64         `json:"record_stop,string"`
+}
+
+type CallActionSTT struct {
+	CallAction
+	Transcript string `json:"transcript"`
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
@@ -206,6 +214,23 @@ func (h *CallActionHangup) VariablesToJson() []byte {
 	}
 	data, _ := json.Marshal(h.Payload)
 	return data
+}
+
+func (h *CallActionHangup) Parameters() []byte {
+	if h.RecordStart == nil && h.RecordStop == nil {
+		return []byte("{}") //FIXME
+	}
+
+	res := make(map[string]interface{})
+	if h.RecordStop != nil {
+		res["record_stop"] = *h.RecordStop
+	}
+	if h.RecordStart != nil {
+		res["record_start"] = *h.RecordStart
+	}
+
+	b, _ := json.Marshal(res)
+	return b
 }
 
 type CallVariables map[string]interface{}
