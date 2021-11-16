@@ -205,3 +205,37 @@ from m`, map[string]interface{}{
 
 	return 0, nil
 }
+
+func (s SqlMemberStore) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, 
+	ready_at, domain_id, timezone_id, priority, bucket_id)
+select q.id queue_id, json_build_array(jsonb_build_object('destination', :Number::varchar) ||
+                      jsonb_build_object('type', jsonb_build_object('id', :TypeId::int4))),
+       :Name::varchar,
+       :Variables::jsonb vars,
+       case when not :HoldSec::int4 isnull then now() + (:HoldSec::int4 || ' sec')::interval else null end lh,
+       q.domain_id,
+	   :TimezoneId,
+	   :Priority,
+	   :BucketId	 
+from call_center.cc_queue q
+where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]interface{}{
+		"DomainId":   domainId,
+		"QueueId":    queueId,
+		"Number":     member.Communication.Destination,
+		"TypeId":     member.Communication.TypeId,
+		"Name":       member.Name,
+		"HoldSec":    holdSec,
+		"Variables":  model.MapStringToJson(member.Variables),
+		"TimezoneId": member.Timezone.Id,
+		"Priority":   member.Priority,
+		"BucketId":   member.Bucket.Id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlMemberStore.CreateMember", "store.sql_member.create.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}

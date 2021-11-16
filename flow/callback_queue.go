@@ -5,17 +5,9 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-type CallbackCommunication struct {
-	Destination string
-	TypeId      int `json:"type_id"`
-}
-
 type CallbackQueueArgs struct {
-	Name          string
-	Variables     map[string]string
-	QueueId       int `json:"queue_id"`
-	HoldSec       int `json:"holdSec"`
-	Communication CallbackCommunication
+	QueueId int `json:"queue_id"`
+	HoldSec int `json:"holdSec"`
 }
 
 /*
@@ -36,13 +28,16 @@ type CallbackQueueArgs struct {
 */
 
 func (r *router) callbackQueue(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var member CallbackQueueArgs
+	var params CallbackQueueArgs
+	if err := scope.Decode(args, &params); err != nil {
+		return nil, err
+	}
+	var member model.CallbackMember
 	if err := scope.Decode(args, &member); err != nil {
 		return nil, err
 	}
 
-	if err := r.fm.AddMemberToQueueQueue(c.DomainId(), member.QueueId, member.Communication.Destination, member.Name, member.Communication.TypeId,
-		member.HoldSec, member.Variables); err != nil {
+	if err := r.fm.CreateMember(c.DomainId(), params.QueueId, params.HoldSec, &member); err != nil {
 		return nil, err
 	}
 

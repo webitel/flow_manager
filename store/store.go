@@ -45,8 +45,6 @@ type CallStore interface {
 	SetHangup(call *model.CallActionHangup) *model.AppError
 	MoveToHistory() *model.AppError
 	UpdateFrom(id string, name, number *string) *model.AppError
-
-	AddMemberToQueueQueue(domainId int64, queueId int, number, name string, typeId, holdSec int, variables map[string]string) *model.AppError
 	SaveTranscribe(callId, transcribe string) *model.AppError
 
 	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError)
@@ -94,6 +92,7 @@ type QueueStore interface {
 }
 
 type MemberStore interface {
+	CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError
 	CallPosition(callId string) (int64, *model.AppError)
 	EWTPuzzle(callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError)
 	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError)

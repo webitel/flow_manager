@@ -5,6 +5,25 @@ type Member struct {
 	Name string `json:"name" db:"name"`
 }
 
+type CallbackCommunication struct {
+	Destination string  `json:"destination"`
+	Description *string `json:"description"`
+	TypeId      int     `json:"type_id"`
+}
+
+type CallbackMember struct {
+	Name      string            `json:"name"`
+	Variables map[string]string `json:"variables"`
+	Timezone  struct {
+		Id *int `json:"id"`
+	} `json:"timezone"`
+	Bucket struct {
+		Id *int `json:"id"`
+	}
+	Priority      int                   `json:"priority"`
+	Communication CallbackCommunication `json:"communication"`
+}
+
 type SearchMember struct {
 	QueueIds    []int   `json:"queue_ids"`
 	Destination *string `json:"destination"`
