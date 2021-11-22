@@ -168,7 +168,8 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`
 with del_calls as materialized (
-    delete from call_center.cc_calls c
+    select *
+    from call_center.cc_calls c
         where c.hangup_at < now() - '1 sec'::interval
             and c.direction notnull
             and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
@@ -177,7 +178,17 @@ with del_calls as materialized (
                                                              from call_center.cc_calls cp
                                                              where cp.id = cp.parent_id
                                                                and cp.hangup_at isnull) else true end
-        returning *
+    order by c.hangup_at asc
+    for update skip locked
+    limit 100
+),
+dd as (
+    delete
+    from call_center.cc_calls m
+    where m.id in (
+        select del_calls.id
+        from del_calls
+    )
 )
 insert
 into call_center.cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name,

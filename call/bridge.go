@@ -75,11 +75,15 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		}()
 	}
 
-	// todo
-	var vars map[string]string
+	var vars = make(map[string]string)
 	if sendOnAnswer, ok := props["sendOnAnswer"].(string); ok {
-		vars = make(map[string]string)
 		vars["execute_on_answer"] = "send_dtmf " + strings.Replace(sendOnAnswer, "'", "", -1)
+	}
+
+	if glob, ok := props["parameters"].(map[string]interface{}); ok && len(glob) > 0 {
+		for k, v := range glob {
+			vars[k] = fmt.Sprintf("%v", v)
+		}
 	}
 
 	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), vars, e, codecs, br)
