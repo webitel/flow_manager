@@ -26,8 +26,11 @@ type QueueJoinArg struct {
 	Number   string `json:"number"`
 	Priority int32  `json:"priority"`
 	Queue    Queue  `json:"queue"`
-	BucketId int32  `json:"bucket_id"` // TODO
-	Agent    *struct {
+	BucketId int32  `json:"bucket_id"` // deprecated
+	Bucket   struct {
+		Id int32 `json:"id"`
+	} `json:"bucket"`
+	Agent *struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
@@ -55,6 +58,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 
 	if len(q.Waiting) > 0 {
 		go flow.Route(wCtx, scope.Fork("queue-waiting", flow.ArrInterfaceToArrayApplication(q.Waiting)), r)
+	}
+
+	if q.BucketId > 0 && q.Bucket.Id == 0 {
+		q.Bucket.Id = q.BucketId
 	}
 
 	if len(q.Timers) > 0 {
@@ -135,7 +142,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		},
 		WaitingMusic:  ringtone,
 		Priority:      q.Priority,
-		BucketId:      q.BucketId,
+		BucketId:      q.Bucket.Id,
 		Variables:     vars,
 		DomainId:      call.DomainId(),
 		StickyAgentId: stickyAgentId,
