@@ -3,6 +3,7 @@ package model
 const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
+	ConversationSessionId            = "uuid"
 )
 
 type ChatButton struct {
