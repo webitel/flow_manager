@@ -137,7 +137,7 @@ from (
     and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
-    and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
+	and (:Destination::varchar isnull or m.search_destinations && array[:Destination::varchar])
     limit 1
 ) t`, map[string]interface{}{
 		"DomainId":    domainId,
