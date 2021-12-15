@@ -307,6 +307,26 @@ func (c *Connection) TTS(ctx context.Context, path string, digits *model.Playbac
 	}
 }
 
+func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+	var tmp = "http_cache://http://$${cdr_url}/sys/tts"
+
+	path += "&format=opus"
+
+	var url string
+
+	if timeout > 0 {
+		url = fmt.Sprintf("file_string://%s!silence_stream://%d", tmp+path+".opus", timeout)
+	} else {
+		url = tmp + path + "&.opus"
+	}
+
+	if digits != nil {
+		return c.PlaybackUrlAndGetDigits(ctx, url, digits)
+	} else {
+		return c.PlaybackUrl(ctx, url)
+	}
+}
+
 func (c *Connection) PlaybackUrl(ctx context.Context, url string) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "playback", url)
 }

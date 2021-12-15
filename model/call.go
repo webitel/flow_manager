@@ -332,6 +332,7 @@ type Call interface {
 	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
 	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)
 	TTS(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
+	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
 
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)

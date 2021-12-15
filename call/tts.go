@@ -47,6 +47,8 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		q = "/polly?"
 	case "microsoft":
 		q = "/microsoft?"
+	case "yandex":
+		q = "/yandex?"
 	case "google":
 		q = "/google?"
 
@@ -70,8 +72,12 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		q = "/?"
 	}
 
-	if argv.Token != "" && argv.Key != "" {
-		q += "&key=" + UrlEncoded(argv.Key) + "&token=" + UrlEncoded(argv.Token)
+	if argv.Key != "" {
+		q += "&key=" + UrlEncoded(argv.Key)
+	}
+
+	if argv.Token != "" {
+		q += "&token=" + UrlEncoded(argv.Token)
 	}
 
 	if argv.TextType != "" {
@@ -106,7 +112,9 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		}
 		return model.CallResponseOK, nil
 	}
-
+	if argv.Provider == "yandex" {
+		return call.TTSOpus(ctx, q, argv.GetDigits, 0)
+	}
 	return call.TTS(ctx, q, argv.GetDigits, 0)
 }
 
