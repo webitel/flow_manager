@@ -30,6 +30,8 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 	s.consume <- conn
 
 	select {
+	case <-conn.ctx.Done():
+		return nil, errors.New("error: server close connection")
 	case <-ctx.Done():
 		return nil, errors.New("ctx done")
 	case r := <-conn.result:
