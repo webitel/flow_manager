@@ -8,9 +8,9 @@ import (
 )
 
 type DoDistributeCancelArgs struct {
-	Description       string `json:"description"`
-	NextDistributeSec uint32 `json:"nextDistributeSec"`
-	Stop              bool   `json:"stop"`
+	Description        string `json:"description"`
+	WaitBetweenRetries int    `json:"waitBetweenRetries"`
+	Stop               bool   `json:"stop"`
 
 	Export []string `json:"export"`
 }
@@ -43,7 +43,7 @@ func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCCo
 		Result: &flow2.DistributeAttemptResponse_Cancel_{
 			Cancel: &flow2.DistributeAttemptResponse_Cancel{
 				Description:       argv.Description,
-				NextDistributeSec: argv.NextDistributeSec,
+				NextDistributeSec: uint32(argv.WaitBetweenRetries),
 				Stop:              argv.Stop,
 			},
 		},
