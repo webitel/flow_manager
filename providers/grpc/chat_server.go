@@ -179,7 +179,14 @@ func messageToText(messages ...*chat.Message) []string {
 	msgs := make([]string, 0, len(messages))
 
 	for _, m := range messages {
-		msgs = append(msgs, m.Text)
+		switch m.Type {
+		case "contact":
+			if m.Contact != nil {
+				msgs = append(msgs, m.Contact.Contact)
+			}
+		default:
+			msgs = append(msgs, m.Text)
+		}
 	}
 
 	return msgs
