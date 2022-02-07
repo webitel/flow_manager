@@ -91,12 +91,12 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		return res, err
 	}
 
-	if t != call.GetVariable("variable_transfer_history") {
+	if t != call.GetVariable("variable_transfer_history") && (call.GetVariable("variable_hangup_after_bridge") == "" || call.GetVariable("variable_hangup_after_bridge") == "true") {
 		scope.SetCancel()
 	}
 
 	//TODO variable_last_bridge_hangup_cause variable_bridge_hangup_cause
-	if call.GetVariable("variable_bridge_hangup_cause") == "NORMAL_CLEARING" && call.GetVariable("variable_hangup_after_bridge") == "true" {
+	if (call.GetVariable("variable_bridge_hangup_cause") == "NORMAL_CLEARING" || call.GetVariable("variable_last_bridge_hangup_cause") == "NORMAL_CLEARING") && call.GetVariable("variable_hangup_after_bridge") == "true" {
 		scope.SetCancel()
 	}
 
