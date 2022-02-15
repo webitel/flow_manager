@@ -57,7 +57,7 @@ func (s *chatApi) getClientFromRequest(ctx context.Context) (*ChatClientConnecti
 
 func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workflow.StartResponse, error) {
 	if _, ok := s.conversations.Get(req.ConversationId); ok {
-		return nil, errors.New(fmt.Sprintf("Conversation %d already exists", req.ConversationId))
+		//return nil, errors.New(fmt.Sprintf("Conversation %s already exists", req.ConversationId))
 	}
 
 	client, err := s.getClientFromRequest(ctx)
@@ -65,7 +65,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 		return nil, err
 	}
 
-	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId)
+	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId, req.SchemaId)
 	conv.chat = s
 
 	if req.Message != nil {
@@ -94,7 +94,8 @@ func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workf
 		return nil, err
 	}
 
-	if err := conv.Break(); err != nil {
+	//todo if cause TRANSFER
+	if err := conv.Break(req.Cause); err != nil {
 		return nil, err
 	}
 
@@ -138,10 +139,20 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 		return nil, errors.New("bridge not found")
 	}
 
+	//todo
+	if in.Cause == "transfer" {
+		conv.breakCause = in.Cause
+	}
+
 	close(conv.chBridge)
 	conv.chBridge = nil
 
 	return &workflow.BreakBridgeResponse{}, nil
+}
+
+func (s *chatApi) TransferChatPlan(ctx context.Context, in *workflow.TransferChatPlanRequest) (*workflow.TransferChatPlanResponse, error) {
+	//todo
+	return &workflow.TransferChatPlanResponse{}, nil
 }
 
 func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {

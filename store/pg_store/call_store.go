@@ -265,14 +265,6 @@ from (
                          filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids
                   from del_calls c
                            left join del_calls ch on ch.parent_id = c.id
-                  where c.hangup_at < now() - '1 sec'::interval
-                    and c.direction notnull
-                    and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id)
-                    and case
-                            when c.parent_id notnull then not exists(select 1
-                                                                     from call_center.cc_calls cp
-                                                                     where cp.id = cp.parent_id
-                                                                       and cp.hangup_at isnull) else true end
                   group by 1
               ) t
      ) c;`)

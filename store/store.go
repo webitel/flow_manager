@@ -83,6 +83,7 @@ type ListStore interface {
 
 type ChatStore interface {
 	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
+	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
 }
 
 type QueueStore interface {

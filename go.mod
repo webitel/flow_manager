@@ -23,8 +23,8 @@ require (
 	github.com/webitel/call_center v0.0.0-20210913120010-a315d7b8c147
 	github.com/webitel/engine v0.0.0-20210618144234-cc4ac480c364
 	github.com/webitel/protos/cc v0.0.0-20210913110322-88eb3bdf0db9
-	github.com/webitel/protos/engine v0.0.0-20210618142934-0e88f093dc55
-	github.com/webitel/protos/workflow v0.0.0-20211020140600-4f6409f1f039
+	github.com/webitel/protos/engine v0.0.0-20220204124109-4cd75b2ef382
+	github.com/webitel/protos/workflow v0.0.0-20220208112727-d166000d6195
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
 	google.golang.org/api v0.25.0
 	google.golang.org/genproto v0.0.0-20201030142918-24207fddd1c3

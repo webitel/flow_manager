@@ -19,16 +19,18 @@ type message struct {
 }
 
 type conversation struct {
-	id        string
-	profileId int64
-	domainId  int64
-	variables map[string]string
-	client    *ChatClientConnection
-	mx        sync.RWMutex
-	ctx       context.Context
-	cancel    context.CancelFunc
-	messages  []*message
-	chBridge  chan struct{}
+	id         string
+	profileId  int64
+	schemaId   int32
+	domainId   int64
+	variables  map[string]string
+	client     *ChatClientConnection
+	mx         sync.RWMutex
+	ctx        context.Context
+	cancel     context.CancelFunc
+	messages   []*message
+	chBridge   chan struct{}
+	breakCause string
 
 	confirmation    map[string]chan []string
 	exportVariables []string
@@ -37,11 +39,12 @@ type conversation struct {
 	chat *chatApi
 }
 
-func NewConversation(client *ChatClientConnection, id string, domainId, profileId int64) *conversation {
+func NewConversation(client *ChatClientConnection, id string, domainId, profileId int64, schemaId int32) *conversation {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &conversation{
 		id:           id,
 		profileId:    profileId,
+		schemaId:     schemaId,
 		domainId:     domainId,
 		variables:    make(map[string]string),
 		client:       client,
@@ -53,6 +56,18 @@ func NewConversation(client *ChatClientConnection, id string, domainId, profileI
 		confirmation: make(map[string]chan []string),
 		nodeId:       client.Name(),
 	}
+}
+
+func (c *conversation) SchemaId() int32 {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.schemaId
+}
+
+func (c *conversation) BreakCause() string {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.breakCause
 }
 
 func (c conversation) Type() model.ConnectionType {
@@ -104,11 +119,12 @@ func (c *conversation) Close() *model.AppError {
 	return nil // fixme
 }
 
-func (c *conversation) Break() *model.AppError {
+func (c *conversation) Break(cause string) *model.AppError {
 	c.mx.Lock()
 	if c.chBridge != nil {
 		close(c.chBridge)
 	}
+	c.breakCause = cause
 	c.mx.Unlock()
 
 	c.cancel()

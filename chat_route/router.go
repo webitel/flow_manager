@@ -27,6 +27,8 @@ type Conversation interface {
 	Export(ctx context.Context, vars []string) (model.Response, *model.AppError)
 	DumpExportVariables() map[string]string
 	NodeName() string
+	SchemaId() int32
+	BreakCause() string
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
@@ -65,8 +67,17 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 
 func (r *Router) handle(conn model.Connection) {
 	conv := conn.(Conversation)
+	var routing *model.Routing
+	var err *model.AppError
+	shId := conv.SchemaId()
 
-	routing, err := r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
+	if shId > 0 {
+		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), shId)
+	} else if conv.ProfileId() > 0 {
+		routing, err = r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
+	} else {
+		//TODO ERROR
+	}
 	if err != nil {
 		conv.Stop(err)
 		return
@@ -82,8 +93,10 @@ func (r *Router) handle(conn model.Connection) {
 
 	flow.Route(conn.Context(), i, r)
 
-	// todo
-	conv.Stop(nil)
+	// todo fixme
+	if conv.BreakCause() != "transfer" {
+		conv.Stop(nil)
+	}
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		//TODO config
