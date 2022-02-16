@@ -119,11 +119,16 @@ func (c *conversation) Close() *model.AppError {
 	return nil // fixme
 }
 
+func (c *conversation) closeIfBreak() {
+	if c.chBridge != nil {
+		close(c.chBridge) // todo move to fn
+		c.chBridge = nil
+	}
+}
+
 func (c *conversation) Break(cause string) *model.AppError {
 	c.mx.Lock()
-	if c.chBridge != nil {
-		close(c.chBridge)
-	}
+	c.closeIfBreak()
 	c.breakCause = cause
 	c.mx.Unlock()
 
@@ -276,7 +281,7 @@ func (c *conversation) Stop(err *model.AppError) {
 	}
 
 	c.chat.conversations.Remove(c.id)
-	wlog.Debug(fmt.Sprintf("close conversation %s", c.id))
+	wlog.Debug(fmt.Sprintf("close conversation %s [%d]", c.id, c.chat.conversations.Len()))
 }
 
 func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {

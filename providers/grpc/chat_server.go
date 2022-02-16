@@ -144,8 +144,7 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 		conv.breakCause = in.Cause
 	}
 
-	close(conv.chBridge)
-	conv.chBridge = nil
+	conv.closeIfBreak()
 
 	return &workflow.BreakBridgeResponse{}, nil
 }
