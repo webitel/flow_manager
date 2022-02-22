@@ -33,16 +33,21 @@ func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, e
 select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables 
 from endpoints e
  left join lateral (
-     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination, array[
-            'sip_h_X-Webitel-Direction=internal',
-            'sip_h_X-Webitel-User-Id=' || u.id,
-            'sip_h_X-Webitel-Domain-Id=' || u.dc,
+     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination, 
+		('{' || concat_ws(',',
+            E'sip_h_X-Webitel-Direction=internal',
+            E'sip_h_X-Webitel-User-Id=' || u.id,
+            E'sip_h_X-Webitel-Domain-Id=' || u.dc,
 
             E'effective_callee_id_name=''' || coalesce(u.name, u.username) || '''',
-            E'effective_callee_id_number=' || coalesce(u.extension, '') || ''
-        ]::text[] variables
+            E'effective_callee_id_number=' || coalesce(u.extension, '') || '',
+
+            case when json_typeof(s.push->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(s.push->'apns')), ',')) || '''' end,
+            case when json_typeof(s.push->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(s.push->'fcm')), ',')) || '''' end
+           ) || '}')::text[] as variables
      from directory.wbt_user u
 		left join directory.wbt_user_status uss on uss.user_id = u.id
+		left join public.sip_subscriber s on s.uid = u.id
 		left join lateral (
 		   select true as d
 		   from call_center.cc_calls c
