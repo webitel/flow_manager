@@ -33,7 +33,7 @@ func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, e
 select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables 
 from endpoints e
  left join lateral (
-     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination, 
+     select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination,
 		('{' || concat_ws(',',
             E'sip_h_X-Webitel-Direction=internal',
             E'sip_h_X-Webitel-User-Id=' || u.id,
@@ -42,12 +42,20 @@ from endpoints e
             E'effective_callee_id_name=''' || coalesce(u.name, u.username) || '''',
             E'effective_callee_id_number=' || coalesce(u.extension, '') || '',
 
-            case when json_typeof(s.push->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(s.push->'apns')), ',')) || '''' end,
-            case when json_typeof(s.push->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(s.push->'fcm')), ',')) || '''' end
+            case when json_typeof(push.config->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'apns')), ',')) || '''' end,
+            case when json_typeof(push.config->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'fcm')), ',')) || '''' end
            ) || '}')::text[] as variables
      from directory.wbt_user u
 		left join directory.wbt_user_status uss on uss.user_id = u.id
-		left join public.sip_subscriber s on s.uid = u.id
+        left join lateral ( SELECT json_object_agg(pn.typ, pn.key) AS json_object_agg
+                             FROM (SELECT s.props ->> 'pn-type'::text                     AS typ,
+                                          array_agg(DISTINCT s.props ->> 'pn-rpid'::text) AS key
+                                   FROM directory.wbt_session s
+                                   WHERE s.user_id IS NOT NULL
+                                     AND NULLIF(s.props ->> 'pn-rpid'::text, ''::text) IS NOT NULL
+                                     AND s.user_id = u.id
+                                     AND LOCALTIMESTAMP < s.expires
+                                   GROUP BY s.user_id, (s.props ->> 'pn-type'::text)) pn) push(config) ON true
 		left join lateral (
 		   select true as d
 		   from call_center.cc_calls c
