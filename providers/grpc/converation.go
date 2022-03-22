@@ -2,11 +2,14 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/tidwall/gjson"
 	"github.com/webitel/flow_manager/model"
 	client "github.com/webitel/protos/engine/chat"
 	"github.com/webitel/wlog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -19,42 +22,42 @@ type message struct {
 }
 
 type conversation struct {
-	id         string
-	profileId  int64
-	schemaId   int32
-	domainId   int64
-	variables  map[string]string
-	client     *ChatClientConnection
-	mx         sync.RWMutex
-	ctx        context.Context
-	cancel     context.CancelFunc
-	messages   []*message
-	chBridge   chan struct{}
-	breakCause string
+	id            string
+	profileId     int64
+	schemaId      int32
+	domainId      int64
+	variables     map[string]string
+	client        *ChatClientConnection
+	mx            sync.RWMutex
+	ctx           context.Context
+	cancel        context.CancelFunc
+	storeMessages map[string][]byte
+	chBridge      chan struct{}
+	breakCause    string
 
-	confirmation    map[string]chan []string
+	confirmation    map[string]chan []*client.Message
 	exportVariables []string
 	nodeId          string
 
 	chat *chatApi
 }
 
-func NewConversation(client *ChatClientConnection, id string, domainId, profileId int64, schemaId int32) *conversation {
+func NewConversation(cli *ChatClientConnection, id string, domainId, profileId int64, schemaId int32) *conversation {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &conversation{
-		id:           id,
-		profileId:    profileId,
-		schemaId:     schemaId,
-		domainId:     domainId,
-		variables:    make(map[string]string),
-		client:       client,
-		chBridge:     nil,
-		mx:           sync.RWMutex{},
-		ctx:          ctx,
-		cancel:       cancel,
-		messages:     make([]*message, 5),
-		confirmation: make(map[string]chan []string),
-		nodeId:       client.Name(),
+		id:            id,
+		profileId:     profileId,
+		schemaId:      schemaId,
+		domainId:      domainId,
+		variables:     make(map[string]string),
+		client:        cli,
+		chBridge:      nil,
+		mx:            sync.RWMutex{},
+		ctx:           ctx,
+		cancel:        cancel,
+		storeMessages: make(map[string][]byte),
+		confirmation:  make(map[string]chan []*client.Message),
+		nodeId:        cli.Name(),
 	}
 }
 
@@ -91,6 +94,12 @@ func (c *conversation) Context() context.Context {
 }
 
 func (c *conversation) Get(name string) (string, bool) {
+	idx := strings.Index(name, ".")
+	if idx > 0 {
+		if m, ok := c.storeMessages[name[0:idx]]; ok {
+			return gjson.GetBytes(m, name[idx+1:]).String(), true
+		}
+	}
 	v, ok := c.variables[name]
 	return v, ok
 }
@@ -193,13 +202,38 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 
 }
 
+func (c *conversation) SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError) {
+	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+		ConversationId: c.id,
+		Message: &client.Message{
+			Type: "file", // FIXME
+			Text: text,
+			File: &client.File{
+				Id:   int64(f.Id), //TODO
+				Url:  f.Url,
+				Mime: f.MimeType,
+				Name: f.Name,
+				Size: f.Size,
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("Conversation.SendFile", "conv.send.file.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 // todo from media file
 func (c *conversation) SendImageMessage(ctx context.Context, url string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
+			//Text: url,
 			Type: "file", // FIXME
 			File: &client.File{
+				Id:  1, //TODO
 				Url: url,
 			},
 		},
@@ -212,7 +246,7 @@ func (c *conversation) SendImageMessage(ctx context.Context, url string) (model.
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]string, *model.AppError) {
+func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
 
 	// TODO rename server api
@@ -243,7 +277,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]strin
 
 	wlog.Debug(fmt.Sprintf("conversation %s wait message %s", c.id, time.Second*time.Duration(timeout)))
 
-	ch := make(chan []string)
+	ch := make(chan []*client.Message)
 	c.mx.Lock()
 	c.confirmation[id] = ch
 	c.mx.Unlock()
@@ -254,7 +288,10 @@ func (c *conversation) ReceiveMessage(ctx context.Context, timeout int) ([]strin
 		break
 	case msgs := <-ch:
 		wlog.Debug(fmt.Sprintf("conversation %s receive message: %s", c.id, msgs))
-		return msgs, nil
+		if len(msgs) > 0 && name != "" {
+			c.storeMessages[name], _ = json.Marshal(msgs[0])
+		}
+		return messageToText(msgs...), nil
 	}
 
 	return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Timeout", http.StatusInternalServerError)

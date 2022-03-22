@@ -19,13 +19,13 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 		return nil, err
 	}
 
-	msgs, err := conv.ReceiveMessage(ctx, argv.Timeout)
-	if err != nil {
-		return nil, err
-	}
-
 	if argv.Set == "" {
 		return model.CallResponseOK, nil
+	}
+
+	msgs, err := conv.ReceiveMessage(ctx, argv.Set, argv.Timeout)
+	if err != nil {
+		return nil, err
 	}
 
 	return conv.Set(ctx, model.Variables{

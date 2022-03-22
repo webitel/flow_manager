@@ -103,7 +103,7 @@ func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workf
 }
 
 func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
-	var conf chan []string
+	var conf chan []*chat.Message
 	var ok bool
 
 	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
@@ -122,7 +122,7 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 		return nil, model.NewAppError("ConfirmationMessage", "chat.confirmation_message.not_found", nil, "Not found", http.StatusNotFound)
 	}
 
-	conf <- messageToText(req.Messages...)
+	conf <- req.Messages
 
 	return &workflow.ConfirmationMessageResponse{}, nil
 }

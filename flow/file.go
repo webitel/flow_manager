@@ -10,6 +10,10 @@ type GenerateLinkArgs struct {
 	Server string `json:"server"`
 	Expire int64  `json:"expire"` // sec ?
 	Set    string `json:"set"`
+	File   struct {
+		Id     string `json:"id"`
+		Source string `json:"source"`
+	} `json:"file"`
 }
 
 func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -27,10 +31,18 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 	if strings.HasSuffix(server, "/") {
 		server = server[:len(server)-1]
 	}
+	id := conn.Id()
+	if argv.File.Id != "" {
+		id = argv.File.Id
+	}
 
-	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", conn.Id(), conn.DomainId(), argv.Expire*1000)
+	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", id, conn.DomainId(), argv.Expire*1000)
 	if err != nil {
 		return nil, err
+	}
+
+	if argv.File.Source != "" {
+		link += "&source=" + argv.File.Source
 	}
 
 	return conn.Set(ctx, model.Variables{
