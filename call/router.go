@@ -80,6 +80,8 @@ func (r *Router) handle(conn model.Connection) {
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
 			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
 		}
+
+		r.fm.SetBlindTransferNumber(call.DomainId(), call.Id(), call.Destination())
 	} else if queueId != nil {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] is ivr from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.Destination()))

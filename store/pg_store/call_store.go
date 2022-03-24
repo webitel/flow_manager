@@ -197,7 +197,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    hangup_at, hold_sec, cause, sip_code, bridged_id,
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
-                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params)
+                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, blind_transfer)
 select c.created_at created_at,
        c.id,
        c.direction,
@@ -241,7 +241,8 @@ select c.created_at created_at,
        c.gateway_ids,
        c.queue_ids,
        c.team_ids,
-	   c.params
+	   c.params,
+	   c.blind_transfer
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -406,7 +407,23 @@ where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
 	})
 
 	if err != nil {
-		model.NewAppError("SqlCallStore.SetUserId", "store.sql_call.set_user_id.app_error", nil, err.Error(), extractCodeFromErr(err))
+		return model.NewAppError("SqlCallStore.SetUserId", "store.sql_call.set_user_id.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) SetBlindTransfer(domainId int64, id string, destination string) *model.AppError {
+	_, err := s.GetMaster().Exec(`update call_center.cc_calls
+set blind_transfer = :Destination 
+where id = :Id and domain_id = :DomainId`, map[string]interface{}{
+		"Id":          id,
+		"DomainId":    domainId,
+		"Destination": destination,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetBlindTransfer", "store.sql_call.set_blind_transfer.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
 	return nil

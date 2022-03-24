@@ -109,3 +109,7 @@ func (c *FlowManager) LastBridgedExtension(domainId int64, number, hours string,
 func (c *FlowManager) SetCallUserId(domainId int64, id string, userId int64) *model.AppError {
 	return c.Store.Call().SetUserId(domainId, id, userId)
 }
+
+func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId string, destination string) *model.AppError {
+	return f.Store.Call().SetBlindTransfer(domainId, callId, destination)
+}
