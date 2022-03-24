@@ -9,3 +9,7 @@ func (f *FlowManager) GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) 
 func (f *FlowManager) GetMediaFile(domainId int64, id int) (*model.File, *model.AppError) {
 	return f.Store.Media().Get(domainId, id)
 }
+
+func (f *FlowManager) SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, *model.AppError) {
+	return f.Store.Media().SearchOne(domainId, search)
+}

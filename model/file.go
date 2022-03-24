@@ -1,5 +1,10 @@
 package model
 
+type SearchFile struct {
+	Id   int
+	Name string
+}
+
 type File struct {
 	Id       int    `json:"id" db:"id"`
 	Url      string `json:"url" db:"-"`

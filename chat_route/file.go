@@ -9,11 +9,12 @@ import (
 )
 
 type FileMessage struct {
-	Id     int    `json:"id"`
-	Text   string `json:"text"`
-	Source string `json:"source"`
-	Expire int64  `json:"expire"`
-	Server string `json:"server"`
+	Id     int              `json:"id"` //todo deprecated
+	File   model.SearchFile `json:"file"`
+	Text   string           `json:"text"`
+	Source string           `json:"source"`
+	Expire int64            `json:"expire"`
+	Server string           `json:"server"`
 	Url    string
 }
 
@@ -26,6 +27,10 @@ func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversati
 		return nil, err
 	}
 
+	if argv.Id > 0 && argv.File.Id == 0 {
+		argv.File.Id = argv.Id
+	}
+
 	server := argv.Server
 
 	if strings.HasSuffix(server, "/") {
@@ -34,7 +39,7 @@ func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversati
 
 	switch argv.Source {
 	default:
-		if file, err = r.fm.GetMediaFile(conv.DomainId(), argv.Id); err != nil {
+		if file, err = r.fm.SearchMediaFile(conv.DomainId(), &argv.File); err != nil {
 			return nil, err
 		}
 	}

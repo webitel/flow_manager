@@ -72,6 +72,7 @@ type EndpointStore interface {
 type MediaStore interface {
 	GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
 	Get(domainId int64, id int) (*model.File, *model.AppError)
+	SearchOne(domainId int64, search *model.SearchFile) (*model.File, *model.AppError)
 }
 
 type CalendarStore interface {

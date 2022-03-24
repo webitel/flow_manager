@@ -40,6 +40,24 @@ where f.domain_id = :DomainId and f.id = :Id`, map[string]interface{}{
 	return file, nil
 }
 
+func (s SqlMediaStore) SearchOne(domainId int64, search *model.SearchFile) (*model.File, *model.AppError) {
+	var file *model.File
+	err := s.GetReplica().SelectOne(&file, `select f.id, f.name, f.size, f.mime_type
+from storage.media_files f
+where f.domain_id = :DomainId and (f.id = :Id or f.name = :Name) limit 1`, map[string]interface{}{
+		"DomainId": domainId,
+		"Id":       search.Id,
+		"Name":     search.Name,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlMediaStore.SearchOne", "store.sql_media.search.error", nil,
+			fmt.Sprintf("domainId=%v %v", domainId, err.Error()), http.StatusBadRequest)
+	}
+
+	return file, nil
+}
+
 func (s SqlMediaStore) GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError) {
 	ids := make([]*int, 0)
 	names := make([]*string, 0)
