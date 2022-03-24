@@ -10,9 +10,10 @@ type GenerateLinkArgs struct {
 	Server string `json:"server"`
 	Expire int64  `json:"expire"` // sec ?
 	Set    string `json:"set"`
+	Source string `json:"source"`
 	File   struct {
-		Id     string `json:"id"`
-		Source string `json:"source"`
+		Id   string `json:"id"`
+		Name string `json:"name"` // TODO
 	} `json:"file"`
 }
 
@@ -41,8 +42,8 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 		return nil, err
 	}
 
-	if argv.File.Source != "" {
-		link += "&source=" + argv.File.Source
+	if argv.Source != "" {
+		link += "&source=" + argv.Source
 	}
 
 	return conn.Set(ctx, model.Variables{
