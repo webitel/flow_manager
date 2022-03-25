@@ -28,6 +28,7 @@ type Conversation interface {
 	DumpExportVariables() map[string]string
 	NodeName() string
 	SchemaId() int32
+	UserId() int64
 	BreakCause() string
 	SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError)
 }
@@ -74,6 +75,8 @@ func (r *Router) handle(conn model.Connection) {
 
 	if shId > 0 {
 		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), shId)
+	} else if conv.UserId() > 0 {
+		routing, _ = r.fm.GetChatRouteFromUserId(conv.DomainId(), conv.UserId())
 	} else if conv.ProfileId() > 0 {
 		routing, err = r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
 	} else {

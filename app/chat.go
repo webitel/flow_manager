@@ -29,3 +29,25 @@ func (fm *FlowManager) GetChatRouteFromSchemaId(domainId int64, schemaId int32) 
 
 	return routing, nil
 }
+
+func (fm *FlowManager) GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, *model.AppError) {
+	routing := &model.Routing{
+		SourceId:   0,
+		SourceName: "Blind transfer to user",
+		SourceData: "Blind transfer to user",
+		DomainId:   domainId,
+		Schema: &model.Schema{
+			DomainId: domainId,
+			Name:     "transfer to user",
+			Schema: model.Applications{
+				{
+					"bridge": map[string]interface{}{
+						"userId": userId,
+					},
+				},
+			},
+		},
+	}
+
+	return routing, nil
+}

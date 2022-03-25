@@ -65,7 +65,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 		return nil, err
 	}
 
-	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId, req.SchemaId)
+	conv := NewConversation(client, req.ConversationId, req.DomainId, req.ProfileId, req.SchemaId, req.UserId)
 	conv.chat = s
 
 	if req.Message != nil {

@@ -38,11 +38,12 @@ type conversation struct {
 	confirmation    map[string]chan []*client.Message
 	exportVariables []string
 	nodeId          string
+	userId          int64
 
 	chat *chatApi
 }
 
-func NewConversation(cli *ChatClientConnection, id string, domainId, profileId int64, schemaId int32) *conversation {
+func NewConversation(cli *ChatClientConnection, id string, domainId, profileId int64, schemaId int32, userId int64) *conversation {
 	ctx, cancel := context.WithCancel(context.Background())
 	return &conversation{
 		id:            id,
@@ -55,10 +56,17 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		mx:            sync.RWMutex{},
 		ctx:           ctx,
 		cancel:        cancel,
+		userId:        userId,
 		storeMessages: make(map[string][]byte),
 		confirmation:  make(map[string]chan []*client.Message),
 		nodeId:        cli.Name(),
 	}
+}
+
+func (c *conversation) UserId() int64 {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+	return c.userId
 }
 
 func (c *conversation) SchemaId() int32 {
