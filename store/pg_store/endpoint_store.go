@@ -52,9 +52,10 @@ from endpoints e
                                           array_agg(DISTINCT s.props ->> 'pn-rpid'::text) AS key
                                    FROM directory.wbt_session s
                                    WHERE s.user_id IS NOT NULL
+								     AND s.access notnull
                                      AND NULLIF(s.props ->> 'pn-rpid'::text, ''::text) IS NOT NULL
                                      AND s.user_id = u.id
-                                     AND LOCALTIMESTAMP < s.expires
+									 AND now() at time zone 'UTC' < s.expires
                                    GROUP BY s.user_id, (s.props ->> 'pn-type'::text)) pn) push(config) ON true
 		left join lateral (
 		   select true as d
