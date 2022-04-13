@@ -50,6 +50,9 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 	case "MD5":
 		value = md5Fn(argv.Data)
 		break
+	case "length":
+		value = fmt.Sprintf("%v", len(argv.Data))
+		break
 	case "SHA-256":
 		value = sha256Fn(argv.Data)
 		break
