@@ -41,3 +41,26 @@ func (s SqlListStore) CheckNumber(domainId int64, number string, listId *int, li
 
 	return exists, nil
 }
+
+func (s SqlListStore) AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_list_communications (list_id, number, description)
+select l.id, :Destination, :Description
+from call_center.cc_list l
+where l.domain_id = :DomainId
+    and (l.id = :Id::int8 or l.name = :Name)
+order by l.id
+limit 1`, map[string]interface{}{
+		"DomainId":    domainId,
+		"Id":          entry.Id,
+		"Name":        entry.Name,
+		"Destination": comm.Destination,
+		"Description": comm.Description,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlListStore.AddDestination", "store.sql_list.add_destination.error", nil,
+			fmt.Sprintf("domainId=%v %v", domainId, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}

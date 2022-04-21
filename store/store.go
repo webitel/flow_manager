@@ -82,6 +82,7 @@ type CalendarStore interface {
 
 type ListStore interface {
 	CheckNumber(domainId int64, number string, listId *int, listName *string) (bool, *model.AppError)
+	AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) *model.AppError
 }
 
 type ChatStore interface {

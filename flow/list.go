@@ -13,6 +13,12 @@ type ListArgs struct {
 	Actions     []interface{}
 }
 
+type listAddCommunicationArgs struct {
+	Destination string             `json:"destination"`
+	Description *string            `json:"description"`
+	List        model.SearchEntity `json:"list"`
+}
+
 func (r *router) List(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv = ListArgs{}
 	var exists bool
@@ -36,6 +42,27 @@ func (r *router) List(ctx context.Context, scope *Flow, conn model.Connection, a
 		Route(ctx, scope2, scope.handler)
 		// cancel root scope ?
 		scope.SetCancel()
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (r *router) listAddCommunication(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv = listAddCommunicationArgs{}
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+	if argv.Destination == "" {
+		return nil, ErrorRequiredParameter("listAdd", "destination")
+	}
+
+	err = r.fm.ListAddCommunication(conn.DomainId(), &argv.List, &model.ListCommunication{
+		Destination: argv.Destination,
+		Description: argv.Description,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	return model.CallResponseOK, nil

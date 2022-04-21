@@ -33,4 +33,39 @@ require (
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
 
-require github.com/tidwall/pretty v1.1.1 // indirect
+require (
+	github.com/armon/go-metrics v0.3.4 // indirect
+	github.com/emersion/go-sasl v0.0.0-20191210011802-430746ea8b9b // indirect
+	github.com/emersion/go-textwrapper v0.0.0-20160606182133-d0e65e56babe // indirect
+	github.com/fatih/color v1.10.0 // indirect
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
+	github.com/google/go-cmp v0.5.0 // indirect
+	github.com/google/uuid v1.1.2 // indirect
+	github.com/googleapis/gax-go/v2 v2.0.5 // indirect
+	github.com/hashicorp/consul/api v1.7.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
+	github.com/hashicorp/go-hclog v0.14.1 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.0 // indirect
+	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/serf v0.9.5 // indirect
+	github.com/martinlindhe/base36 v1.0.0 // indirect
+	github.com/mattn/go-colorable v0.1.8 // indirect
+	github.com/mattn/go-isatty v0.0.12 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/tidwall/match v1.0.3 // indirect
+	github.com/tidwall/pretty v1.1.1 // indirect
+	go.opencensus.io v0.22.3 // indirect
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
+	go.uber.org/zap v1.16.0 // indirect
+	golang.org/x/net v0.0.0-20201031054903-ff519b6c9102 // indirect
+	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d // indirect
+	golang.org/x/sys v0.0.0-20201101102859-da207088b7d1 // indirect
+	golang.org/x/text v0.3.4 // indirect
+	google.golang.org/appengine v1.6.6 // indirect
+	google.golang.org/protobuf v1.25.0 // indirect
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
+	gopkg.in/sourcemap.v1 v1.0.5 // indirect
+)

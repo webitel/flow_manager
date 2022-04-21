@@ -87,6 +87,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.List),
 	}
+	apps["listAdd"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.listAddCommunication),
+	}
 	apps["timezone"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.SetTimezone),
