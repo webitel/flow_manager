@@ -27,19 +27,43 @@ type CallbackMember struct {
 }
 
 type SearchMember struct {
-	QueueIds    []int   `json:"queue_ids"`
-	Destination *string `json:"destination"`
-	Name        *string `json:"name"`
-	Today       *bool   `json:"today"`
-	Completed   *bool   `json:"completed"`
-	BucketId    *int    `json:"bucket_id"`
+	QueueIds    []int          `json:"queue_ids"` // todo deprecated
+	Queues      []SearchEntity `json:"queues"`
+	Destination *string        `json:"destination"`
+	Name        *string        `json:"name"`
+	Today       *bool          `json:"today"`
+	Completed   *bool          `json:"completed"`
+	BucketId    *int           `json:"bucket_id"` // todo deprecated
+	Bucket      *SearchEntity  `json:"bucket"`
 }
 
 type PatchMember struct {
-	Name      *string    `json:"name"`
-	Priority  *int       `json:"priority"`
-	BucketId  *int       `json:"bucket_id"`
-	ReadyAt   *int64     `json:"ready_at"`
-	StopCause *string    `json:"stop_cause"`
-	Variables *Variables `json:"variables"`
+	Name      *string       `json:"name"`
+	Priority  *int          `json:"priority"`
+	BucketId  *int          `json:"bucket_id"` // todo deprecated
+	Bucket    *SearchEntity `json:"bucket"`
+	ReadyAt   *int64        `json:"ready_at"`
+	StopCause *string       `json:"stop_cause"`
+	Variables *Variables    `json:"variables"`
+}
+
+func (m *SearchMember) GetQueueIds() []int {
+	if m.QueueIds != nil && m.Queues == nil {
+		return m.QueueIds
+	}
+
+	return getIds(m.Queues)
+}
+
+func getIds(src []SearchEntity) []int {
+	l := len(src)
+
+	res := make([]int, 0, l)
+	for _, q := range src {
+		if q.Id != nil {
+			res = append(res, *q.Id)
+		}
+	}
+
+	return res
 }

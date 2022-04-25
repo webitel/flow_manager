@@ -180,16 +180,16 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
 select count(*)
 from m`, map[string]interface{}{
 		"DomainId":    domainId,
-		"QueueIds":    pq.Array(req.QueueIds),
+		"QueueIds":    pq.Array(req.GetQueueIds()),
 		"Name":        req.Name,
 		"Today":       req.Today,
 		"Completed":   req.Completed,
-		"BucketId":    req.BucketId,
+		"BucketId":    req.Bucket.GetId(),
 		"Destination": req.Destination,
 
 		"UName":      patch.Name,
 		"UPriority":  patch.Priority,
-		"UBucketId":  patch.BucketId,
+		"UBucketId":  patch.Bucket.GetId(),
 		"UReadyAt":   patch.ReadyAt,
 		"UStopCause": patch.StopCause,
 		"UVariables": patch.Variables.ToJson(),

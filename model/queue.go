@@ -31,3 +31,11 @@ type SearchQueueActiveStatistics struct {
 	Field      string
 	State      string
 }
+
+func (s *SearchEntity) GetId() *int {
+	if s == nil {
+		return nil
+	}
+
+	return s.Id
+}
