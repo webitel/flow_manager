@@ -6,9 +6,10 @@ type Member struct {
 }
 
 type CallbackCommunication struct {
-	Destination string  `json:"destination"`
-	Description *string `json:"description"`
-	TypeId      int     `json:"type_id"`
+	Destination string       `json:"destination"`
+	Description *string      `json:"description"`
+	TypeId      *int         `json:"type_id"`
+	Type        SearchEntity `json:"type"`
 }
 
 type CallbackMember struct {
@@ -22,6 +23,7 @@ type CallbackMember struct {
 	}
 	Priority      int                   `json:"priority"`
 	Communication CallbackCommunication `json:"communication"`
+	Queue         SearchEntity          `json:"queue"`
 }
 
 type SearchMember struct {

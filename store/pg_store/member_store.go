@@ -223,7 +223,7 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 		"DomainId":   domainId,
 		"QueueId":    queueId,
 		"Number":     member.Communication.Destination,
-		"TypeId":     member.Communication.TypeId,
+		"TypeId":     member.Communication.Type.Id,
 		"Name":       member.Name,
 		"HoldSec":    holdSec,
 		"Variables":  model.MapStringToJson(member.Variables),

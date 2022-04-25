@@ -10,23 +10,6 @@ type CallbackQueueArgs struct {
 	HoldSec int `json:"holdSec"`
 }
 
-/*
-   {
-       "callbackQueue": {
-           "communication": {
-               "destination": "${caller_id_number}",
-               "type_id": 1
-           },
-           "holdSec": "60",
-           "name": "${caller_id_number}",
-           "queue_id": 1,
-           "variables": {
-               "aaa": "2321321"
-           }
-       }
-   }
-*/
-
 func (r *router) callbackQueue(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var params CallbackQueueArgs
 	if err := scope.Decode(args, &params); err != nil {
@@ -35,6 +18,16 @@ func (r *router) callbackQueue(ctx context.Context, scope *Flow, c model.Connect
 	var member model.CallbackMember
 	if err := scope.Decode(args, &member); err != nil {
 		return nil, err
+	}
+
+	// todo deprecated queue_id
+	if member.Queue.Id != nil {
+		params.QueueId = *member.Queue.Id
+	}
+
+	//todo deprecated TypeId
+	if member.Communication.TypeId != nil && member.Communication.Type.Id == nil {
+		member.Communication.Type.Id = member.Communication.TypeId
 	}
 
 	if err := r.fm.CreateMember(c.DomainId(), params.QueueId, params.HoldSec, &member); err != nil {
