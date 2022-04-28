@@ -2,12 +2,14 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
+
 	// "github.com/webitel/flow_manager/providers/grpc/workflow"
-	"github.com/webitel/protos/workflow"
-	"github.com/webitel/wlog"
 	"sync"
+
+	"github.com/webitel/wlog"
 )
 
 const (
@@ -22,12 +24,6 @@ type FlowManager interface {
 	Stop()
 
 	Queue() QueueApi
-}
-
-type QueueApi interface {
-	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
-	ResultAttempt(in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error)
-	StartFlow(in *workflow.StartFlowRequest) (string, error)
 }
 
 type flowManager struct {
@@ -101,6 +97,9 @@ func (am *flowManager) Stop() {
 }
 
 func (am *flowManager) registerConnection(v *discovery.ServiceConnection) {
+	if v.Id != "workflow-igor" {
+		return
+	}
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
 	client, err := NewFlowConnection(v.Id, addr)
 	if err != nil {

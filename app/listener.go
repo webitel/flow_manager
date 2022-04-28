@@ -2,9 +2,10 @@ package app
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"sync"
 )
 
 func (f *FlowManager) Listen() {
@@ -68,6 +69,10 @@ func (f *FlowManager) listenGrpcConnection(stop chan struct{}, wg *sync.WaitGrou
 			switch c.Type() {
 			case model.ConnectionTypeChat:
 				if err := f.ChatRouter.Handle(c); err != nil {
+					wlog.Error(err.Error())
+				}
+			case model.ConnectionTypeForm:
+				if err := f.FormRouter.Handle(c); err != nil {
 					wlog.Error(err.Error())
 				}
 			default:

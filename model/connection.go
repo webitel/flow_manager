@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/webitel/engine/discovery"
 )
 
@@ -14,6 +15,7 @@ const (
 	ConnectionTypeEmail
 	ConnectionTypeWebChat
 	ConnectionTypeChat
+	ConnectionTypeForm
 )
 
 type Server interface {
@@ -56,4 +58,12 @@ func (v *Variables) ToJson() []byte {
 	}
 	d, _ := json.Marshal(v)
 	return d
+}
+
+func VariablesFromStringMap(m map[string]string) Variables {
+	vars := make(Variables)
+	for k, v := range m {
+		vars[k] = v
+	}
+	return vars
 }

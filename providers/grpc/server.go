@@ -3,6 +3,12 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
@@ -11,16 +17,12 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"net"
-	"net/http"
-	"strconv"
-	"sync"
-	"time"
 )
 
 type Config struct {
-	Host string
-	Port int
+	Host     string
+	Port     int
+	NodeName string
 }
 
 type server struct {
@@ -29,8 +31,10 @@ type server struct {
 	didFinishListen chan struct{}
 	consume         chan model.Connection
 	chatApi         *chatApi
+	processingApi   *processingApi
 	startOnce       sync.Once
 	chatManager     *chatManager
+	nodeName        string
 }
 
 func NewServer(cfg *Config) model.Server {
@@ -38,8 +42,10 @@ func NewServer(cfg *Config) model.Server {
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan model.Connection),
+		nodeName:        cfg.NodeName,
 	}
 	srv.chatApi = NewChatApi(srv)
+	srv.processingApi = NewProcessingApi(srv)
 
 	return srv
 }
@@ -76,6 +82,7 @@ func (s *server) Start() *model.AppError {
 
 	workflow.RegisterFlowServiceServer(s.server, s)
 	workflow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
+	workflow.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
@@ -123,6 +130,10 @@ func (s *server) Port() int {
 }
 func (s *server) Consume() <-chan model.Connection {
 	return s.consume
+}
+
+func (s *server) NodeName() string {
+	return s.nodeName
 }
 
 func (s server) Type() model.ConnectionType {

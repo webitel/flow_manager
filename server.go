@@ -2,17 +2,19 @@ package main
 
 import (
 	"fmt"
-	"github.com/webitel/flow_manager/app"
-	"github.com/webitel/flow_manager/call"
-	"github.com/webitel/flow_manager/chat_route"
-	"github.com/webitel/flow_manager/flow"
-	"github.com/webitel/flow_manager/grpc_route"
-	"github.com/webitel/wlog"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/webitel/flow_manager/app"
+	"github.com/webitel/flow_manager/call"
+	"github.com/webitel/flow_manager/chat_route"
+	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/grpc_route"
+	"github.com/webitel/flow_manager/processing"
+	"github.com/webitel/wlog"
 )
 
 func main() {
@@ -28,6 +30,7 @@ func main() {
 	call.Init(fm, router)
 	grpc_route.Init(fm, router)
 	chat_route.Init(fm, router)
+	processing.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()

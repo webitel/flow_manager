@@ -2,6 +2,8 @@ package app
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/webitel/call_center/grpc_api/client"
 	presign "github.com/webitel/engine/presign"
 	"github.com/webitel/engine/utils"
@@ -14,7 +16,6 @@ import (
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 	"github.com/webitel/wlog"
-	"time"
 )
 
 type FlowManager struct {
@@ -38,6 +39,7 @@ type FlowManager struct {
 	GRPCRouter  model.Router
 	EmailRouter model.Router
 	ChatRouter  model.Router
+	FormRouter  model.Router
 
 	callWatcher *callWatcher
 	cert        presign.PreSign
@@ -79,8 +81,9 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	servers := []model.Server{
 		grpc.NewServer(&grpc.Config{
-			Host: fm.Config().Grpc.Host,
-			Port: fm.Config().Grpc.Port,
+			Host:     fm.Config().Grpc.Host,
+			Port:     fm.Config().Grpc.Port,
+			NodeName: fm.id,
 		}),
 		fs.NewServer(&fs.Config{
 			Host:           fm.Config().Esl.Host,

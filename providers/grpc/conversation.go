@@ -4,14 +4,15 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/engine/chat"
-	"github.com/webitel/wlog"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"github.com/webitel/flow_manager/model"
+	client "github.com/webitel/protos/engine/chat"
+	"github.com/webitel/wlog"
 )
 
 type conversationClient interface {

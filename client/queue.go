@@ -6,6 +6,13 @@ import (
 	"github.com/webitel/protos/workflow"
 )
 
+type QueueApi interface {
+	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
+	ResultAttempt(in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error)
+	StartFlow(in *workflow.StartFlowRequest) (string, error)
+	NewProcessing(ctx context.Context, domainId int64, schemaId int, vars map[string]string) (*QueueProcessing, error)
+}
+
 type queueApi struct {
 	cli *flowManager
 }
