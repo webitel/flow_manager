@@ -46,8 +46,24 @@ func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64,
 }
 
 func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppError {
-	err := fm.cc.Member().AttemptResult(result.Id, result.Status, result.Description, result.ReadyAt, result.ExpiredAt,
-		result.Variables, result.StickyDisplay, result.AgentId)
+	req := &cc.AttemptResultRequest{
+		AttemptId:   result.Id,
+		Status:      result.Status,
+		Variables:   result.Variables,
+		Display:     result.StickyDisplay,
+		Description: result.Description,
+		AgentId:     result.AgentId,
+	}
+
+	if result.ExpiredAt != nil {
+		req.ExpireAt = *result.ExpiredAt
+	}
+
+	if result.ReadyAt != nil {
+		req.NextDistributeAt = *result.ReadyAt
+	}
+
+	err := fm.cc.Member().AttemptResult(req)
 
 	if err != nil {
 		return model.NewAppError("AttemptResult", "app.attempt.result", nil, err.Error(), http.StatusInternalServerError)
