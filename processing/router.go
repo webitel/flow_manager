@@ -19,7 +19,9 @@ type Router struct {
 type Connection interface {
 	model.Connection
 	SchemaId() int
-	PushForm(actions []string, view map[string]interface{}) (*model.FormAction, *model.AppError)
+	PushForm(form model.FormElem) (*model.FormAction, *model.AppError)
+	SetComponent(name string, data *model.JsonView)
+	GetComponentByName(name string) *model.JsonView
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {

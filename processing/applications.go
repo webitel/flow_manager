@@ -12,11 +12,14 @@ type processingHandler func(ctx context.Context, scope *flow.Flow, c Connection,
 func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	var apps = make(flow.ApplicationHandlers)
 
-	apps["form"] = &flow.Application{
-		Handler: processingHandlerMiddleware(r.form),
+	apps["generateForm"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.generateForm),
 	}
-	apps["component"] = &flow.Application{
-		Handler: processingHandlerMiddleware(r.component),
+	apps["formComponent"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.formComponent),
+	}
+	apps["attemptResult"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.attemptResult),
 	}
 
 	return apps

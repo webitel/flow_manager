@@ -16,11 +16,11 @@ type processingConnection struct {
 	domainId   int64
 	schemaId   int
 	parentId   string
-	forms      chan *model.Form
+	forms      chan model.FormElem
 	formAction chan model.FormAction
 	finished   chan struct{}
 
-	components map[string]interface{}
+	components map[string]*model.JsonView
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -40,8 +40,8 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		ctx:        ctx,
 		cancel:     cancel,
 		finished:   make(chan struct{}),
-		forms:      make(chan *model.Form, 5),
-		components: make(map[string]interface{}),
+		forms:      make(chan model.FormElem, 5),
+		components: make(map[string]*model.JsonView),
 	}
 }
 
@@ -49,20 +49,26 @@ func (c *processingConnection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *processingConnection) SetComponent(name string, data interface{}) {
+func (c *processingConnection) SetComponent(name string, data *model.JsonView) {
+	c.Lock()
 	c.components[name] = data
+	c.Unlock()
 }
 
-func (c *processingConnection) PushForm(actions []string, view map[string]interface{}) (*model.FormAction, *model.AppError) {
+func (c *processingConnection) GetComponentByName(name string) *model.JsonView {
+	c.RLock()
+	v, _ := c.components[name]
+	c.RUnlock()
+
+	return v
+}
+
+func (c *processingConnection) PushForm(form model.FormElem) (*model.FormAction, *model.AppError) {
 	if c.formAction != nil {
 		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
 	}
 
-	c.forms <- &model.Form{
-		Id:      model.NewId(),
-		Actions: actions,
-		View:    view,
-	}
+	c.forms <- form
 
 	c.formAction = make(chan model.FormAction)
 
@@ -83,7 +89,7 @@ func (c *processingConnection) FormAction(action model.FormAction) *model.AppErr
 	return nil
 }
 
-func (c *processingConnection) waitForm(timeSec int) (*model.Form, *model.AppError) {
+func (c *processingConnection) waitForm(timeSec int) (*model.FormElem, *model.AppError) {
 	select {
 	case <-time.After(time.Second * time.Duration(timeSec)):
 		return nil, model.NewAppError("Processing", "processing.connection.form.timeout", nil, "Timeout", http.StatusBadRequest)
@@ -95,7 +101,7 @@ func (c *processingConnection) waitForm(timeSec int) (*model.Form, *model.AppErr
 		if !ok {
 			return nil, model.NewAppError("Processing", "processing.connection.form.close", nil, "Close", http.StatusBadRequest)
 		}
-		return f, nil
+		return &f, nil
 	}
 }
 

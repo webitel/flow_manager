@@ -1,12 +1,14 @@
 package flow
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/mitchellh/mapstructure"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"github.com/mitchellh/mapstructure"
+	"github.com/webitel/flow_manager/model"
 )
 
 /*
@@ -31,7 +33,8 @@ import (
 
 func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
-		if from.Kind() == reflect.String {
+		kind := from.Kind()
+		if kind == reflect.String {
 			switch to.Kind() {
 			case reflect.String:
 				return f.Connection.ParseText(data.(string)), nil
@@ -46,6 +49,22 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				return v, nil
 			case reflect.Bool:
 				return f.Connection.ParseText(data.(string)), nil
+			}
+		} else if kind == reflect.Map && to.Kind() == reflect.Ptr {
+			elem := to.Elem()
+			if elem != nil && elem.Name() == "JsonView" {
+				var res *model.JsonView
+				b, err := json.Marshal(data)
+				if err != nil {
+					return nil, err
+				}
+
+				err = json.Unmarshal([]byte(f.Connection.ParseText(string(b))), &res)
+				if err != nil {
+					return nil, err
+				}
+
+				return res, nil
 			}
 		}
 		return data, nil
