@@ -97,9 +97,6 @@ func (am *flowManager) Stop() {
 }
 
 func (am *flowManager) registerConnection(v *discovery.ServiceConnection) {
-	if v.Id != "workflow-igor" {
-		return
-	}
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
 	client, err := NewFlowConnection(v.Id, addr)
 	if err != nil {
