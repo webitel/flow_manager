@@ -3,12 +3,14 @@ package flow
 import (
 	"context"
 	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 )
 
 type ListArgs struct {
 	Name        *string
 	Id          *int
+	List        model.SearchEntity
 	Destination string
 	Actions     []interface{}
 }
@@ -31,8 +33,17 @@ func (r *router) List(ctx context.Context, scope *Flow, conn model.Connection, a
 		return nil, ErrorRequiredParameter("list", "actions")
 	}
 
+	// todo deprecated
+	if argv.List.Id == nil && argv.Id != nil {
+		argv.List.Id = argv.Id
+	}
+	// todo deprecated
+	if argv.List.Name == nil && argv.Name != nil {
+		argv.List.Name = argv.Name
+	}
+
 	// fixme domain id in scope
-	exists, err = r.fm.ListCheckNumber(scope.Connection.DomainId(), argv.Destination, argv.Id, argv.Name)
+	exists, err = r.fm.ListCheckNumber(scope.Connection.DomainId(), argv.Destination, argv.List.Id, argv.Name)
 	if err != nil {
 		return nil, err
 	}
