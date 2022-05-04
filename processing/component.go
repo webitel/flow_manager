@@ -14,11 +14,11 @@ func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Conne
 		return nil, err
 	}
 
-	if argv.Name == "" {
+	if argv.Id == "" {
 		return nil, model.ErrorRequiredParameter("formComponent", "name")
 	}
 
-	conn.SetComponent(argv.Name, argv.View)
+	conn.SetComponent(argv.Id, argv.View)
 
 	return model.CallResponseOK, nil
 }

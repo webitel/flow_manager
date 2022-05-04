@@ -8,7 +8,7 @@ import (
 )
 
 type GenerateFromArgs struct {
-	Name    string                  `json:"name"`
+	Id      string                  `json:"id"`
 	Title   string                  `json:"title"`
 	Set     string                  `json:"set"`
 	Actions []*model.FormActionElem `json:"actions"`
@@ -25,7 +25,7 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 	}
 
 	f := model.FormElem{
-		Name:    argv.Name,
+		Id:      argv.Id,
 		Title:   argv.Title,
 		Actions: argv.Actions,
 		Body:    make([]model.FormComponent, 0, len(argv.Body)),
@@ -35,7 +35,7 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 		e := conn.GetComponentByName(v)
 		if e != nil {
 			f.Body = append(f.Body, model.FormComponent{
-				Name: v,
+				Id:   v,
 				View: e,
 			})
 		}

@@ -8,17 +8,17 @@ type FormAction struct {
 }
 
 type FormComponent struct {
-	Name string    `json:"name"`
+	Id   string    `json:"id"`
 	View *JsonView `json:"view"`
 }
 
 type FormActionElem struct {
-	Name string    `json:"name"`
+	Id   string    `json:"id"`
 	View *JsonView `json:"view"`
 }
 
 type FormElem struct {
-	Name    string            `json:"name"`
+	Id      string            `json:"id"`
 	Title   string            `json:"title"`
 	Actions []*FormActionElem `json:"actions"`
 	Body    []FormComponent   `json:"body"`
