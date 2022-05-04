@@ -8,8 +8,9 @@ type FormAction struct {
 }
 
 type FormComponent struct {
-	Id   string    `json:"id"`
-	View *JsonView `json:"view"`
+	Id    string      `json:"id"`
+	View  *JsonView   `json:"view"`
+	Value interface{} `json:"value"`
 }
 
 type FormActionElem struct {

@@ -20,7 +20,7 @@ type processingConnection struct {
 	formAction chan model.FormAction
 	finished   chan struct{}
 
-	components map[string]*model.JsonView
+	components map[string]model.FormComponent
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -41,7 +41,7 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		cancel:     cancel,
 		finished:   make(chan struct{}),
 		forms:      make(chan model.FormElem, 5),
-		components: make(map[string]*model.JsonView),
+		components: make(map[string]model.FormComponent),
 	}
 }
 
@@ -49,13 +49,13 @@ func (c *processingConnection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *processingConnection) SetComponent(name string, data *model.JsonView) {
+func (c *processingConnection) SetComponent(name string, component *model.FormComponent) {
 	c.Lock()
-	c.components[name] = data
+	c.components[name] = *component
 	c.Unlock()
 }
 
-func (c *processingConnection) GetComponentByName(name string) *model.JsonView {
+func (c *processingConnection) GetComponentByName(name string) model.FormComponent {
 	c.RLock()
 	v, _ := c.components[name]
 	c.RUnlock()

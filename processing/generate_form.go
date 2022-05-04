@@ -33,11 +33,8 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 
 	for _, v := range argv.Body {
 		e := conn.GetComponentByName(v)
-		if e != nil {
-			f.Body = append(f.Body, model.FormComponent{
-				Id:   v,
-				View: e,
-			})
+		if e.Id != "" {
+			f.Body = append(f.Body, e)
 		}
 	}
 

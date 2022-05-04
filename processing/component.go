@@ -18,7 +18,9 @@ func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Conne
 		return nil, model.ErrorRequiredParameter("formComponent", "name")
 	}
 
-	conn.SetComponent(argv.Id, argv.View)
+	argv.Value, _ = conn.Get(argv.Id)
+
+	conn.SetComponent(argv.Id, &argv)
 
 	return model.CallResponseOK, nil
 }
