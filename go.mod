@@ -19,8 +19,8 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.1
-	github.com/webitel/call_center v0.0.0-20220503142302-487a2e2290e9
-	github.com/webitel/engine v0.0.0-20220503141418-86c60353e792
+	github.com/webitel/call_center v0.0.0-20220504112703-f9a1c0c80304
+	github.com/webitel/engine v0.0.0-20220504115625-fd7060288b43
 	github.com/webitel/protos/cc v0.0.0-20220504085106-475035abbe22
 	github.com/webitel/protos/engine v0.0.0-20220504085106-475035abbe22
 	github.com/webitel/protos/workflow v0.0.0-20220504085106-475035abbe22
@@ -38,7 +38,7 @@ require (
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/consul/api v1.12.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -47,7 +47,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/serf v0.9.7 // indirect
-	github.com/jmoiron/sqlx v1.3.4 // indirect
+	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/martinlindhe/base36 v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
