@@ -8,6 +8,7 @@ require (
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
+	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/jordan-wright/email v0.0.0-20200322182553-8eef2508c362
@@ -18,9 +19,13 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.1
+	github.com/webitel/call_center v0.0.0-20220503142302-487a2e2290e9
+	github.com/webitel/engine v0.0.0-20220503141418-86c60353e792
 	github.com/webitel/protos/cc v0.0.0-20220504085106-475035abbe22
 	github.com/webitel/protos/engine v0.0.0-20220504085106-475035abbe22
+	github.com/webitel/protos/workflow v0.0.0-20220428115356-35297e3b1bb4
 	github.com/webitel/wlog v0.0.0-20190823170623-8cc283b29e3e
+	google.golang.org/grpc v1.46.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
@@ -56,14 +61,6 @@ require (
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
-)
-
-require (
-	github.com/golang/protobuf v1.5.2
-	github.com/webitel/call_center v0.0.0-20220503142302-487a2e2290e9
-	github.com/webitel/engine v0.0.0-20220504105119-2e69c26ee41e
-	github.com/webitel/protos/workflow v0.0.0-20220504085106-475035abbe22
-	google.golang.org/grpc v1.46.0
 )
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.27.0
