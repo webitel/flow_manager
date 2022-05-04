@@ -19,7 +19,7 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.1
-	github.com/webitel/call_center v0.0.0-20220504112703-f9a1c0c80304
+	github.com/webitel/call_center v0.0.0-20220504120510-c1442df07b90
 	github.com/webitel/engine v0.0.0-20220504115625-fd7060288b43
 	github.com/webitel/protos/cc v0.0.0-20220504085106-475035abbe22
 	github.com/webitel/protos/engine v0.0.0-20220504085106-475035abbe22
@@ -53,7 +53,6 @@ require (
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/nicksnyder/go-i18n v1.10.1 // indirect
-	github.com/olebedev/emitter v0.0.0-20190110104742-e8d1457e6aee // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
@@ -65,7 +64,6 @@ require (
 	golang.org/x/net v0.0.0-20220425223048-2871e0cb64e4 // indirect
 	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6 // indirect
 	golang.org/x/text v0.3.7 // indirect
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	google.golang.org/genproto v0.0.0-20220503193339-ba3ae3f07e29 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
