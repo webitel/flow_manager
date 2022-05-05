@@ -52,7 +52,7 @@ func (r *router) List(ctx context.Context, scope *Flow, conn model.Connection, a
 		scope2 := scope.Fork(fmt.Sprintf("list"), ArrInterfaceToArrayApplication(argv.Actions))
 		Route(ctx, scope2, scope.handler)
 		// cancel root scope ?
-		scope.SetCancel()
+		//scope.SetCancel()
 	}
 
 	return model.CallResponseOK, nil
