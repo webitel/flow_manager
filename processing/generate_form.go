@@ -10,7 +10,6 @@ import (
 type GenerateFromArgs struct {
 	Id      string                  `json:"id"`
 	Title   string                  `json:"title"`
-	Set     string                  `json:"set"`
 	Actions []*model.FormActionElem `json:"actions"`
 	Body    []string                `json:"body"`
 }
@@ -45,14 +44,11 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 		return nil, err
 	}
 
-	if argv.Set != "" {
-		_, err = conn.Set(ctx, model.Variables{
-			argv.Set: action.Name,
-		})
-		if err != nil {
-
-			return nil, err
+	if argv.Id != "" {
+		if action.Fields == nil {
+			action.Fields = make(model.Variables)
 		}
+		action.Fields[argv.Id] = action.Name
 	}
 
 	return conn.Set(ctx, action.Fields)

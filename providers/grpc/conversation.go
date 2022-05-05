@@ -313,7 +313,7 @@ func (c *conversation) NodeName() string {
 func (c *conversation) Stop(err *model.AppError) {
 	var cause = ""
 	if err != nil {
-		wlog.Error(fmt.Sprintf("conversation %d stop with error: %s", c.id, err.Error()))
+		wlog.Error(fmt.Sprintf("conversation %s stop with error: %s", c.id, err.Error()))
 		cause = err.Id
 	}
 
