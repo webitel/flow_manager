@@ -3,11 +3,12 @@ package grpc_route
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
 )
 
 type Router struct {
@@ -68,7 +69,6 @@ func (r *Router) handle(conn model.Connection) {
 	})
 
 	flow.Route(conn.Context(), i, r)
-
 	conn.Close()
 }
 

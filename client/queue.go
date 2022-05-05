@@ -10,6 +10,7 @@ type QueueApi interface {
 	DoDistributeAttempt(in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error)
 	ResultAttempt(in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error)
 	StartFlow(in *workflow.StartFlowRequest) (string, error)
+	StartSyncFlow(in *workflow.StartSyncFlowRequest) (string, error)
 	NewProcessing(ctx context.Context, domainId int64, schemaId int, vars map[string]string) (*QueueProcessing, error)
 }
 
@@ -49,6 +50,22 @@ func (api *queueApi) StartFlow(in *workflow.StartFlowRequest) (string, error) {
 	}
 
 	res, err = cli.queue.StartFlow(context.Background(), in)
+	if err != nil {
+
+		return "", err
+	}
+
+	return res.Id, nil
+}
+
+func (api *queueApi) StartSyncFlow(in *workflow.StartSyncFlowRequest) (string, error) {
+	var res *workflow.StartSyncFlowResponse
+	cli, err := api.cli.getRandomClient()
+	if err != nil {
+		return "", err
+	}
+
+	res, err = cli.queue.StartSyncFlow(context.Background(), in)
 	if err != nil {
 
 		return "", err

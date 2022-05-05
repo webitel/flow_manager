@@ -3,9 +3,10 @@ package grpc
 import (
 	"context"
 	"errors"
+	"time"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/workflow"
-	"time"
 )
 
 const (
@@ -106,6 +107,35 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 
 	s.consume <- conn
 	return &workflow.StartFlowResponse{
+		Id: id,
+	}, nil
+}
+
+func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRequest) (*workflow.StartSyncFlowResponse, error) {
+	var vars = in.Variables
+
+	if vars == nil {
+		vars = make(map[string]string)
+	}
+
+	var timeout = 30
+
+	if in.TimeoutSec != 0 {
+		timeout = int(in.TimeoutSec)
+	}
+	c, _ := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
+	conn := newConnection(c, vars)
+	id := model.NewId()
+	conn.id = id
+
+	conn.schemaId = int(in.SchemaId)
+	conn.domainId = in.DomainId
+
+	s.consume <- conn
+
+	<-conn.Context().Done()
+
+	return &workflow.StartSyncFlowResponse{
 		Id: id,
 	}, nil
 }
