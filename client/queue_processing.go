@@ -11,6 +11,7 @@ type QueueProcessing struct {
 	cli  *fConnection
 	form *workflow.Form
 	sync.RWMutex
+	fields map[string]string
 }
 
 func (q *queueApi) NewProcessing(ctx context.Context, domainId int64, schemaId int, vars map[string]string) (*QueueProcessing, error) {
@@ -20,7 +21,8 @@ func (q *queueApi) NewProcessing(ctx context.Context, domainId int64, schemaId i
 	}
 
 	qp := &QueueProcessing{
-		cli: cli,
+		cli:    cli,
+		fields: make(map[string]string),
 	}
 	qp.form, err = cli.processing.StartProcessing(ctx, &workflow.StartProcessingRequest{
 		SchemaId:  uint32(schemaId),
@@ -58,6 +60,9 @@ func (p *QueueProcessing) ActionForm(ctx context.Context, action string, vars ma
 		return nil, err
 	}
 	p.Lock()
+	for k, v := range vars {
+		p.fields[k] = v
+	}
 	p.form = f
 	p.Unlock()
 
@@ -70,4 +75,11 @@ func (p *QueueProcessing) Close() error {
 	})
 
 	return err
+}
+
+func (p *QueueProcessing) Fields() map[string]string {
+	p.RLock()
+	defer p.RUnlock()
+
+	return p.fields
 }
