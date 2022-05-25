@@ -2,17 +2,23 @@ package call
 
 import (
 	"context"
+	"fmt"
+	"net/url"
+	"strconv"
+	"strings"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/url"
-	"strings"
 )
 
 type TTSArgs struct {
-	Key   string `json:"key"`
-	Token string `json:"token"`
-
+	Profile struct {
+		Id int `json:"id"`
+	} `json:"profile"`
+	Key      string `json:"key"`
+	Token    string `json:"token"`
 	Provider string `json:"provider"`
+
 	Language string `json:"language"`
 	Voice    string `json:"voice"`
 	Text     string `json:"text"`
@@ -70,6 +76,11 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 
 	default:
 		q = "/?"
+	}
+
+	q += fmt.Sprintf("&domain_id=%d", call.DomainId())
+	if argv.Profile.Id > 0 {
+		q += "&profile_id=" + strconv.Itoa(argv.Profile.Id)
 	}
 
 	if argv.Key != "" {
