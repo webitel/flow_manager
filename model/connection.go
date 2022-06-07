@@ -29,7 +29,8 @@ type Server interface {
 	Cluster(discovery discovery.ServiceDiscovery) *AppError
 }
 
-type Variables map[string]interface{}
+type VariableValue interface{}
+type Variables map[string]VariableValue
 
 type Connection interface {
 	Type() ConnectionType
@@ -39,6 +40,7 @@ type Connection interface {
 
 	Context() context.Context
 	Get(key string) (string, bool)
+	GetVar(key string) (VariableValue, bool)
 	Set(ctx context.Context, vars Variables) (Response, *AppError)
 	ParseText(text string) string
 

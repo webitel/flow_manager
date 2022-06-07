@@ -3,10 +3,11 @@ package fs
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 const (
@@ -130,7 +131,7 @@ func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *mode
 }
 
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	exp := make(map[string]interface{})
+	exp := make(map[string]model.VariableValue)
 	for _, v := range vars {
 		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
 
@@ -172,7 +173,7 @@ func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec
 func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
 	// FIXME SET
 
-	vrs := map[string]interface{}{
+	vrs := model.Variables{
 		"RECORD_MIN_SEC":            minSec,
 		"RECORD_STEREO":             stereo,
 		"RECORD_BRIDGE_REQ":         bridged,

@@ -6,9 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/flow_manager/model"
-	"gopkg.in/xmlpath.v2"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"github.com/webitel/flow_manager/model"
+	"gopkg.in/xmlpath.v2"
 )
 
 func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -199,10 +200,14 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			if err != nil {
 				return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err", nil, err.Error(), http.StatusBadRequest)
 			}
-
 			vars := model.Variables{}
+
+			cp := bytes.NewBuffer([]byte{})
+			json.Compact(cp, body)
+			body, _ = ioutil.ReadAll(cp)
+
 			for k, _ := range exportVariables {
-				vars[k] = gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, "")).String()
+				vars[k] = gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, ""))
 			}
 			if _, err := c.Set(context.Background(), vars); err != nil {
 				return model.CallResponseError, err

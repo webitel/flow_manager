@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
 )
 
 const (
@@ -49,7 +50,7 @@ func (e *ExternalStoreManager) Connect(driver, dns string) (*ExternalDb, *model.
 	return e.Connect(driver, dns)
 }
 
-func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{}) (map[string]interface{}, *model.AppError) {
+func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{}) (map[string]model.VariableValue, *model.AppError) {
 	rows, err := d.db.QueryContext(ctx, text, params...)
 
 	if err != nil {
@@ -74,7 +75,7 @@ func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{
 		return nil, model.NewAppError("Cache.Query", "cache.query.scan.err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	result := make(map[string]interface{})
+	result := make(map[string]model.VariableValue)
 
 	for i, col := range cols {
 		switch col.(type) {

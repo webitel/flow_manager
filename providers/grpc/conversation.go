@@ -113,10 +113,25 @@ func (c *conversation) Get(name string) (string, bool) {
 	return v, ok
 }
 
+func (c *conversation) GetVar(key string) (model.VariableValue, bool) {
+	return c.Get(key)
+}
+
 func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+	//req := make(map[string]string)
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v)
+		str := fmt.Sprintf("%v", v)
+		//req[k] = str
+		c.variables[k] = str
 	}
+
+	//if _, err := c.client.api.SetVariables(ctx, &client.SetVariablesRequest{
+	//
+	//	Variables: nil,
+	//}); err != nil {
+	//
+	//}
+
 	return model.CallResponseOK, nil
 }
 
@@ -331,7 +346,7 @@ func (c *conversation) Stop(err *model.AppError) {
 }
 
 func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	exp := make(map[string]interface{})
+	exp := make(map[string]model.VariableValue)
 	for _, v := range vars {
 		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
 

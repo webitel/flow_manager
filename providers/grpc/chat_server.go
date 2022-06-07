@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/engine/chat"
 	"github.com/webitel/protos/workflow"
 	"google.golang.org/grpc/metadata"
-	"net/http"
-	"strings"
 )
 
 const (
@@ -77,7 +78,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
 		})
 	}
-	conv.Set(ctx, map[string]interface{}{
+	conv.Set(ctx, model.Variables{
 		model.ConversationSessionId: conv.id,
 	})
 

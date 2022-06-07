@@ -3,13 +3,14 @@ package fs
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+
 	uuid "github.com/satori/go.uuid"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 	"github.com/webitel/wlog"
-	"net/http"
-	"strconv"
-	"sync"
 )
 
 const (
@@ -293,6 +294,10 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 		}
 	}
 	return
+}
+
+func (c *Connection) GetVar(key string) (model.VariableValue, bool) {
+	return c.Get(key)
 }
 
 func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, *model.AppError) {

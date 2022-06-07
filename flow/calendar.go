@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -50,7 +51,7 @@ func (r *router) Calendar(ctx context.Context, scope *Flow, conn model.Connectio
 		}
 	}
 
-	return conn.Set(context.Background(), map[string]interface{}{
+	return conn.Set(context.Background(), model.Variables{
 		argv.SetVar: value,
 	})
 }

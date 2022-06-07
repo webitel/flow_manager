@@ -2,17 +2,20 @@ package call
 
 import (
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"regexp"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 var compileVar *regexp.Regexp
 var compileOutPattern *regexp.Regexp
+var compileObjVar *regexp.Regexp
 
 func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 	compileOutPattern = regexp.MustCompile(`\$(\d+)`)
+	compileObjVar = regexp.MustCompile(`\{\{([\s\S]*?)\}\}`)
 }
 
 type callParser struct {
@@ -38,6 +41,15 @@ func getOutboundReg(pattern, destination string) (map[string]string, *model.AppE
 func (call *callParser) ParseText(text string) string {
 	txt := compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
 		r := compileVar.FindStringSubmatch(varName)
+		if len(r) > 0 {
+			out, _ = call.Get(r[1])
+		}
+
+		return
+	})
+
+	txt = compileObjVar.ReplaceAllStringFunc(txt, func(varName string) (out string) {
+		r := compileObjVar.FindStringSubmatch(varName)
 		if len(r) > 0 {
 			out, _ = call.Get(r[1])
 		}

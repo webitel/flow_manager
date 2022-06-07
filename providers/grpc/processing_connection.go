@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
 )
 
 type processingConnection struct {
 	id         string
-	variables  map[string]string
+	variables  model.Variables
 	domainId   int64
 	schemaId   int
 	parentId   string
@@ -28,15 +31,17 @@ type processingConnection struct {
 }
 
 func NewProcessingConnection(domainId int64, schemaId int, vars map[string]string) *processingConnection {
-	if vars == nil {
-		vars = make(map[string]string)
+	variables := make(model.Variables)
+	for k, v := range vars {
+		variables[k] = v
 	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	return &processingConnection{
 		id:         model.NewId(),
 		domainId:   domainId,
 		schemaId:   schemaId,
-		variables:  vars,
+		variables:  variables,
 		ctx:        ctx,
 		cancel:     cancel,
 		finished:   make(chan struct{}),
@@ -119,6 +124,17 @@ func (c *processingConnection) ParseText(text string) string {
 		return
 	})
 
+	text = compileObjVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
+		r := compileObjVar.FindStringSubmatch(varName)
+		if len(r) > 0 {
+			if v, ok := c.GetVar(r[1]); ok {
+				out = fmt.Sprintf("%v", v)
+			}
+		}
+
+		return
+	})
+
 	return text
 }
 
@@ -153,7 +169,7 @@ func (c *processingConnection) Set(ctx context.Context, vars model.Variables) (m
 	defer c.Unlock()
 
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v) // TODO
+		c.variables[k] = v
 	}
 
 	return model.CallResponseOK, nil
@@ -168,6 +184,24 @@ func (c *processingConnection) Get(key string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func (c *processingConnection) GetVar(key string) (model.VariableValue, bool) {
+	idx := strings.Index(key, ".")
+	if idx > -1 {
+		if v, ok := c.variables[key[:idx]]; ok {
+			switch v.(type) {
+			case gjson.Result:
+				return v.(gjson.Result).Get(key[idx+1:]), true
+			default:
+				return fmt.Sprintf("%v", v), true
+			}
+		}
+	} else {
+		return c.Get(key)
+	}
+
+	return nil, false
 }
 
 //fixme

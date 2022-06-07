@@ -2,6 +2,7 @@ package call
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
@@ -41,7 +42,7 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 	}
 
 	if argv.Terminators != "" {
-		if _, err := call.Set(ctx, map[string]interface{}{
+		if _, err := call.Set(ctx, model.Variables{
 			"playback_terminators": argv.Terminators,
 		}); err != nil {
 			return nil, err

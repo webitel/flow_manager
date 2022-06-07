@@ -7,9 +7,10 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
+	"net/http"
+
 	"github.com/robertkrimen/otto"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 type StringArgs struct {
@@ -95,7 +96,7 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 		value = v.String()
 	}
 
-	return c.Set(context.Background(), map[string]interface{}{
+	return c.Set(context.Background(), model.Variables{
 		argv.SetVar: value,
 	})
 }

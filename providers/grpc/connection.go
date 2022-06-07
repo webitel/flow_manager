@@ -3,9 +3,10 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"regexp"
 	"sync"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type Connection struct {
@@ -28,9 +29,11 @@ type Connection struct {
 }
 
 var compileVar *regexp.Regexp
+var compileObjVar *regexp.Regexp
 
 func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
+	compileObjVar = regexp.MustCompile(`\{\{([\s\S]*?)\}\}`)
 }
 
 func newConnection(ctx context.Context, variables map[string]string) *Connection {
@@ -110,6 +113,10 @@ func (c *Connection) Get(key string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func (c *Connection) GetVar(key string) (model.VariableValue, bool) {
+	return c.Get(key)
 }
 
 //fixme
