@@ -4,20 +4,22 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
-	"strings"
 )
 
 type EndpointVariableArgs struct {
-	Type       string          `json:"type"`
-	Name       *string         `json:"name"`
-	Id         *int            `json:"id"`
-	Idle       bool            `json:"idle"`
-	Parameters model.Variables `json:"parameters"`
+	Type       string              `json:"type"`
+	Name       *string             `json:"name"`
+	Gateway    *model.SearchEntity `json:"gateway"`
+	Id         *int                `json:"id"`
+	Idle       bool                `json:"idle"`
+	Parameters model.Variables     `json:"parameters"`
 }
 
 type BridgeArgs struct {

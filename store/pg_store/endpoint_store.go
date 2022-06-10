@@ -3,9 +3,10 @@ package sqlstore
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"net/http"
 )
 
 type SqlEndpointStore struct {
@@ -88,7 +89,7 @@ from endpoints e
         left join directory.sip_gateway_register reg on reg.id = g.id
      where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
              ( g.name = (e.endpoint->>'name')::varchar or
-             g.id = (e.endpoint->>'id')::bigint)
+             g.id = (e.endpoint->>'id')::bigint or g.name = (e.endpoint->'gateway'->>'name')::varchar or g.id = (e.endpoint->'gateway'->>'id')::bigint)
 
      limit 1
  ) res on true
