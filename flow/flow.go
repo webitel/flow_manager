@@ -2,11 +2,12 @@ package flow
 
 import (
 	"fmt"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 )
 
 const MAX_GOTO = 100 //32767

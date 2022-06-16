@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/robertkrimen/otto"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/robertkrimen/otto"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 )
 
 var (
@@ -72,7 +73,7 @@ func (r *router) conditionHandler(ctx context.Context, scope *Flow, conn model.C
 			req.flow.SetRoot(req.then_)
 			wlog.Debug(fmt.Sprintf("condition (%s) is true", req.expression))
 		} else {
-			req.then_.setFirst()
+			req.else_.setFirst()
 			req.flow.SetRoot(req.else_)
 			wlog.Debug(fmt.Sprintf("condition (%s) is false", req.expression))
 		}
