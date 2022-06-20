@@ -247,12 +247,14 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 			if req.args, err = newSwitchArgs(i, root, req.args); err != nil {
 				wlog.Warn(err.Error())
 			} else {
-				i.trySetTag(req.Tag, root, req.idx)
+				req.setParentNode(root)
 				root.Add(req)
+				i.trySetTag(req.Tag, root, req.idx)
 			}
 
 		case "break":
 			req.args = &BreakArgs{i}
+			req.setParentNode(root)
 			i.trySetTag(req.Tag, root, req.idx)
 			root.Add(req)
 
