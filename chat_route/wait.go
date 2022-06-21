@@ -2,9 +2,10 @@ package chat_route
 
 import (
 	"context"
+	"strings"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"strings"
 )
 
 type ReceiveMessage struct {
@@ -25,6 +26,9 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 
 	msgs, err := conv.ReceiveMessage(ctx, argv.Set, argv.Timeout)
 	if err != nil {
+		conv.Set(ctx, model.Variables{
+			argv.Set: "",
+		})
 		return nil, err
 	}
 
