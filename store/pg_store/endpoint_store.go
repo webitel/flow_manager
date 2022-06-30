@@ -3,9 +3,10 @@ package sqlstore
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"net/http"
 )
 
 type SqlEndpointStore struct {
@@ -42,8 +43,8 @@ from endpoints e
             E'effective_callee_id_name=''' || coalesce(u.name, u.username) || '''',
             E'effective_callee_id_number=' || coalesce(u.extension, '') || '',
 
-            case when json_typeof(push.config->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'apns')), ',')) || '''' end,
-            case when json_typeof(push.config->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'fcm')), ',')) || '''' end
+            case when json_typeof(push.config->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'apns')), '::')) || '''' end,
+            case when json_typeof(push.config->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'fcm')), '::')) || '''' end
            ) || '}')::text[] as variables
      from directory.wbt_user u
 		left join directory.wbt_user_status uss on uss.user_id = u.id
