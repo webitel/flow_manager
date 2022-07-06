@@ -330,15 +330,27 @@ func (c *conversation) Stop(err *model.AppError) {
 	wlog.Debug(fmt.Sprintf("close conversation %s [%d]", c.id, c.chat.conversations.Len()))
 }
 
+// TODO transferVars
 func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
 	exp := make(map[string]interface{})
+	transferVars := make(map[string]string)
 	for _, v := range vars {
 		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
-
+		transferVars[v], _ = c.Get(v)
 		c.exportVariables = append(c.exportVariables, v)
 	}
 
 	if len(exp) > 0 {
+		if c.BreakCause() == "" {
+			_, err := c.client.api.SetVariables(ctx, &client.SetVariablesRequest{
+				ChannelId: c.id,
+				Variables: transferVars,
+			})
+
+			if err != nil {
+				wlog.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
+			}
+		}
 		return c.Set(ctx, exp)
 	}
 
