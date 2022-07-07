@@ -18,11 +18,11 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.1
-	github.com/webitel/call_center v0.0.0-20220629121349-3bc94fd9fd1b
+	github.com/webitel/call_center v0.0.0-20220707121946-77901ce049fc
 	github.com/webitel/engine v0.0.0-20220707121332-60cf8fe6b2a2
 	github.com/webitel/protos/cc v0.0.0-20220706123912-32958e54422d
 	github.com/webitel/protos/engine v0.0.0-20220706123912-32958e54422d
-	github.com/webitel/protos/workflow v0.0.0-20220606114117-702ad5d192a0
+	github.com/webitel/protos/workflow v0.0.0-20220706123912-32958e54422d
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	google.golang.org/grpc v1.47.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
