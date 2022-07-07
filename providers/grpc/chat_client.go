@@ -3,6 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
 	client "github.com/webitel/protos/engine/chat"
@@ -10,8 +13,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
-	"sync"
-	"time"
 )
 
 var (
@@ -155,7 +156,7 @@ func (cm *chatManager) wakeUp() {
 			cm.registerConnection(v)
 		}
 	}
-	cm.poolConnections.RecheckConnections()
+	cm.poolConnections.RecheckConnections(list.Ids())
 }
 
 func (cc *ChatClientConnection) Name() string {

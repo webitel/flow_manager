@@ -119,7 +119,7 @@ func (am *flowManager) wakeUp() {
 			am.registerConnection(v)
 		}
 	}
-	am.poolConnections.RecheckConnections()
+	am.poolConnections.RecheckConnections(list.Ids())
 }
 
 func (cc *flowManager) getRandomClient() (*fConnection, error) {
