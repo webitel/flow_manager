@@ -1,9 +1,12 @@
 package email
 
 import (
+	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/model"
+	"strings"
 	"sync"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type connection struct {
@@ -11,6 +14,7 @@ type connection struct {
 	profile   *Profile
 	email     *model.Email
 	variables model.Variables
+	ctx       context.Context
 	sync.RWMutex
 }
 
@@ -20,10 +24,17 @@ func NewConnection(profile *Profile, email *model.Email) *connection {
 		profile:   profile,
 		email:     email,
 		variables: make(map[string]interface{}),
+		ctx:       context.Background(),
 	}
 
-	c.variables["from"] = fmt.Sprintf("%v", email.From)
-	c.variables["body"] = fmt.Sprintf("%v", string(email.Body))
+	c.variables["message_id"] = email.MessageId
+	c.variables["reply_to"] = strings.Join(email.ReplyTo, ",")
+	c.variables["from"] = strings.Join(email.From, ",")
+	c.variables["cc"] = strings.Join(email.CC, ",")
+	c.variables["sender"] = strings.Join(email.Sender, ",")
+	c.variables["in_reply_to"] = email.InReplyTo
+	c.variables["body"] = string(email.Body)
+	c.variables["subject"] = fmt.Sprintf("%v", email.Subject)
 
 	return c
 }
@@ -53,7 +64,7 @@ func (c *connection) Get(key string) (string, bool) {
 	return fmt.Sprintf("%v", v), true
 }
 
-func (c *connection) Set(vars model.Variables) (model.Response, *model.AppError) {
+func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	c.Lock()
 	defer c.Unlock()
 	for k, v := range vars {
@@ -68,11 +79,20 @@ func (c *connection) ParseText(text string) string {
 	return text
 }
 
+func (c *connection) SchemaId() int {
+	return c.profile.flowId
+}
+
 func (c *connection) Close() *model.AppError {
 	return nil
 }
+
 func (c *connection) DomainId() int64 {
-	return 0
+	return c.profile.DomainId
+}
+
+func (c *connection) Context() context.Context {
+	return c.ctx
 }
 
 //fixme

@@ -11,6 +11,7 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/call"
 	"github.com/webitel/flow_manager/chat_route"
+	"github.com/webitel/flow_manager/email"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/grpc_route"
 	"github.com/webitel/flow_manager/processing"
@@ -31,6 +32,7 @@ func main() {
 	grpc_route.Init(fm, router)
 	chat_route.Init(fm, router)
 	processing.Init(fm, router)
+	email.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()

@@ -19,7 +19,7 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.1
 	github.com/webitel/call_center v0.0.0-20220707121946-77901ce049fc
-	github.com/webitel/engine v0.0.0-20220707121332-60cf8fe6b2a2
+	github.com/webitel/engine v0.0.0-20220707122345-ab4ec146041b
 	github.com/webitel/protos/cc v0.0.0-20220706123912-32958e54422d
 	github.com/webitel/protos/engine v0.0.0-20220706123912-32958e54422d
 	github.com/webitel/protos/workflow v0.0.0-20220706123912-32958e54422d
@@ -54,9 +54,9 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.21.0 // indirect
 	golang.org/x/net v0.0.0-20220706163947-c90051bbdb60 // indirect
-	golang.org/x/sys v0.0.0-20220704084225-05e143d24a9e // indirect
+	golang.org/x/sys v0.0.0-20220708085239-5a0f0661e09d // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220706185917-7780775163c4 // indirect
+	google.golang.org/genproto v0.0.0-20220707150051-590a5ac7bee1 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

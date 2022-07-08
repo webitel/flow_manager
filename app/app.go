@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/webitel/flow_manager/providers/email"
+
 	"github.com/webitel/call_center/grpc_api/client"
 	presign "github.com/webitel/engine/presign"
 	"github.com/webitel/engine/utils"
@@ -90,6 +92,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port:           fm.Config().Esl.Port,
 			RecordResample: fm.Config().Record.Sample,
 		}),
+		email.New(fm.Store.Email()),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {

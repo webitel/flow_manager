@@ -1,12 +1,14 @@
 package email
 
 import (
+	"sync"
+	"time"
+
+	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"
-	"sync"
-	"time"
 )
 
 var (
@@ -35,6 +37,10 @@ func New(s store.EmailStore) model.Server {
 
 func (s *server) Name() string {
 	return "Email"
+}
+
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+	return nil
 }
 
 func (s *server) Start() *model.AppError {
@@ -90,19 +96,22 @@ func (s *server) listen() {
 }
 
 func (s *server) GetProfile(p *model.EmailProfileTask) (*Profile, *model.AppError) {
+	var pp *Profile
 	profile, ok := s.profiles.Get(p.Id)
 	if ok {
-		return profile.(*Profile), nil
+		pp = profile.(*Profile)
+		if p.UpdatedAt == pp.UpdatedAt() {
+			return pp, nil
+		}
 	}
 
-	//TODO add updated_at condition
 	params, err := s.store.GetProfile(p.Id)
 	if err != nil {
 		return nil, err
 	}
 
-	pp := newProfile(s, params)
-	if err := pp.Login(); err != nil {
+	pp = newProfile(s, params)
+	if err = pp.Login(); err != nil {
 
 		return nil, err
 	}

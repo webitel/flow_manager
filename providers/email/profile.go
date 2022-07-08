@@ -2,34 +2,41 @@ package email
 
 import (
 	"fmt"
-	"github.com/emersion/go-imap"
-	"github.com/emersion/go-imap/client"
-	"github.com/emersion/go-message/mail"
-	"github.com/jordan-wright/email"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/smtp"
 	"net/textproto"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/emersion/go-message/mail"
+
+	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/client"
+	"github.com/jordan-wright/email"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
+
+	_ "github.com/emersion/go-message/charset"
 )
 
 type Profile struct {
-	Id       int
-	DomainId int64
-	Addr     string
-	login    string
-	password string
-	Mailbox  string
-	smtpPort int
-	imapPort int
+	Id        int
+	DomainId  int64
+	updatedAt int64
+	Addr      string
+	login     string
+	password  string
+	Mailbox   string
+	smtpPort  int
+	imapPort  int
+
+	flowId int
 
 	server *server
-	sync.Mutex
+	sync.RWMutex
 	client *client.Client
 
 	mbox        *imap.MailboxStatus
@@ -38,15 +45,17 @@ type Profile struct {
 
 func newProfile(srv *server, params *model.EmailProfile) *Profile {
 	return &Profile{
-		Id:       params.Id,
-		DomainId: params.DomainId,
-		server:   srv,
-		Addr:     params.Host,
-		login:    params.Login,
-		password: params.Password,
-		smtpPort: params.SmtpPort,
-		imapPort: params.ImapPort,
-		Mailbox:  params.Mailbox,
+		Id:        params.Id,
+		DomainId:  params.DomainId,
+		updatedAt: params.UpdatedAt,
+		server:    srv,
+		Addr:      params.Host,
+		login:     params.Login,
+		password:  params.Password,
+		smtpPort:  params.SmtpPort,
+		imapPort:  params.ImapPort,
+		Mailbox:   params.Mailbox,
+		flowId:    params.FlowId,
 	}
 }
 
@@ -63,6 +72,13 @@ func (p *Profile) Login() *model.AppError {
 	}
 
 	return nil
+}
+
+func (p *Profile) UpdatedAt() int64 {
+	p.RLock()
+	defer p.RUnlock()
+
+	return p.updatedAt
 }
 
 func (p *Profile) selectMailBox() *model.AppError {
@@ -88,7 +104,8 @@ func (p *Profile) Read() []*model.Email {
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
-		log.Println(err)
+		wlog.Error(err.Error())
+		return nil
 	}
 
 	seqSet := new(imap.SeqSet)
@@ -106,8 +123,8 @@ func (p *Profile) Read() []*model.Email {
 		close(done)
 	}()
 
-	for message := range messages {
-		e, err := p.parseMessage(message, section)
+	for msg := range messages {
+		e, err := p.parseMessage(msg, section)
 		if err != nil {
 			wlog.Error(err.Error())
 			continue
@@ -147,8 +164,8 @@ func (p *Profile) Reply(parent *model.Email, data []byte) *model.AppError {
 		Body:      data, //[]byte("<h1>Fancy HTML is supported, too!</h1>"),
 	}
 
-	if err := p.server.store.Save(p.DomainId, rr); err != nil {
-		return err
+	if appErr := p.server.store.Save(p.DomainId, rr); appErr != nil {
+		return appErr
 	}
 
 	e := &email.Email{
@@ -171,22 +188,41 @@ func (p *Profile) Reply(parent *model.Email, data []byte) *model.AppError {
 	return nil
 }
 
-func (p *Profile) parseMessage(message *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
-	email := &model.Email{
+func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
+	m := &model.Email{
 		ProfileId: p.Id,
 		Direction: "inbound", //TODO
 	}
 
-	if message == nil {
+	if msg == nil {
 		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message",
 			http.StatusInternalServerError)
 	}
 
-	r := message.GetBody(section)
+	r := msg.GetBody(section)
 	if r == nil {
 		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message body",
 			http.StatusInternalServerError)
 	}
+
+	m.Subject = msg.Envelope.Subject
+	for _, v := range msg.Envelope.From {
+		m.From = append(m.From, v.Address())
+	}
+	for _, v := range msg.Envelope.Sender {
+		m.Sender = append(m.Sender, v.Address())
+	}
+	for _, v := range msg.Envelope.ReplyTo {
+		m.ReplyTo = append(m.ReplyTo, v.Address())
+	}
+	for _, v := range msg.Envelope.To {
+		m.To = append(m.To, v.Address())
+	}
+	for _, v := range msg.Envelope.Cc {
+		m.CC = append(m.CC, v.Address())
+	}
+	m.InReplyTo = msg.Envelope.InReplyTo
+	m.MessageId = msg.Envelope.MessageId
 
 	// Create a new mail reader
 	mr, err := mail.CreateReader(r)
@@ -195,41 +231,40 @@ func (p *Profile) parseMessage(message *imap.Message, section *imap.BodySectionN
 			http.StatusInternalServerError)
 	}
 
-	email.Subject = message.Envelope.Subject
-	for _, v := range message.Envelope.From {
-		email.From = append(email.From, v.Address())
-	}
-	for _, v := range message.Envelope.Sender {
-		email.Sender = append(email.Sender, v.Address())
-	}
-	for _, v := range message.Envelope.ReplyTo {
-		email.ReplyTo = append(email.ReplyTo, v.Address())
-	}
-	for _, v := range message.Envelope.To {
-		email.To = append(email.To, v.Address())
-	}
-	for _, v := range message.Envelope.Cc {
-		email.CC = append(email.CC, v.Address())
-	}
-	email.InReplyTo = message.Envelope.InReplyTo
-	email.MessageId = message.Envelope.MessageId
+	var text []byte
+	var html []byte
 
 	// Process each message's part
+	var part *mail.Part
 	for {
-		part, err := mr.NextPart()
+		part, err = mr.NextPart()
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			log.Fatal(err)
+
 		}
 
 		switch part.Header.(type) {
 		case *mail.InlineHeader:
+			ct := part.Header.Get("Content-Type")
 			// This is the message's text (can be plain-text or HTML)
 			b, _ := ioutil.ReadAll(part.Body)
-			email.Body = append(email.Body, b...)
+			if strings.HasPrefix(ct, "text/html") {
+				html = b
+			} else if strings.HasPrefix(ct, "text/") {
+				text = append(text, b...)
+			}
+		case *mail.AttachmentHeader:
+			// This is an attachment
+			// TODO
 		}
 	}
 
-	return email, nil
+	if text != nil {
+		m.Body = text
+	} else {
+		m.Body = html
+	}
+
+	return m, nil
 }

@@ -1,20 +1,30 @@
 package email
 
 import (
-	"github.com/webitel/flow_manager/model"
+	"context"
 	"net/http"
+
+	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/model"
 )
 
-func (r *Router) reply(email model.EmailConnection, args interface{}) (model.Response, *model.AppError) {
-	var props map[string]interface{}
-	var ok bool
+type Reply struct {
+	Body string
+}
 
-	if props, ok = args.(map[string]interface{}); !ok {
+func (r *Router) reply(ctx context.Context, scope *flow.Flow, email model.EmailConnection, args interface{}) (model.Response, *model.AppError) {
+	var argv Reply
+
+	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.Body == "" {
 		return model.CallResponseError, model.NewAppError("Reply", "email.reply.valid.args", nil, "bad arguments", http.StatusBadRequest)
 	}
 
 	//TODO response..
-	_, err := email.Reply(email.ParseText(getStringValueFromMap("body", props, "")))
+	_, err := email.Reply(argv.Body)
 	if err != nil {
 
 		return model.CallResponseError, err

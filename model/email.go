@@ -23,6 +23,7 @@ type EmailAction struct {
 
 type EmailConnection interface {
 	Connection
+	SchemaId() int
 	Reply(text string) (Response, *AppError)
 	Email() *Email
 }

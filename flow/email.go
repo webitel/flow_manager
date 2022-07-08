@@ -3,17 +3,19 @@ package flow
 import (
 	"context"
 	"crypto/tls"
+	"net/http"
+
 	"github.com/webitel/flow_manager/model"
 	"gopkg.in/gomail.v2"
-	"net/http"
 )
 
 type EmailArgs struct {
-	Cc      []string `json:"cc"`
-	From    string   `json:"from"`
-	Message string   `json:"message"`
-	Type    string   `json:"type"`
-	Smtp    struct {
+	Cc        []string `json:"cc"`
+	From      string   `json:"from"`
+	Message   string   `json:"message"`
+	ReplyToId string   `json:"replyToId"`
+	Type      string   `json:"type"`
+	Smtp      struct {
 		Auth struct {
 			Password string `json:"password"`
 			User     string `json:"user"`
@@ -61,6 +63,10 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 
 	if argv.Subject != "" {
 		mail.SetHeader("Subject", argv.Subject)
+	}
+
+	if argv.ReplyToId != "" {
+		mail.SetHeader("In-Reply-To", argv.ReplyToId[1:len(argv.ReplyToId)-1])
 	}
 
 	mail.SetBody(argv.Type, argv.Message)
