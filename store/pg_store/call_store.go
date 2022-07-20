@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
@@ -176,11 +177,11 @@ with del_calls as materialized (
             and case
                     when c.parent_id notnull then not exists(select 1
                                                              from call_center.cc_calls cp
-                                                             where cp.id = cp.parent_id
+                                                             where cp.id = c.parent_id
                                                                and cp.hangup_at isnull) else true end
     order by c.hangup_at asc
     for update skip locked
-    limit 100
+    limit 1000
 ),
 dd as (
     delete
@@ -197,7 +198,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    hangup_at, hold_sec, cause, sip_code, bridged_id,
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
-                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, blind_transfer)
+                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, blind_transfer, talk_sec)
 select c.created_at created_at,
        c.id,
        c.direction,
@@ -242,7 +243,8 @@ select c.created_at created_at,
        c.queue_ids,
        c.team_ids,
 	   c.params,
-	   c.blind_transfer
+	   c.blind_transfer,
+	   c.talk_sec
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -251,7 +253,8 @@ from (
                     when (t.r).gateway_id isnull then t.gateway_ids
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
-                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids
+                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
+                coalesce(t.talk_sec) as talk_sec 
          from (
                   select c                                                             r,
                          array_agg(distinct ch.user_id)
@@ -263,12 +266,16 @@ from (
                          array_agg(distinct ch.gateway_id)
                          filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
                          array_agg(distinct ch.team_id)
-                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids
+                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids,
+
+
+						 extract(epoch from sum(case when c.parent_id isnull then ch.hangup_at - ch.bridged_at else c.hangup_at - c.bridged_at end)
+						     filter ( where c.bridged_at notnull ))::int8  talk_sec
                   from del_calls c
-                           left join del_calls ch on ch.parent_id = c.id
+                           left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id))
                   group by 1
               ) t
-     ) c;`)
+     ) c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
 			err.Error(), extractCodeFromErr(err))
