@@ -254,7 +254,7 @@ from (
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
                 case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
-                coalesce(t.talk_sec) as talk_sec 
+                coalesce(t.talk_sec, 0) as talk_sec 
          from (
                   select c                                                             r,
                          array_agg(distinct ch.user_id)
