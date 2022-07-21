@@ -177,7 +177,7 @@ with del_calls as materialized (
             and case
                     when c.parent_id notnull then not exists(select 1
                                                              from call_center.cc_calls cp
-                                                             where cp.id = c.parent_id
+                                                             where (cp.id = c.parent_id or cp.parent_id = c.id)
                                                                and cp.hangup_at isnull) else true end
     order by c.hangup_at asc
     for update skip locked
