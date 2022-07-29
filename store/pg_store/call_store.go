@@ -111,9 +111,9 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	call.Parameters()
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, 
-			sip_code, payload, hangup_by, tags, amd_result, params)
+			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec)
 values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, 
-	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb)
+	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0))
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
@@ -124,6 +124,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 	  tags = EXCLUDED.tags,
 	  amd_result = EXCLUDED.amd_result,
 	  params = EXCLUDED.params,
+	  talk_sec = EXCLUDED.talk_sec::int,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
@@ -134,6 +135,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"SipCode":   call.SipCode,
 		"HangupBy":  call.HangupBy,
 		"AmdResult": call.AmdResult,
+		"TalkSec":   call.TalkSec,
 		"Tags":      pq.Array(call.Tags),
 		"Variables": call.VariablesToJson(),
 		"Params":    call.Parameters(),
@@ -253,8 +255,7 @@ from (
                     when (t.r).gateway_id isnull then t.gateway_ids
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
-                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
-                coalesce(t.talk_sec, 0) as talk_sec 
+                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids
          from (
                   select c                                                             r,
                          array_agg(distinct ch.user_id)
@@ -266,11 +267,7 @@ from (
                          array_agg(distinct ch.gateway_id)
                          filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
                          array_agg(distinct ch.team_id)
-                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids,
-
-
-						 extract(epoch from sum(case when c.parent_id isnull then ch.hangup_at - ch.bridged_at else c.hangup_at - c.bridged_at end)
-						     filter ( where c.bridged_at notnull ))::int8  talk_sec
+                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids
                   from del_calls c
                            left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id))
                   group by 1

@@ -4,8 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/webitel/wlog"
 	"strconv"
+
+	"github.com/webitel/wlog"
 )
 
 type CallResponse struct {
@@ -201,6 +202,7 @@ type CallActionHangup struct {
 	AmdResult     *string        `json:"amd_result"`
 	RecordStart   *int64         `json:"record_start,string"`
 	RecordStop    *int64         `json:"record_stop,string"`
+	TalkSec       *float32       `json:"talk_sec,string"`
 }
 
 type CallActionSTT struct {

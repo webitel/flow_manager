@@ -2,10 +2,11 @@ package sqlstore
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"strings"
 )
 
 type SqlMemberStore struct {

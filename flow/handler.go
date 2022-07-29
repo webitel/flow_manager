@@ -66,7 +66,7 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 				i.PushSteepLog(req.log.Name, s.UnixNano()/1000)
 			}
 			if res.Err != nil {
-				wlog.Error(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Err.Error(), time.Since(s)))
+				wlog.Warn(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Err.Error(), time.Since(s)))
 			} else {
 				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Res.String(), time.Since(s)))
 			}
