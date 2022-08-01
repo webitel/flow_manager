@@ -2,6 +2,7 @@ package grpc_route
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	flow2 "github.com/webitel/protos/workflow"
@@ -12,7 +13,8 @@ type DoDistributeCancelArgs struct {
 	WaitBetweenRetries int    `json:"waitBetweenRetries"`
 	Stop               bool   `json:"stop"`
 
-	Export []string `json:"export"`
+	Export                      []string `json:"export"`
+	ExcludeCurrentCommunication bool     `json:"excludeCurrentCommunication"`
 }
 
 type DoDistributeConfirmArgs struct {
@@ -27,9 +29,10 @@ type AfterAttemptSuccess struct {
 }
 
 type AfterAttemptAbandoned struct {
-	MaxAttempts        uint32   `json:"maxAttempts"`
-	WaitBetweenRetries uint32   `json:"waitBetweenRetries"`
-	Export             []string `json:"export"`
+	MaxAttempts                 uint32   `json:"maxAttempts"`
+	WaitBetweenRetries          uint32   `json:"waitBetweenRetries"`
+	Export                      []string `json:"export"`
+	ExcludeCurrentCommunication bool     `json:"excludeCurrentCommunication"`
 }
 
 func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
@@ -106,8 +109,9 @@ func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRP
 	conn.Result(&flow2.ResultAttemptResponse{
 		Result: &flow2.ResultAttemptResponse_Abandoned_{
 			Abandoned: &flow2.ResultAttemptResponse_Abandoned{
-				MaxAttempts:        argv.MaxAttempts,
-				WaitBetweenRetries: argv.WaitBetweenRetries,
+				MaxAttempts:                 argv.MaxAttempts,
+				WaitBetweenRetries:          argv.WaitBetweenRetries,
+				ExcludeCurrentCommunication: argv.ExcludeCurrentCommunication,
 			},
 		},
 		Variables: exportVars(conn, argv.Export),
