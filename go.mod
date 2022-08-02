@@ -20,9 +20,9 @@ require (
 	github.com/tidwall/gjson v1.14.1
 	github.com/webitel/call_center v0.0.0-20220707121946-77901ce049fc
 	github.com/webitel/engine v0.0.0-20220707122345-ab4ec146041b
-	github.com/webitel/protos/cc v0.0.0-20220706123912-32958e54422d
-	github.com/webitel/protos/engine v0.0.0-20220722081720-acdba456457d
-	github.com/webitel/protos/workflow v0.0.0-20220801123511-35207b95d244
+	github.com/webitel/protos/cc v0.0.0-20220802105620-ccc6c51c23f8
+	github.com/webitel/protos/engine v0.0.0-20220802105620-ccc6c51c23f8
+	github.com/webitel/protos/workflow v0.0.0-20220802105620-ccc6c51c23f8
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	google.golang.org/grpc v1.48.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -56,7 +56,7 @@ require (
 	golang.org/x/net v0.0.0-20220728211354-c7608f3a8462 // indirect
 	golang.org/x/sys v0.0.0-20220731174439-a90be440212d // indirect
 	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220728213248-dd149ef739b9 // indirect
+	google.golang.org/genproto v0.0.0-20220801145646-83ce21fca29f // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect

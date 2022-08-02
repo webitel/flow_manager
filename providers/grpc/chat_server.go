@@ -29,6 +29,7 @@ var (
 type chatApi struct {
 	conversations utils.ObjectCache
 	*server
+	workflow.UnsafeFlowChatServerServiceServer
 }
 
 func NewChatApi(s *server) *chatApi {

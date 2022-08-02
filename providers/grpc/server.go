@@ -35,6 +35,7 @@ type server struct {
 	startOnce       sync.Once
 	chatManager     *chatManager
 	nodeName        string
+	workflow.UnsafeFlowServiceServer
 }
 
 func NewServer(cfg *Config) model.Server {

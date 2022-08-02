@@ -20,6 +20,7 @@ var (
 type processingApi struct {
 	connections utils.ObjectCache
 	*server
+	workflow.UnsafeFlowProcessingServiceServer
 }
 
 func NewProcessingApi(s *server) *processingApi {
