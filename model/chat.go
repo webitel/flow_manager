@@ -20,3 +20,16 @@ type ChatMenuArgs struct {
 	Text    string         `json:"text"`
 	Set     string         `json:"set"`
 }
+
+type BroadcastChat struct {
+	Type    string
+	Profile struct {
+		Id int64
+	}
+	Peer      []string
+	Text      string
+	Menu      *ChatMenuArgs
+	File      *File
+	Variables map[string]string
+	DomainId  int64
+}

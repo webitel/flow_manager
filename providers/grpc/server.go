@@ -33,17 +33,18 @@ type server struct {
 	chatApi         *chatApi
 	processingApi   *processingApi
 	startOnce       sync.Once
-	chatManager     *chatManager
+	chatManager     *ChatManager
 	nodeName        string
 	workflow.UnsafeFlowServiceServer
 }
 
-func NewServer(cfg *Config) model.Server {
+func NewServer(cfg *Config, cm *ChatManager) model.Server {
 	srv := &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan model.Connection),
 		nodeName:        cfg.NodeName,
+		chatManager:     cm,
 	}
 	srv.chatApi = NewChatApi(srv)
 	srv.processingApi = NewProcessingApi(srv)
@@ -62,11 +63,6 @@ func publicAddr(lis net.Listener) (string, int) {
 
 //todo del me
 func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
-	s.chatManager = NewChatManager(discovery)
-	if err := s.chatManager.Start(); err != nil {
-		return model.NewAppError("GRPC", "grpc.chat.client_manager.app_err", nil, err.Error(), http.StatusInternalServerError)
-	}
-
 	return nil
 }
 

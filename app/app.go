@@ -29,6 +29,7 @@ type FlowManager struct {
 	ExternalStore *cachelayer.ExternalStoreManager
 	servers       []model.Server
 	schemaCache   utils.ObjectCache
+	chatManager   *grpc.ChatManager
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
@@ -81,12 +82,18 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
 
+	fm.cluster = NewCluster(fm)
+
+	fm.chatManager = grpc.NewChatManager()
+
+	grpcSrv := grpc.NewServer(&grpc.Config{
+		Host:     fm.Config().Grpc.Host,
+		Port:     fm.Config().Grpc.Port,
+		NodeName: fm.id,
+	}, fm.chatManager)
+
 	servers := []model.Server{
-		grpc.NewServer(&grpc.Config{
-			Host:     fm.Config().Grpc.Host,
-			Port:     fm.Config().Grpc.Port,
-			NodeName: fm.id,
-		}),
+		grpcSrv,
 		fs.NewServer(&fs.Config{
 			Host:           fm.Config().Esl.Host,
 			Port:           fm.Config().Esl.Port,
@@ -102,13 +109,17 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 
-	fm.cluster = NewCluster(fm)
 	if err = fm.cluster.Start(); err != nil {
 		return nil, err
 	}
 
+	if err := fm.chatManager.Start(fm.cluster.discovery); err != nil {
+		outErr = err
+		return
+	}
+
 	//todo fixme
-	if err := servers[0].Cluster(fm.cluster.discovery); err != nil {
+	if err := grpcSrv.Cluster(fm.cluster.discovery); err != nil {
 		outErr = err
 		return
 	}
@@ -143,6 +154,10 @@ func (f *FlowManager) Shutdown() {
 
 	if f.cc != nil {
 		f.cc.Stop()
+	}
+
+	if f.chatManager != nil {
+		f.chatManager.Stop()
 	}
 
 	close(f.stop)

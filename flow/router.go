@@ -2,9 +2,10 @@ package flow
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 type Response struct {
@@ -162,6 +163,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 	apps["sql"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.SqlHandler),
+	}
+	apps["broadcastChatMessage"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.broadcastChatMessage),
 	}
 
 	return apps

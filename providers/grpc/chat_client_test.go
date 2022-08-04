@@ -1,8 +1,9 @@
 package grpc
 
 import (
-	"github.com/webitel/engine/discovery"
 	"testing"
+
+	"github.com/webitel/engine/discovery"
 )
 
 func TestChatClient(t *testing.T) {
@@ -12,8 +13,8 @@ func TestChatClient(t *testing.T) {
 		return true, nil
 	})
 
-	cm := NewChatManager(service)
-	if err := cm.Start(); err != nil {
+	cm := NewChatManager()
+	if err := cm.Start(service); err != nil {
 		t.Error(err.Error())
 	}
 

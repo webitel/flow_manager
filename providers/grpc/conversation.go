@@ -15,13 +15,6 @@ import (
 	"github.com/webitel/wlog"
 )
 
-type conversationClient interface {
-	Id() string
-}
-
-type message struct {
-}
-
 type conversation struct {
 	id            string
 	profileId     int64
@@ -175,29 +168,13 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
-//todo refactoring
 func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
 	req := &client.Message{
 		Type:    "text",
 		Text:    menu.Text,
-		Buttons: make([]*client.Buttons, 0, len(menu.Buttons)),
+		Buttons: getChatButtons(menu.Buttons),
 	}
 	//menu.Set // fixme
-
-	for _, v := range menu.Buttons {
-		btns := make([]*client.Button, 0, len(v))
-		for _, b := range v {
-			btns = append(btns, &client.Button{
-				Text: b.Text,
-				Type: b.Type,
-				Url:  b.Url,
-				Code: b.Code,
-			})
-		}
-		req.Buttons = append(req.Buttons, &client.Buttons{
-			Button: btns,
-		})
-	}
 
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		Message:        req,
@@ -217,13 +194,7 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File)
 		Message: &client.Message{
 			Type: "file", // FIXME
 			Text: text,
-			File: &client.File{
-				Id:   int64(f.Id), //TODO
-				Url:  f.Url,
-				Mime: f.MimeType,
-				Name: f.Name,
-				Size: f.Size,
-			},
+			File: getFile(f),
 		},
 	})
 
@@ -417,5 +388,47 @@ func (c *conversation) actualizeClient(cli *ChatClientConnection) {
 		wlog.Debug(fmt.Sprintf("conversation [%s] changed client from \"%s\" to \"%s\"", c.id, c.client.Name(), cli.Name()))
 		c.client = cli
 		c.mx.Unlock()
+	}
+}
+
+func getChatButtons(buttons [][]model.ChatButton) []*client.Buttons {
+	l := len(buttons)
+
+	if l == 0 {
+		return nil
+	}
+
+	res := make([]*client.Buttons, 0, l)
+
+	for _, v := range buttons {
+		btns := make([]*client.Button, 0, len(v))
+		for _, b := range v {
+			btns = append(btns, &client.Button{
+				Text: b.Text,
+				Type: b.Type,
+				Url:  b.Url,
+				Code: b.Code,
+			})
+		}
+
+		res = append(res, &client.Buttons{
+			Button: btns,
+		})
+	}
+
+	return res
+}
+
+func getFile(f *model.File) *client.File {
+	if f == nil {
+		return nil
+	}
+
+	return &client.File{
+		Id:   int64(f.Id), //TODO
+		Url:  f.Url,
+		Mime: f.MimeType,
+		Name: f.Name,
+		Size: f.Size,
 	}
 }

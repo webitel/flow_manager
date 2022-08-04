@@ -2,10 +2,10 @@ package chat_route
 
 import (
 	"context"
+	"strings"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"strconv"
-	"strings"
 )
 
 type FileMessage struct {
@@ -52,15 +52,10 @@ func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversati
 		argv.Expire = 604800
 	}
 
-	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", strconv.Itoa(file.Id), conv.DomainId(), argv.Expire*1000)
+	file, err = r.fm.SetupPublicFileUrl(file, conv.DomainId(), server, argv.Source, argv.Expire)
 	if err != nil {
 		return nil, err
 	}
-
-	if argv.Source != "" {
-		link += "&source=" + argv.Source
-	}
-	file.Url = server + link
 
 	return conv.SendFile(ctx, argv.Text, file)
 }

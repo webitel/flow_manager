@@ -1,6 +1,11 @@
 package app
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"context"
+	"net/http"
+
+	"github.com/webitel/flow_manager/model"
+)
 
 func (fm *FlowManager) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError) {
 	routing, err := fm.Store.Chat().RoutingFromProfile(domainId, profileId)
@@ -50,4 +55,13 @@ func (fm *FlowManager) GetChatRouteFromUserId(domainId int64, userId int64) (*mo
 	}
 
 	return routing, nil
+}
+
+func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat) *model.AppError {
+	err := fm.chatManager.BroadcastMessage(ctx, domainId, req)
+	if err != nil {
+		return model.NewAppError("Chat", "chat.broadcast.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return nil
 }
