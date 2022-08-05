@@ -19,9 +19,13 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 	// todo add search file
 	argv.File = nil
 
+	responseCode := ""
+
 	if err = r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv); err != nil {
-		return nil, err
+		responseCode = err.Error()
 	}
 
-	return model.CallResponseOK, nil
+	return conn.Set(ctx, model.Variables{
+		argv.ResponseCode: responseCode,
+	})
 }

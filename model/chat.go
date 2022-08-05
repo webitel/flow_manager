@@ -26,10 +26,11 @@ type BroadcastChat struct {
 	Profile struct {
 		Id int64
 	}
-	Peer      []string
-	Text      string
-	Menu      *ChatMenuArgs
-	File      *File
-	Variables map[string]string
-	DomainId  int64
+	Peer         []string
+	Text         string
+	Menu         *ChatMenuArgs
+	File         *File
+	Variables    map[string]string
+	DomainId     int64
+	ResponseCode string `json:"responseCode"`
 }
