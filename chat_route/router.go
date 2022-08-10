@@ -3,11 +3,12 @@ package chat_route
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
-	"time"
 )
 
 type Router struct {
@@ -104,9 +105,10 @@ func (r *Router) handle(conn model.Connection) {
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		//TODO config
-		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()
+		cancel()
 	}
 }
 
