@@ -3,9 +3,10 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"regexp"
 	"sync"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type Connection struct {

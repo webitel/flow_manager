@@ -17,7 +17,7 @@ import (
 
 const (
 	activeConversationCacheSize = 50000
-	maximumInactiveChat         = 60 * 60 * 24 // day
+	maximumInactiveChat         = 0 //30 * 60 * 60 * 24 // day
 	confirmationBuffer          = 100
 )
 
