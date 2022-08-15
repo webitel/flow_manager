@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/robertkrimen/otto"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
@@ -36,6 +38,7 @@ type Flow struct {
 	gotoCounter int16
 	cancel      bool
 	logs        []*model.StepLog
+	vm          *otto.Otto
 	sync.RWMutex
 }
 
@@ -63,6 +66,8 @@ func New(conf Config) *Flow {
 	}
 
 	parseFlowArray(i, i.currentNode, conf.Schema)
+	i.initVm()
+
 	return i
 }
 
@@ -364,12 +369,4 @@ func ArrInterfaceToArrayApplication(src []interface{}) model.Applications {
 		}
 	}
 	return res
-}
-
-func InterfaceToArrayApplication(src interface{}) model.Applications {
-	if arr, ok := src.([]interface{}); ok {
-		return ArrInterfaceToArrayApplication(arr)
-	}
-
-	return nil
 }

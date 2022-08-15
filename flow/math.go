@@ -2,10 +2,11 @@ package flow
 
 import (
 	"context"
-	"github.com/robertkrimen/otto"
-	"github.com/webitel/flow_manager/model"
 	"math/rand"
 	"net/http"
+
+	"github.com/robertkrimen/otto"
+	"github.com/webitel/flow_manager/model"
 )
 
 type MathArgs struct {
@@ -15,8 +16,9 @@ type MathArgs struct {
 }
 
 func (r *router) Math(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var vm *otto.Otto
 	var _args interface{}
+
+	vm := scope.GetVm()
 
 	var argv = MathArgs{
 		Fn: "random",

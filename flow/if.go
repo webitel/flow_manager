@@ -26,7 +26,6 @@ type conditionArgs struct {
 	expression string
 	then_      *Node
 	else_      *Node
-	vm_        *otto.Otto
 	flow       *Flow
 }
 
@@ -61,13 +60,11 @@ func (r *router) conditionHandler(ctx context.Context, scope *Flow, conn model.C
 		return nil, model.NewAppError("Flow.ConditionHandler", "flow.condition_if.not_found", nil, "bad arguments", http.StatusBadRequest)
 	}
 
-	if req.vm_ == nil {
-		req.vm_ = otto.New()
-	}
+	vm := scope.GetVm()
 
-	injectJsSysObject(conn, req.vm_, req.flow)
+	injectJsSysObject(conn, vm, req.flow)
 
-	if value, err := req.vm_.Run(`_result = ` + conn.ParseText(req.expression)); err == nil {
+	if value, err := vm.Run(`_result = ` + conn.ParseText(req.expression)); err == nil {
 		if boolVal, err := value.ToBoolean(); err == nil && boolVal == true {
 			req.then_.setFirst()
 			req.flow.SetRoot(req.then_)

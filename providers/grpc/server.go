@@ -38,7 +38,7 @@ type server struct {
 	workflow.UnsafeFlowServiceServer
 }
 
-func NewServer(cfg *Config, cm *ChatManager) model.Server {
+func NewServer(cfg *Config, cm *ChatManager) *server {
 	srv := &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),

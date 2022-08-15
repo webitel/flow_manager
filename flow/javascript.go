@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/robertkrimen/otto"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"time"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 var errTimeout = errors.New("timeout")
@@ -28,27 +28,7 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 		return fmt.Sprintf(`_getChannelVar("%s")`, l[1])
 	})
 
-	vm := otto.New()
-	vm.Interrupt = make(chan func(), 1) // The buffer prevents blocking
-
-	vm.Set("_getChannelVar", func(call otto.FunctionCall) otto.Value {
-		v, _ := conn.Get(call.Argument(0).String())
-		res, err := vm.ToValue(v)
-		if err != nil {
-			return otto.Value{}
-		}
-		return res
-	})
-
-	vm.Set("_LocalDateParameters", func(call otto.FunctionCall) otto.Value {
-		t := scope.Now()
-		res, err := vm.ToValue([]int{t.Year(), int(t.Month()), t.Day(), t.Hour(), t.Minute(), t.Second()})
-		if err != nil {
-			return otto.Value{}
-		}
-
-		return res
-	})
+	vm := scope.GetVm()
 
 	go func() {
 		time.Sleep(2 * time.Second) // Stop after two seconds
@@ -70,4 +50,13 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 	return conn.Set(ctx, model.Variables{
 		argv.SetVar: result,
 	})
+}
+
+func (r *router) panic(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv string
+	if err := scope.DecodeSrc(args, &argv); err != nil {
+		panic(err.Error())
+	}
+
+	panic(argv)
 }
