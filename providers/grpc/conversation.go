@@ -263,6 +263,9 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 	c.mx.Unlock()
 
 	select {
+	case <-c.Context().Done():
+		wlog.Debug(fmt.Sprintf("conversation %s wait message: cancel", c.id))
+		break
 	case <-t:
 		wlog.Debug(fmt.Sprintf("conversation %s wait message: timeout", c.id))
 		break
