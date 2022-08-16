@@ -40,7 +40,7 @@ func newConnection(ctx context.Context, variables map[string]string) *Connection
 		stop:      make(chan struct{}),
 		result:    make(chan interface{}),
 	}
-	c.ctx, c.cancel = context.WithCancel(ctx)
+	c.ctx, c.cancel = context.WithTimeout(ctx, timeoutFlowSchema)
 
 	return c
 }

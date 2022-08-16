@@ -97,8 +97,8 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	if vars == nil {
 		vars = make(map[string]string)
 	}
-	c, _ := context.WithTimeout(context.Background(), timeoutFlowSchema)
-	conn := newConnection(c, vars)
+
+	conn := newConnection(context.Background(), vars)
 	id := model.NewId()
 	conn.id = id
 

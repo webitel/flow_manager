@@ -7,9 +7,9 @@ import (
 	"crypto/sha512"
 	"encoding/base64"
 	"fmt"
-	"github.com/robertkrimen/otto"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type StringArgs struct {
@@ -20,7 +20,6 @@ type StringArgs struct {
 }
 
 func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var vm *otto.Otto
 	var argv = StringArgs{}
 
 	err := scope.Decode(args, &argv)
@@ -60,7 +59,7 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 		value = sha512Fn(argv.Data)
 		break
 	default:
-		vm = otto.New()
+		vm := scope.GetVm()
 		vm.Set("fnName", argv.Fn)
 		vm.Set("args", argv.Args)
 		vm.Set("data", argv.Data)

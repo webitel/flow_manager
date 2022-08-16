@@ -4,10 +4,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/robertkrimen/otto"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"time"
+
+	"github.com/webitel/wlog"
+
+	"github.com/robertkrimen/otto"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 var errTimeout = errors.New("timeout")
@@ -15,6 +19,11 @@ var errTimeout = errors.New("timeout")
 type JsArgs struct {
 	Data   string
 	SetVar string
+}
+
+type jsResult struct {
+	val otto.Value
+	err error
 }
 
 func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -28,46 +37,51 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 		return fmt.Sprintf(`_getChannelVar("%s")`, l[1])
 	})
 
-	vm := otto.New()
-	vm.Interrupt = make(chan func(), 1) // The buffer prevents blocking
+	vm := scope.GetVm()
 
-	vm.Set("_getChannelVar", func(call otto.FunctionCall) otto.Value {
-		v, _ := conn.Get(call.Argument(0).String())
-		res, err := vm.ToValue(v)
-		if err != nil {
-			return otto.Value{}
-		}
-		return res
-	})
-
-	vm.Set("_LocalDateParameters", func(call otto.FunctionCall) otto.Value {
-		t := scope.Now()
-		res, err := vm.ToValue([]int{t.Year(), int(t.Month()), t.Day(), t.Hour(), t.Minute(), t.Second()})
-		if err != nil {
-			return otto.Value{}
-		}
-
-		return res
-	})
+	runtime := make(chan jsResult, 1)
+	var result jsResult
 
 	go func() {
-		time.Sleep(2 * time.Second) // Stop after two seconds
-		vm.Interrupt <- func() {
-			panic(errTimeout)
-		}
-	}()
-
-	result, err := vm.Run(`
+		defer func() {
+			if caught := recover(); caught != nil {
+				wlog.Error(errTimeout.Error())
+			}
+		}()
+		result := jsResult{}
+		result.val, result.err = vm.Run(`
 		var LocalDate = function() {
 			var t = _LocalDateParameters();
 			return new Date(t[0], t[1] - 1, t[2], t[3], t[4], t[5])
 		};
 		(function(LocalDate) {` + argv.Data + `})(LocalDate)`)
-	if err != nil {
-		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, err.Error(), http.StatusBadRequest)
+		runtime <- result
+	}()
+
+	select {
+	case <-time.After(1 * time.Second):
+		vm.Interrupt <- func() {
+			panic(errTimeout)
+		}
+		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, errTimeout.Error(), http.StatusBadRequest)
+	case result = <-runtime:
+
+	}
+
+	if result.err != nil {
+		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, result.err.Error(), http.StatusBadRequest)
 	}
 
 	return conn.Set(ctx, model.Variables{
-		argv.SetVar: result,
+		argv.SetVar: result.val,
 	})
+}
+
+func (r *router) panic(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv string
+	if err := scope.DecodeSrc(args, &argv); err != nil {
+		panic(err.Error())
+	}
+
+	panic(argv)
 }

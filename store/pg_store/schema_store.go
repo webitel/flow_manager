@@ -30,7 +30,8 @@ where s.domain_id = :DomainId and s.id = :Id`, map[string]interface{}{
 }
 
 func (s SqlSchemaStore) GetUpdatedAt(domainId int64, id int) (int64, *model.AppError) {
-	i, err := s.GetReplica().SelectInt(`select s.updated_at
+	var i int64
+	err := s.GetReplica().SelectOne(&i, `select s.updated_at
 from flow.acr_routing_scheme s
 where id = :Id and domain_id = :DomainId::int8`, map[string]interface{}{
 		"Id":       id,

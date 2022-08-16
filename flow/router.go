@@ -168,6 +168,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.broadcastChatMessage),
 	}
+	apps["panic"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.panic),
+	}
 
 	return apps
 }
