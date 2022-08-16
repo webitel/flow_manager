@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/robertkrimen/otto"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -27,8 +26,6 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 	if err != nil {
 		return nil, err
 	}
-
-	vm := scope.GetVm()
 
 	if argv.SetVar == "" {
 		return nil, ErrorRequiredParameter("string", "setVar")
@@ -62,7 +59,7 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 		value = sha512Fn(argv.Data)
 		break
 	default:
-		vm = otto.New()
+		vm := scope.GetVm()
 		vm.Set("fnName", argv.Fn)
 		vm.Set("args", argv.Args)
 		vm.Set("data", argv.Data)

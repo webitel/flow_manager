@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/webitel/wlog"
+
+	"github.com/robertkrimen/otto"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -15,6 +19,11 @@ var errTimeout = errors.New("timeout")
 type JsArgs struct {
 	Data   string
 	SetVar string
+}
+
+type jsResult struct {
+	val otto.Value
+	err error
 }
 
 func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -30,25 +39,41 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 
 	vm := scope.GetVm()
 
-	go func() {
-		time.Sleep(2 * time.Second) // Stop after two seconds
-		vm.Interrupt <- func() {
-			panic(errTimeout)
-		}
-	}()
+	runtime := make(chan jsResult, 1)
+	var result jsResult
 
-	result, err := vm.Run(`
+	go func() {
+		defer func() {
+			if caught := recover(); caught != nil {
+				wlog.Error(errTimeout.Error())
+			}
+		}()
+		result := jsResult{}
+		result.val, result.err = vm.Run(`
 		var LocalDate = function() {
 			var t = _LocalDateParameters();
 			return new Date(t[0], t[1] - 1, t[2], t[3], t[4], t[5])
 		};
 		(function(LocalDate) {` + argv.Data + `})(LocalDate)`)
-	if err != nil {
-		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, err.Error(), http.StatusBadRequest)
+		runtime <- result
+	}()
+
+	select {
+	case <-time.After(1 * time.Second):
+		vm.Interrupt <- func() {
+			panic(errTimeout)
+		}
+		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, errTimeout.Error(), http.StatusBadRequest)
+	case result = <-runtime:
+
+	}
+
+	if result.err != nil {
+		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, result.err.Error(), http.StatusBadRequest)
 	}
 
 	return conn.Set(ctx, model.Variables{
-		argv.SetVar: result,
+		argv.SetVar: result.val,
 	})
 }
 

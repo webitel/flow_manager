@@ -66,7 +66,6 @@ func New(conf Config) *Flow {
 	}
 
 	parseFlowArray(i, i.currentNode, conf.Schema)
-	i.initVm()
 
 	return i
 }

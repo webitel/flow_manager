@@ -139,8 +139,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
-	go grpcSrv.TestMem()
-
 	return fm, outErr
 }
 

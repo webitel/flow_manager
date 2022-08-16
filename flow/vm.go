@@ -45,6 +45,9 @@ func (f *Flow) initVm() {
 }
 
 func (f *Flow) GetVm() *otto.Otto {
+	f.Lock()
+	defer f.Unlock()
+
 	if f.vm != nil {
 		return f.vm
 	}

@@ -2,8 +2,9 @@ package flow
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/model"
 	"time"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type SleepArgs int
@@ -15,7 +16,12 @@ func (r *router) sleep(ctx context.Context, scope *Flow, c model.Connection, arg
 	}
 
 	if timeout > 0 {
-		time.Sleep(time.Millisecond * (time.Duration(timeout)))
+		select {
+		case <-c.Context().Done():
+			return ResponseErr, nil
+		case <-time.After(time.Millisecond * (time.Duration(timeout))):
+			return ResponseOK, nil
+		}
 	}
 	return ResponseOK, nil
 }

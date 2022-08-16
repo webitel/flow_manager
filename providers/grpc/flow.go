@@ -3,10 +3,7 @@ package grpc
 import (
 	"context"
 	"errors"
-	"sync"
 	"time"
-
-	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/workflow"
@@ -100,8 +97,8 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	if vars == nil {
 		vars = make(map[string]string)
 	}
-	c, _ := context.WithTimeout(context.Background(), timeoutFlowSchema)
-	conn := newConnection(c, vars)
+
+	conn := newConnection(context.Background(), vars)
 	id := model.NewId()
 	conn.id = id
 
@@ -141,28 +138,4 @@ func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 	return &workflow.StartSyncFlowResponse{
 		Id: id,
 	}, nil
-}
-
-func (s *server) TestMem() {
-	wg := sync.WaitGroup{}
-
-	h := func(wg *sync.WaitGroup, s *server) {
-		wg.Add(1)
-		s.StartFlow(context.Background(), &workflow.StartFlowRequest{
-			SchemaId:  635,
-			DomainId:  1,
-			Variables: map[string]string{"A": "A"},
-		})
-		wg.Done()
-	}
-
-	for i := 0; i < 1000; i++ {
-		for y := 0; y < 50; y++ {
-			go h(&wg, s)
-		}
-		time.Sleep(time.Millisecond * 500)
-	}
-
-	wg.Wait()
-	wlog.Error("STOP TEST")
 }

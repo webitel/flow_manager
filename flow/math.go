@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"net/http"
 
-	"github.com/robertkrimen/otto"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -17,8 +16,6 @@ type MathArgs struct {
 
 func (r *router) Math(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var _args interface{}
-
-	vm := scope.GetVm()
 
 	var argv = MathArgs{
 		Fn: "random",
@@ -36,7 +33,7 @@ func (r *router) Math(ctx context.Context, scope *Flow, c model.Connection, args
 	if argv.Fn == "random" || argv.Fn == "" {
 		_args = random(argv.Data)
 	} else {
-		vm = otto.New()
+		vm := scope.GetVm()
 		vm.Set("fnName", argv.Fn)
 		vm.Set("args", argv.Data)
 		v, err := vm.Run(`
