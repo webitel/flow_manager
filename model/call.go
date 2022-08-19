@@ -392,11 +392,3 @@ type PlaybackArgs struct {
 	GetDigits  *PlaybackDigits `json:"getDigits"`
 	GetSpeech  *GetSpeech      `json:"getSpeech"`
 }
-
-type LastBridged struct {
-	Extension   string `json:"extension" db:"extension"`
-	QueueId     *int   `json:"queue_id" db:"queue_id"`
-	AgentId     *int   `json:"agent_id" db:"agent_id"`
-	CreatedAt   string `json:"created_at" db:"created_at"`
-	Description string `json:"description" db:"description"`
-}
