@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -47,7 +48,7 @@ type CallStore interface {
 	UpdateFrom(id string, name, number *string) *model.AppError
 	SaveTranscribe(callId, transcribe string) *model.AppError
 
-	LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError)
+	LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
 	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
 	SetUserId(domainId int64, id string, userId int64) *model.AppError
 	SetBlindTransfer(domainId int64, id string, destination string) *model.AppError

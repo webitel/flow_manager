@@ -2,7 +2,7 @@ package flow
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -15,12 +15,12 @@ type LastBridged struct {
 	}
 	Hours  string `json:"hours"`
 	Number string `json:"number"`
-	Set    map[string]string
+	Set    model.Variables
 }
 
 func (r *router) lastBridged(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv = LastBridged{}
-	var lastBridged *model.LastBridged
+	var lastBridged model.Variables
 
 	err := scope.Decode(args, &argv)
 	if err != nil {
@@ -31,35 +31,10 @@ func (r *router) lastBridged(ctx context.Context, scope *Flow, c model.Connectio
 		return nil, ErrorRequiredParameter("lastBridged", "setVar")
 	}
 
-	lastBridged, err = r.fm.LastBridgedExtension(c.DomainId(), argv.Number, argv.Hours, argv.Calls.Dialer, argv.Calls.Inbound, argv.Calls.Outbound, argv.Calls.QueueIds)
+	lastBridged, err = r.fm.LastBridged(c.DomainId(), argv.Number, argv.Hours, argv.Calls.Dialer, argv.Calls.Inbound, argv.Calls.Outbound, argv.Calls.QueueIds, argv.Set)
 	if err != nil {
 		return nil, err
 	}
 
-	vars := make(model.Variables)
-
-	for k, v := range argv.Set {
-		switch v {
-		case "extension":
-			vars[k] = lastBridged.Extension
-		case "agent_id":
-			if lastBridged.AgentId != nil {
-				vars[k] = fmt.Sprintf("%d", *lastBridged.AgentId)
-			}
-		case "queue_id":
-			if lastBridged.QueueId != nil {
-				vars[k] = fmt.Sprintf("%d", *lastBridged.QueueId)
-			}
-		case "created_at":
-			vars[k] = lastBridged.CreatedAt
-		case "description":
-			vars[k] = lastBridged.Description
-		}
-	}
-
-	if len(vars) == 0 {
-		return model.CallResponseOK, nil
-	}
-
-	return c.Set(ctx, vars)
+	return c.Set(ctx, lastBridged)
 }

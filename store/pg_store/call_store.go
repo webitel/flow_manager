@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
@@ -312,63 +313,99 @@ values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlCallStore) LastBridgedExtension(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int) (*model.LastBridged, *model.AppError) {
-	var res *model.LastBridged
+func (s SqlCallStore) LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
+	f := make([]string, 0)
+
+	for k, v := range mapRes {
+		var val = ""
+		switch v {
+		case "extension":
+			val = "extension::varchar as " + pq.QuoteIdentifier(k)
+		case "id":
+			val = "id::varchar as " + pq.QuoteIdentifier(k)
+		case "queue_id":
+			val = "queue_id::varchar as " + pq.QuoteIdentifier(k)
+		case "agent_id":
+			val = "agent_id::varchar as " + pq.QuoteIdentifier(k)
+		case "description":
+			val = "description::varchar as " + pq.QuoteIdentifier(k)
+		case "created_at":
+			val = "created_at::varchar as " + pq.QuoteIdentifier(k)
+		case "gateway_id":
+			val = "gateway_id::varchar as " + pq.QuoteIdentifier(k)
+		case "destination":
+			val = "destination::varchar as " + pq.QuoteIdentifier(k)
+		default:
+
+			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
+				continue
+			}
+
+			val = fmt.Sprintf("(h.variables->%s) as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+		}
+
+		f = append(f, val)
+	}
+
+	var t *properties
+
 	// fixme extension dialer logic
-	err := s.GetReplica().SelectOne(&res, `select coalesce(extension, '') as extension,
-       queue_id,
-       agent_id,
-       coalesce(description, '') as description,
-       to_char(created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') created_at
-from (
-         select h.created_at,
-                case when h.direction = 'inbound' or q.type = any(array[4,5]::smallint[]) then h.to_number else h.from_number end as extension,
-                h.queue_id,
-                ah.agent_id,
-                ah.description
-         from call_center.cc_calls_history h
- 			left join call_center.cc_queue q on q.id = h.queue_id
-            left join call_center.cc_member_attempt_history ah on ah.domain_id = h.domain_id and ah.member_call_id = h.id
-         where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
-		   and (:QueueIds::int[] isnull or (h.queue_id = any(:QueueIds) or h.queue_id isnull))
-           and (
-                 (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
-                 or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
-                 or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
-             )
-           and h.parent_id isnull
-           and (
-                 ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
-                  (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
-                  (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
-                 (
-                         case
-                             when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
-                                     h.attempt_id notnull and case :Dialer
-                                                                  when 'bridged' then h.bridged_at notnull
-                                                                  when 'attempt' then h.bridged_at isnull
-                                                                  else true end
-                             else false end
-                         or case
-                                when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
-                                        h.direction = 'inbound' and case :Inbound
-                                                                        when 'bridged' then h.bridged_at notnull
-                                                                        when 'attempt' then h.bridged_at isnull
-                                                                        else true end
+	err := s.GetReplica().SelectOne(&t, `select row_to_json(t) variables
+from (select `+strings.Join(f, ", ")+`
+      from (select to_char(h.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') created_at,
+                   coalesce(case
+                                when h.direction = 'inbound' or q.type = any (array [4,5]::smallint[]) then h.to_number
+                                else h.from_number end, '') as         extension,
+                   h.queue_id,
+                   ah.agent_id,
+                   coalesce(ah.description, '')             as         description,
+                   h.gateway_id,
+                   h.payload                                as         variables,
+				   h.id,
+			       h.destination
+            from call_center.cc_calls_history h
+                     left join call_center.cc_queue q on q.id = h.queue_id
+                     left join call_center.cc_member_attempt_history ah
+                               on ah.domain_id = h.domain_id and ah.member_call_id = h.id
+            where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
+              and (:QueueIds::int[] isnull or (h.queue_id = any (:QueueIds) or h.queue_id isnull))
+              and (
+                    (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
+                    or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
+                    or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
+                )
+              and h.parent_id isnull
+              and (
+                    ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
+                     (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
+                     (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
+                    (
+                            case
+                                when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
+                                        h.attempt_id notnull and case :Dialer
+                                                                     when 'bridged' then h.bridged_at notnull
+                                                                     when 'attempt' then h.bridged_at isnull
+                                                                     else true end
                                 else false end
-                         or case
-                                when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
-                                        h.direction = 'outbound' and case :Outbound
-                                                                         when 'bridged' then h.bridged_at notnull
-                                                                         when 'attempt' then h.bridged_at isnull
-                                                                         else true end
-                                else false end
-                     )
-             )
-         order by h.created_at desc
-     ) h
-order by h.created_at desc
-limit 1`, map[string]interface{}{
+                            or case
+                                   when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
+                                               h.direction = 'inbound' and case :Inbound
+                                                                               when 'bridged' then h.bridged_at notnull
+                                                                               when 'attempt' then h.bridged_at isnull
+                                                                               else true end
+                                   else false end
+                            or case
+                                   when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
+                                               h.direction = 'outbound' and case :Outbound
+                                                                                when 'bridged' then h.bridged_at notnull
+                                                                                when 'attempt' then h.bridged_at isnull
+                                                                                else true end
+                                   else false end
+                        )
+                )
+            order by h.created_at desc) h
+      order by h.created_at desc
+      limit 1) t`, map[string]interface{}{
 		"DomainId": domainId,
 		"Hours":    hours,
 		"Number":   number,
@@ -382,7 +419,7 @@ limit 1`, map[string]interface{}{
 		return nil, model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
-	return res, nil
+	return t.Variables, nil
 }
 
 func (s SqlCallStore) SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError {
