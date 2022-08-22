@@ -60,6 +60,14 @@ func (v *Variables) ToJson() []byte {
 	return d
 }
 
+func (v *Variables) ToString() *string {
+	if v == nil {
+		return nil
+	}
+	d, _ := json.Marshal(v)
+	return NewString(string(d))
+}
+
 func VariablesFromStringMap(m map[string]string) Variables {
 	vars := make(Variables)
 	for k, v := range m {

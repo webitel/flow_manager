@@ -10,11 +10,13 @@ type CallbackCommunication struct {
 	Description *string      `json:"description"`
 	TypeId      *int         `json:"type_id"`
 	Type        SearchEntity `json:"type"`
+	ResourceId  *int         `json:"resource_id"`
+	Display     *string      `json:"display"`
 }
 
 type CallbackMember struct {
-	Name      string            `json:"name"`
-	Variables map[string]string `json:"variables"`
+	Name      string     `json:"name"`
+	Variables *Variables `json:"variables"`
 	Timezone  struct {
 		Id *int `json:"id"`
 	} `json:"timezone"`
@@ -24,6 +26,10 @@ type CallbackMember struct {
 	Priority      int                   `json:"priority"`
 	Communication CallbackCommunication `json:"communication"`
 	Queue         SearchEntity          `json:"queue"`
+	Agent         struct {
+		Id *int `json:"id"`
+	} `json:"agent"`
+	ExpireAt *int64 `json:"expire_at"`
 }
 
 type SearchMember struct {
@@ -35,6 +41,7 @@ type SearchMember struct {
 	Completed   *bool          `json:"completed"`
 	BucketId    *int           `json:"bucket_id"` // todo deprecated
 	Bucket      *SearchEntity  `json:"bucket"`
+	Id          *int64         `json:"id"`
 }
 
 type PatchMember struct {
