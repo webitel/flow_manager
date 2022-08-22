@@ -167,11 +167,12 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
         ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else ready_at end,
         stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else stop_cause end,
         stop_at = case when :UStopCause::varchar notnull then now() else stop_at end,
-        variables = case when (:UVariables::jsonb) notnull then variables || :UVariables::jsonb else variables end
+        variables = case when (:UVariables::jsonb) notnull then coalesce(variables, '{}'::jsonb) || :UVariables::jsonb else variables end
     where m.queue_id in (
         select id from call_center.cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
+    and (:Id::int8 isnull or m.id = :Id::int8)
     and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
@@ -182,6 +183,7 @@ select count(*)
 from m`, map[string]interface{}{
 		"DomainId":    domainId,
 		"QueueIds":    pq.Array(req.GetQueueIds()),
+		"Id":          req.Id,
 		"Name":        req.Name,
 		"Today":       req.Today,
 		"Completed":   req.Completed,
@@ -193,7 +195,7 @@ from m`, map[string]interface{}{
 		"UBucketId":  patch.Bucket.GetId(),
 		"UReadyAt":   patch.ReadyAt,
 		"UStopCause": patch.StopCause,
-		"UVariables": patch.Variables.ToJson(),
+		"UVariables": patch.Variables.ToString(),
 	})
 
 	if err != nil {
@@ -210,10 +212,15 @@ from m`, map[string]interface{}{
 func (s SqlMemberStore) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, 
 	ready_at, domain_id, timezone_id, priority, bucket_id)
-select q.id queue_id, json_build_array(jsonb_build_object('destination', :Number::varchar) ||
-                      jsonb_build_object('type', jsonb_build_object('id', :TypeId::int4))),
+select q.id queue_id, 
+	   json_build_array(
+              jsonb_build_object('destination', :Number::varchar)
+              || jsonb_build_object('type', jsonb_build_object('id', :TypeId::int))
+              || case when :Display::varchar notnull then jsonb_build_object('display', :Display::varchar) else '{}' end
+              || case when :ResourceId::int notnull then jsonb_build_object('resource', jsonb_build_object('id', :ResourceId::int)) else '{}'::jsonb end
+       ),
        :Name::varchar,
-       :Variables::jsonb vars,
+	   case when :Variables::text notnull then :Variables::jsonb else '{}'::jsonb end as vars,
        case when not :HoldSec::int4 isnull then now() + (:HoldSec::int4 || ' sec')::interval else null end lh,
        q.domain_id,
 	   :TimezoneId,
@@ -227,10 +234,12 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 		"TypeId":     member.Communication.Type.Id,
 		"Name":       member.Name,
 		"HoldSec":    holdSec,
-		"Variables":  model.MapStringToJson(member.Variables),
+		"Variables":  member.Variables.ToString(),
 		"TimezoneId": member.Timezone.Id,
 		"Priority":   member.Priority,
 		"BucketId":   member.Bucket.Id,
+		"Display":    member.Communication.Display,
+		"ResourceId": member.Communication.ResourceId,
 	})
 
 	if err != nil {
