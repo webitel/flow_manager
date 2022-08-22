@@ -2,7 +2,7 @@ package flow
 
 import (
 	"context"
-	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -19,8 +19,7 @@ type GetQueueMetrics struct {
 
 type GetQueueInfo struct {
 	Queue *model.SearchEntity `json:"queue"`
-	Set   string
-	Field string `json:"field"`
+	Set   model.Variables
 }
 
 type GetQueueAgents struct {
@@ -30,9 +29,10 @@ type GetQueueAgents struct {
 
 func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv GetQueueInfo
-	var res *model.QueueData
+	var err *model.AppError
+	var res model.Variables
 
-	err := scope.Decode(args, &argv)
+	err = scope.Decode(args, &argv)
 	if err != nil {
 		return nil, err
 	}
@@ -40,34 +40,16 @@ func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connecti
 	if argv.Queue == nil {
 		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "queue")
 	}
-	if argv.Set == "" {
+	if len(argv.Set) == 0 {
 		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "set")
 	}
-	if argv.Field == "" {
-		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "field")
-	}
 
-	res, err = r.fm.Store.Queue().GetQueueData(c.DomainId(), argv.Queue)
+	res, err = r.fm.Store.Queue().GetQueueData(c.DomainId(), argv.Queue, argv.Set)
 	if err != nil {
 		return nil, err
 	}
 
-	fmt.Println(res)
-
-	var set = ""
-
-	switch argv.Field {
-	case "enabled":
-		set = fmt.Sprintf("%v", res.Enabled)
-	case "type":
-		set = fmt.Sprintf("%v", res.Type)
-	case "priority":
-		set = fmt.Sprintf("%v", res.Priority)
-	}
-
-	return c.Set(ctx, model.Variables{
-		argv.Set: set,
-	})
+	return c.Set(ctx, res)
 
 }
 
