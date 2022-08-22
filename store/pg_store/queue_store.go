@@ -2,11 +2,12 @@ package sqlstore
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
+
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"net/http"
-	"strings"
 )
 
 type SqlQueueStore struct {
@@ -87,12 +88,50 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 	return res, nil
 }
 
-func (s SqlQueueStore) GetQueueData(domainId int64, search *model.SearchEntity) (*model.QueueData, *model.AppError) {
-	var res *model.QueueData
-	err := s.GetReplica().SelectOne(&res, `select q.type, q.enabled, q.priority
-from call_center.cc_queue q
-where q.domain_id = :DomainId and (q.id = :Id or q.name = :Name) 
-limit 1`, map[string]interface{}{
+func (s SqlQueueStore) GetQueueData(domainId int64, search *model.SearchEntity, mapRes model.Variables) (model.Variables, *model.AppError) {
+	f := make([]string, 0)
+
+	for k, v := range mapRes {
+		var val = ""
+		switch v {
+		case "type":
+			val = "type::varchar as " + pq.QuoteIdentifier(k)
+		case "name":
+			val = "name::varchar as " + pq.QuoteIdentifier(k)
+		case "enabled":
+			val = "enabled::varchar as " + pq.QuoteIdentifier(k)
+		case "priority":
+			val = "priority::varchar as " + pq.QuoteIdentifier(k)
+		case "waiting":
+			val = "waiting::varchar as " + pq.QuoteIdentifier(k)
+		case "size":
+			val = "size::varchar as " + pq.QuoteIdentifier(k)
+		default:
+			continue
+		}
+
+		f = append(f, val)
+	}
+
+	var t *properties
+	err := s.GetReplica().SelectOne(&t, `select row_to_json(t) as variables
+from (
+    select 
+		`+strings.Join(f, ", ")+`
+    from (
+        select q.type,
+           q.enabled,
+           q.priority,
+		   q.name,	
+           coalesce(case when q.type = any(array[1,6]) then (select count(*) from call_center.cc_member_attempt a1 where a1.queue_id = q.id and a1.bridged_at isnull)
+                   else (select sum(s.member_waiting) from call_center.cc_queue_statistics s where s.queue_id = q.id) end, 0) waiting,
+           coalesce(case when q.type = any(array[1,6]) then (select count(*) from call_center.cc_member_attempt a1 where a1.queue_id = q.id and a1.state != 'leaving')
+                   else (select sum(s.member_waiting) from call_center.cc_queue_statistics s where s.queue_id = q.id) end, 0) size
+        from call_center.cc_queue q
+        where q.domain_id = :DomainId and (q.id = :Id or q.name = :Name)
+        limit 1
+    ) t
+ ) t`, map[string]interface{}{
 		"DomainId": domainId,
 		"Id":       search.Id,
 		"Name":     search.Name,
@@ -102,7 +141,7 @@ limit 1`, map[string]interface{}{
 		return nil, model.NewAppError("SqlQueueStore.GetQueueData", "store.sql_queue.data.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
-	return res, nil
+	return t.Variables, nil
 }
 
 func (s SqlQueueStore) GetQueueAgents(domainId int64, queueId int, mapRes model.Variables) (model.Variables, *model.AppError) {
