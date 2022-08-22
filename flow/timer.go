@@ -3,8 +3,9 @@ package flow
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/wlog"
 	"time"
+
+	"github.com/webitel/wlog"
 )
 
 type TimerArgs struct {
@@ -45,6 +46,7 @@ func (scope *Flow) Timer(ctx context.Context, t TimerArgs, r Handler) {
 				timer.Stop()
 				return
 			}
+			f.Reset()
 			timer = time.NewTimer(time.Second * interval)
 		}
 	}
