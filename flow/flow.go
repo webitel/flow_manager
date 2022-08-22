@@ -160,6 +160,15 @@ func (i *Flow) SetRoot(root *Node) {
 	i.currentNode = root
 }
 
+func (i *Flow) Reset() {
+	if i.currentNode != nil {
+		i.currentNode.setFirst()
+	}
+	i.Lock()
+	i.cancel = false
+	i.Unlock()
+}
+
 func (i *Flow) NextRequest() *ApplicationRequest {
 	var req *ApplicationRequest
 	req = i.currentNode.Next()
