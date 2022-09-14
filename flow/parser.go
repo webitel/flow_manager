@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/webitel/flow_manager/model"
@@ -45,6 +46,14 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				v := f.Connection.ParseText(data.(string))
 				if v == "" {
 					return 0, nil
+				}
+
+				if strings.Index(v, ".") > -1 {
+					res, err := strconv.ParseFloat(v, 64)
+					if err != nil {
+						return 0, err
+					}
+					return res, nil
 				}
 				return v, nil
 			case reflect.Bool:
