@@ -2,6 +2,7 @@ package sqlstore
 
 import (
 	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -43,8 +44,8 @@ func (s SqlListStore) CheckNumber(domainId int64, number string, listId *int, li
 }
 
 func (s SqlListStore) AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_list_communications (list_id, number, description)
-select l.id, :Destination, :Description
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_list_communications (list_id, number, description, expire_at)
+select l.id, :Destination, :Description, :ExpireAt
 from call_center.cc_list l
 where l.domain_id = :DomainId
     and (l.id = :Id::int8 or l.name = :Name)
@@ -55,6 +56,7 @@ limit 1`, map[string]interface{}{
 		"Name":        entry.Name,
 		"Destination": comm.Destination,
 		"Description": comm.Description,
+		"ExpireAt":    comm.ExpireAt,
 	})
 
 	if err != nil {
@@ -63,4 +65,18 @@ limit 1`, map[string]interface{}{
 	}
 
 	return nil
+}
+
+func (s SqlListStore) CleanExpired() (int64, *model.AppError) {
+	res, err := s.GetMaster().Exec(`delete 
+from call_center.cc_list_communications
+where expire_at < now()`)
+
+	if err != nil {
+		return 0, model.NewAppError("SqlListStore.CleanExpired", "store.sql_list.clean_expired.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	count, _ := res.RowsAffected()
+	return count, nil
 }

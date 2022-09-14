@@ -46,6 +46,7 @@ type FlowManager struct {
 
 	callWatcher *callWatcher
 	cert        presign.PreSign
+	listWatcher *listWatcher
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -74,6 +75,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	})
 
 	fm.callWatcher = NewCallWatcher(fm)
+	fm.listWatcher = NewListWatcher(fm)
 
 	wlog.RedirectStdLog(fm.Log)
 	wlog.InitGlobalLogger(fm.Log)
@@ -150,6 +152,10 @@ func (f *FlowManager) Shutdown() {
 
 	if f.callWatcher != nil {
 		f.callWatcher.Stop()
+	}
+
+	if f.listWatcher != nil {
+		f.listWatcher.Stop()
 	}
 
 	if f.cc != nil {

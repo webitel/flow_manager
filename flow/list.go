@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -18,6 +19,7 @@ type ListArgs struct {
 type listAddCommunicationArgs struct {
 	Destination string             `json:"destination"`
 	Description *string            `json:"description"`
+	ExpireAt    *int64             `json:"expireAt"`
 	List        model.SearchEntity `json:"list"`
 }
 
@@ -69,10 +71,20 @@ func (r *router) listAddCommunication(ctx context.Context, scope *Flow, conn mod
 		return nil, ErrorRequiredParameter("listAdd", "destination")
 	}
 
-	err = r.fm.ListAddCommunication(conn.DomainId(), &argv.List, &model.ListCommunication{
+	req := model.ListCommunication{
 		Destination: argv.Destination,
 		Description: argv.Description,
-	})
+	}
+
+	if argv.ExpireAt != nil && *argv.ExpireAt > 0 {
+		t := time.Unix(0, *argv.ExpireAt*int64(time.Millisecond))
+		if scope.timezone != nil {
+			t.In(scope.timezone)
+		}
+		req.ExpireAt = &t
+	}
+
+	err = r.fm.ListAddCommunication(conn.DomainId(), &argv.List, &req)
 	if err != nil {
 		return nil, err
 	}

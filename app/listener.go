@@ -15,6 +15,7 @@ func (f *FlowManager) Listen() {
 	var wg sync.WaitGroup
 
 	f.callWatcher.Start()
+	f.listWatcher.Start()
 
 	go f.listenCallEvents(f.stop)
 
