@@ -54,6 +54,9 @@ func New(conf Config) *Flow {
 	i := &Flow{}
 	i.handler = conf.Handler
 	i.name = conf.Name
+	if conf.Conn != nil {
+		i.name += fmt.Sprintf(" [%s]", conf.Conn.Id())
+	}
 	i.Connection = conf.Conn
 	i.currentNode = NewNode(nil)
 	i.Functions = make(map[string]model.Applications)
