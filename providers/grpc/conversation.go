@@ -33,6 +33,7 @@ type conversation struct {
 	exportVariables []string
 	nodeId          string
 	userId          int64
+	cancelQueue     context.CancelFunc
 
 	chat *chatApi
 }
@@ -383,6 +384,27 @@ func (c *conversation) DumpExportVariables() map[string]string {
 		}
 	}
 	return res
+}
+
+func (c *conversation) SetQueueCancel(cancel context.CancelFunc) bool {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	c.cancelQueue = cancel
+	return true
+}
+
+func (c *conversation) CancelQueue() bool {
+	c.mx.Lock()
+	defer c.mx.Unlock()
+
+	if c.cancelQueue == nil {
+		return false
+	}
+
+	c.cancelQueue()
+	c.cancelQueue = nil
+	return true
 }
 
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {

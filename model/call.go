@@ -354,6 +354,9 @@ type Call interface {
 	Push(ctx context.Context, name, tag string) (Response, *AppError)
 	Cv(ctx context.Context) (Response, *AppError)
 	Stopped() bool
+
+	SetQueueCancel(cancel context.CancelFunc) bool
+	CancelQueue() bool
 }
 
 type PlaybackFile struct {

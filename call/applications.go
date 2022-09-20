@@ -3,9 +3,10 @@ package call
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 type callHandler func(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError)
@@ -71,6 +72,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["joinQueue"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.queue),
+	}
+	apps["cancelQueue"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.cancelQueue),
 	}
 	apps["flushDtmf"] = &flow.Application{
 		AllowNoConnect: false,

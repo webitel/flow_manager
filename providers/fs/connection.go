@@ -3,13 +3,14 @@ package fs
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+
 	uuid "github.com/satori/go.uuid"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 	"github.com/webitel/wlog"
-	"net/http"
-	"strconv"
-	"sync"
 )
 
 const (
@@ -75,6 +76,7 @@ type Connection struct {
 	ctx              context.Context
 	cancelFn         context.CancelFunc
 	hookBridged      chan struct{} //todo
+	cancelQueue      context.CancelFunc
 	sync.RWMutex
 }
 
@@ -547,6 +549,27 @@ func (c *Connection) DumpVariables() map[string]string {
 
 func (c *Connection) IsSetResample() bool {
 	return c.GetVariable("variable_record_sample_rate") != ""
+}
+
+func (c *Connection) SetQueueCancel(cancel context.CancelFunc) bool {
+	c.Lock()
+	defer c.Unlock()
+
+	c.cancelQueue = cancel
+	return true
+}
+
+func (c *Connection) CancelQueue() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.cancelQueue == nil {
+		return false
+	}
+
+	c.cancelQueue()
+	c.cancelQueue = nil
+	return true
 }
 
 //fixme

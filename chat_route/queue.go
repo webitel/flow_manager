@@ -3,11 +3,12 @@ package chat_route
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
-	"io"
 )
 
 /*
@@ -63,6 +64,12 @@ type QueueJoinArg struct {
 	Bridged       []interface{}    `json:"bridged"`
 }
 
+func (r *Router) cancelQueue(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
+	return conv.Set(ctx, model.Variables{
+		"cc_cancel": fmt.Sprintf("%v", conv.CancelQueue()),
+	})
+}
+
 func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
 	var q QueueJoinArg
 	var wCancel context.CancelFunc
@@ -71,6 +78,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 	wCtx, wCancel = context.WithCancel(ctx)
 
 	if err := r.Decode(scope, args, &q); err != nil {
+		wCancel()
 		return nil, err
 	}
 
@@ -88,8 +96,8 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		}
 	}()
 
-	//ctx2 := context.Background()
-	res, err := r.fm.JoinChatToInboundQueue(ctx, &cc.ChatJoinToQueueRequest{
+	ctx2, cancelQueue := context.WithCancel(ctx)
+	res, err := r.fm.JoinChatToInboundQueue(ctx2, &cc.ChatJoinToQueueRequest{
 		ConversationId: conv.Id(),
 		Queue: &cc.ChatJoinToQueueRequest_Queue{
 			Id:   int32(q.Queue.Id),
@@ -106,6 +114,9 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		wlog.Error(err.Error())
 		return model.CallResponseOK, nil
 	}
+
+	conv.SetQueueCancel(cancelQueue)
+	defer conv.SetQueueCancel(nil)
 
 	// TODO bug close stream channel
 	for {

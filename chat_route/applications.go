@@ -2,6 +2,7 @@ package chat_route
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
@@ -25,6 +26,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	}
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
+	}
+	apps["cancelQueue"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.cancelQueue),
 	}
 	apps["export"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.export),

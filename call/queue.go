@@ -3,11 +3,12 @@ package call
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
-	"io"
 )
 
 type Queue struct {
@@ -42,6 +43,12 @@ type QueueJoinArg struct {
 	Bridged             []interface{}       `json:"bridged"`
 	Timers              []flow.TimerArgs    `json:"timers"`
 	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
+}
+
+func (r *Router) cancelQueue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
+	return call.Set(ctx, model.Variables{
+		"cc_cancel": fmt.Sprintf("%v", call.CancelQueue()),
+	})
 }
 
 func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -133,7 +140,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		return model.CallResponseError, nil
 	}
 
-	ctx2 := context.Background()
+	ctx2, cancelQueue := context.WithCancel(context.Background())
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),
 		Queue: &cc.CallJoinToQueueRequest_Queue{
@@ -152,6 +159,9 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		wlog.Error(err.Error())
 		return model.CallResponseOK, nil
 	}
+
+	call.SetQueueCancel(cancelQueue)
+	defer call.SetQueueCancel(nil)
 
 	// TODO bug close stream channel
 	for {
@@ -175,6 +185,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 				flow.Route(context.Background(), scope.Fork("queue-offering", flow.ArrInterfaceToArrayApplication(q.Offering)), r)
 			}
 		case *cc.QueueEvent_Bridged:
+			call.SetQueueCancel(nil)
 			if wCancel != nil {
 				wCancel()
 				wCancel = nil

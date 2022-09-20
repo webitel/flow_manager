@@ -32,6 +32,9 @@ type Conversation interface {
 	UserId() int64
 	BreakCause() string
 	SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError)
+
+	SetQueueCancel(cancel context.CancelFunc) bool
+	CancelQueue() bool
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
