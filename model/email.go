@@ -12,9 +12,9 @@ type Email struct {
 	ReplyTo   []string `json:"reply_to" db:"reply_to"`
 	InReplyTo string   `json:"in_reply_to" db:"in_reply_to"`
 	CC        []string `json:"cc" db:"cc"`
-	Body      []byte
-	HtmlBody  []byte
-	AttemptId *int64 `json:"attempt_id" db:"attempt_id"`
+	Body      []byte   `json:"body" db:"body"`
+	HtmlBody  []byte   `json:"html_body" db:"html_body"`
+	AttemptId *int64   `json:"attempt_id" db:"attempt_id"`
 }
 
 type EmailAction struct {

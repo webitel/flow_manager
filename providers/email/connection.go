@@ -38,6 +38,7 @@ func NewConnection(profile *Profile, email *model.Email) *connection {
 		c.variables["body_html"] = string(email.HtmlBody)
 	}
 	c.variables["subject"] = fmt.Sprintf("%v", email.Subject)
+	c.variables["id"] = fmt.Sprintf("%d", email.Id)
 
 	return c
 }

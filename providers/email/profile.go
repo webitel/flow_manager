@@ -97,6 +97,13 @@ func (p *Profile) selectMailBox() *model.AppError {
 	return nil
 }
 
+func (p *Profile) storeErr(err *model.AppError) {
+	saveErr := p.server.store.SetError(p.Id, err)
+	if saveErr != nil {
+		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
+	}
+}
+
 func (p *Profile) Read() []*model.Email {
 	res := make([]*model.Email, 0)
 
@@ -104,13 +111,13 @@ func (p *Profile) Read() []*model.Email {
 	criteria.WithoutFlags = []string{"\\Seen"}
 
 	if err := p.selectMailBox(); err != nil {
-		wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
+		p.storeErr(err)
 		return nil
 	}
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
-		wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
+		p.storeErr(model.NewAppError("Email", "email.mailbox.search.app_err", nil, err.Error(), http.StatusInternalServerError))
 		return nil
 	}
 

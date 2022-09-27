@@ -29,6 +29,14 @@ type EmailArgs struct {
 	To      []string `json:"to"`
 }
 
+type GetEmailInfo struct {
+	Email *struct {
+		Id        *int64  `json:"id"`
+		MessageId *string `json:"messageId"`
+	}
+	Set model.Variables
+}
+
 func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv EmailArgs
 	argv.Type = "text/html"
@@ -81,4 +89,27 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv GetEmailInfo
+	var err *model.AppError
+	if err = scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.Email == nil {
+		return nil, ErrorRequiredParameter("GetEmailInfo", "email")
+	}
+
+	if argv.Set == nil {
+		return nil, ErrorRequiredParameter("GetEmailInfo", "set")
+	}
+
+	res, err := r.fm.GetEmailProperties(conn.DomainId(), argv.Email.Id, argv.Email.MessageId, argv.Set)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.Set(ctx, res)
 }
