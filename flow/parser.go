@@ -1,7 +1,6 @@
 package flow
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -58,22 +57,6 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				return v, nil
 			case reflect.Bool:
 				return f.Connection.ParseText(data.(string)), nil
-			}
-		} else if kind == reflect.Map && to.Kind() == reflect.Ptr {
-			elem := to.Elem()
-			if elem != nil && elem.Name() == "JsonView" {
-				var res *model.JsonView
-				b, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-
-				err = json.Unmarshal([]byte(f.Connection.ParseText(string(b))), &res)
-				if err != nil {
-					return nil, err
-				}
-
-				return res, nil
 			}
 		}
 		return data, nil

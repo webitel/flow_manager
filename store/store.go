@@ -37,6 +37,7 @@ type EmailStore interface {
 	Save(domainId int64, m *model.Email) *model.AppError
 	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
 	GetProfile(id int) (*model.EmailProfile, *model.AppError)
+	SetError(profileId int, appErr *model.AppError) *model.AppError
 }
 
 type CallStore interface {

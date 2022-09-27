@@ -125,6 +125,10 @@ func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	profile, err := s.GetProfile(p)
 	if err != nil {
 		wlog.Error(err.Error())
+
+		if err = s.store.SetError(p.Id, err); err != nil {
+			wlog.Error(err.Error())
+		}
 		return
 	}
 

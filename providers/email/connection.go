@@ -34,6 +34,9 @@ func NewConnection(profile *Profile, email *model.Email) *connection {
 	c.variables["sender"] = strings.Join(email.Sender, ",")
 	c.variables["in_reply_to"] = email.InReplyTo
 	c.variables["body"] = string(email.Body)
+	if email.HtmlBody != nil {
+		c.variables["body_html"] = string(email.HtmlBody)
+	}
 	c.variables["subject"] = fmt.Sprintf("%v", email.Subject)
 
 	return c

@@ -35,10 +35,11 @@ returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
 func (s SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_email ("from", "to", profile_id, subject, cc, body, direction, message_id, sender, reply_to,
-                      in_reply_to, parent_id)
+                      in_reply_to, parent_id, html)
 values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
                                                                                                        from call_center.cc_email m
-                                                                                                       where m.in_reply_to = :MessageId))
+                                                                                                       where m.in_reply_to = :MessageId limit 1), 
+		:Html::text)
 `, map[string]interface{}{
 		"From":      pq.Array(m.From),
 		"To":        pq.Array(m.To),
@@ -51,6 +52,7 @@ values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :Message
 		"Sender":    pq.Array(m.Sender),
 		"ReplyTo":   pq.Array(m.ReplyTo),
 		"InReplyTo": m.InReplyTo,
+		"Html":      m.HtmlBody,
 	})
 
 	if err != nil {
@@ -76,4 +78,21 @@ where t.id = :Id`, map[string]interface{}{
 	}
 
 	return profile, nil
+}
+
+func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
+	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
+set enabled = false,
+    fetch_err = :Err
+where id = :Id`, map[string]interface{}{
+		"Id":  profileId,
+		"Err": appErr.Error(),
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlEmailStore.SetError", "store.sql_email_profile.set_error.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }

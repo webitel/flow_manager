@@ -27,6 +27,7 @@ type Profile struct {
 	DomainId  int64
 	updatedAt int64
 	Addr      string
+	name      string
 	login     string
 	password  string
 	Mailbox   string
@@ -56,7 +57,12 @@ func newProfile(srv *server, params *model.EmailProfile) *Profile {
 		imapPort:  params.ImapPort,
 		Mailbox:   params.Mailbox,
 		flowId:    params.FlowId,
+		name:      params.Name,
 	}
+}
+
+func (p *Profile) String() string {
+	return fmt.Sprintf("%s <%s>", p.name, p.login)
 }
 
 func (p *Profile) Login() *model.AppError {
@@ -98,13 +104,13 @@ func (p *Profile) Read() []*model.Email {
 	criteria.WithoutFlags = []string{"\\Seen"}
 
 	if err := p.selectMailBox(); err != nil {
-		wlog.Error(err.Error())
+		wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
 		return nil
 	}
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
-		wlog.Error(err.Error())
+		wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
 		return nil
 	}
 
@@ -126,17 +132,16 @@ func (p *Profile) Read() []*model.Email {
 	for msg := range messages {
 		e, err := p.parseMessage(msg, section)
 		if err != nil {
-			wlog.Error(err.Error())
+			wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
 			continue
 		}
 
 		if err = p.server.store.Save(p.DomainId, e); err != nil {
-			//TODO
-			wlog.Error(err.Error())
+			wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
 			continue
 		}
 
-		wlog.Debug(fmt.Sprintf("receive new email from %v					", e.From))
+		wlog.Debug(fmt.Sprintf("receive new email from %v", e.From))
 		res = append(res, e)
 	}
 
@@ -265,6 +270,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	} else {
 		m.Body = html
 	}
+	m.HtmlBody = html
 
 	return m, nil
 }

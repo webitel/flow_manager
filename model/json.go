@@ -1,3 +1,3 @@
 package model
 
-type JsonView interface{}
+type JsonView map[string]interface{}
