@@ -103,7 +103,7 @@ func (p *Profile) Logout() *model.AppError {
 	if err != nil {
 		return model.NewAppError("Email", "email.logout.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
-
+	p.logged = false
 	p.client.Close()
 	p.client = nil
 	return nil

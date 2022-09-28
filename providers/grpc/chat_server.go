@@ -137,12 +137,15 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 
 	defer conv.mx.Unlock()
 	conv.mx.Lock()
-	if conv.chBridge == nil && in.Cause != "transfer" {
+
+	isTransfer := strings.EqualFold(in.Cause, model.BreakChatTransferCause)
+
+	if conv.chBridge == nil && !isTransfer {
 		return nil, errors.New("bridge not found")
 	}
 
 	//todo
-	if in.Cause == "transfer" {
+	if isTransfer {
 		conv.breakCause = in.Cause
 	}
 

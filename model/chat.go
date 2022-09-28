@@ -4,6 +4,8 @@ const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
 	ConversationSessionId            = "uuid"
+
+	BreakChatTransferCause = "TRANSFER"
 )
 
 type ChatButton struct {
