@@ -138,6 +138,13 @@ func (c *conversation) closeIfBreak() {
 	}
 }
 
+func (c *conversation) IsTransfer() bool {
+	if c.breakCause == "" {
+		return false
+	}
+	return strings.EqualFold(c.breakCause, model.BreakChatTransferCause)
+}
+
 func (c *conversation) Break(cause string) *model.AppError {
 	c.mx.Lock()
 	c.closeIfBreak()
