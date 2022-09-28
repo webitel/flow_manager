@@ -37,6 +37,7 @@ type EmailStore interface {
 	Save(domainId int64, m *model.Email) *model.AppError
 	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
 	GetProfile(id int) (*model.EmailProfile, *model.AppError)
+	GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError)
 	SetError(profileId int, appErr *model.AppError) *model.AppError
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)

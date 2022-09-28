@@ -26,13 +26,16 @@ type Profile struct {
 	Id        int
 	DomainId  int64
 	updatedAt int64
-	Addr      string
 	name      string
 	login     string
 	password  string
 	Mailbox   string
+	smtpHost  string
 	smtpPort  int
+	imapHost  string
 	imapPort  int
+
+	logged bool
 
 	flowId int
 
@@ -50,10 +53,11 @@ func newProfile(srv *server, params *model.EmailProfile) *Profile {
 		DomainId:  params.DomainId,
 		updatedAt: params.UpdatedAt,
 		server:    srv,
-		Addr:      params.Host,
 		login:     params.Login,
 		password:  params.Password,
+		smtpHost:  params.SmtpHost,
 		smtpPort:  params.SmtpPort,
+		imapHost:  params.ImapHost,
 		imapPort:  params.ImapPort,
 		Mailbox:   params.Mailbox,
 		flowId:    params.FlowId,
@@ -66,9 +70,16 @@ func (p *Profile) String() string {
 }
 
 func (p *Profile) Login() *model.AppError {
+	p.Lock()
+	defer p.Unlock()
+
+	if p.logged && p.client != nil {
+		return nil
+	}
+
+	p.logged = false
 	var err error
-	//TODO port
-	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.Addr, p.imapPort), nil)
+	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), nil)
 	if err != nil {
 		return model.NewAppError("Email", "email.login.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -76,7 +87,25 @@ func (p *Profile) Login() *model.AppError {
 	if err := p.client.Login(p.login, p.password); err != nil {
 		return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
 	}
+	p.logged = true
+	return nil
+}
 
+func (p *Profile) Logout() *model.AppError {
+	p.Lock()
+	defer p.Unlock()
+
+	if !p.logged {
+		return nil
+	}
+
+	err := p.client.Logout()
+	if err != nil {
+		return model.NewAppError("Email", "email.logout.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	p.client.Close()
+	p.client = nil
 	return nil
 }
 
@@ -98,10 +127,7 @@ func (p *Profile) selectMailBox() *model.AppError {
 }
 
 func (p *Profile) storeErr(err *model.AppError) {
-	saveErr := p.server.store.SetError(p.Id, err)
-	if saveErr != nil {
-		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
-	}
+	p.server.storeError(p, err)
 }
 
 func (p *Profile) Read() []*model.Email {
@@ -143,11 +169,6 @@ func (p *Profile) Read() []*model.Email {
 			continue
 		}
 
-		if err = p.server.store.Save(p.DomainId, e); err != nil {
-			wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
-			continue
-		}
-
 		wlog.Debug(fmt.Sprintf("receive new email from %v", e.From))
 		res = append(res, e)
 	}
@@ -156,10 +177,10 @@ func (p *Profile) Read() []*model.Email {
 	return res
 }
 
-func (p *Profile) Reply(parent *model.Email, data []byte) *model.AppError {
+func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.AppError) {
 	id, err := generateMessageID()
 	if err != nil {
-		return model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	rr := &model.Email{
@@ -173,11 +194,8 @@ func (p *Profile) Reply(parent *model.Email, data []byte) *model.AppError {
 		ReplyTo:   parent.ReplyTo,
 		InReplyTo: parent.MessageId,
 		CC:        parent.CC,
-		Body:      data, //[]byte("<h1>Fancy HTML is supported, too!</h1>"),
-	}
-
-	if appErr := p.server.store.Save(p.DomainId, rr); appErr != nil {
-		return appErr
+		Body:      data,
+		HtmlBody:  data,
 	}
 
 	e := &email.Email{
@@ -193,11 +211,11 @@ func (p *Profile) Reply(parent *model.Email, data []byte) *model.AppError {
 		},
 	}
 
-	if err := e.Send(fmt.Sprintf("%s:%d", p.Addr, p.smtpPort), smtp.PlainAuth("", p.login, p.password, p.Addr)); err != nil {
-		return model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
+	if err := e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), smtp.PlainAuth("", p.login, p.password, p.smtpHost)); err != nil {
+		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return nil
+	return rr, nil
 }
 
 func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {

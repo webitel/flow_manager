@@ -15,7 +15,8 @@ type Reply struct {
 func (r *Router) reply(ctx context.Context, scope *flow.Flow, email model.EmailConnection, args interface{}) (model.Response, *model.AppError) {
 	var argv Reply
 
-	if err := r.Decode(scope, args, &argv); err != nil {
+	err := r.Decode(scope, args, &argv)
+	if err != nil {
 		return nil, err
 	}
 
@@ -23,11 +24,10 @@ func (r *Router) reply(ctx context.Context, scope *flow.Flow, email model.EmailC
 		return model.CallResponseError, model.NewAppError("Reply", "email.reply.valid.args", nil, "bad arguments", http.StatusBadRequest)
 	}
 
-	//TODO response..
-	_, err := email.Reply(argv.Body)
+	err = r.fm.ReplyEmail(email, argv.Body)
 	if err != nil {
-
-		return model.CallResponseError, err
+		return nil, err
 	}
+
 	return model.CallResponseOK, nil
 }

@@ -1,6 +1,7 @@
 package email
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -73,7 +74,7 @@ func (s *server) Consume() <-chan model.Connection {
 
 func (s *server) listen() {
 	defer func() {
-		wlog.Debug("stop listen email server...") //TODO
+		wlog.Debug("stop listen email server...")
 		close(s.stopped)
 	}()
 	wlog.Debug("start listen emails")
@@ -95,17 +96,17 @@ func (s *server) listen() {
 	}
 }
 
-func (s *server) GetProfile(p *model.EmailProfileTask) (*Profile, *model.AppError) {
+func (s *server) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError) {
 	var pp *Profile
-	profile, ok := s.profiles.Get(p.Id)
+	profile, ok := s.profiles.Get(id)
 	if ok {
 		pp = profile.(*Profile)
-		if p.UpdatedAt == pp.UpdatedAt() {
+		if updatedAt == pp.UpdatedAt() {
 			return pp, nil
 		}
 	}
 
-	params, err := s.store.GetProfile(p.Id)
+	params, err := s.store.GetProfile(id)
 	if err != nil {
 		return nil, err
 	}
@@ -116,13 +117,13 @@ func (s *server) GetProfile(p *model.EmailProfileTask) (*Profile, *model.AppErro
 		return nil, err
 	}
 
-	s.profiles.Add(p.Id, pp)
+	s.profiles.Add(id, pp)
 
 	return pp, nil
 }
 
 func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
-	profile, err := s.GetProfile(p)
+	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
 		wlog.Error(err.Error())
 
@@ -132,8 +133,52 @@ func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 		return
 	}
 
+	err = profile.Login()
+	if err != nil {
+		s.storeError(profile, err)
+		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+	}
+
 	emails := profile.Read()
 	for _, email := range emails {
+		if err = s.store.Save(profile.DomainId, email); err != nil {
+			wlog.Error(fmt.Sprintf("%s, error: %s", profile, err.Error()))
+			continue
+		}
 		s.consume <- NewConnection(profile, email)
 	}
+	err = profile.Logout()
+	if err != nil {
+		s.storeError(profile, err)
+		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+	}
+}
+
+func (s *server) storeError(p *Profile, err *model.AppError) {
+	saveErr := s.store.SetError(p.Id, err)
+	if saveErr != nil {
+		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
+	}
+}
+
+func (s *server) TestProfile(domainId int64, profileId int) *model.AppError {
+	var profile *Profile
+	updatedAt, err := s.store.GetProfileUpdatedAt(domainId, profileId)
+	if err != nil {
+		return err
+	}
+
+	if profile, err = s.GetProfile(profileId, updatedAt); err != nil {
+		return err
+	}
+
+	if err = profile.Login(); err != nil {
+		return err
+	}
+
+	if err = profile.Logout(); err != nil {
+		return err
+	}
+
+	return nil
 }

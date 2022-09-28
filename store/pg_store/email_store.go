@@ -70,8 +70,18 @@ values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :Message
 func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError) {
 	var profile *model.EmailProfile
 
-	err := s.GetReplica().SelectOne(&profile, `
-select t.id, t.name, t.host, t.login, t.password, t.mailbox, t.imap_port, t.smtp_port, (extract(EPOCH from t.updated_at) * 1000)::int8 updated_at , t.flow_id, t.domain_id
+	err := s.GetReplica().SelectOne(&profile, `select t.id,
+       t.name,
+       t.login,
+       t.password,
+       t.mailbox,
+       coalesce(t.imap_host, '') as imap_host,
+       t.imap_port,
+       coalesce(t.smtp_host, '') as smtp_host,
+       t.smtp_port,
+       (extract(EPOCH from t.updated_at) * 1000)::int8 updated_at,
+       t.flow_id,
+       t.domain_id
 from call_center.cc_email_profile t
 where t.id = :Id`, map[string]interface{}{
 		"Id": id,
@@ -85,13 +95,30 @@ where t.id = :Id`, map[string]interface{}{
 	return profile, nil
 }
 
+func (s SqlEmailStore) GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError) {
+	updatedAt, err := s.GetMaster().SelectInt(`select (extract(EPOCH from updated_at) * 1000)::int8 updated_at
+from call_center.cc_email_profile
+where id = :Id and domain_id = :DomainId`, map[string]interface{}{
+		"Id":       id,
+		"DomainId": domainId,
+	})
+
+	if err != nil {
+		return 0, model.NewAppError("SqlEmailStore.GetProfileUpdatedAt", "store.sql_email.get_profile_updated.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return updatedAt, nil
+}
+
 func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
 set enabled = false,
-    fetch_err = :Err
+    fetch_err = :Err,
+    state = 'error'
 where id = :Id`, map[string]interface{}{
 		"Id":  profileId,
-		"Err": appErr.Error(),
+		"Err": appErr.DetailedError,
 	})
 
 	if err != nil {

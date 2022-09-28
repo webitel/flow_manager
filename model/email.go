@@ -25,7 +25,7 @@ type EmailAction struct {
 type EmailConnection interface {
 	Connection
 	SchemaId() int
-	Reply(text string) (Response, *AppError)
+	Reply(text string) (*Email, *AppError)
 	Email() *Email
 }
 
@@ -42,11 +42,12 @@ type EmailProfile struct {
 	DomainId  int64  `json:"domain_id" db:"domain_id"`
 	Name      string `json:"name" db:"name"`
 	FlowId    int    `json:"flow_id" db:"flow_id"`
-	Host      string `json:"host" db:"host"`
 	Login     string `json:"login" db:"login"`
 	Password  string `json:"password" db:"password"`
 	Mailbox   string `json:"mailbox" db:"mailbox"`
+	SmtpHost  string `json:"smtp_host" db:"smtp_host"`
 	SmtpPort  int    `json:"smtp_port" db:"smtp_port"`
+	ImapHost  string `json:"imap_host" db:"imap_host"`
 	ImapPort  int    `json:"imap_port" db:"imap_port"`
 	UpdatedAt int64  `json:"updated_at" db:"updated_at"`
 }
