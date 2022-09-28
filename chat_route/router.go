@@ -31,6 +31,7 @@ type Conversation interface {
 	SchemaId() int32
 	UserId() int64
 	BreakCause() string
+	IsTransfer() bool
 	SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError)
 }
 
@@ -98,8 +99,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	flow.Route(conn.Context(), i, r)
 
-	// todo fixme
-	if conv.BreakCause() != "transfer" {
+	if !conv.IsTransfer() {
 		conv.Stop(nil)
 	}
 
