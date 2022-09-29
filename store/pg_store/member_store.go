@@ -211,7 +211,7 @@ from m`, map[string]interface{}{
 
 func (s SqlMemberStore) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, 
-	ready_at, domain_id, timezone_id, priority, bucket_id)
+	ready_at, domain_id, timezone_id, priority, bucket_id, expire_at)
 select q.id queue_id, 
 	   json_build_array(
               jsonb_build_object('destination', :Number::varchar)
@@ -225,8 +225,11 @@ select q.id queue_id,
        q.domain_id,
 	   :TimezoneId,
 	   :Priority,
-	   :BucketId	 
+	   :BucketId,
+	   case when :ExpireAt::int8 notnull and :ExpireAt::int8 > 0 then to_timestamp(:ExpireAt::int8/1000::double precision) at time zone tz.sys_name end
 from call_center.cc_queue q
+	inner join flow.calendar c on c.id = q.calendar_id
+    inner join flow.calendar_timezones tz on tz.id = c.timezone_id
 where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]interface{}{
 		"DomainId":   domainId,
 		"QueueId":    queueId,
@@ -240,6 +243,7 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 		"BucketId":   member.Bucket.Id,
 		"Display":    member.Communication.Display,
 		"ResourceId": member.Communication.ResourceId,
+		"ExpireAt":   member.ExpireAt,
 	})
 
 	if err != nil {
