@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"github.com/lib/pq"
 	"strings"
+
+	"github.com/lib/pq"
 )
 
 type Endpoint struct {
@@ -16,6 +17,7 @@ type Endpoint struct {
 	Number      *string           `json:"number" db:"-"`
 	Variables   pq.StringArray    `json:"variables" db:"variables"`
 	Params      map[string]string `json:"parameters"`
+	HasPush     bool              `json:"has_push" db:"has_push"`
 }
 
 func (e *Endpoint) ToStringVariables() string {

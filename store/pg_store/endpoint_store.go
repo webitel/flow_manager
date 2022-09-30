@@ -31,7 +31,8 @@ func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, e
     select t.*
     from jsonb_array_elements(:Request::jsonb) with ordinality as t (endpoint, idx)
 )
-select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables 
+select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables ,
+	has_push
 from endpoints e
  left join lateral (
      select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination,
@@ -45,7 +46,8 @@ from endpoints e
 
             case when json_typeof(push.config->'apns') = 'array' then 'wbt_push_apn=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'apns')), '::')) || '''' end,
             case when json_typeof(push.config->'fcm') = 'array' then 'wbt_push_fcm=''' || (array_to_string(array(SELECT json_array_elements_text(push.config->'fcm')), '::')) || '''' end
-           ) || '}')::text[] as variables
+           ) || '}')::text[] as variables,
+		   push.config notnull as has_push
      from directory.wbt_user u
 		left join directory.wbt_user_status uss on uss.user_id = u.id
         left join lateral ( SELECT json_object_agg(pn.typ, pn.key) AS json_object_agg
@@ -84,7 +86,7 @@ from endpoints e
                     'sip_h_X-Webitel-Direction=outbound',
 					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
-            end vars
+            end vars, false
      from directory.sip_gateway g
         left join directory.sip_gateway_register reg on reg.id = g.id
      where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
