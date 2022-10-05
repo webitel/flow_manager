@@ -73,10 +73,10 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 }
 
 func (fm *FlowManager) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) *model.AppError {
-	//err := fm.cc.Member().CancelAttempt(ctx, att.AttemptId, result, att.AppId)
-	//if err != nil {
-	//	return model.NewAppError("CancelAttempt", "app.attempt.cancel", nil, err.Error(), http.StatusInternalServerError)
-	//}
+	err := fm.cc.Member().CancelAttempt(ctx, att.AttemptId, result, att.AppId)
+	if err != nil {
+		return model.NewAppError("CancelAttempt", "app.attempt.cancel", nil, err.Error(), http.StatusInternalServerError)
+	}
 
 	return nil
 }
