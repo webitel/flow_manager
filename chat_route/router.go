@@ -34,8 +34,8 @@ type Conversation interface {
 	IsTransfer() bool
 	SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError)
 
-	SetQueueCancel(cancel context.CancelFunc) bool
-	CancelQueue() bool
+	SetQueue(*model.InQueueKey) bool
+	GetQueueKey() *model.InQueueKey
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {

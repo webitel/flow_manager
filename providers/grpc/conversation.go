@@ -33,7 +33,7 @@ type conversation struct {
 	exportVariables []string
 	nodeId          string
 	userId          int64
-	cancelQueue     context.CancelFunc
+	queueKey        *model.InQueueKey
 
 	chat *chatApi
 }
@@ -393,25 +393,23 @@ func (c *conversation) DumpExportVariables() map[string]string {
 	return res
 }
 
-func (c *conversation) SetQueueCancel(cancel context.CancelFunc) bool {
+func (c *conversation) SetQueue(key *model.InQueueKey) bool {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
-	c.cancelQueue = cancel
-	return true
-}
-
-func (c *conversation) CancelQueue() bool {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-
-	if c.cancelQueue == nil {
+	if c.queueKey == key {
 		return false
 	}
 
-	c.cancelQueue()
-	c.cancelQueue = nil
+	c.queueKey = key
 	return true
+}
+
+func (c *conversation) GetQueueKey() *model.InQueueKey {
+	c.mx.RLock()
+	defer c.mx.RUnlock()
+
+	return c.queueKey
 }
 
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {
