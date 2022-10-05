@@ -6,9 +6,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/flow_manager/model"
-	"gopkg.in/xmlpath.v2"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -16,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"github.com/webitel/flow_manager/model"
+	"gopkg.in/xmlpath.v2"
 )
 
 func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {

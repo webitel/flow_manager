@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -36,6 +37,24 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 		kind := from.Kind()
 		if kind == reflect.String {
 			switch to.Kind() {
+			case reflect.Slice:
+				var res interface{}
+				body, err := json.Marshal(data)
+				if err != nil {
+					return nil, err
+				}
+
+				if len(body) < 2 {
+					return data, nil
+				}
+
+				txt := []byte(f.Connection.ParseText(string(body[1 : len(body)-1])))
+
+				err = json.Unmarshal(txt, &res)
+				if err != nil {
+					return nil, err
+				}
+				return res, nil
 			case reflect.String:
 				return f.Connection.ParseText(data.(string)), nil
 			case reflect.Interface:

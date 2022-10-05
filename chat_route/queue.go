@@ -65,8 +65,19 @@ type QueueJoinArg struct {
 }
 
 func (r *Router) cancelQueue(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
+	key := conv.GetQueueKey()
+	if key == nil {
+		//TODO NO QUEUE
+		return model.CallResponseError, nil
+	}
+
+	err := r.fm.CancelAttempt(ctx, *key, "cancel")
+	if err != nil {
+		return nil, err
+	}
+
 	return conv.Set(ctx, model.Variables{
-		"cc_cancel": fmt.Sprintf("%v", conv.CancelQueue()),
+		"cc_cancel": fmt.Sprintf("%v", conv.SetQueue(nil)),
 	})
 }
 
@@ -96,8 +107,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		}
 	}()
 
-	ctx2, cancelQueue := context.WithCancel(ctx)
-	res, err := r.fm.JoinChatToInboundQueue(ctx2, &cc.ChatJoinToQueueRequest{
+	res, err := r.fm.JoinChatToInboundQueue(ctx, &cc.ChatJoinToQueueRequest{
 		ConversationId: conv.Id(),
 		Queue: &cc.ChatJoinToQueueRequest_Queue{
 			Id:   int32(q.Queue.Id),
@@ -115,8 +125,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		return model.CallResponseOK, nil
 	}
 
-	conv.SetQueueCancel(cancelQueue)
-	defer conv.SetQueueCancel(nil)
+	defer conv.SetQueue(nil)
 
 	// TODO bug close stream channel
 	for {
@@ -130,6 +139,11 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		}
 
 		switch e := msg.Data.(type) {
+		case *cc.QueueEvent_Joined:
+			conv.SetQueue(&model.InQueueKey{
+				AttemptId: e.Joined.AttemptId,
+				AppId:     e.Joined.AppId,
+			})
 		case *cc.QueueEvent_Offering:
 			conv.Set(ctx, model.Variables{
 				"cc_agent_name": e.Offering.AgentName,
@@ -148,6 +162,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 			}
 
 		case *cc.QueueEvent_Bridged:
+			conv.SetQueue(nil)
 			if len(q.Bridged) > 0 {
 				flow.Route(wCtx, scope.Fork("queue-bridged", flow.ArrInterfaceToArrayApplication(q.Bridged)), r)
 			}

@@ -5,6 +5,11 @@ type SearchEntity struct {
 	Name *string `json:"name"`
 }
 
+type InQueueKey struct {
+	AttemptId int64
+	AppId     string
+}
+
 type QueueData struct {
 	Type     uint `json:"type" db:"type"`
 	Enabled  bool `json:"enabled" db:"enabled"`
