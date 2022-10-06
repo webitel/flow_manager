@@ -101,7 +101,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port:           fm.Config().Esl.Port,
 			RecordResample: fm.Config().Record.Sample,
 		}),
-		email.New(fm.Store.Email()),
+		email.New(fm.Config().DiscoverySettings.Url, fm.Store.Email()),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {

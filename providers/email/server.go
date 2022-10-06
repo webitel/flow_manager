@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/webitel/flow_manager/storage"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
@@ -19,6 +21,7 @@ var (
 
 type server struct {
 	store           store.EmailStore
+	storage         *storage.Api
 	profiles        *utils.Cache
 	didFinishListen chan struct{}
 	stopped         chan struct{}
@@ -26,13 +29,18 @@ type server struct {
 	consume         chan model.Connection
 }
 
-func New(s store.EmailStore) model.Server {
+func New(consul string, s store.EmailStore) model.Server {
+	storageApi, err := storage.NewClient(consul)
+	if err != nil {
+		panic(err.Error())
+	}
 	return &server{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),
+		storage:         storageApi,
 	}
 }
 
@@ -139,7 +147,13 @@ func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 	}
 
-	emails := profile.Read()
+	var emails []*model.Email
+	emails, err = profile.Read()
+	if err != nil {
+		wlog.Error(fmt.Sprintf("[%s] error: %s", profile, err.Error()))
+		return
+	}
+
 	for _, email := range emails {
 		if err = s.store.Save(profile.DomainId, email); err != nil {
 			wlog.Error(fmt.Sprintf("%s, error: %s", profile, err.Error()))

@@ -1,6 +1,7 @@
 package email
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -84,7 +85,7 @@ func (p *Profile) Login() *model.AppError {
 		return model.NewAppError("Email", "email.login.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	if err := p.client.Login(p.login, p.password); err != nil {
+	if err = p.client.Login(p.login, p.password); err != nil {
 		return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
 	}
 	p.logged = true
@@ -130,7 +131,10 @@ func (p *Profile) storeErr(err *model.AppError) {
 	p.server.storeError(p, err)
 }
 
-func (p *Profile) Read() []*model.Email {
+func (p *Profile) Read() ([]*model.Email, *model.AppError) {
+	if !p.logged {
+		return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
+	}
 	res := make([]*model.Email, 0)
 
 	criteria := imap.NewSearchCriteria()
@@ -138,13 +142,14 @@ func (p *Profile) Read() []*model.Email {
 
 	if err := p.selectMailBox(); err != nil {
 		p.storeErr(err)
-		return nil
+		return nil, err
 	}
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
-		p.storeErr(model.NewAppError("Email", "email.mailbox.search.app_err", nil, err.Error(), http.StatusInternalServerError))
-		return nil
+		appErr := model.NewAppError("Email", "email.mailbox.search.app_err", nil, err.Error(), http.StatusInternalServerError)
+		p.storeErr(appErr)
+		return nil, appErr
 	}
 
 	seqSet := new(imap.SeqSet)
@@ -174,7 +179,7 @@ func (p *Profile) Read() []*model.Email {
 	}
 
 	<-done
-	return res
+	return res, nil
 }
 
 func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.AppError) {
@@ -274,9 +279,9 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 
 		}
 
-		switch part.Header.(type) {
+		switch h := part.Header.(type) {
 		case *mail.InlineHeader:
-			ct := part.Header.Get("Content-Type")
+			ct := h.Get("Content-Type")
 			// This is the message's text (can be plain-text or HTML)
 			b, _ := ioutil.ReadAll(part.Body)
 			if strings.HasPrefix(ct, "text/html") {
@@ -285,8 +290,22 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				text = append(text, b...)
 			}
 		case *mail.AttachmentHeader:
-			// This is an attachment
-			// TODO
+			var fileName string
+			fileName, err = h.Filename()
+			if err != nil {
+				wlog.Error(fmt.Sprintf("email [%s] error: %s", m.From, err.Error()))
+				continue
+			}
+			var file model.File
+			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
+				Name:     fileName,
+				MimeType: h.Get("Content-Type"),
+			})
+			if err != nil {
+				wlog.Error(fmt.Sprintf("email [%s] error: %s", m.From, err.Error()))
+				continue
+			}
+			m.Attachments = append(m.Attachments, file)
 		}
 	}
 

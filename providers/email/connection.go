@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -39,6 +40,12 @@ func NewConnection(profile *Profile, email *model.Email) *connection {
 	}
 	c.variables["subject"] = fmt.Sprintf("%v", email.Subject)
 	c.variables["id"] = fmt.Sprintf("%d", email.Id)
+
+	if len(email.Attachments) != 0 {
+		if attachments, err := json.Marshal(email.Attachments); err == nil {
+			c.variables["attachments"] = string(attachments)
+		}
+	}
 
 	return c
 }

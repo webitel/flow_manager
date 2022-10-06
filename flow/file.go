@@ -2,8 +2,10 @@ package flow
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/model"
+	"fmt"
 	"strings"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type GenerateLinkArgs struct {
@@ -15,6 +17,22 @@ type GenerateLinkArgs struct {
 		Id   string `json:"id"`
 		Name string `json:"name"` // TODO
 	} `json:"file"`
+}
+
+type PrintFileArgs struct {
+	Files []model.File `json:"files"`
+}
+
+func (r *router) printFile(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv PrintFileArgs
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(argv)
+
+	return ResponseOK, nil
 }
 
 func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {

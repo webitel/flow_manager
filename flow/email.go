@@ -3,10 +3,9 @@ package flow
 import (
 	"context"
 	"crypto/tls"
-	"net/http"
-
 	"github.com/webitel/flow_manager/model"
 	"gopkg.in/gomail.v2"
+	"net/http"
 )
 
 type EmailArgs struct {
@@ -27,6 +26,7 @@ type EmailArgs struct {
 	} `json:"smtp"`
 	Subject string   `json:"subject"`
 	To      []string `json:"to"`
+	Async   bool     `json:"async"`
 }
 
 type GetEmailInfo struct {
@@ -61,6 +61,16 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	if argv.Smtp.Port == 0 {
 		return nil, ErrorRequiredParameter("sendEmail", "port")
 	}
+
+	if argv.Async {
+		go r.sendEmailFn(argv)
+		return ResponseOK, nil
+	} else {
+		return r.sendEmailFn(argv)
+	}
+}
+
+func (r *router) sendEmailFn(argv EmailArgs) (model.Response, *model.AppError) {
 
 	mail := gomail.NewMessage()
 	mail.SetHeader("To", argv.To...)

@@ -38,25 +38,26 @@ returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
 func (s SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
 	id, err := s.GetMaster().SelectInt(`insert into call_center.cc_email ("from", "to", profile_id, subject, cc, body, direction, message_id, sender, reply_to,
-                      in_reply_to, parent_id, html)
+                      in_reply_to, parent_id, html, attachment_ids)
 values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
                                                                                                        from call_center.cc_email m
                                                                                                        where m.in_reply_to = :MessageId limit 1), 
-		:Html::text)
+		:Html::text, :AttachmentIds::int8[])
 	   returning id
 `, map[string]interface{}{
-		"From":      pq.Array(m.From),
-		"To":        pq.Array(m.To),
-		"ProfileId": m.ProfileId,
-		"Subject":   m.Subject,
-		"Cc":        pq.Array(m.CC),
-		"Body":      m.Body,
-		"Direction": m.Direction,
-		"MessageId": m.MessageId,
-		"Sender":    pq.Array(m.Sender),
-		"ReplyTo":   pq.Array(m.ReplyTo),
-		"InReplyTo": m.InReplyTo,
-		"Html":      m.HtmlBody,
+		"From":          pq.Array(m.From),
+		"To":            pq.Array(m.To),
+		"ProfileId":     m.ProfileId,
+		"Subject":       m.Subject,
+		"Cc":            pq.Array(m.CC),
+		"Body":          m.Body,
+		"Direction":     m.Direction,
+		"MessageId":     m.MessageId,
+		"Sender":        pq.Array(m.Sender),
+		"ReplyTo":       pq.Array(m.ReplyTo),
+		"InReplyTo":     m.InReplyTo,
+		"Html":          m.HtmlBody,
+		"AttachmentIds": pq.Array(m.AttachmentIds()),
 	})
 
 	if err != nil {
@@ -136,7 +137,7 @@ func (s SqlEmailStore) GerProperties(domainId int64, id *int64, messageId *strin
 		var val = ""
 		switch v {
 		case "from", "to", "subject",
-			"cc", "sender", "reply_to", "in_reply_to", "body", "html":
+			"cc", "sender", "reply_to", "in_reply_to", "body", "html", "attachments":
 			val = fmt.Sprintf("\"%s\" as %s", v, pq.QuoteIdentifier(k))
 		}
 
@@ -159,7 +160,15 @@ from (
             array_to_string("reply_to", ',') as reply_to,
             in_reply_to,
             body,
-            html
+            html,
+			(select jsonb_agg(row_to_json(t)) 
+			from (
+				select f.id, f.name, f.size, f.mime_type
+				from storage.files f
+				where f.uuid = e.message_id
+					and f.domain_id = :DomainId
+                limit 40
+			) t)::text as attachments
         from call_center.cc_email e
         where (id = :Id or message_id = :MessageId)
             and exists(select 1 from call_center.cc_email_profile p where p.domain_id = :DomainId and p.id = e.profile_id)
