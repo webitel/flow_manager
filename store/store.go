@@ -22,6 +22,7 @@ type Store interface {
 	Member() MemberStore
 	User() UserStore
 	Log() LogStore
+	File() FileStore
 }
 
 type CacheStore interface {
@@ -112,4 +113,8 @@ type MemberStore interface {
 
 type LogStore interface {
 	Save(schemaId int, connId string, log interface{}) *model.AppError
+}
+
+type FileStore interface {
+	GetMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError)
 }

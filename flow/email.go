@@ -3,9 +3,12 @@ package flow
 import (
 	"context"
 	"crypto/tls"
-	"github.com/webitel/flow_manager/model"
-	"gopkg.in/gomail.v2"
+	"io"
 	"net/http"
+
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
+	"gopkg.in/gomail.v2"
 )
 
 type EmailArgs struct {
@@ -24,9 +27,12 @@ type EmailArgs struct {
 		Tls      bool   `json:"tls"`
 		Insecure bool   `json:"insecure"`
 	} `json:"smtp"`
-	Subject string   `json:"subject"`
-	To      []string `json:"to"`
-	Async   bool     `json:"async"`
+	Subject    string   `json:"subject"`
+	To         []string `json:"to"`
+	Async      bool     `json:"async"`
+	Attachment struct {
+		Files []int64 `json:"files"`
+	} `json:"attachment"`
 }
 
 type GetEmailInfo struct {
@@ -63,14 +69,14 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	}
 
 	if argv.Async {
-		go r.sendEmailFn(argv)
+		go r.sendEmailFn(conn.DomainId(), argv)
 		return ResponseOK, nil
 	} else {
-		return r.sendEmailFn(argv)
+		return r.sendEmailFn(conn.DomainId(), argv)
 	}
 }
 
-func (r *router) sendEmailFn(argv EmailArgs) (model.Response, *model.AppError) {
+func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *model.AppError) {
 
 	mail := gomail.NewMessage()
 	mail.SetHeader("To", argv.To...)
@@ -87,6 +93,15 @@ func (r *router) sendEmailFn(argv EmailArgs) (model.Response, *model.AppError) {
 		mail.SetHeader("In-Reply-To", argv.ReplyToId[1:len(argv.ReplyToId)-1])
 	}
 
+	if len(argv.Attachment.Files) != 0 {
+		files, err := r.fm.GetFileMetadata(domainId, argv.Attachment.Files)
+		if err != nil {
+			wlog.Error(err.Error())
+		} else {
+			r.attachToMail(domainId, mail, files)
+		}
+	}
+
 	mail.SetBody(argv.Type, argv.Message)
 
 	dialer := gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, argv.Smtp.Auth.Password)
@@ -99,6 +114,26 @@ func (r *router) sendEmailFn(argv EmailArgs) (model.Response, *model.AppError) {
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (r *router) attachToMail(domainId int64, mail *gomail.Message, files []model.File) {
+	attachFn := func(f model.File) func(w io.Writer) error {
+		return func(w io.Writer) error {
+			reader, err := r.fm.DownloadFile(domainId, int64(f.Id))
+			if err != nil {
+				wlog.Error(err.Error())
+				return err
+			}
+			defer reader.Close()
+
+			_, cErr := io.Copy(w, reader)
+			return cErr
+		}
+	}
+
+	for _, file := range files {
+		mail.Attach(file.Name, gomail.SetCopyFunc(attachFn(file)))
+	}
 }
 
 func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {

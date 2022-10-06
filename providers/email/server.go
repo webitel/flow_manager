@@ -29,11 +29,7 @@ type server struct {
 	consume         chan model.Connection
 }
 
-func New(consul string, s store.EmailStore) model.Server {
-	storageApi, err := storage.NewClient(consul)
-	if err != nil {
-		panic(err.Error())
-	}
+func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 	return &server{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),

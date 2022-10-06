@@ -71,3 +71,7 @@ func (s *LayeredStore) User() UserStore {
 func (s *LayeredStore) Log() LogStore {
 	return s.DatabaseLayer.Log()
 }
+
+func (s *LayeredStore) File() FileStore {
+	return s.DatabaseLayer.File()
+}

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/webitel/flow_manager/storage"
+
 	"github.com/webitel/flow_manager/providers/email"
 
 	"github.com/webitel/call_center/grpc_api/client"
@@ -30,6 +32,7 @@ type FlowManager struct {
 	servers       []model.Server
 	schemaCache   utils.ObjectCache
 	chatManager   *grpc.ChatManager
+	storage       *storage.Api
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
@@ -94,6 +97,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		NodeName: fm.id,
 	}, fm.chatManager)
 
+	fm.storage, outErr = storage.NewClient(fm.Config().DiscoverySettings.Url)
+	if outErr != nil {
+		return nil, outErr
+	}
+
 	servers := []model.Server{
 		grpcSrv,
 		fs.NewServer(&fs.Config{
@@ -101,7 +109,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			Port:           fm.Config().Esl.Port,
 			RecordResample: fm.Config().Record.Sample,
 		}),
-		email.New(fm.Config().DiscoverySettings.Url, fm.Store.Email()),
+		email.New(fm.storage, fm.Store.Email()),
 	}
 
 	if err := fm.RegisterServers(servers...); err != nil {

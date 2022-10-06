@@ -6,16 +6,18 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/webitel/flow_manager/store"
 	sqltrace "log"
 	"os"
 	"time"
 
+	"github.com/webitel/flow_manager/store"
+
 	"github.com/go-gorp/gorp"
+
+	"sync/atomic"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"sync/atomic"
 )
 
 const (
@@ -44,6 +46,7 @@ type SqlSupplierOldStores struct {
 	member      store.MemberStore
 	user        store.UserStore
 	log         store.LogStore
+	file        store.FileStore
 }
 
 type SqlSupplier struct {
@@ -78,6 +81,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.member = NewSqlMemberStore(supplier)
 	supplier.oldStores.user = NewSqlUserStore(supplier)
 	supplier.oldStores.log = NewSqlLogStore(supplier)
+	supplier.oldStores.file = NewSqlFileStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -254,4 +258,8 @@ func (ss *SqlSupplier) User() store.UserStore {
 
 func (ss *SqlSupplier) Log() store.LogStore {
 	return ss.oldStores.log
+}
+
+func (ss *SqlSupplier) File() store.FileStore {
+	return ss.oldStores.file
 }

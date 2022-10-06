@@ -23,7 +23,7 @@ require (
 	github.com/webitel/engine v0.0.0-20221003091338-26dbd6130dc0
 	github.com/webitel/protos/cc v0.0.0-20221005083301-6afcfe9297d5
 	github.com/webitel/protos/engine v0.0.0-20221005083301-6afcfe9297d5
-	github.com/webitel/protos/storage v0.0.0-20221005144602-96f345de3e8f
+	github.com/webitel/protos/storage v0.0.0-20221006124517-94c314283f0e
 	github.com/webitel/protos/workflow v0.0.0-20221005083301-6afcfe9297d5
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0

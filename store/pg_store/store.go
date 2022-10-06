@@ -23,4 +23,5 @@ type SqlStore interface {
 	Queue() store.QueueStore
 	Member() store.MemberStore
 	Log() store.LogStore
+	File() store.FileStore
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net/http"
 
 	"github.com/webitel/flow_manager/model"
 
@@ -18,13 +17,13 @@ type Api struct {
 	service storage.FileServiceClient
 }
 
-func NewClient(consulTarget string) (*Api, *model.AppError) {
+func NewClient(consulTarget string) (*Api, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("consul://%s/storage?wait=14s", consulTarget),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 		grpc.WithInsecure(),
 	)
 	if err != nil {
-		return nil, model.NewAppError("Storage", "storage.create_client.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, err
 	}
 
 	service := storage.NewFileServiceClient(conn)
@@ -94,4 +93,37 @@ func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile i
 	metadata.PublicUrl = res.Server + res.FileUrl
 
 	return metadata, nil
+}
+
+func (api *Api) Download(ctx context.Context, domainId int64, id int64) (io.ReadCloser, error) {
+	stream, err := api.service.DownloadFile(ctx, &storage.DownloadFileRequest{
+		Id:       id,
+		DomainId: domainId,
+		Metadata: false,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	reader, writer := io.Pipe()
+
+	go func(w io.WriteCloser) {
+		var sf *storage.StreamFile
+		var err error
+		for {
+			sf, err = stream.Recv()
+			if err != nil {
+				break
+			}
+
+			if r, ok := sf.Data.(*storage.StreamFile_Chunk); ok {
+				// todo
+				writer.Write(r.Chunk)
+			}
+		}
+		writer.Close()
+	}(writer)
+
+	return reader, nil
 }
