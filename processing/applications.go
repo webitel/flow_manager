@@ -18,6 +18,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["formComponent"] = &flow.Application{
 		Handler: processingHandlerMiddleware(r.formComponent),
 	}
+	apps["formFile"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.formFile),
+	}
 	apps["attemptResult"] = &flow.Application{
 		Handler: processingHandlerMiddleware(r.attemptResult),
 	}

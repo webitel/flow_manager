@@ -7,8 +7,8 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
-	var argv model.FormComponent
+func (r *Router) formFile(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv model.FormFile
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err

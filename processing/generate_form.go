@@ -27,14 +27,11 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 		Id:      argv.Id,
 		Title:   argv.Title,
 		Actions: argv.Actions,
-		Body:    make([]model.FormComponent, 0, len(argv.Body)),
+		Body:    make([]interface{}, 0, len(argv.Body)),
 	}
 
 	for _, v := range argv.Body {
-		e := conn.GetComponentByName(v)
-		if e.Id != "" && e.View != nil {
-			f.Body = append(f.Body, e)
-		}
+		f.Body = append(f.Body, conn.GetComponentByName(v))
 	}
 
 	var action *model.FormAction

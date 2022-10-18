@@ -20,8 +20,8 @@ type Connection interface {
 	model.Connection
 	SchemaId() int
 	PushForm(form model.FormElem) (*model.FormAction, *model.AppError)
-	SetComponent(name string, component *model.FormComponent)
-	GetComponentByName(name string) model.FormComponent
+	SetComponent(name string, component interface{})
+	GetComponentByName(name string) interface{}
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {

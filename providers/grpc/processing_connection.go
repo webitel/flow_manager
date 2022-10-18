@@ -20,7 +20,7 @@ type processingConnection struct {
 	formAction chan model.FormAction
 	finished   chan struct{}
 
-	components map[string]model.FormComponent
+	components map[string]interface{}
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -41,7 +41,7 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		cancel:     cancel,
 		finished:   make(chan struct{}),
 		forms:      make(chan model.FormElem, 5),
-		components: make(map[string]model.FormComponent),
+		components: make(map[string]interface{}),
 	}
 }
 
@@ -49,13 +49,13 @@ func (c *processingConnection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *processingConnection) SetComponent(name string, component *model.FormComponent) {
+func (c *processingConnection) SetComponent(name string, component interface{}) {
 	c.Lock()
-	c.components[name] = *component
+	c.components[name] = component
 	c.Unlock()
 }
 
-func (c *processingConnection) GetComponentByName(name string) model.FormComponent {
+func (c *processingConnection) GetComponentByName(name string) interface{} {
 	c.RLock()
 	v, _ := c.components[name]
 	c.RUnlock()
