@@ -123,7 +123,7 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 		if _, ok = props["path"].(map[string]interface{}); ok {
 			for k, v = range props["path"].(map[string]interface{}) {
 				str = parseMapValue(c, v)
-				uri = strings.Replace(uri, "${"+k+"}", str, -1)
+				uri = strings.Replace(uri, "${"+k+"}", encodeURIComponent(str), -1)
 			}
 		}
 	}
@@ -257,4 +257,10 @@ func parseMapValue(c model.Connection, v interface{}) (str string) {
 		str, _ = c.Get(str[2 : len(str)-1])
 	}
 	return str
+}
+
+func encodeURIComponent(str string) string {
+	r := url.QueryEscape(str)
+	r = strings.Replace(r, "+", "%20", -1)
+	return r
 }
