@@ -8,6 +8,10 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"regexp"
+	"strings"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -57,6 +61,9 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 		break
 	case "SHA-512":
 		value = sha512Fn(argv.Data)
+		break
+	case "match":
+		value = match(argv.Data, GetTopStringArg(argv.Args))
 		break
 	default:
 		vm := scope.GetVm()
@@ -134,4 +141,14 @@ func sha256Fn(data string) string {
 
 func sha512Fn(data string) string {
 	return fmt.Sprintf("%x", sha512.Sum512([]byte(data)))
+}
+
+func match(s string, expr string) string {
+	r, err := regexp.Compile(strings.Trim(expr, "/"))
+	if err != nil {
+		wlog.Error(fmt.Sprintf("expression %s, error: %s", expr, err.Error()))
+		return ""
+	}
+
+	return strings.Join(r.FindStringSubmatch(s), ",")
 }
