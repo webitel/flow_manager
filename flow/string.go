@@ -62,7 +62,7 @@ func (r *router) stringApp(ctx context.Context, scope *Flow, c model.Connection,
 	case "SHA-512":
 		value = sha512Fn(argv.Data)
 		break
-	case "match":
+	case "gomatch":
 		value = match(argv.Data, GetTopStringArg(argv.Args))
 		break
 	default:
