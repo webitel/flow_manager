@@ -144,7 +144,7 @@ func sha512Fn(data string) string {
 }
 
 func match(s string, expr string) string {
-	r, err := regexp.Compile(strings.Trim(expr, "/"))
+	r, err := regexp.Compile(expr)
 	if err != nil {
 		wlog.Error(fmt.Sprintf("expression %s, error: %s", expr, err.Error()))
 		return ""
