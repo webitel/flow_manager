@@ -128,7 +128,7 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 		}
 	}
 
-	urlParam, err = url.Parse(strings.Trim(uri, " "))
+	urlParam, err = url.Parse(c.ParseText(strings.Trim(uri, " ")))
 	if err != nil {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.err.args", nil, err.Error(), http.StatusBadRequest)
 	}
