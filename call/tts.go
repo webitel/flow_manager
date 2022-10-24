@@ -29,6 +29,12 @@ type TTSArgs struct {
 	VolumeGainDb     string `json:"volumeGainDb"`
 	EffectsProfileId string `json:"effectsProfileId"`
 	KeyLocation      string `json:"keyLocation"`
+	Background       *struct {
+		FileUri string  `json:"url"`
+		Volume  float64 `json:"volume"`
+		FadeIn  int64   `json:"fadeIn"`
+		FadeOut int64   `json:"fadeOut"`
+	} `json:"background"`
 
 	TextType   string                `json:"textType"`
 	Terminator string                `json:"terminator"`
@@ -105,6 +111,20 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 
 	if argv.Voice != "" {
 		q += "&voice=" + argv.Voice
+	}
+
+	if argv.Background != nil && argv.Background.FileUri != "" {
+		q += "&bg_url=" + argv.Background.FileUri
+
+		if argv.Background.Volume > 0 {
+			q += fmt.Sprintf("&bg_vol=%f", argv.Background.Volume)
+		}
+		if argv.Background.FadeIn > 0 {
+			q += fmt.Sprintf("&bg_fin=%d", argv.Background.FadeIn)
+		}
+		if argv.Background.FadeOut > 0 {
+			q += fmt.Sprintf("&bg_fout=%d", argv.Background.FadeOut)
+		}
 	}
 
 	q += "&text=" + UrlEncoded(argv.Text)

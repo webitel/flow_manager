@@ -14,7 +14,7 @@ import (
 )
 
 type Api struct {
-	service storage.FileServiceClient
+	file storage.FileServiceClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -26,14 +26,14 @@ func NewClient(consulTarget string) (*Api, error) {
 		return nil, err
 	}
 
-	service := storage.NewFileServiceClient(conn)
+	fileService := storage.NewFileServiceClient(conn)
 	return &Api{
-		service: service,
+		file: fileService,
 	}, nil
 }
 
 func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error) {
-	stream, err := api.service.UploadFile(ctx)
+	stream, err := api.file.UploadFile(ctx)
 	if err != nil {
 		return model.File{}, err
 	}
@@ -96,7 +96,7 @@ func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile i
 }
 
 func (api *Api) Download(ctx context.Context, domainId int64, id int64) (io.ReadCloser, error) {
-	stream, err := api.service.DownloadFile(ctx, &storage.DownloadFileRequest{
+	stream, err := api.file.DownloadFile(ctx, &storage.DownloadFileRequest{
 		Id:       id,
 		DomainId: domainId,
 		Metadata: false,
