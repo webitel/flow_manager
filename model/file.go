@@ -7,9 +7,9 @@ type SearchFile struct {
 
 type File struct {
 	Id        int    `json:"id" db:"id"`
-	Url       string `json:"url" db:"-"`
-	PublicUrl string `json:"public_url" db:"-"`
+	Url       string `json:"url,omitempty" db:"-"`
+	PublicUrl string `json:"public_url,omitempty" db:"-"`
 	Name      string `json:"name" db:"name"`
 	Size      int64  `json:"size" db:"size"`
-	MimeType  string `json:"mime_type" db:"mime_type"`
+	MimeType  string `json:"mime" db:"mime_type"`
 }

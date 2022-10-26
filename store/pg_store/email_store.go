@@ -163,7 +163,7 @@ from (
             html,
 			(select jsonb_agg(row_to_json(t)) 
 			from (
-				select f.id, f.name, f.size, f.mime_type
+				select f.id, f.name, f.size, f.mime_type as mime 
 				from storage.files f
 				where f.uuid = e.message_id
 					and f.domain_id = :DomainId
