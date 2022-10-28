@@ -19,15 +19,15 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20221005091028-77b8c0d2fe01
-	github.com/webitel/engine v0.0.0-20221003091338-26dbd6130dc0
-	github.com/webitel/protos/cc v0.0.0-20221005083301-6afcfe9297d5
-	github.com/webitel/protos/engine v0.0.0-20221005083301-6afcfe9297d5
-	github.com/webitel/protos/storage v0.0.0-20221006124517-94c314283f0e
-	github.com/webitel/protos/workflow v0.0.0-20221005083301-6afcfe9297d5
+	github.com/webitel/call_center v0.0.0-20221028125927-4ad0388c602a
+	github.com/webitel/engine v0.0.0-20221028131449-cc7b51b60a04
+	github.com/webitel/protos/cc v0.0.0-20221027123513-0c1d3b4d5e64
+	github.com/webitel/protos/engine v0.0.0-20221027123513-0c1d3b4d5e64
+	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
+	github.com/webitel/protos/workflow v0.0.0-20221027123513-0c1d3b4d5e64
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0
-	google.golang.org/grpc v1.49.0
+	golang.org/x/sync v0.1.0
+	google.golang.org/grpc v1.50.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
@@ -42,7 +42,7 @@ require (
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
-	github.com/hashicorp/consul/api v1.15.2 // indirect
+	github.com/hashicorp/consul/api v1.15.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.3.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
@@ -59,10 +59,10 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
-	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
-	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/genproto v0.0.0-20220930163606-c98284e70a91 // indirect
+	golang.org/x/net v0.1.0 // indirect
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
+	google.golang.org/genproto v0.0.0-20221027153422-115e99e71e1c // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0 // indirect
