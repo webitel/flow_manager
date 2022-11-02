@@ -95,7 +95,6 @@ from endpoints e
 
      limit 1
  ) res on true
-where res.id notnull
 order by e.idx`, map[string]interface{}{
 		"DomainId": domainId,
 		"Request":  request,
