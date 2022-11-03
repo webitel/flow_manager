@@ -31,7 +31,10 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 	}
 
 	for _, v := range argv.Body {
-		f.Body = append(f.Body, conn.GetComponentByName(v))
+		c := conn.GetComponentByName(v)
+		if c != nil {
+			f.Body = append(f.Body, c)
+		}
 	}
 
 	var action *model.FormAction
