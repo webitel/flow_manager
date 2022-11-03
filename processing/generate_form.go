@@ -2,6 +2,7 @@ package processing
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
@@ -12,6 +13,10 @@ type GenerateFromArgs struct {
 	Title   string                  `json:"title"`
 	Actions []*model.FormActionElem `json:"actions"`
 	Body    []string                `json:"body"`
+}
+
+type Tst struct {
+	Id string `json:"id"`
 }
 
 func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
@@ -31,7 +36,16 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 	}
 
 	for _, v := range argv.Body {
-		f.Body = append(f.Body, conn.GetComponentByName(v))
+		c := conn.GetComponentByName(v)
+
+		if cmp, er := json.Marshal(c); er == nil {
+			var t Tst
+			json.Unmarshal(cmp, &t)
+			if t.Id != "" {
+				f.Body = append(f.Body, c)
+			}
+
+		}
 	}
 
 	var action *model.FormAction
