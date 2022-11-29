@@ -52,7 +52,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 
 				err = json.Unmarshal(txt, &res)
 				if err != nil {
-					return nil, err
+					return []interface{}{}, nil
 				}
 				return res, nil
 			case reflect.String:

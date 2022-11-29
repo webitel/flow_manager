@@ -31,7 +31,7 @@ type EmailArgs struct {
 	To         []string `json:"to"`
 	Async      bool     `json:"async"`
 	Attachment struct {
-		Files []int64 `json:"files"`
+		Files []model.File `json:"files"`
 	} `json:"attachment"`
 }
 
@@ -94,7 +94,11 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	}
 
 	if len(argv.Attachment.Files) != 0 {
-		files, err := r.fm.GetFileMetadata(domainId, argv.Attachment.Files)
+		ids := make([]int64, 0, len(argv.Attachment.Files))
+		for _, v := range argv.Attachment.Files {
+			ids = append(ids, int64(v.Id))
+		}
+		files, err := r.fm.GetFileMetadata(domainId, ids)
 		if err != nil {
 			wlog.Error(err.Error())
 		} else {
@@ -132,7 +136,7 @@ func (r *router) attachToMail(domainId int64, mail *gomail.Message, files []mode
 	}
 
 	for _, file := range files {
-		mail.Attach(file.Name, gomail.SetCopyFunc(attachFn(file)))
+		mail.Attach(file.GetViewName(), gomail.SetCopyFunc(attachFn(file)))
 	}
 }
 

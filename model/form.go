@@ -14,6 +14,8 @@ type FormFile struct {
 		Label        string `json:"label"`
 		Hint         string `json:"hint"`
 		Readonly     bool   `json:"readonly"`
+		Collapsible  bool   `json:"collapsible"`
+		Component    string `json:"component"`
 	} `json:"view"`
 	Value interface{} `json:"value"`
 }

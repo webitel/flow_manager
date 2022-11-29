@@ -20,7 +20,7 @@ func NewSqlFileStore(sqlStore SqlStore) store.FileStore {
 func (s SqlFileStore) GetMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError) {
 	var files []model.File
 	_, err := s.GetReplica().Select(&files, `
-		select f.id, f.name, f.size, f.mime_type
+		select f.id, f.name, f.size, f.mime_type, f.view_name
 		from storage.files f
 		where f.domain_id = :DomainId and f.id = any(:Ids::int8[])
 	`, map[string]interface{}{

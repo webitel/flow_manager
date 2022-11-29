@@ -12,7 +12,7 @@ import (
 	"github.com/webitel/wlog"
 )
 
-const MAX_GOTO = 100 //32767
+const MAX_GOTO = 1000 //32767
 
 const (
 	ApplicationFlagBreakEnabled ApplicationFlag = 1 << iota
@@ -238,11 +238,8 @@ func (i *Flow) IsCancel() bool {
 
 func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 	for _, v := range apps {
-		req, err := parseReq(v, root)
-		if err != nil {
-			wlog.Error(fmt.Sprintf("parse [%v] error: %s", v, err.Error()))
-			continue
-		}
+		var err *model.AppError
+		req := parseReq(v)
 
 		switch req.Name {
 		case "if":
@@ -286,7 +283,7 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 	}
 }
 
-func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model.AppError) {
+func parseReq(m model.ApplicationObject) ApplicationRequest {
 	var ok, v bool
 	req := ApplicationRequest{}
 
@@ -342,7 +339,7 @@ func parseReq(m model.ApplicationObject, root *Node) (ApplicationRequest, *model
 	}
 	//FIXME
 	//req.setParentNode(root)
-	return req, nil
+	return req
 }
 
 func newLimiter(args map[string]interface{}) *Limiter {
@@ -374,9 +371,11 @@ func newLog(args map[string]interface{}) *Log {
 func ArrInterfaceToArrayApplication(src []interface{}) model.Applications {
 	res := make(model.Applications, len(src))
 	var ok bool
+	var tmp map[string]interface{}
+
 	for k, v := range src {
-		if _, ok = v.(map[string]interface{}); ok {
-			res[k] = v.(map[string]interface{})
+		if tmp, ok = v.(map[string]interface{}); ok {
+			res[k] = tmp
 		}
 	}
 	return res

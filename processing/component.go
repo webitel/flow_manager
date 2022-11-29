@@ -18,7 +18,8 @@ func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Conne
 		return nil, model.ErrorRequiredParameter("formComponent", "name")
 	}
 
-	argv.Value, _ = conn.Get(argv.Id)
+	val, _ := conn.Get(argv.Id)
+	argv.Value = setToJson(val)
 
 	conn.SetComponent(argv.Id, argv)
 
