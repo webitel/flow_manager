@@ -9,4 +9,5 @@ type AttemptResult struct {
 	Variables     map[string]string
 	StickyDisplay bool
 	AgentId       int32
+	Redial        bool
 }

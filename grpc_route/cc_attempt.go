@@ -33,6 +33,7 @@ type AfterAttemptAbandoned struct {
 	WaitBetweenRetries          uint32   `json:"waitBetweenRetries"`
 	Export                      []string `json:"export"`
 	ExcludeCurrentCommunication bool     `json:"excludeCurrentCommunication"`
+	Redial                      bool     `json:"redial"`
 }
 
 func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
@@ -112,6 +113,7 @@ func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRP
 				MaxAttempts:                 argv.MaxAttempts,
 				WaitBetweenRetries:          argv.WaitBetweenRetries,
 				ExcludeCurrentCommunication: argv.ExcludeCurrentCommunication,
+				Redial:                      argv.Redial,
 			},
 		},
 		Variables: exportVars(conn, argv.Export),

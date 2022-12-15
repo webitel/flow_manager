@@ -53,6 +53,7 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 		Display:     result.StickyDisplay,
 		Description: result.Description,
 		AgentId:     result.AgentId,
+		Redial:      result.Redial,
 	}
 
 	if result.ExpiredAt != nil {
