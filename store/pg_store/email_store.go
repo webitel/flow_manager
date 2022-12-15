@@ -24,7 +24,7 @@ func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask,
 	_, err := s.GetReplica().Select(&tasks, ` update call_center.cc_email_profile
  set last_activity_at = now(),
      state = 'active'
- where enabled and
+ where id = 77  and
        last_activity_at < now() - (fetch_interval || ' sec')::interval
 returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
@@ -82,7 +82,9 @@ func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError)
        t.smtp_port,
        (extract(EPOCH from t.updated_at) * 1000)::int8 updated_at,
        t.flow_id,
-       t.domain_id
+       t.domain_id,
+	   t.auth_type,
+       coalesce(params, '{}')::jsonb as params
 from call_center.cc_email_profile t
 where t.id = :Id`, map[string]interface{}{
 		"Id": id,
@@ -186,4 +188,25 @@ from (
 	}
 
 	return t.Variables, nil
+}
+
+func (s SqlEmailStore) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
+	var smptSettings *model.SmtSettings
+	err := s.GetReplica().SelectOne(&smptSettings, `select jsonb_build_object('user', p.login, 'password', p.password) as auth,
+		p.smtp_port as port, p.smtp_host as server, coalesce((p.params->>'insecure')::bool, false) as tls
+from call_center.cc_email_profile p
+where p.domain_id = :DomainId::int8
+    and (p.id = :Id::int or p.name = :Name::varchar)
+limit 1`, map[string]interface{}{
+		"DomainId": domainId,
+		"Id":       search.Id,
+		"Name":     search.Name,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlEmailStore.SmtpSettings", "store.sql_email.smtp.settings.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return smptSettings, nil
 }

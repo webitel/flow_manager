@@ -102,12 +102,12 @@ func TestLabeledTree(t *testing.T) {
 		fmt.Printf("> %v ", v.Name)
 
 		if v.Name == "goto" {
-			tag, _ := v.Val.(string)
+			tag, _ := v.Val.args.(string)
 			m.Goto(tag)
 			continue
 		}
 
-		switch c := v.Val.(type) {
+		switch c := v.Val.args.(type) {
 		case *ConditionVal:
 			m.Current = c.Then
 		case *SwitchVal:

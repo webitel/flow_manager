@@ -7,12 +7,10 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-const maxGotoLoop = 1000
-
 type TreeKey int
 
 type TreeVal struct {
-	Val  interface{}
+	Val  *ApplicationRequest
 	Name string
 	Root TreeKey
 	Out  []TreeKey
@@ -54,10 +52,6 @@ func NewLabeledTree(apps model.Applications) LabeledTree {
 }
 
 func (m *LabeledTree) Goto(tag string) bool {
-	if m.gotoCounter >= maxGotoLoop {
-		m.Current = -1
-		return false
-	}
 	key, ok := m.Tags[tag]
 	if !ok {
 		return false
@@ -126,7 +120,7 @@ func (m *LabeledTree) reverseFill(from TreeKey, apps model.Applications) TreeKey
 			cnd := ConditionVal{}
 			mVal := &TreeVal{
 				Name: "if",
-				Val:  &cnd,
+				Val:  &r,
 				Out:  []TreeKey{from},
 				Root: root,
 			}
@@ -145,6 +139,7 @@ func (m *LabeledTree) reverseFill(from TreeKey, apps model.Applications) TreeKey
 					cnd.Expression = parseExpression(ex)
 				}
 			}
+			r.args = cnd
 			continue
 		case "switch":
 			cnd := SwitchVal{
@@ -152,7 +147,7 @@ func (m *LabeledTree) reverseFill(from TreeKey, apps model.Applications) TreeKey
 			}
 			mVal := &TreeVal{
 				Name: "switch",
-				Val:  &cnd,
+				Val:  &r,
 				Out:  []TreeKey{from},
 				Root: root,
 			}
@@ -171,19 +166,20 @@ func (m *LabeledTree) reverseFill(from TreeKey, apps model.Applications) TreeKey
 					}
 				}
 			}
+			r.args = cnd
 
 			continue
 		case "break":
 			from = m.append(&TreeVal{
 				Name: r.Name,
-				Val:  r.args,
+				Val:  &r,
 				Out:  []TreeKey{from},
 				Root: root,
 			}, r.Tag)
 		default:
 			from = m.append(&TreeVal{
 				Name: r.Name,
-				Val:  r.args,
+				Val:  &r,
 				Out:  []TreeKey{from},
 				Root: root,
 			}, r.Tag)

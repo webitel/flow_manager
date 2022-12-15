@@ -3,10 +3,11 @@ package fs
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 const (
@@ -380,6 +381,9 @@ func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.R
 
 func (c *Connection) UnSet(ctx context.Context, name string) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "unset", name)
+}
+func (c *Connection) AudioStream(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "wbt_audio_stream", "")
 }
 
 func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) (model.Response, *model.AppError) {

@@ -40,6 +40,7 @@ type EmailStore interface {
 	GetProfile(id int) (*model.EmailProfile, *model.AppError)
 	GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError)
 	SetError(profileId int, appErr *model.AppError) *model.AppError
+	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
 }

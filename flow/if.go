@@ -22,57 +22,28 @@ var (
 	regSpace                  = regexp.MustCompile(`\s`)
 )
 
-type conditionArgs struct {
-	expression string
-	then_      *Node
-	else_      *Node
-	flow       *Flow
-}
-
-func newConditionArgs(i *Flow, parent *Node, props interface{}) *conditionArgs {
-	args := &conditionArgs{
-		then_: NewNode(parent),
-		else_: NewNode(parent),
-		flow:  i,
-	}
-
-	if tmp, ok := props.(map[string]interface{}); ok {
-		if th, ok := tmp["then"].([]interface{}); ok {
-			parseFlowArray(i, args.then_, ArrInterfaceToArrayApplication(th))
-		}
-
-		if el, ok := tmp["else"].([]interface{}); ok {
-			parseFlowArray(i, args.else_, ArrInterfaceToArrayApplication(el))
-		}
-
-		if ex, ok := tmp["expression"].(string); ok {
-			args.expression = parseExpression(ex)
-		}
-	}
-
-	return args
-}
-
 func (r *router) conditionHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var req *conditionArgs
+	var req ConditionVal
 	var ok bool
-	if req, ok = args.(*conditionArgs); !ok {
+	if req, ok = args.(ConditionVal); !ok {
 		return nil, model.NewAppError("Flow.ConditionHandler", "flow.condition_if.not_found", nil, "bad arguments", http.StatusBadRequest)
 	}
 
 	vm := scope.GetVm()
 
-	injectJsSysObject(conn, vm, req.flow)
+	injectJsSysObject(conn, vm, scope)
 
-	if value, err := vm.Run(`_result = ` + conn.ParseText(req.expression)); err == nil {
+	if value, err := vm.Run(`_result = ` + conn.ParseText(req.Expression)); err == nil {
 		if boolVal, err := value.ToBoolean(); err == nil && boolVal == true {
-			req.then_.setFirst()
-			req.flow.SetRoot(req.then_)
-			wlog.Debug(fmt.Sprintf("condition (%s) is true", req.expression))
+			if req.Then > 0 {
+				scope.tree.Current = req.Then
+			}
+			wlog.Debug(fmt.Sprintf("condition (%s) is true", req.Expression))
 		} else {
-			req.else_.setFirst()
-			req.flow.SetRoot(req.else_)
-			wlog.Debug(fmt.Sprintf("condition (%s) is false", req.expression))
+			if req.Else > 0 {
+				scope.tree.Current = req.Else
+			}
+			wlog.Debug(fmt.Sprintf("condition (%s) is false", req.Expression))
 		}
 	} else {
 		return nil, model.NewAppError("Flow.ConditionHandler", "flow.condition_if.vm_err", nil, err.Error(), http.StatusBadRequest)

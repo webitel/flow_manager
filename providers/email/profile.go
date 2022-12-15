@@ -2,6 +2,8 @@ package email
 
 import (
 	"context"
+	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +13,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/oauth2"
+
+	"golang.org/x/oauth2/google"
+
+	"github.com/emersion/go-sasl"
 
 	"github.com/emersion/go-message/mail"
 
@@ -22,6 +30,8 @@ import (
 
 	_ "github.com/emersion/go-message/charset"
 )
+
+//https://accounts.google.com/ServiceLogin?continue=https%3A%2F%2Faccounts.google.com%2Fsignin%2Foauth%2Flegacy%2Fconsent%3Fauthuser%3Dunknown%26part%3DAJi8hAPLMT3J8QWEvr-P3TUxD9uzxqJdXnsd3YbJFY0ksWCK7F0r49ubptGd9L6xyhLyjl65STpfHA1JC4iuEyouKrxG2yDQo-HNnl6u2doOSdjQjcQlXDmW0Xz8iziufaA6Wf2qqDS5ZRElFKvMAEypl0xQ37QHFHRYtLukUjkh0H0fCOoXVB82Ym7jjN5PQ7nCO_u3cetnrkIhITCZjrGP9pivJORnOIH83SR07EPtXqrkDinaUhBn5siRxOZfuu1to8P0VqV5TFAmvIrvQT431MveOB1mdN-qiSg_uek-08sedBQqJyJKhEWVcZnwXyJNolGoUSoY5L0bdYkZy_tccLmxDwiPB1f6TmFTk9cSTPeNNr7syktkeXbE8SvDJoMPw4GwvNIijFDAkAfHMyVKlFEwG7rmcu9E2FlZ5vqpMFI1hMHJDGHwjkePltKjRlIpDAc2tKoY8-kzXd_33cbZ5H7QeWaiRQ%26as%3DS1879532501%253A1669820130058935%26client_id%3D406964657835-aq8lmia8j95dhl1a2bvharmfk3t1hgqj.apps.googleusercontent.com%23&sacu=1&passive=1209600&oauth=1&Email=navrotskyj%40gmail.com
 
 type Profile struct {
 	Id        int
@@ -43,26 +53,44 @@ type Profile struct {
 	server *server
 	sync.RWMutex
 	client *client.Client
+	params *model.MailParams
 
 	mbox        *imap.MailboxStatus
 	lastMessage time.Time
+
+	authMethod string
+
+	Tls bool
 }
+
+var (
+	googleOAuth2 = oauth2.Config{
+		RedirectURL: "https://dev.webitel.com/endpoint/oauth2/google/callback",
+		//RedirectURL:  "urn:ietf:wg:oauth:2.0:oob",
+		ClientID:     "1003527838078-eq1o4od8bvrvquk6a5m8gfkauhria0dj.apps.googleusercontent.com",
+		ClientSecret: "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",
+		Scopes:       []string{"https://mail.google.com/"},
+		Endpoint:     google.Endpoint,
+	}
+)
 
 func newProfile(srv *server, params *model.EmailProfile) *Profile {
 	return &Profile{
-		Id:        params.Id,
-		DomainId:  params.DomainId,
-		updatedAt: params.UpdatedAt,
-		server:    srv,
-		login:     params.Login,
-		password:  params.Password,
-		smtpHost:  params.SmtpHost,
-		smtpPort:  params.SmtpPort,
-		imapHost:  params.ImapHost,
-		imapPort:  params.ImapPort,
-		Mailbox:   params.Mailbox,
-		flowId:    params.FlowId,
-		name:      params.Name,
+		Id:         params.Id,
+		DomainId:   params.DomainId,
+		updatedAt:  params.UpdatedAt,
+		server:     srv,
+		login:      params.Login,
+		password:   params.Password,
+		smtpHost:   params.SmtpHost,
+		smtpPort:   params.SmtpPort,
+		imapHost:   params.ImapHost,
+		imapPort:   params.ImapPort,
+		Mailbox:    params.Mailbox,
+		flowId:     params.FlowId,
+		name:       params.Name,
+		params:     params.Params,
+		authMethod: params.AuthType,
 	}
 }
 
@@ -78,16 +106,60 @@ func (p *Profile) Login() *model.AppError {
 		return nil
 	}
 
+	// https://github.com/carrey-k/mso-token/blob/94b077e55ea21baabc0025d26b0a33e93fca3ea0/mso_token.go
+	// https://support.google.com/mail/answer/7126229#zippy=%2C%D1%88%D0%B0%D0%B3-%D0%B2%D0%BA%D0%BB%D1%8E%D1%87%D0%B8%D1%82%D0%B5-imap-%D0%B4%D0%BE%D1%81%D1%82%D1%83%D0%BF
+
+	//1003527838078-eq1o4od8bvrvquk6a5m8gfkauhria0dj.apps.googleusercontent.com cli_id
+	//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 cli secret
+
+	//4/0AfgeXvszVWhJPA5TbnpzYzx4QPL5_5WX91dq6K1lD8PZB7RxGh9Y_TNFwkr8DJBwaOfSkw navrotskyj@gmail.com
+
 	p.logged = false
 	var err error
-	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), nil)
-	if err != nil {
-		return model.NewAppError("Email", "email.login.app_err", nil, err.Error(), http.StatusInternalServerError)
+
+	tlsConfig := &tls.Config{}
+
+	// todo
+	if p.Tls {
+		tlsConfig.InsecureSkipVerify = true
 	}
 
-	if err = p.client.Login(p.login, p.password); err != nil {
-		return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
+	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
+	if err != nil {
+		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
+	if p.authMethod == model.MailAuthTypeOAuth2 && p.params != nil {
+		var ok bool
+		ok, err = p.client.SupportAuth(sasl.OAuthBearer)
+		if err != nil {
+			return model.NewAppError("Email", "email.oauth.support", nil, err.Error(), http.StatusInternalServerError)
+		}
+
+		if !ok {
+			return model.NewAppError("Email", "email.oauth.support", nil, "Not support", http.StatusInternalServerError)
+		}
+
+		ts := googleOAuth2.TokenSource(context.Background(), p.params.OAuth2)
+		newToken, _ := ts.Token()
+
+		saslClient := sasl.NewOAuthBearerClient(&sasl.OAuthBearerOptions{
+			Username: p.login,
+			Token:    newToken.AccessToken,
+		})
+
+		fmt.Println("OK ", newToken.AccessToken)
+
+		err = p.client.Authenticate(saslClient)
+		if err != nil {
+			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
+		}
+	} else {
+		if err = p.client.Login(p.login, p.password); err != nil {
+			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
+		}
+	}
+
 	p.logged = true
 	return nil
 }
@@ -216,7 +288,15 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 		},
 	}
 
-	if err := e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), smtp.PlainAuth("", p.login, p.password, p.smtpHost)); err != nil {
+	var auth smtp.Auth
+	tok := "ya29.a0AeTM1ief4Qtk9_L7amsEugrEs_f5Y6N8Y7tHbhio9dZBVEr4bkDdIlQNktGzu1jx4BVukKgW9cmKjQM7eK9E3EeCueSRRoQNhDrBJjD3RJzJyif0ImJZufxRXGTgzE1Sw2A1XIi8cpB_tOyL7x-MwmbItFNCaCgYKAewSARASFQHWtWOmS-z5eY-3fXJlzDgYU0RGyA0163"
+	if p.authMethod == model.MailAuthTypeOAuth2 {
+		auth = NewOAuth2Smtp(p.login, "", tok)
+	} else {
+		auth = smtp.PlainAuth("", p.login, p.password, p.smtpHost)
+	}
+
+	if err := e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth); err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
@@ -317,4 +397,32 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	m.HtmlBody = html
 
 	return m, nil
+}
+
+type OAuth2Smtp struct {
+	user, tokenType, token string
+}
+
+// Returns an AUTH that implements XOAUTH2 authentication
+// user is your email username (normally your email address)
+// tokenType is usually going to be "Bearer"
+// token is your access_token generated by a tool like quickstart
+func NewOAuth2Smtp(user, tokenType, token string) smtp.Auth {
+	return &OAuth2Smtp{user, tokenType, token}
+}
+
+func (a *OAuth2Smtp) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	if !server.TLS {
+		return "", nil, errors.New("unencrypted connection")
+	}
+	resp := []byte(fmt.Sprintf("user=%v\001auth=%v %v\001\001", a.user, "Bearer", a.token))
+	return "XOAUTH2", resp, nil
+}
+
+func (a *OAuth2Smtp) Next(fromServer []byte, more bool) ([]byte, error) {
+	if more {
+		// We've already sent everything.
+		return nil, fmt.Errorf("unexpected server challenge: %s", fromServer)
+	}
+	return nil, nil
 }

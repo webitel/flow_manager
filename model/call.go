@@ -357,6 +357,8 @@ type Call interface {
 
 	SetQueueCancel(cancel context.CancelFunc) bool
 	CancelQueue() bool
+
+	AudioStream(ctx context.Context) (Response, *AppError)
 }
 
 type PlaybackFile struct {

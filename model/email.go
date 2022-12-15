@@ -1,5 +1,7 @@
 package model
 
+import "golang.org/x/oauth2"
+
 type Email struct {
 	Id          int64    `json:"id" db:"id"`
 	Direction   string   `json:"direction" db:"direction" `
@@ -38,19 +40,29 @@ type EmailProfileTask struct {
 	UpdatedAt int64 `json:"updated_at" db:"updated_at"`
 }
 
+type MailParams struct {
+	OAuth2 *oauth2.Token `json:"oauth2"`
+}
+
+const (
+	MailAuthTypeOAuth2 = "oauth2"
+)
+
 type EmailProfile struct {
-	Id        int    `json:"id" db:"id"`
-	DomainId  int64  `json:"domain_id" db:"domain_id"`
-	Name      string `json:"name" db:"name"`
-	FlowId    int    `json:"flow_id" db:"flow_id"`
-	Login     string `json:"login" db:"login"`
-	Password  string `json:"password" db:"password"`
-	Mailbox   string `json:"mailbox" db:"mailbox"`
-	SmtpHost  string `json:"smtp_host" db:"smtp_host"`
-	SmtpPort  int    `json:"smtp_port" db:"smtp_port"`
-	ImapHost  string `json:"imap_host" db:"imap_host"`
-	ImapPort  int    `json:"imap_port" db:"imap_port"`
-	UpdatedAt int64  `json:"updated_at" db:"updated_at"`
+	Id        int         `json:"id" db:"id"`
+	DomainId  int64       `json:"domain_id" db:"domain_id"`
+	Name      string      `json:"name" db:"name"`
+	FlowId    int         `json:"flow_id" db:"flow_id"`
+	Login     string      `json:"login" db:"login"`
+	Password  string      `json:"password" db:"password"`
+	Mailbox   string      `json:"mailbox" db:"mailbox"`
+	SmtpHost  string      `json:"smtp_host" db:"smtp_host"`
+	SmtpPort  int         `json:"smtp_port" db:"smtp_port"`
+	ImapHost  string      `json:"imap_host" db:"imap_host"`
+	ImapPort  int         `json:"imap_port" db:"imap_port"`
+	UpdatedAt int64       `json:"updated_at" db:"updated_at"`
+	Params    *MailParams `json:"params" db:"params"`
+	AuthType  string      `json:"auth_type" db:"auth_type"`
 }
 
 func (e *Email) AttachmentIds() []int64 {

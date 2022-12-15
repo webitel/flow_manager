@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	FetchProfileInterval = time.Second * 20
+	FetchProfileInterval = time.Second * 2
 	SizeCache            = 1000
 )
 

@@ -137,6 +137,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.SetUser),
 	}
+	apps["audioStream"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.audioStream),
+	}
 
 	return apps
 }

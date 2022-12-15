@@ -21,20 +21,17 @@ const (
 
 type ApplicationFlag int
 
-type Tag struct {
-	parent *Node
-	idx    int
-}
-
 type Flow struct {
-	timezone    *time.Location
-	handler     Handler
-	Connection  model.Connection
-	name        string
-	Tags        map[string]*Tag
-	Functions   map[string]model.Applications
-	triggers    map[string]model.Applications
-	currentNode *Node
+	timezone   *time.Location
+	handler    Handler
+	Connection model.Connection
+	name       string
+	//Tags       map[string]*Tag
+	Functions map[string]model.Applications
+	triggers  map[string]model.Applications
+
+	tree LabeledTree
+
 	gotoCounter int16
 	cancel      bool
 	logs        []*model.StepLog
@@ -58,17 +55,16 @@ func New(conf Config) *Flow {
 		i.name += fmt.Sprintf(" [%s]", conf.Conn.Id())
 	}
 	i.Connection = conf.Conn
-	i.currentNode = NewNode(nil)
 	i.Functions = make(map[string]model.Applications)
 	i.triggers = make(map[string]model.Applications)
-	i.Tags = make(map[string]*Tag)
+	//i.Tags = make(map[string]*Tag)
 	i.logs = make([]*model.StepLog, 0, 1)
 
 	if conf.Timezone != "" {
 		i.timezone, _ = time.LoadLocation(conf.Timezone)
 	}
 
-	parseFlowArray(i, i.currentNode, conf.Schema)
+	i.tree = NewLabeledTree(conf.Schema)
 
 	return i
 }
@@ -99,13 +95,13 @@ func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	i.handler = f.handler
 	i.name = name
 	i.Connection = f.Connection
-	i.currentNode = NewNode(nil)
 	i.Functions = f.Functions
 	i.triggers = f.triggers // nil ?
-	i.Tags = make(map[string]*Tag)
+	//i.Tags = make(map[string]*Tag)
 	i.timezone = f.timezone
 
-	parseFlowArray(i, i.currentNode, schema)
+	i.tree = NewLabeledTree(schema)
+
 	return i
 }
 
@@ -120,7 +116,6 @@ type Log struct {
 }
 
 type ApplicationRequest struct {
-	BaseNode
 	args    interface{}
 	Flags   ApplicationFlag
 	Name    string
@@ -159,50 +154,18 @@ func (i *Flow) Name() string {
 	return i.name
 }
 
-func (i *Flow) SetRoot(root *Node) {
-	i.currentNode = root
-}
-
 func (i *Flow) Reset() {
-	if i.currentNode != nil {
-		i.currentNode.setFirst()
-	}
 	i.Lock()
 	i.cancel = false
 	i.Unlock()
 }
 
 func (i *Flow) NextRequest() *ApplicationRequest {
-	var req *ApplicationRequest
-	req = i.currentNode.Next()
-	if req == nil {
-		if newNode := i.GetParentNode(); newNode == nil {
-			return nil
-		} else {
-			return i.NextRequest()
-		}
-	} else {
-		return req
-	}
-}
-
-func (i *Flow) GetParentNode() *Node {
-	parent := i.currentNode.GetParent()
-	i.currentNode.setFirst()
-	if parent == nil {
+	val, ok := i.tree.Next()
+	if !ok {
 		return nil
 	}
-	i.currentNode = parent
-	return i.currentNode
-}
-
-func (i *Flow) trySetTag(tag string, parent *Node, idx int) {
-	if tag != "" {
-		i.Tags[tag] = &Tag{
-			parent: parent,
-			idx:    idx,
-		}
-	}
+	return val.Val
 }
 
 func (i *Flow) Goto(tag string) bool {
@@ -211,17 +174,7 @@ func (i *Flow) Goto(tag string) bool {
 		return false
 	}
 
-	if gotoApp, ok := i.Tags[tag]; ok {
-		i.currentNode.setFirst()
-		i.SetRoot(gotoApp.parent)
-		i.currentNode.position = gotoApp.idx
-		if i.currentNode.parent != nil {
-			i.currentNode.parent.position = i.currentNode.idx + 1
-		}
-		i.gotoCounter++
-		return true
-	}
-	return false
+	return i.tree.Goto(tag)
 }
 
 func (i *Flow) SetCancel() {
@@ -234,53 +187,6 @@ func (i *Flow) IsCancel() bool {
 	i.RLock()
 	defer i.RUnlock()
 	return i.cancel
-}
-
-func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
-	for _, v := range apps {
-		var err *model.AppError
-		req := parseReq(v)
-
-		switch req.Name {
-		case "if":
-			req.args = newConditionArgs(i, root, req.args)
-			req.setParentNode(root)
-			i.trySetTag(req.Tag, root, req.idx)
-			root.Add(req)
-
-		case "function":
-			if err := i.addFunction(req.args); err != nil {
-				wlog.Warn(err.Error())
-			}
-		case "trigger":
-			if err := i.addTrigger(req.args); err != nil {
-				wlog.Warn(err.Error())
-			}
-		case "switch":
-			if req.args, err = newSwitchArgs(i, root, req.args); err != nil {
-				wlog.Warn(err.Error())
-			} else {
-				req.setParentNode(root)
-				root.Add(req)
-				i.trySetTag(req.Tag, root, req.idx)
-			}
-
-		case "break":
-			req.args = &BreakArgs{i}
-			req.setParentNode(root)
-			i.trySetTag(req.Tag, root, req.idx)
-			root.Add(req)
-
-		default:
-			if req.Name != "" {
-				req.setParentNode(root)
-				root.Add(req)
-				i.trySetTag(req.Tag, root, req.idx)
-			} else {
-				wlog.Warn(fmt.Sprintf("bad application structure %v", v))
-			}
-		}
-	}
 }
 
 func parseReq(m model.ApplicationObject) ApplicationRequest {
