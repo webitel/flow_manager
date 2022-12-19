@@ -23,8 +23,8 @@ var (
 )
 
 const (
-	MailGmail     = "gmail"
-	MailMicrosoft = "microsoft"
+	MailGmail   = "gmail"
+	MailOutlook = "outlook"
 )
 
 type MailServer struct {
@@ -211,6 +211,8 @@ func (s *MailServer) OAuth2MailConfig(host string) (c oauth2.Config, ok bool) {
 
 	if strings.Index(host, "gmail.com") > -1 {
 		c, ok = s.oauth2Conf[MailGmail]
+	} else if strings.Index(host, "outlook.") == 0 {
+		c, ok = s.oauth2Conf[MailOutlook]
 	}
 
 	return

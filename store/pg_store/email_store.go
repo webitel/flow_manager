@@ -82,7 +82,9 @@ func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError)
        t.smtp_port,
        (extract(EPOCH from t.updated_at) * 1000)::int8 updated_at,
        t.flow_id,
-       t.domain_id
+       t.domain_id,
+       coalesce(t.auth_type, 'plain') as auth_type,
+       t.params
 from call_center.cc_email_profile t
 where t.id = :Id`, map[string]interface{}{
 		"Id": id,
