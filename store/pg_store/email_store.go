@@ -191,7 +191,7 @@ from (
 func (s SqlEmailStore) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
 	var smptSettings *model.SmtSettings
 	err := s.GetReplica().SelectOne(&smptSettings, `select jsonb_build_object('user', p.login, 'password', p.password) as auth,
-		p.smtp_port as port, p.smtp_host as server, coalesce((p.params->>'insecure')::bool, false) as tls
+		p.smtp_port as port, p.smtp_host as server, coalesce((p.params->>'insecure')::bool, false) as tls, coalesce(p.auth_type, 'plain') as auth_type, p.params
 from call_center.cc_email_profile p
 where p.domain_id = :DomainId::int8
     and (p.id = :Id::int or p.name = :Name::varchar)

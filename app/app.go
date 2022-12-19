@@ -29,10 +29,14 @@ type FlowManager struct {
 	cluster       *cluster
 	Store         store.Store
 	ExternalStore *cachelayer.ExternalStoreManager
-	servers       []model.Server
-	schemaCache   utils.ObjectCache
-	chatManager   *grpc.ChatManager
-	storage       *storage.Api
+
+	grpcServer model.Server
+	mailServer model.Server
+	eslServer  model.Server
+
+	schemaCache utils.ObjectCache
+	chatManager *grpc.ChatManager
+	storage     *storage.Api
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
@@ -62,7 +66,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm := &FlowManager{
 		config:      config,
 		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
-		servers:     make([]model.Server, 0, 1),
 		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
 		stop:        make(chan struct{}),
 		stopped:     make(chan struct{}),
@@ -102,17 +105,15 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, outErr
 	}
 
-	servers := []model.Server{
-		grpcSrv,
-		fs.NewServer(&fs.Config{
-			Host:           fm.Config().Esl.Host,
-			Port:           fm.Config().Esl.Port,
-			RecordResample: fm.Config().Record.Sample,
-		}),
-		email.New(fm.storage, fm.Store.Email(), fm.Config().EmailOAuth),
-	}
+	fm.grpcServer = grpcSrv
+	fm.eslServer = fs.NewServer(&fs.Config{
+		Host:           fm.Config().Esl.Host,
+		Port:           fm.Config().Esl.Port,
+		RecordResample: fm.Config().Record.Sample,
+	})
+	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().EmailOAuth)
 
-	if err := fm.RegisterServers(servers...); err != nil {
+	if err := fm.RegisterServers(); err != nil {
 		outErr = err
 		return
 	}

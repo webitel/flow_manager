@@ -35,13 +35,11 @@ func (c *cluster) Start() error {
 }
 
 func (f *FlowManager) GetPublicInterface() (string, int) {
-	for _, v := range f.servers {
-		if v.Type() == model.ConnectionTypeGrpc {
-			return v.Host(), v.Port()
-		}
+	if f.grpcServer == nil {
+		return "", 0
 	}
 
-	return f.servers[0].Host(), f.servers[0].Port()
+	return f.grpcServer.Host(), f.grpcServer.Port()
 }
 
 func (c *cluster) Stop() {

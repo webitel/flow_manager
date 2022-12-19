@@ -6,30 +6,24 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/webitel/flow_manager/providers/email"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"gopkg.in/gomail.v2"
 )
 
 type EmailArgs struct {
-	Cc        []string `json:"cc"`
-	From      string   `json:"from"`
-	Message   string   `json:"message"`
-	ReplyToId string   `json:"replyToId"`
-	Type      string   `json:"type"`
-	Smtp      struct {
-		Auth struct {
-			Password string `json:"password"`
-			User     string `json:"user"`
-		} `json:"auth"`
-		Port     int    `json:"port"`
-		Server   string `json:"server"`
-		Tls      bool   `json:"tls"`
-		Insecure bool   `json:"insecure"`
-	} `json:"smtp"`
-	Subject    string   `json:"subject"`
-	To         []string `json:"to"`
-	Async      bool     `json:"async"`
+	Cc         []string            `json:"cc"`
+	From       string              `json:"from"`
+	Message    string              `json:"message"`
+	ReplyToId  string              `json:"replyToId"`
+	Type       string              `json:"type"`
+	Profile    *model.SearchEntity `json:"profile"`
+	Smtp       model.SmtSettings   `json:"smtp"`
+	Subject    string              `json:"subject"`
+	To         []string            `json:"to"`
+	Async      bool                `json:"async"`
 	Attachment struct {
 		Files []model.File `json:"files"`
 	} `json:"attachment"`
@@ -45,6 +39,8 @@ type GetEmailInfo struct {
 
 func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv EmailArgs
+	var err *model.AppError
+
 	argv.Type = "text/html"
 
 	if err := scope.Decode(args, &argv); err != nil {
@@ -58,18 +54,24 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	if argv.To == nil || len(argv.To) < 1 {
 		return nil, ErrorRequiredParameter("sendEmail", "to")
 	}
-	if argv.Smtp.Server == "" {
-		return nil, ErrorRequiredParameter("sendEmail", "server")
-	}
-	if argv.Smtp.Auth.User == "" {
-		return nil, ErrorRequiredParameter("sendEmail", "user")
-	}
-	if argv.Smtp.Port == 0 {
-		return nil, ErrorRequiredParameter("sendEmail", "port")
+
+	if argv.Profile != nil && (argv.Profile.Id != nil || argv.Profile.Name != nil) {
+		var settings *model.SmtSettings
+		settings, err = r.fm.SmtpSettings(conn.DomainId(), argv.Profile)
+		if err != nil {
+			return nil, err
+		}
+
+		argv.Smtp = *settings
 	}
 
 	if argv.Async {
-		go r.sendEmailFn(conn.DomainId(), argv)
+		go func() {
+			_, err := r.sendEmailFn(conn.DomainId(), argv)
+			if err != nil {
+				wlog.Error(err.Error())
+			}
+		}()
 		return ResponseOK, nil
 	} else {
 		return r.sendEmailFn(conn.DomainId(), argv)
@@ -107,8 +109,27 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	}
 
 	mail.SetBody(argv.Type, argv.Message)
+	var dialer *gomail.Dialer
+	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
+		if argv.Smtp.Params == nil {
+			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, "Not found token", http.StatusInternalServerError)
+		}
+		oa, ok := r.fm.MailServer().OAuth2MailConfig(argv.Smtp.Server)
+		if !ok {
+			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, "Not found token config", http.StatusInternalServerError)
+		}
+		ts := oa.TokenSource(context.Background(), argv.Smtp.Params.OAuth2)
+		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, "")
+		tok, err := ts.Token()
+		if err != nil {
+			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, err.Error(), http.StatusInternalServerError)
+		}
+		dialer.Auth = email.NewOAuth2Smtp(argv.Smtp.Auth.User, "", tok.AccessToken)
 
-	dialer := gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, argv.Smtp.Auth.Password)
+	} else {
+		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, argv.Smtp.Auth.Password)
+	}
+
 	if argv.Smtp.Tls {
 		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	}

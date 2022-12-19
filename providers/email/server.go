@@ -27,7 +27,7 @@ const (
 	MailMicrosoft = "microsoft"
 )
 
-type server struct {
+type MailServer struct {
 	store           store.EmailStore
 	storage         *storage.Api
 	profiles        *utils.Cache
@@ -39,7 +39,7 @@ type server struct {
 }
 
 func New(storageApi *storage.Api, s store.EmailStore, oauth2Conf map[string]oauth2.Config) model.Server {
-	return &server{
+	return &MailServer{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
 		didFinishListen: make(chan struct{}),
@@ -50,43 +50,43 @@ func New(storageApi *storage.Api, s store.EmailStore, oauth2Conf map[string]oaut
 	}
 }
 
-func (s *server) Name() string {
+func (s *MailServer) Name() string {
 	return "Email"
 }
 
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *MailServer) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 	return nil
 }
 
-func (s *server) Start() *model.AppError {
+func (s *MailServer) Start() *model.AppError {
 	s.startOnce.Do(func() {
 		go s.listen()
 	})
 	return nil
 }
 
-func (s *server) Stop() {
+func (s *MailServer) Stop() {
 	close(s.didFinishListen)
 	<-s.stopped
 }
 
-func (s *server) Host() string {
+func (s *MailServer) Host() string {
 	return "" //TODO
 }
 
-func (s *server) Port() int {
+func (s *MailServer) Port() int {
 	return 0
 }
 
-func (s *server) Type() model.ConnectionType {
+func (s *MailServer) Type() model.ConnectionType {
 	return model.ConnectionTypeEmail
 }
 
-func (s *server) Consume() <-chan model.Connection {
+func (s *MailServer) Consume() <-chan model.Connection {
 	return s.consume
 }
 
-func (s *server) listen() {
+func (s *MailServer) listen() {
 	defer func() {
 		wlog.Debug("stop listen email server...")
 		close(s.stopped)
@@ -110,7 +110,7 @@ func (s *server) listen() {
 	}
 }
 
-func (s *server) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError) {
+func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError) {
 	var pp *Profile
 	profile, ok := s.profiles.Get(id)
 	if ok {
@@ -136,7 +136,7 @@ func (s *server) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError)
 	return pp, nil
 }
 
-func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
+func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
 		wlog.Error(err.Error())
@@ -174,14 +174,14 @@ func (s *server) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	}
 }
 
-func (s *server) storeError(p *Profile, err *model.AppError) {
+func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 	saveErr := s.store.SetError(p.Id, err)
 	if saveErr != nil {
 		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
 	}
 }
 
-func (s *server) TestProfile(domainId int64, profileId int) *model.AppError {
+func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError {
 	var profile *Profile
 	updatedAt, err := s.store.GetProfileUpdatedAt(domainId, profileId)
 	if err != nil {
@@ -203,7 +203,7 @@ func (s *server) TestProfile(domainId int64, profileId int) *model.AppError {
 	return nil
 }
 
-func (s *server) OAuth2MailConfig(host string) (c oauth2.Config, ok bool) {
+func (s *MailServer) OAuth2MailConfig(host string) (c oauth2.Config, ok bool) {
 	if s.oauth2Conf == nil {
 		ok = false
 		return

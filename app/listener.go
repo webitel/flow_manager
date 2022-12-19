@@ -19,18 +19,19 @@ func (f *FlowManager) Listen() {
 
 	go f.listenCallEvents(f.stop)
 
-	for _, v := range f.servers {
+	if f.eslServer != nil {
 		wg.Add(1)
-		switch v.Type() {
-		case model.ConnectionTypeCall:
-			go f.listenCallConnection(f.stop, &wg, v)
-		case model.ConnectionTypeGrpc:
-			go f.listenGrpcConnection(f.stop, &wg, v)
-		case model.ConnectionTypeEmail:
-			go f.listenInboundEmail(f.stop, &wg, v)
-		default:
-			wg.Done()
-		}
+		go f.listenCallConnection(f.stop, &wg, f.eslServer)
+	}
+
+	if f.grpcServer != nil {
+		wg.Add(1)
+		go f.listenGrpcConnection(f.stop, &wg, f.grpcServer)
+	}
+
+	if f.mailServer != nil {
+		wg.Add(1)
+		go f.listenInboundEmail(f.stop, &wg, f.mailServer)
 	}
 
 	wg.Wait()

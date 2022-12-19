@@ -46,7 +46,7 @@ type Profile struct {
 
 	flowId int
 
-	server *server
+	server *MailServer
 	sync.RWMutex
 	client *client.Client
 
@@ -58,7 +58,7 @@ type Profile struct {
 	Tls        bool
 }
 
-func newProfile(srv *server, params *model.EmailProfile) *Profile {
+func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 	return &Profile{
 		Id:         params.Id,
 		DomainId:   params.DomainId,
