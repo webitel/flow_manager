@@ -46,20 +46,6 @@ func (s SqlQueueStore) HistoryStatistics(domainId int64, search *model.SearchQue
 			"bad field", http.StatusBadRequest)
 	}
 
-	fmt.Println(`select ` + agg + `
-	from call_center.cc_member_attempt_history a
-	where queue_id = (
-		select q.id
-		from call_center.cc_queue q
-		where q.domain_id = :DomainId::int8 and (q.id = :QueueId::int or q.name = :QueueName::varchar)
-		limit 1
-	) and joined_at between now() - (:Min::int || ' min')::interval and now()
-	  and ((:BucketId::int isnull and :BucketName::varchar isnull) or a.bucket_id = (
-	      select b.id
-	      from call_center.cc_bucket b
-	      where b.domain_id = :DomainId::int8 and (b.id = :BucketId::int or b.name = :BucketName::varchar)
-        ))`)
-
 	res, err := s.GetReplica().SelectFloat(`select `+agg+`
 	from call_center.cc_member_attempt_history a
 	where queue_id = (

@@ -2,8 +2,11 @@ package email
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/oauth2"
 
 	"github.com/webitel/flow_manager/storage"
 
@@ -19,6 +22,11 @@ var (
 	SizeCache            = 1000
 )
 
+const (
+	MailGmail     = "gmail"
+	MailMicrosoft = "microsoft"
+)
+
 type server struct {
 	store           store.EmailStore
 	storage         *storage.Api
@@ -27,9 +35,10 @@ type server struct {
 	stopped         chan struct{}
 	startOnce       sync.Once
 	consume         chan model.Connection
+	oauth2Conf      map[string]oauth2.Config
 }
 
-func New(storageApi *storage.Api, s store.EmailStore) model.Server {
+func New(storageApi *storage.Api, s store.EmailStore, oauth2Conf map[string]oauth2.Config) model.Server {
 	return &server{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
@@ -37,6 +46,7 @@ func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),
 		storage:         storageApi,
+		oauth2Conf:      oauth2Conf,
 	}
 }
 
@@ -191,4 +201,17 @@ func (s *server) TestProfile(domainId int64, profileId int) *model.AppError {
 	}
 
 	return nil
+}
+
+func (s *server) OAuth2MailConfig(host string) (c oauth2.Config, ok bool) {
+	if s.oauth2Conf == nil {
+		ok = false
+		return
+	}
+
+	if strings.Index(host, "gmail.com") > -1 {
+		c, ok = s.oauth2Conf[MailGmail]
+	}
+
+	return
 }

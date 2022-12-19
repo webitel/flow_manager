@@ -3,8 +3,10 @@ module github.com/webitel/flow_manager
 go 1.18
 
 require (
+	github.com/BoRuDar/configuration/v4 v4.2.2
 	github.com/emersion/go-imap v1.2.1
 	github.com/emersion/go-message v0.15.0
+	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.6.0
@@ -26,6 +28,7 @@ require (
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
 	github.com/webitel/protos/workflow v0.0.0-20221215113319-bb59fcd34cfb
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
+	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.51.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -33,8 +36,9 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute v1.13.0 // indirect
+	cloud.google.com/go/compute/metadata v0.2.2 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
-	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21 // indirect
 	github.com/emersion/go-textwrapper v0.0.0-20200911093747-65d896831594 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
@@ -62,6 +66,7 @@ require (
 	golang.org/x/net v0.4.0 // indirect
 	golang.org/x/sys v0.3.0 // indirect
 	golang.org/x/text v0.5.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20221207170731-23e4bf6bdc37 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect

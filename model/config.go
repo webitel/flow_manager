@@ -1,59 +1,52 @@
 package model
 
+import "golang.org/x/oauth2"
+
 const (
 	DATABASE_DRIVER_POSTGRES = "postgres"
 )
 
 type Config struct {
-	Id          string `json:"id"`
-	ExternalSql bool   `json:"external_sql"`
+	ConfigFile  *string `json:"-" flag:"config_file||JSON file configuration"`
+	Id          string  `json:"id" flag:"id|1|Service id"`
+	ExternalSql bool    `json:"external_sql" flag:"external_sql|false|Enable external sql query"`
 	Record      struct {
-		Sample int `json:"sample"`
+		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording"`
 	} `json:"record"`
-	SqlSettings                  SqlSettings       `json:"sql_settings"`
-	MQSettings                   MQSettings        `json:"mq_settings"`
-	DiscoverySettings            DiscoverySettings `json:"discovery_settings"`
-	PreSignedCertificateLocation string
-	Dev                          bool            `json:"dev"`
-	Esl                          ServeSettings   `json:"esl"`
-	Grpc                         ServeSettings   `json:"grpc"`
-	WebChat                      WebChatSettings `json:"web_chat"`
+	SqlSettings                  SqlSettings              `json:"sql_settings"`
+	MQSettings                   MQSettings               `json:"mq_settings"`
+	DiscoverySettings            DiscoverySettings        `json:"discovery_settings"`
+	PreSignedCertificateLocation string                   `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate"`
+	Dev                          bool                     `json:"dev" flag:"dev|false|Dev mode"`
+	Esl                          EslSettings              `json:"esl"`
+	Grpc                         GrpcServeSettings        `json:"grpc"`
+	EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
 }
 
-type ServeSettings struct {
-	Host string
-	Port int
+type EslSettings struct {
+	Host string `json:"host" flag:"esl_host|localhost|ESL server host"`
+	Port int    `json:"port" flag:"esl_port|10030|ESL server port"`
+}
+
+type GrpcServeSettings struct {
+	Host string `json:"host" flag:"grpc_addr|localhost|GRPC server host"`
+	Port int    `json:"port" flag:"grpc_port|0|GRPC server port"`
 }
 
 type DiscoverySettings struct {
-	Url string
-}
-
-type ServiceSettings struct {
-	NodeId                *string
-	ListenAddress         *string
-	ListenInternalAddress *string
-	SessionCacheInMinutes *int
-}
-
-type WebChatSettings struct {
-	Host string
-	Port int
+	Url string `json:"url" flag:"consul|consul:8500|Host to consul"`
 }
 
 type SqlSettings struct {
-	DriverName                  *string
-	DataSource                  *string
-	DataSourceReplicas          []string
-	DataSourceSearchReplicas    []string
-	MaxIdleConns                *int
-	ConnMaxLifetimeMilliseconds *int
-	MaxOpenConns                *int
-	Trace                       bool
-	AtRestEncryptKey            string
-	QueryTimeout                *int
+	DriverName                  *string  `json:"driver_name" flag:"sql_driver_name|postgres|"`
+	DataSource                  *string  `json:"data_source" flag:"data_source|postgres://opensips:webitel@postgres:5432/webitel?fallback_application_name=engine&sslmode=disable&connect_timeout=10&search_path=call_center|Data source"`
+	DataSourceReplicas          []string `json:"data_source_replicas" flag:"sql_data_source_replicas" default:""`
+	MaxIdleConns                *int     `json:"max_idle_conns" flag:"sql_max_idle_conns|5|Maximum idle connections"`
+	MaxOpenConns                *int     `json:"max_open_conns" flag:"sql_max_open_conns|5|Maximum open connections"`
+	ConnMaxLifetimeMilliseconds *int     `json:"conn_max_lifetime_milliseconds" flag:"sql_conn_max_lifetime_milliseconds|300000|Connection maximum lifetime milliseconds"`
+	Trace                       bool     `json:"trace" flag:"sql_trace|false|Trace SQL"`
 }
 
 type MQSettings struct {
-	Url string
+	Url string `json:"url" flag:"amqp|amqp://webitel:webitel@rabbit:5672?heartbeat=10|AMQP connection"`
 }
