@@ -21,6 +21,10 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 
 	responseCode := ""
 
+	if len(argv.Peer) == 0 {
+		return nil, ErrorRequiredParameter("broadcastChatMessage", "peer")
+	}
+
 	if err = r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv); err != nil {
 		responseCode = err.Error()
 	}
