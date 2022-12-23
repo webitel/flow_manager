@@ -32,7 +32,7 @@ func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, e
     from jsonb_array_elements(:Request::jsonb) with ordinality as t (endpoint, idx)
 )
 select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables ,
-	has_push
+	coalesce(has_push, false) as has_push
 from endpoints e
  left join lateral (
      select u.id::int8 as id, coalesce(u.name, u.username)::varchar as name, coalesce(x.d, uss.dnd) dnd, u.extension as destination,

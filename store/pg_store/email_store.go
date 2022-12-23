@@ -24,7 +24,7 @@ func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask,
 	_, err := s.GetReplica().Select(&tasks, ` update call_center.cc_email_profile
  set last_activity_at = now(),
      state = 'active'
- where id = 77  and
+ where listen and
        last_activity_at < now() - (fetch_interval || ' sec')::interval
 returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
