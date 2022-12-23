@@ -480,6 +480,11 @@ func (c *Connection) Api(cmd string) ([]byte, error) {
 func (c *Connection) HangupCause() string {
 	c.RLock()
 	defer c.RUnlock()
+	if c.hangupCause == "" && c.variables != nil {
+		if v, ok := c.variables["Hangup-Cause"]; ok && v != "" {
+			return v
+		}
+	}
 	return c.hangupCause
 }
 

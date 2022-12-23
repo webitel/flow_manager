@@ -140,6 +140,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		return model.CallResponseError, nil
 	}
 
+	if call.HangupCause() != "" {
+		return nil, model.NewAppError("Call", "call.queue.join.hangup", nil, "Call is down", 500)
+	}
+
 	ctx2, cancelQueue := context.WithCancel(context.Background())
 	res, err := r.fm.JoinToInboundQueue(ctx2, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),

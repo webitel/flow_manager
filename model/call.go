@@ -359,6 +359,7 @@ type Call interface {
 	CancelQueue() bool
 
 	AudioStream(ctx context.Context) (Response, *AppError)
+	HangupCause() string
 }
 
 type PlaybackFile struct {
