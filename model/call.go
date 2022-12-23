@@ -357,6 +357,7 @@ type Call interface {
 
 	SetQueueCancel(cancel context.CancelFunc) bool
 	CancelQueue() bool
+	HangupCause() string
 }
 
 type PlaybackFile struct {
