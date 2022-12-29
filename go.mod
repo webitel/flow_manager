@@ -21,8 +21,8 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20221028125927-4ad0388c602a
-	github.com/webitel/engine v0.0.0-20221028131449-cc7b51b60a04
+	github.com/webitel/call_center v0.0.0-20221229103044-4e3121f5990d
+	github.com/webitel/engine v0.0.0-20221221131149-7330f7dd4cdd
 	github.com/webitel/protos/cc v0.0.0-20221215113319-bb59fcd34cfb
 	github.com/webitel/protos/engine v0.0.0-20221215113319-bb59fcd34cfb
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
@@ -42,7 +42,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-playground/form v3.1.4+incompatible // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/consul/api v1.15.3 // indirect
