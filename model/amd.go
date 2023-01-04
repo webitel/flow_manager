@@ -11,3 +11,6 @@ type AmdParameters struct {
 	Greeting             *int `json:"greeting"`
 	InitialSilence       *int `json:"initialSilence"`
 }
+
+type AmdMLParameters struct {
+}

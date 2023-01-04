@@ -193,16 +193,18 @@ type CallActionBridge struct {
 
 type CallActionHangup struct {
 	CallAction
-	Cause         string         `json:"cause"`
-	Payload       *CallVariables `json:"payload"`
-	SipCode       *int           `json:"sip"`
-	OriginSuccess *bool          `json:"originate_success"`
-	HangupBy      *string        `json:"hangup_by"`
-	Tags          []string       `json:"tags"`
-	AmdResult     *string        `json:"amd_result"`
-	RecordStart   *int64         `json:"record_start,string"`
-	RecordStop    *int64         `json:"record_stop,string"`
-	TalkSec       *float32       `json:"talk_sec,string"`
+	Cause          string         `json:"cause"`
+	Payload        *CallVariables `json:"payload"`
+	SipCode        *int           `json:"sip"`
+	OriginSuccess  *bool          `json:"originate_success"`
+	HangupBy       *string        `json:"hangup_by"`
+	Tags           []string       `json:"tags"`
+	AmdResult      *string        `json:"amd_result"`
+	RecordStart    *int64         `json:"record_start,string"`
+	RecordStop     *int64         `json:"record_stop,string"`
+	TalkSec        *float32       `json:"talk_sec,string"`
+	AmdMlResult    *string        `json:"amd_ml_result"`
+	AmdMlResultLog []string       `json:"amd_ml_logs"`
 }
 
 type CallActionSTT struct {
@@ -347,6 +349,8 @@ type Call interface {
 	GetVariable(string) string
 
 	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
+	AmdML(ctx context.Context, params AmdMLParameters) (Response, *AppError)
+
 	GoogleTranscribe(ctx context.Context) (Response, *AppError)
 	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
 
