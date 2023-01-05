@@ -460,7 +460,7 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res m
 }
 
 func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, *model.AppError) {
-	return c.executeWithContext(ctx, "wbt_audio_stream", "")
+	return c.executeWithContext(ctx, "wbt_amd", "")
 }
 
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
