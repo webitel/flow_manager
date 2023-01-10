@@ -203,8 +203,8 @@ type CallActionHangup struct {
 	RecordStart    *int64         `json:"record_start,string"`
 	RecordStop     *int64         `json:"record_stop,string"`
 	TalkSec        *float32       `json:"talk_sec,string"`
-	AmdMlResult    *string        `json:"amd_ml_result"`
-	AmdMlResultLog []string       `json:"amd_ml_logs"`
+	AmdAiResult    *string        `json:"amd_ai_result"`
+	AmdAiResultLog []string       `json:"amd_ai_logs"`
 }
 
 type CallActionSTT struct {
