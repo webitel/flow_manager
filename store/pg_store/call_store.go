@@ -111,7 +111,7 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, 
-			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ml_logs)
+			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs)
 values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, 
 	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult, :AmdAiResultLog)
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
