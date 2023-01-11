@@ -70,7 +70,7 @@ type Connection struct {
 	lastEvent        *eventsocket.Event
 	connection       *eventsocket.Connection
 	callbackMessages map[string]chan *eventsocket.Event
-	variables        map[string]string
+	variables        *model.ThreadSafeStringMap
 	hangupCause      string
 	exportVariables  []string
 	ctx              context.Context
@@ -110,7 +110,7 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		lastEvent:        dump,
 		callbackMessages: make(map[string]chan *eventsocket.Event),
 		//disconnected:     make(chan struct{}),
-		variables: make(map[string]string),
+		variables: model.NewThreadSafeStringMap(),
 	}
 	connection.initIvrQueue(dump)
 	connection.initTransferSchema(dump)
@@ -274,7 +274,7 @@ func (c *Connection) Close() *model.AppError {
 
 func (c *Connection) Get(key string) (value string, ok bool) {
 	if c.Stopped() {
-		if value, ok = c.variables[key]; ok {
+		if value, ok = c.variables.Load(key); ok {
 			return
 		}
 	}
@@ -285,7 +285,7 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 			value = c.lastEvent.Get("variable_" + (key))
 		}
 		if value == "" {
-			if key, ok := mapVariables[key]; ok {
+			if key, ok = mapVariables[key]; ok {
 				value = c.lastEvent.Get(key)
 			}
 		}
@@ -298,9 +298,11 @@ func (c *Connection) Get(key string) (value string, ok bool) {
 }
 
 func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, *model.AppError) {
+	m := make(map[string]string)
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v)
+		m[k] = fmt.Sprintf("%v", v)
 	}
+	c.variables.UnionMap(m)
 	return model.CallResponseOK, nil
 }
 
@@ -481,7 +483,7 @@ func (c *Connection) HangupCause() string {
 	c.RLock()
 	defer c.RUnlock()
 	if c.hangupCause == "" && c.variables != nil {
-		if v, ok := c.variables["Hangup-Cause"]; ok && v != "" {
+		if v, ok := c.variables.Load("Hangup-Cause"); ok && v != "" {
 			return v
 		}
 	}
@@ -525,9 +527,11 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args in
 }
 
 func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {
+	m := make(map[string]string)
 	for k, _ := range event.Header {
-		c.variables[k] = event.Get(k)
+		m[k] = event.Get(k)
 	}
+	c.variables.UnionMap(m)
 }
 
 func (c *Connection) GetVariable(name string) (value string) {
@@ -549,7 +553,7 @@ func (c *Connection) SendEvent(m map[string]string, name string) error {
 }
 
 func (c *Connection) DumpVariables() map[string]string {
-	return c.variables
+	return c.variables.Data()
 }
 
 func (c *Connection) IsSetResample() bool {
