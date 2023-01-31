@@ -205,6 +205,7 @@ type CallActionHangup struct {
 	TalkSec        *float32       `json:"talk_sec,string"`
 	AmdAiResult    *string        `json:"amd_ai_result"`
 	AmdAiResultLog []string       `json:"amd_ai_logs"`
+	AmdAiPositive  *bool          `json:"amd_ai_positive"`
 }
 
 type CallActionSTT struct {
