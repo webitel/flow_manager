@@ -37,6 +37,9 @@ func (q *queueApi) NewProcessing(ctx context.Context, domainId int64, schemaId i
 }
 
 func (p *QueueProcessing) Form() []byte {
+	if p == nil {
+		return nil
+	}
 	p.RLock()
 	defer p.RUnlock()
 
