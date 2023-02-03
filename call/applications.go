@@ -141,6 +141,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.amdMl),
 	}
+	apps["pickup"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.pickup),
+	}
 
 	return apps
 }

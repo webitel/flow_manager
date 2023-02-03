@@ -88,7 +88,12 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		}
 	}
 
-	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), vars, e, codecs, br)
+	pickup := getStringValueFromMap("pickup", props, "")
+	if pickup != "" {
+		pickup = call.ParseText(pickup)
+	}
+
+	res, err := call.Bridge(ctx, call, getStringValueFromMap("strategy", props, ""), vars, e, codecs, br, pickup)
 	if err != nil {
 		return res, err
 	}

@@ -44,7 +44,8 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *m
 }
 
 // FIXME GLOBAL VARS
-func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string, endpoints []*model.Endpoint, codecs []string, hook chan struct{}) (model.Response, *model.AppError) {
+func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string,
+	endpoints []*model.Endpoint, codecs []string, hook chan struct{}, pickup string) (model.Response, *model.AppError) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -110,6 +111,9 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 		}
 	}
 
+	if pickup != "" {
+		dialString += fmt.Sprintf("pickup/%s:_:", c.PickupHash(pickup))
+	}
 	dialString += strings.Join(end, separator)
 
 	if hook != nil {
@@ -461,6 +465,15 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res m
 
 func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "wbt_amd", "")
+}
+
+func (c *Connection) Pickup(ctx context.Context, name string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "pickup", fmt.Sprintf("%s@%d", name, c.domainId))
+}
+
+// PickupHash todo
+func (c *Connection) PickupHash(name string) string {
+	return fmt.Sprintf("%s@%d", name, c.domainId)
 }
 
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
