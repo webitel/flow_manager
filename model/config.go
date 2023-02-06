@@ -10,6 +10,7 @@ type Config struct {
 	ConfigFile  *string `json:"-" flag:"config_file||JSON file configuration"`
 	Id          string  `json:"id" flag:"id|1|Service id"`
 	ExternalSql bool    `json:"external_sql" flag:"external_sql|false|Enable external sql query"`
+	AllowUseMQ  bool    `json:"allow_use_mq" flag:"allow_use_mq|false|Allow push message to MQ"`
 	Record      struct {
 		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording"`
 	} `json:"record"`

@@ -3,12 +3,15 @@ package rabbit
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/streadway/amqp"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/wlog"
-	"os"
-	"time"
 )
 
 const CallChanBufferCount = 100
@@ -33,6 +36,7 @@ type AMQP struct {
 	stopping           bool
 	callEvent          chan model.CallActionData
 	queueEvent         mq.QueueEvent
+	sync.RWMutex
 }
 
 func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
@@ -67,7 +71,9 @@ func (a *AMQP) initConnection() {
 		a.initConnection()
 	} else {
 		a.connectionAttempts = 0
+		a.Lock()
 		a.channel, err = a.connection.Channel()
+		a.Unlock()
 		if err != nil {
 			wlog.Critical(fmt.Sprintf("Failed to open AMQP channel to err:%v", err.Error()))
 			time.Sleep(time.Second)
@@ -165,7 +171,27 @@ func (a *AMQP) Close() {
 	}
 }
 
-func (a *AMQP) SendJSON(key string, data []byte) *model.AppError {
+func (a *AMQP) getChannel() *amqp.Channel {
+	a.RLock()
+	defer a.RUnlock()
+
+	return a.channel
+}
+
+func (a *AMQP) SendJSON(exchange string, key string, data []byte) *model.AppError {
+	channel := a.getChannel()
+	if channel == nil {
+		return model.NewAppError("MQ", "mq.publish.channel.err", nil, "Not found publish channel", http.StatusInternalServerError)
+	}
+	err := channel.Publish(exchange, key, false, false, amqp.Publishing{
+		ContentType: "text/json",
+		Body:        data,
+	})
+
+	if err != nil {
+		return model.NewAppError("MQ", "mq.publish.err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
 	return nil
 }
 

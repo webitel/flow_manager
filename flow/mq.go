@@ -1,0 +1,45 @@
+package flow
+
+import (
+	"context"
+	"encoding/json"
+	"net/http"
+
+	"github.com/webitel/flow_manager/model"
+)
+
+type MQArgs struct {
+	Exchange string `json:"exchange"`
+	Topic    string `json:"topic"`
+	Body     interface{}
+}
+
+func (r *router) mq(ctx context.Context, scope *Flow, call model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv MQArgs
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+
+	if argv.Exchange == "" {
+		return nil, ErrorRequiredParameter("mq", "exchange")
+	}
+
+	if argv.Topic == "" {
+		return nil, ErrorRequiredParameter("mq", "topic")
+	}
+
+	data, jsonErr := json.Marshal(argv.Body)
+	if jsonErr != nil {
+		return model.CallResponseError, model.NewAppError("Flow", "flow.app.mq.valid.body", nil, jsonErr.Error(), http.StatusInternalServerError)
+	}
+
+	data = []byte(call.ParseText(string(data)))
+
+	err = r.fm.SendMQJson(argv.Exchange, argv.Topic, data)
+	if err != nil {
+		return nil, err
+	}
+
+	return model.CallResponseOK, nil
+}

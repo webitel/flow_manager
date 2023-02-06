@@ -2,6 +2,7 @@ package mq
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -21,8 +22,8 @@ func NewMQ(mq LayeredMQLayer) MQ {
 	}
 }
 
-func (l *LayeredMQ) SendJSON(name string, data []byte) *model.AppError {
-	return l.MQLayer.SendJSON(name, data)
+func (l *LayeredMQ) SendJSON(exchange string, key string, data []byte) *model.AppError {
+	return l.MQLayer.SendJSON(exchange, key, data)
 }
 
 func (l *LayeredMQ) Close() {

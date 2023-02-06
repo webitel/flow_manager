@@ -5,7 +5,7 @@ import (
 )
 
 type MQ interface {
-	SendJSON(name string, data []byte) *model.AppError
+	SendJSON(exchange string, key string, data []byte) *model.AppError
 	Close()
 
 	ConsumeCallEvent() <-chan model.CallActionData
