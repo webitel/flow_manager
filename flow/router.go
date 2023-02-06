@@ -176,6 +176,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.printFile),
 	}
+	apps["mq"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.mq),
+	}
 
 	return apps
 }
