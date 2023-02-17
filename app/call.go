@@ -86,6 +86,10 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 		}
 
 	default:
+		if data.Event == "eavesdrop" || data.Event == "dtmf" {
+			// skip that events
+			return
+		}
 		if err := f.Store.Call().SetState(&data.CallAction); err != nil {
 			wlog.Error(err.Error())
 		}
