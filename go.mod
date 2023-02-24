@@ -22,7 +22,7 @@ require (
 	github.com/streadway/amqp v1.0.0
 	github.com/tidwall/gjson v1.14.3
 	github.com/webitel/call_center v0.0.0-20221229103044-4e3121f5990d
-	github.com/webitel/engine v0.0.0-20230224125618-aa7b2780ab09
+	github.com/webitel/engine v0.0.0-20230224131740-fae606f7d2f9
 	github.com/webitel/protos/cc v0.0.0-20221215113319-bb59fcd34cfb
 	github.com/webitel/protos/engine v0.0.0-20230112133238-3b34cb4e8b58
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
