@@ -173,7 +173,7 @@ func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec
 	}
 
 	return c.executeWithContext(ctx, "record",
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s&.%s %d %d %d", c.domainId, c.Id(), name, format,
+		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s %d %d %d", c.domainId, c.Id(), name, format, format,
 			maxSec, silenceThresh, silenceHits))
 }
 
@@ -199,7 +199,7 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 	}
 
 	return c.executeWithContext(ctx, "record_session",
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
+		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s.%s&.%s", c.domainId, c.Id(), c.Id(), name, format, format))
 }
 
 func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {
