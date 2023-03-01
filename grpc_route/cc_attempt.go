@@ -29,11 +29,15 @@ type AfterAttemptSuccess struct {
 }
 
 type AfterAttemptAbandoned struct {
+	Status                      string   `json:"status"`
 	MaxAttempts                 uint32   `json:"maxAttempts"`
 	WaitBetweenRetries          uint32   `json:"waitBetweenRetries"`
 	Export                      []string `json:"export"`
 	ExcludeCurrentCommunication bool     `json:"excludeCurrentCommunication"`
 	Redial                      bool     `json:"redial"`
+	Display                     bool     `json:"display"`
+	Description                 string   `json:"description"`
+	AgentId                     *int32   `json:"agentId"`
 }
 
 func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
@@ -101,20 +105,32 @@ func (r *Router) success(ctx context.Context, scope *flow.Flow, conn model.GRPCC
 }
 
 func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
-	var argv AfterAttemptAbandoned
+	var argv = AfterAttemptAbandoned{
+		Status: "abandoned",
+	}
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
+	abandoned := &flow2.ResultAttemptResponse_Abandoned{
+		Status:                      argv.Status,
+		MaxAttempts:                 argv.MaxAttempts,
+		WaitBetweenRetries:          argv.WaitBetweenRetries,
+		ExcludeCurrentCommunication: argv.ExcludeCurrentCommunication,
+		Redial:                      argv.Redial,
+		AgentId:                     0,
+		Display:                     argv.Display,
+		Description:                 argv.Description,
+	}
+
+	if argv.AgentId != nil {
+		abandoned.AgentId = *argv.AgentId
+	}
+
 	conn.Result(&flow2.ResultAttemptResponse{
 		Result: &flow2.ResultAttemptResponse_Abandoned_{
-			Abandoned: &flow2.ResultAttemptResponse_Abandoned{
-				MaxAttempts:                 argv.MaxAttempts,
-				WaitBetweenRetries:          argv.WaitBetweenRetries,
-				ExcludeCurrentCommunication: argv.ExcludeCurrentCommunication,
-				Redial:                      argv.Redial,
-			},
+			Abandoned: abandoned,
 		},
 		Variables: exportVars(conn, argv.Export),
 	})
