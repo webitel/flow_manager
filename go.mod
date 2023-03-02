@@ -24,11 +24,11 @@ require (
 	github.com/webitel/call_center v0.0.0-20221229103044-4e3121f5990d
 	github.com/webitel/engine v0.0.0-20230224131740-fae606f7d2f9
 	github.com/webitel/protos/cc v0.0.0-20221215113319-bb59fcd34cfb
-	github.com/webitel/protos/engine v0.0.0-20230112133238-3b34cb4e8b58
+	github.com/webitel/protos/engine v0.0.0-20230301123315-c6d5b859609e
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
-	github.com/webitel/protos/workflow v0.0.0-20221215113319-bb59fcd34cfb
+	github.com/webitel/protos/workflow v0.0.0-20230301123315-c6d5b859609e
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
-	golang.org/x/oauth2 v0.0.0-20221014153046-6fdb5e3db783
+	golang.org/x/oauth2 v0.4.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.52.3
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -61,9 +61,9 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.23.0 // indirect
-	golang.org/x/net v0.5.0 // indirect
-	golang.org/x/sys v0.4.0 // indirect
-	golang.org/x/text v0.6.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
+	golang.org/x/sys v0.5.0 // indirect
+	golang.org/x/text v0.7.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230131230820-1c016267d619 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect

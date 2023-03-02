@@ -2,10 +2,11 @@ package sqlstore
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"strings"
 )
 
 type SqlUserStore struct {
@@ -60,7 +61,7 @@ where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
 				continue
 			}
 
-			val = fmt.Sprintf("(u.profile->%s) as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+			val = fmt.Sprintf("coalesce((u.profile->%s)::text, '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
 		}
 
 		f = append(f, val)
