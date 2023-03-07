@@ -61,7 +61,7 @@ where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
 				continue
 			}
 
-			val = fmt.Sprintf("coalesce((u.profile->%s)::text, '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+			val = fmt.Sprintf("coalesce((u.profile->>%s)::text, '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
 		}
 
 		f = append(f, val)
