@@ -133,17 +133,16 @@ where id = :Id`, map[string]interface{}{
 }
 
 func (s SqlEmailStore) GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError) {
-	f := make([]string, 0)
+	f := make([]string, 0, 0)
 
 	for k, v := range mapRes {
 		var val = ""
 		switch v {
 		case "from", "to", "subject",
-			"cc", "sender", "reply_to", "in_reply_to", "body", "html", "attachments":
-			val = fmt.Sprintf("\"%s\" as %s", v, pq.QuoteIdentifier(k))
+			"cc", "sender", "reply_to", "in_reply_to", "body", "html", "attachments", "message_id", "id":
+			val = fmt.Sprintf("coalesce(\"%s\"::text, '') as %s", v, pq.QuoteIdentifier(k))
+			f = append(f, val)
 		}
-
-		f = append(f, val)
 	}
 
 	var t *properties
@@ -153,7 +152,8 @@ from (
     select `+strings.Join(f, ", ")+`
     from (
         select
-            id,
+            id::text as id,
+			message_id,
             array_to_string("from", ',') as from,
             array_to_string("to", ',') as to,
             subject,
