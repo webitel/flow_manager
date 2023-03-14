@@ -2,11 +2,12 @@ package call
 
 import (
 	"context"
+	"io"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
-	"io"
 )
 
 type JoinAgentArgs struct {
@@ -19,10 +20,11 @@ type JoinAgentArgs struct {
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
 	}
-	Bridged          []interface{} `json:"bridged"`
-	Timeout          int32         `json:"timeout"`
-	QueueName        string        `json:"queue_name"`
-	CancelDistribute bool          `json:"cancel_distribute"`
+	Ringtone         model.PlaybackFile `json:"ringtone"`
+	Bridged          []interface{}      `json:"bridged"`
+	Timeout          int32              `json:"timeout"`
+	QueueName        string             `json:"queue_name"`
+	CancelDistribute bool               `json:"cancel_distribute"`
 }
 
 func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -53,12 +55,30 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 	}
 
 	t := call.GetVariable("variable_transfer_history")
+	var ringtone *cc.CallJoinToAgentRequest_WaitingMusic
+	//FIXME
+	if argv.Ringtone.Name != nil || argv.Ringtone.Id != nil {
+		var err *model.AppError
+		req := make([]*model.PlaybackFile, 1, 1)
+		req[0] = &model.PlaybackFile{
+			Id:   argv.Ringtone.Id,
+			Name: argv.Ringtone.Name,
+		}
+		if req, err = r.fm.GetMediaFiles(call.DomainId(), &req); err != nil {
+			return nil, err
+		} else if req != nil && req[0] != nil && req[0].Type != nil {
+			ringtone = &cc.CallJoinToAgentRequest_WaitingMusic{
+				Id:   int32(*req[0].Id),
+				Type: *req[0].Type,
+			}
+		}
+	}
 
 	req := &cc.CallJoinToAgentRequest{
 		DomainId:         call.DomainId(),
 		MemberCallId:     call.Id(),
 		AgentId:          *agentId,
-		WaitingMusic:     nil,
+		WaitingMusic:     ringtone,
 		Timeout:          argv.Timeout,
 		Variables:        call.DumpExportVariables(),
 		QueueName:        argv.QueueName,
