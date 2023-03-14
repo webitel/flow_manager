@@ -160,15 +160,24 @@ from (
 // todo variables
 func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError) {
 	i, err := s.GetMaster().SelectNullInt(`with m as (
-    update call_center.cc_member m
-    set name = coalesce(:UName::varchar, name),
-        priority = coalesce(:UPriority::int, priority),
-        bucket_id = coalesce(:UBucketId::int, bucket_id),
-        ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else ready_at end,
-        stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else stop_cause end,
-        stop_at = case when :UStopCause::varchar notnull then now() else stop_at end,
-        variables = case when (:UVariables::jsonb) notnull then coalesce(variables, '{}'::jsonb) || :UVariables::jsonb else variables end
-    where m.queue_id in (
+    update call_center.cc_member mu
+    set name = coalesce(:UName::varchar, mu.name),
+        priority = coalesce(:UPriority::int, mu.priority),
+        bucket_id = coalesce(:UBucketId::int, mu.bucket_id),
+        ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else mu.ready_at end,
+        stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else mu.stop_cause end,
+        stop_at = case when :UStopCause::varchar notnull then now() else mu.stop_at end,
+        variables = case when (:UVariables::jsonb) notnull then coalesce(mu.variables, '{}'::jsonb) || :UVariables::jsonb else mu.variables end,
+        communications = case when :Communications::jsonb notnull and x.v notnull then x.v else mu.communications end
+    from call_center.cc_member m
+        left join lateral (
+            select
+                jsonb_agg(case when d notnull then x.comm || (d - '{"id"}') else x.comm end order by idx) v
+            from jsonb_array_elements(m.communications) with ordinality x(comm, idx)
+                left join jsonb_array_elements(:Communications::jsonb) d on (d->>'id')::int8 = idx
+        ) x on :Communications::jsonb notnull
+    where m.id = mu.id
+    and m.queue_id in (
         select id from call_center.cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
@@ -177,7 +186,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
     and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
-    returning id
+    returning mu.id
 )
 select count(*)
 from m`, map[string]interface{}{
@@ -190,12 +199,13 @@ from m`, map[string]interface{}{
 		"BucketId":    req.Bucket.GetId(),
 		"Destination": req.Destination,
 
-		"UName":      patch.Name,
-		"UPriority":  patch.Priority,
-		"UBucketId":  patch.Bucket.GetId(),
-		"UReadyAt":   patch.ReadyAt,
-		"UStopCause": patch.StopCause,
-		"UVariables": patch.Variables.ToString(),
+		"UName":          patch.Name,
+		"UPriority":      patch.Priority,
+		"UBucketId":      patch.Bucket.GetId(),
+		"UReadyAt":       patch.ReadyAt,
+		"UStopCause":     patch.StopCause,
+		"UVariables":     patch.Variables.ToString(),
+		"Communications": patch.CommunicationsToJson(),
 	})
 
 	if err != nil {
@@ -234,7 +244,7 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 		"DomainId":   domainId,
 		"QueueId":    queueId,
 		"Number":     member.Communication.Destination,
-		"TypeId":     member.Communication.Type.Id,
+		"TypeId":     member.Communication.Type.GetId(),
 		"Name":       member.Name,
 		"HoldSec":    holdSec,
 		"Variables":  member.Variables.ToString(),
