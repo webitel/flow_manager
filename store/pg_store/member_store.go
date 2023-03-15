@@ -174,7 +174,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
             select
                 jsonb_agg(case when d notnull then x.comm || (d - '{"id"}') else x.comm end order by idx) v
             from jsonb_array_elements(m.communications) with ordinality x(comm, idx)
-                left join jsonb_array_elements(:Communications::jsonb) d on (d->>'id')::int8 = idx
+                left join jsonb_array_elements(:Communications::jsonb) d on (d->>'id')::int8 = idx - 1
         ) x on :Communications::jsonb notnull
     where m.id = mu.id
     and m.queue_id in (
