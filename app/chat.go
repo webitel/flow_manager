@@ -65,3 +65,7 @@ func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64,
 
 	return nil
 }
+
+func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
+	return c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
+}

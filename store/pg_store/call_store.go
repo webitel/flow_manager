@@ -351,7 +351,7 @@ func (s SqlCallStore) LastBridged(domainId int64, number, hours string, dialer, 
 				continue
 			}
 
-			val = fmt.Sprintf("(h.variables->%s) as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+			val = fmt.Sprintf("coalesce(regexp_replace((h.variables->%s)::text, '\n|\t', ' ', 'g'), '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
 		}
 
 		f = append(f, val)
@@ -368,7 +368,7 @@ from (select `+strings.Join(f, ", ")+`
                                 else h.from_number end, '') as         extension,
                    h.queue_id,
                    ah.agent_id,
-                   coalesce(ah.description, '')             as         description,
+                   coalesce(regexp_replace(ah.description, '\n|\t',  ' ', 'g'), '')             as         description,
                    h.gateway_id,
                    h.payload                                as         variables,
 				   h.id,

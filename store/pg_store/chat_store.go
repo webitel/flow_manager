@@ -1,6 +1,10 @@
 package sqlstore
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -79,4 +83,89 @@ where ars.id = :SchemaId and ars.domain_id = :DomainId`, map[string]interface{}{
 	}
 
 	return routing, nil
+}
+
+func (s SqlChatStore) LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
+	f := make([]string, 0)
+
+	for k, v := range mapRes {
+		var val = ""
+		switch v {
+		case "extension":
+			val = "extension::varchar as " + pq.QuoteIdentifier(k)
+		case "id":
+			val = "id::varchar as " + pq.QuoteIdentifier(k)
+		case "queue_id":
+			val = "queue_id::varchar as " + pq.QuoteIdentifier(k)
+		case "agent_id":
+			val = "agent_id::varchar as " + pq.QuoteIdentifier(k)
+		case "description":
+			val = "description::varchar as " + pq.QuoteIdentifier(k)
+		case "created_at":
+			val = "created_at::varchar as " + pq.QuoteIdentifier(k)
+		case "gateway_id":
+			val = "gateway_id::varchar as " + pq.QuoteIdentifier(k)
+		case "destination":
+			val = "destination::varchar as " + pq.QuoteIdentifier(k)
+		default:
+
+			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
+				continue
+			}
+
+			val = fmt.Sprintf("coalesce(regexp_replace((h.variables->%s)::text, '\n|\t', ' ', 'g'), '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+		}
+
+		f = append(f, val)
+	}
+
+	var t *properties
+
+	err := s.GetReplica().SelectOne(&t, `select row_to_json(t) variables
+from (select `+strings.Join(f, ", ")+`
+      from (select c.id::text as id,
+               u.extension,
+               to_char(c.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') created_at,
+               a.id::text as agent_id,
+               ''::text as gateway_id, --bot id,
+               ah.queue_id::text as queue_id,
+               coalesce(ah.description, '') as description,
+               coalesce(c.props, '{}') || coalesce(ch.props, '{}') as variables,
+			   c.props->>'chat' as destination
+        from chat.conversation c
+            left join lateral (
+                select ch.user_id, ch.props
+                from chat.channel ch
+                where ch.conversation_id = c.id
+                    and ch.internal
+                order by c.created_at desc
+                limit 1
+            ) ch on true
+            left join lateral (
+                select *
+                from call_center.cc_member_attempt_history ah
+                where ah.domain_id = c.domain_id
+                    and ah.member_call_id = c.id
+            ) ah on true
+            left join directory.wbt_user u on u.id = ch.user_id
+            left join call_center.cc_agent a on a.user_id = ch.user_id
+        where (c.props->>'user')::text = :Number and
+              ch.user_id notnull
+            and (c.domain_id = :DomainId and c.created_at > now() - (:Hours::varchar || ' hours')::interval)
+                      and (:QueueIds::int[] isnull or (ah.queue_id = any (:QueueIds) or ah.queue_id isnull))
+        order by c.created_at desc
+        limit 1) h
+      order by h.created_at desc
+      limit 1) t`, map[string]interface{}{
+		"DomainId": domainId,
+		"Hours":    hours,
+		"Number":   number,
+		"QueueIds": pq.Array(queueIds),
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlChatStore.LastBridgedExtension", "store.sql_chat.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return t.Variables, nil
 }

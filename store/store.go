@@ -96,6 +96,8 @@ type ListStore interface {
 type ChatStore interface {
 	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
 	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
+
+	LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
 }
 
 type QueueStore interface {
