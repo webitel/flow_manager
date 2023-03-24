@@ -31,9 +31,12 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 	if vars == nil {
 		vars = make(map[string]string)
 	}
+
+	att, _ := vars["attempt_id"]
+
 	ctx, cancel := context.WithCancel(context.Background())
 	return &processingConnection{
-		id:         model.NewId(),
+		id:         fmt.Sprintf("%s-%s", att, model.NewId()),
 		domainId:   domainId,
 		schemaId:   schemaId,
 		variables:  vars,

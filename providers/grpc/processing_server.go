@@ -74,6 +74,8 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 		return nil, err
 	}
 
+	wlog.Debug(fmt.Sprintf("[%s] receive action \"%s\" fields: %v", c.id, in.Action, in.Variables))
+
 	err = c.FormAction(model.FormAction{
 		Name:   in.Action,
 		Fields: model.VariablesFromStringMap(in.Variables),
