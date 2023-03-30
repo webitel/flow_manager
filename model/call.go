@@ -120,6 +120,7 @@ type CallActionInfo struct {
 	Payload     *CallVariables `json:"payload"`
 	Queue       *QueueInfo     `json:"queue"`
 	GranteeId   *int           `json:"grantee_id"`
+	SipId       *string        `json:"sip_id"`
 }
 
 type CallActionRinging struct {

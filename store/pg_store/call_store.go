@@ -21,10 +21,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
                       from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, 
-					  attempt_id, member_id, grantee_id)
+					  attempt_id, member_id, grantee_id, params)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
         :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, 
-		:AttemptId, :MemberId, :GranteeId)
+		:AttemptId, :MemberId, :GranteeId, jsonb_build_object('sip_id', :SipId::varchar))
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -47,7 +47,8 @@ on conflict (id)
 		team_id = EXCLUDED.team_id,
 		attempt_id = EXCLUDED.attempt_id,
 		member_id = EXCLUDED.member_id,
-		grantee_Id = EXCLUDED.grantee_Id
+		grantee_Id = EXCLUDED.grantee_Id,
+		params = EXCLUDED.params
 		`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
@@ -76,6 +77,7 @@ on conflict (id)
 		"MemberId":  call.GetMemberIdId(),
 		"GranteeId": call.GranteeId,
 		"Payload":   nil,
+		"SipId":     call.SipId,
 	})
 
 	if err != nil {
@@ -123,7 +125,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       hangup_by = EXCLUDED.hangup_by,
 	  tags = EXCLUDED.tags,
 	  amd_result = EXCLUDED.amd_result,
-	  params = EXCLUDED.params,
+	  params = EXCLUDED.params || call_center.cc_calls.params,
 	  talk_sec = EXCLUDED.talk_sec::int,
       timestamp = EXCLUDED.timestamp,
       amd_ai_result = EXCLUDED.amd_ai_result,
