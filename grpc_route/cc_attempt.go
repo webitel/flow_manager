@@ -15,6 +15,7 @@ type DoDistributeCancelArgs struct {
 
 	Export                      []string `json:"export"`
 	ExcludeCurrentCommunication bool     `json:"excludeCurrentCommunication"`
+	MinOfferingAt               *int64   `json:"minOfferingAt"`
 }
 
 type DoDistributeConfirmArgs struct {
@@ -38,6 +39,13 @@ type AfterAttemptAbandoned struct {
 	Display                     bool     `json:"display"`
 	Description                 string   `json:"description"`
 	AgentId                     *int32   `json:"agentId"`
+}
+
+type AfterAttemptRetry struct {
+	NextResource bool                `json:"nextResource"`
+	Sleep        int32               `json:"sleep"`
+	Resource     *model.SearchEntity `json:"resource"`
+	Export       []string            `json:"export"`
 }
 
 func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
@@ -138,6 +146,37 @@ func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRP
 	scope.SetCancel()
 
 	return model.CallResponseOK, nil
+}
+
+func (r *Router) retry(ctx context.Context, scope *flow.Flow, conn model.GRPCConnection, args interface{}) (model.Response, *model.AppError) {
+	var argv = AfterAttemptRetry{}
+
+	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	var resourceId int32
+	if argv.Resource != nil && argv.Resource.Id != nil {
+		resourceId = int32(*argv.Resource.Id)
+	}
+
+	retry := &flow2.ResultAttemptResponse{
+		Result: &flow2.ResultAttemptResponse_Retry_{
+			Retry: &flow2.ResultAttemptResponse_Retry{
+				NextResource: argv.NextResource,
+				Sleep:        argv.Sleep,
+				ResourceId:   resourceId,
+			},
+		},
+		Variables: exportVars(conn, argv.Export),
+	}
+
+	conn.Result(retry)
+
+	scope.SetCancel()
+
+	return model.CallResponseOK, nil
+
 }
 
 func exportVars(conn model.GRPCConnection, vars []string) map[string]string {
