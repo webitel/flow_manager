@@ -143,7 +143,7 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 
 		case "user":
 			e.Variables = getVars(endpoints[key], e.Variables)
-			if e.HasPush {
+			if e.HasPush != nil && *e.HasPush {
 				e.Variables = append(e.Variables, "execute_on_originate=wbt_send_hook")
 			}
 			//if e.Destination != nil {
