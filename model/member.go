@@ -1,5 +1,7 @@
 package model
 
+import "encoding/json"
+
 type Member struct {
 	Id   int64  `json:"id" db:"id"`
 	Name string `json:"name" db:"name"`
@@ -12,6 +14,16 @@ type CallbackCommunication struct {
 	Type        SearchEntity `json:"type"`
 	ResourceId  *int         `json:"resource_id"`
 	Display     *string      `json:"display"`
+}
+
+type PatchCallbackCommunication struct {
+	Id          *int          `json:"id,omitempty"`
+	Destination *string       `json:"destination,omitempty"`
+	Description *string       `json:"description,omitempty"`
+	Type        *SearchEntity `json:"type,omitempty"`
+	Display     *string       `json:"display,omitempty"`
+	Resource    *SearchEntity `json:"resource,omitempty"`
+	Priority    *int          `json:"priority,omitempty"`
 }
 
 type CallbackMember struct {
@@ -45,13 +57,22 @@ type SearchMember struct {
 }
 
 type PatchMember struct {
-	Name      *string       `json:"name"`
-	Priority  *int          `json:"priority"`
-	BucketId  *int          `json:"bucket_id"` // todo deprecated
-	Bucket    *SearchEntity `json:"bucket"`
-	ReadyAt   *int64        `json:"ready_at"`
-	StopCause *string       `json:"stop_cause"`
-	Variables *Variables    `json:"variables"`
+	Name           *string                      `json:"name"`
+	Priority       *int                         `json:"priority"`
+	BucketId       *int                         `json:"bucket_id"` // todo deprecated
+	Bucket         *SearchEntity                `json:"bucket"`
+	ReadyAt        *int64                       `json:"ready_at"`
+	StopCause      *string                      `json:"stop_cause"`
+	Variables      *Variables                   `json:"variables"`
+	Communications []PatchCallbackCommunication `json:"communications"`
+}
+
+func (p *PatchMember) CommunicationsToJson() *string {
+	if len(p.Communications) == 0 {
+		return nil
+	}
+	data, _ := json.Marshal(p.Communications)
+	return NewString(string(data))
 }
 
 func (m *SearchMember) GetQueueIds() []int {

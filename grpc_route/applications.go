@@ -2,6 +2,7 @@ package grpc_route
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
@@ -22,6 +23,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	}
 	apps["success"] = &flow.Application{
 		Handler: grpcHandlerMiddleware(r.success),
+	}
+	apps["retry"] = &flow.Application{
+		Handler: grpcHandlerMiddleware(r.retry),
 	}
 
 	return apps

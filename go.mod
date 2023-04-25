@@ -26,7 +26,7 @@ require (
 	github.com/webitel/protos/cc v0.0.0-20221215113319-bb59fcd34cfb
 	github.com/webitel/protos/engine v0.0.0-20230301123315-c6d5b859609e
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
-	github.com/webitel/protos/workflow v0.0.0-20230301123315-c6d5b859609e
+	github.com/webitel/protos/workflow v0.0.0-20230413090020-f5f4e9d27dc4
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.4.0
 	golang.org/x/sync v0.1.0

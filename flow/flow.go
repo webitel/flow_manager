@@ -12,7 +12,7 @@ import (
 	"github.com/webitel/wlog"
 )
 
-const MAX_GOTO = 1000 //32767
+const MAX_GOTO = 10000 //32767
 
 const (
 	ApplicationFlagBreakEnabled ApplicationFlag = 1 << iota
