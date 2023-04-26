@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -10,16 +11,18 @@ import (
     "calendar": {
         "name": "my Business Calendar",
         "extended": false,
-        "setVar": "isWorkDay"
+        "setVar": "isWorkDay",
+        "nextWorkTime": "myTimeVar"
     }
 }
 */
 
 type CalendarArgs struct {
-	Name     *string
-	Id       *int
-	SetVar   string `json:"setVar"`
-	Extended bool
+	Name         *string
+	Id           *int
+	SetVar       string `json:"setVar"`
+	Extended     bool
+	NextWorkTime string `json:"nextWorkTime"`
 }
 
 func (r *router) Calendar(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
