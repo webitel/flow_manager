@@ -167,11 +167,18 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 			body = []byte(str)
 		} else {
 			//JSON default
-			body, err = json.Marshal(props["data"])
+			switch pd := props["data"].(type) {
+			case string:
+				body = []byte(c.ParseText(pd))
+			default:
+				body, err = json.Marshal(props["data"])
+				if err == nil {
+					body = []byte(c.ParseText(string(body)))
+				}
+			}
+
 			if err != nil {
 				return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, err.Error(), http.StatusBadRequest)
-			} else {
-				body = []byte(c.ParseText(string(body)))
 			}
 		}
 
