@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"mime"
 	"net/http"
 
 	"github.com/webitel/flow_manager/providers/email"
@@ -157,7 +158,7 @@ func (r *router) attachToMail(domainId int64, mail *gomail.Message, files []mode
 	}
 
 	for _, file := range files {
-		mail.Attach(file.GetViewName(), gomail.SetCopyFunc(attachFn(file)))
+		mail.Attach(mime.QEncoding.Encode("UTF-8", file.GetViewName()), gomail.SetCopyFunc(attachFn(file)))
 	}
 }
 
