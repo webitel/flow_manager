@@ -91,7 +91,7 @@ on conflict (id)
 // TODO race... fix remove
 func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls(id, state, timestamp, app_id, domain_id)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId)
+values (:Id::uuid, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId)
 on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /1000) and cause isnull
     do update set 
       state = EXCLUDED.state,
@@ -159,8 +159,8 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 }
 
 func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
-	_, err := s.GetMaster().Exec(`call call_center.cc_call_set_bridged(:Id::varchar, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
-    :DomainId::int8, :BridgedId::varchar)`, map[string]interface{}{
+	_, err := s.GetMaster().Exec(`call call_center.cc_call_set_bridged(:Id::uuid, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
+    :DomainId::int8, :BridgedId::uuid)`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
@@ -378,7 +378,7 @@ from (select `+strings.Join(f, ", ")+`
             from call_center.cc_calls_history h
                      left join call_center.cc_queue q on q.id = h.queue_id
                      left join call_center.cc_member_attempt_history ah
-                               on ah.domain_id = h.domain_id and ah.member_call_id = h.id
+                               on ah.domain_id = h.domain_id and ah.member_call_id = h.id::text
             where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
               and (:QueueIds::int[] isnull or (h.queue_id = any (:QueueIds) or h.queue_id isnull))
               and (
