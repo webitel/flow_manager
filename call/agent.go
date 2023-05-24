@@ -111,16 +111,25 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 			return model.CallResponseError, nil
 		}
 
-		switch msg.Data.(type) {
+		switch e := msg.Data.(type) {
+		case *cc.QueueEvent_Joined:
+			call.Set(ctx, model.Variables{
+				"attempt_id": e.Joined.AttemptId,
+			})
+
 		case *cc.QueueEvent_Bridged:
 			if len(argv.Bridged) > 0 {
+				call.Set(ctx, model.Variables{
+					"agent_id":        e.Bridged.AgentId,
+					"agent_extension": call.GetVariable("Caller-Caller-ID-Number"),
+				})
 				go flow.Route(ctx, scope.Fork("agent-bridged", flow.ArrInterfaceToArrayApplication(argv.Bridged)), r)
 			}
 
 		case *cc.QueueEvent_Leaving:
-			//call.Set(ctx, model.Variables{
-			//	"cc_result": msg.Data.(*cc.QueueEvent_Leaving).Leaving.Result,
-			//})
+			call.Set(ctx, model.Variables{
+				"cc_result": e.Leaving.Result,
+			})
 			break
 		}
 	}

@@ -43,6 +43,7 @@ type Connection interface {
 	ParseText(text string) string
 
 	Close() *AppError
+	Variables() map[string]string
 }
 
 type Result struct {

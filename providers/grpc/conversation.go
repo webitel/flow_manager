@@ -393,6 +393,10 @@ func (c *conversation) DumpExportVariables() map[string]string {
 	return res
 }
 
+func (c *conversation) Variables() map[string]string {
+	return c.variables
+}
+
 func (c *conversation) SetQueue(key *model.InQueueKey) bool {
 	c.mx.Lock()
 	defer c.mx.Unlock()

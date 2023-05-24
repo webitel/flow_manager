@@ -581,6 +581,10 @@ func (c *Connection) CancelQueue() bool {
 	return true
 }
 
+func (c *Connection) Variables() map[string]string {
+	return c.variables.Data()
+}
+
 //fixme
 func test() {
 	a := func(c model.Call) {}

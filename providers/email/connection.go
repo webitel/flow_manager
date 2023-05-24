@@ -106,6 +106,15 @@ func (c *connection) Context() context.Context {
 	return c.ctx
 }
 
+func (c *connection) Variables() map[string]string {
+	vars := make(map[string]string)
+	for k, v := range c.variables {
+		vars[k] = fmt.Sprintf("%v", v)
+
+	}
+	return vars
+}
+
 //fixme
 func test() {
 	a := func(c model.EmailConnection) {}

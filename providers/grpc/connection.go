@@ -113,6 +113,10 @@ func (c *Connection) Get(key string) (string, bool) {
 	return "", false
 }
 
+func (c *Connection) Variables() map[string]string {
+	return c.variables
+}
+
 //fixme
 func test() {
 	a := func(c model.GRPCConnection) {}

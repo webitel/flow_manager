@@ -173,4 +173,8 @@ func (c *processingConnection) Get(key string) (string, bool) {
 	return "", false
 }
 
+func (c *processingConnection) Variables() map[string]string {
+	return c.variables
+}
+
 //fixme
