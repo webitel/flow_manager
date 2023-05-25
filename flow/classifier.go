@@ -37,12 +37,13 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 
 	for cluster, elems := range argv.Cluster {
 		for _, word := range elems {
-			if inArr(tokens, strings.ToLower(word), MatchType(argv.MatchType)) {
+			if inArr(tokens, strings.ToLower(word), MatchType(strings.ToLower(argv.MatchType))) {
 				variable = cluster
-				break
+				goto exit
 			}
 		}
 	}
+exit:
 
 	return conn.Set(ctx, model.Variables{
 		argv.Set: variable,
