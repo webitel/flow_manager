@@ -2,8 +2,6 @@ package flow
 
 import (
 	"context"
-	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/euskadi31/go-tokenizer"
@@ -19,37 +17,35 @@ type ClassifierArgs struct {
 	MatchType string              `json:"matchType"`
 }
 
-type MatchType int
+type MatchType string
 
 const (
-	Full MatchType = 0
-	Part MatchType = 1
+	Full MatchType = "full"
+	Part MatchType = "part"
 )
 
 func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var argv ClassifierArgs
+	var (
+		argv     ClassifierArgs
+		variable string
+	)
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
-	}
-	match, err := strconv.Atoi(argv.MatchType)
-	if err != nil {
-		return nil, model.NewAppError("Classifier", "classifier.classifierHandler.parse.err", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	tokens := tok.Tokenize(strings.ToLower(argv.Input))
 
 	for cluster, elems := range argv.Cluster {
 		for _, word := range elems {
-			if inArr(tokens, strings.ToLower(word), MatchType(match)) {
-				return conn.Set(ctx, model.Variables{
-					argv.Set: cluster,
-				})
+			if inArr(tokens, strings.ToLower(word), MatchType(argv.MatchType)) {
+				variable = cluster
+				break
 			}
 		}
 	}
 
 	return conn.Set(ctx, model.Variables{
-		argv.Set: "",
+		argv.Set: variable,
 	})
 }
 
