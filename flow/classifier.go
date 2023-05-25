@@ -43,7 +43,7 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 	}
 
 	return conn.Set(ctx, model.Variables{
-		argv.Set: nil,
+		argv.Set: "",
 	})
 }
 
