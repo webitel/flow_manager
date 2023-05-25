@@ -227,6 +227,7 @@ select q.id queue_id,
               jsonb_build_object('destination', :Number::varchar)
               || jsonb_build_object('type', jsonb_build_object('id', :TypeId::int))
               || case when :Display::varchar notnull then jsonb_build_object('display', :Display::varchar) else '{}' end
+			  || case when :CommunicationPriority::int notnull then jsonb_build_object('priority', :CommunicationPriority::int) else '{}' end
               || case when :ResourceId::int notnull then jsonb_build_object('resource', jsonb_build_object('id', :ResourceId::int)) else '{}'::jsonb end
        ),
        :Name::varchar,
@@ -242,20 +243,21 @@ from call_center.cc_queue q
 	inner join flow.calendar c on c.id = q.calendar_id
     inner join flow.calendar_timezones tz on tz.id = c.timezone_id
 where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]interface{}{
-		"DomainId":   domainId,
-		"QueueId":    queueId,
-		"Number":     member.Communication.Destination,
-		"TypeId":     member.Communication.Type.GetId(),
-		"Name":       member.Name,
-		"HoldSec":    holdSec,
-		"Variables":  member.Variables.ToString(),
-		"TimezoneId": member.Timezone.Id,
-		"Priority":   member.Priority,
-		"BucketId":   member.Bucket.Id,
-		"Display":    member.Communication.Display,
-		"ResourceId": member.Communication.ResourceId,
-		"ExpireAt":   member.ExpireAt,
-		"AgentId":    member.Agent.Id,
+		"DomainId":              domainId,
+		"QueueId":               queueId,
+		"Number":                member.Communication.Destination,
+		"TypeId":                member.Communication.Type.GetId(),
+		"Name":                  member.Name,
+		"HoldSec":               holdSec,
+		"Variables":             member.Variables.ToString(),
+		"TimezoneId":            member.Timezone.Id,
+		"Priority":              member.Priority,
+		"BucketId":              member.Bucket.Id,
+		"Display":               member.Communication.Display,
+		"ResourceId":            member.Communication.ResourceId,
+		"ExpireAt":              member.ExpireAt,
+		"AgentId":               member.Agent.Id,
+		"CommunicationPriority": member.Communication.Priority,
 	})
 
 	if err != nil {
