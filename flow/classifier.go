@@ -2,18 +2,27 @@ package flow
 
 import (
 	"context"
+	"strings"
+
 	"github.com/euskadi31/go-tokenizer"
 	"github.com/webitel/flow_manager/model"
-	"strings"
 )
 
 var tok = tokenizer.New()
 
 type ClassifierArgs struct {
-	Cluster map[string][]string `json:"cluster"`
-	Input   string              `json:"input"`
-	Set     string              `json:"set"`
+	Cluster   map[string][]string `json:"cluster"`
+	Input     string              `json:"input"`
+	Set       string              `json:"set"`
+	MatchType MatchType           `json:"matchType"`
 }
+
+type MatchType int64
+
+const (
+	Full MatchType = 0
+	Part MatchType = 1
+)
 
 func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv ClassifierArgs
@@ -25,7 +34,7 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 
 	for cluster, elems := range argv.Cluster {
 		for _, word := range elems {
-			if inArr(tokens, strings.ToLower(word)) {
+			if inArr(tokens, strings.ToLower(word), argv.MatchType) {
 				return conn.Set(ctx, model.Variables{
 					argv.Set: cluster,
 				})
@@ -33,16 +42,26 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 		}
 	}
 
-	return model.CallResponseOK, nil
+	return conn.Set(ctx, model.Variables{
+		argv.Set: nil,
+	})
 }
 
-func inArr(tokens []string, val string) bool {
+func inArr(tokens []string, val string, matchType MatchType) bool {
+	var matchFunc func(str string, sub string) bool
+	switch matchType {
+	case Full:
+		matchFunc = func(str string, sub string) bool {
+			return str == sub
+		}
+	case Part:
+		matchFunc = strings.Contains
+	}
 
 	for _, v := range tokens {
-		if v == val {
+		if matchFunc(val, v) {
 			return true
 		}
 	}
-
 	return false
 }
