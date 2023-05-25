@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+	"net/http"
 	"strconv"
 	"strings"
 
@@ -32,7 +33,7 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 	}
 	match, err := strconv.Atoi(argv.MatchType)
 	if err != nil {
-		return nil, ErrorRequiredParameter("classifierHandler", "matchType")
+		return nil, model.NewAppError("Classifier", "classifier.classifierHandler.parse.err", nil, err.Error(), http.StatusBadRequest)
 	}
 
 	tokens := tok.Tokenize(strings.ToLower(argv.Input))
