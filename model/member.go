@@ -14,6 +14,7 @@ type CallbackCommunication struct {
 	Type        SearchEntity `json:"type"`
 	ResourceId  *int         `json:"resource_id"`
 	Display     *string      `json:"display"`
+	Priority    *int         `json:"priority"`
 }
 
 type PatchCallbackCommunication struct {
