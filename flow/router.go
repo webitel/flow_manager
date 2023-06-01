@@ -48,6 +48,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.conditionHandler),
 	}
+	apps["while"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.whileHandler),
+	}
 	apps["switch"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.switchHandler),

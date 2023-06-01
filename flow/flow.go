@@ -35,6 +35,7 @@ type Flow struct {
 	Functions   map[string]model.Applications
 	triggers    map[string]model.Applications
 	currentNode *Node
+	prevRequest *ApplicationRequest
 	gotoCounter int16
 	cancel      bool
 	logs        []*model.StepLog
@@ -173,8 +174,8 @@ func (i *Flow) Reset() {
 }
 
 func (i *Flow) NextRequest() *ApplicationRequest {
-	var req *ApplicationRequest
-	req = i.currentNode.Next()
+	i.setPreviousRequest()
+	req := i.currentNode.Next()
 	if req == nil {
 		if newNode := i.GetParentNode(); newNode == nil {
 			return nil
@@ -184,6 +185,19 @@ func (i *Flow) NextRequest() *ApplicationRequest {
 	} else {
 		return req
 	}
+}
+
+func (i *Flow) setPreviousRequest() {
+	pos := i.currentNode.position - 1
+	if pos < 0 {
+		i.prevRequest = nil
+		return
+	}
+	i.prevRequest = i.currentNode.children[pos]
+}
+
+func (i *Flow) getPreviousRequest() *ApplicationRequest {
+	return i.prevRequest
 }
 
 func (i *Flow) GetParentNode() *Node {
@@ -247,7 +261,11 @@ func parseFlowArray(i *Flow, root *Node, apps model.Applications) {
 			req.setParentNode(root)
 			i.trySetTag(req.Tag, root, req.idx)
 			root.Add(req)
-
+		case "while":
+			req.args = newWhileArgs(i, root, req)
+			req.setParentNode(root)
+			i.trySetTag(req.Tag, root, req.idx)
+			root.Add(req)
 		case "function":
 			if err := i.addFunction(req.args); err != nil {
 				wlog.Warn(err.Error())
