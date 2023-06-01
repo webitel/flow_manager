@@ -193,7 +193,10 @@ func (i *Flow) setPreviousRequest() {
 		i.prevRequest = nil
 		return
 	}
-	i.prevRequest = i.currentNode.children[pos]
+	if len(i.currentNode.children) != 0 {
+		i.prevRequest = i.currentNode.children[pos]
+	}
+
 }
 
 func (i *Flow) getPreviousRequest() *ApplicationRequest {
