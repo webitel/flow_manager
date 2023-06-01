@@ -86,9 +86,14 @@ func (r *router) whileHandler(ctx context.Context, scope *Flow, conn model.Conne
 	return ResponseOK, nil
 }
 func nextStep(req *whileArgs) {
+	if len(req.do.children) == 1 { // nothing to do. == 1 because there will be always inserted [while] at the end
+		endCycle(req)
+		return
+	}
 	req.do.setFirst()
 	req.flow.SetRoot(req.do)
 	req.step++
+
 }
 
 func endCycle(req *whileArgs) {
