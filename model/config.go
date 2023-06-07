@@ -16,6 +16,7 @@ type Config struct {
 	} `json:"record"`
 	SqlSettings                  SqlSettings              `json:"sql_settings"`
 	MQSettings                   MQSettings               `json:"mq_settings"`
+	RedisSettings                RedisSettings            `json:"redis_settings"`
 	DiscoverySettings            DiscoverySettings        `json:"discovery_settings"`
 	PreSignedCertificateLocation string                   `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate"`
 	Dev                          bool                     `json:"dev" flag:"dev|false|Dev mode"`
@@ -27,6 +28,20 @@ type Config struct {
 type EslSettings struct {
 	Host string `json:"host" flag:"esl_host|localhost|ESL server host"`
 	Port int    `json:"port" flag:"esl_port|10030|ESL server port"`
+}
+
+type RedisSettings struct {
+	Host     string `json:"host,omitempty" flag:"redis_host|localhost|Redis server host"`
+	Port     int    `json:"port,omitempty" flag:"redis_port|6379|Redis server port"`
+	Password string `json:"password,omitempty" flag:"redis_password||Redis password"`
+	Database int    `json:"database,omitempty" flag:"redis_database|0|Redis database"`
+}
+
+func (r *RedisSettings) IsValid() bool {
+	if r.Host == "" || r.Port == 0 {
+		return false
+	}
+	return true
 }
 
 type GrpcServeSettings struct {
