@@ -2,10 +2,11 @@ package app
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store/cachelayer"
+	"github.com/webitel/wlog"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -85,7 +86,8 @@ func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType string, k
 func (fm *FlowManager) GetCacheStoreByType(cacheType string) (cachelayer.CacheStore, *model.AppError) {
 	v, ok := fm.cacheStore[cacheType]
 	if !ok {
-		return nil, model.NewAppError("App", "app.flow.get_cache_store", nil, "no such cache type", http.StatusBadRequest)
+		wlog.Debug(fmt.Sprintf("unable to find given cache storage (%s), setting memory storage..", cacheType))
+		return fm.cacheStore["memory"], nil
 	}
 
 	return v, nil
