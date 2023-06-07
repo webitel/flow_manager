@@ -97,7 +97,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.cacheStore = map[string]cachelayer.CacheStore{}
 	fm.cacheStore["memory"] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 1000, DefaultExpiry: 10000})
 	if config.RedisSettings.IsValid() {
-		fm.cacheStore["redis"] = cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
+		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
+		if err != nil {
+			outErr = err
+			return
+		}
+		fm.cacheStore["redis"] = storage
 	}
 	fm.chatManager = grpc.NewChatManager()
 

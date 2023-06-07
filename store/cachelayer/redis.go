@@ -15,7 +15,7 @@ type RedisCache struct {
 	redis *redis.Client
 }
 
-func NewRedisCache(address string, port int, password string, db int) *RedisCache {
+func NewRedisCache(address string, port int, password string, db int) (*RedisCache, *model.AppError) {
 	var redisCache RedisCache
 	address = fmt.Sprintf("%s:%s", address, strconv.Itoa(port))
 	redisCache.redis = redis.NewClient(&redis.Options{
@@ -23,7 +23,13 @@ func NewRedisCache(address string, port int, password string, db int) *RedisCach
 		Password: password,
 		DB:       db,
 	})
-	return &redisCache
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	_, err := redisCache.redis.Ping(ctx).Result()
+	if err != nil {
+		return nil, model.NewAppError("CacheLayer.RedisCache", "cache.redis_cache", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return &redisCache, nil
 }
 
 func (r *RedisCache) Get(ctx context.Context, key string) (*CacheValue, *model.AppError) {
@@ -41,7 +47,7 @@ func (r *RedisCache) Set(ctx context.Context, key string, value any, expiresAfte
 	if err := r.IsValid(); err != nil {
 		return err
 	}
-	expires := time.Duration(expiresAfter * 1000)
+	expires := time.Duration(expiresAfter * int64(time.Second))
 	err := r.redis.Set(ctx, key, value, expires).Err()
 	if err != nil {
 		return model.NewAppError("CacheLayer.RedisCache", "cache.redis_cache.get", nil, err.Error(), http.StatusInternalServerError)

@@ -31,8 +31,8 @@ type EslSettings struct {
 }
 
 type RedisSettings struct {
-	Host     string `json:"host,omitempty" flag:"redis_host|localhost|Redis server host"`
-	Port     int    `json:"port,omitempty" flag:"redis_port|6379|Redis server port"`
+	Host     string `json:"host,omitempty" flag:"redis_host||Redis server host"`
+	Port     int    `json:"port,omitempty" flag:"redis_port||Redis server port"`
 	Password string `json:"password,omitempty" flag:"redis_password||Redis password"`
 	Database int    `json:"database,omitempty" flag:"redis_database|0|Redis database"`
 }

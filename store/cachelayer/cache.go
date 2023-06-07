@@ -20,11 +20,15 @@ type CacheStore interface {
 }
 
 func (v *CacheValue) String() (string, *model.AppError) {
+	if v.value == nil {
+		return "", model.NewAppError("CacheValue", "cache_value.string", nil, "value is nil", http.StatusInternalServerError)
+	}
 	if v, ok := v.value.(string); ok {
 		return v, nil
 	} else {
 		return "", model.NewAppError("CacheValue", "cache_value.string", nil, "unable to convert value", http.StatusInternalServerError)
 	}
+
 }
 
 func (v *CacheValue) Raw() any {

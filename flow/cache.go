@@ -9,16 +9,11 @@ import (
 )
 
 type CacheArgs struct {
-	Type   string  `json:"type,omitempty"`
-	Action string  `json:"action,omitempty"`
-	Get    *Get    `json:"get,omitempty"`
-	Set    *Set    `json:"set,omitempty"`
-	Delete *Delete `json:"delete,omitempty"`
-}
-
-type Get struct {
-	Key      string `json:"key,omitempty"`
-	Variable string `json:"variable,omitempty"`
+	Type   string            `json:"type,omitempty"`
+	Action string            `json:"action,omitempty"`
+	Get    map[string]string `json:"get,omitempty"`
+	Set    *Set              `json:"set,omitempty"`
+	Delete *Delete           `json:"delete,omitempty"`
 }
 
 type Set struct {
@@ -58,14 +53,21 @@ func (r *router) Cache(ctx context.Context, scope *Flow, conn model.Connection, 
 		if cacheArgs.Get == nil {
 			return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.get", nil, "no 'get' object when type is 'get'", http.StatusInternalServerError)
 		}
-		value, err := r.fm.CacheGetValue(ctx, cacheArgs.Type, conn.DomainId(), cacheArgs.Get.Key)
-		if err != nil {
-			return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.set", nil, err.Error(), http.StatusBadRequest)
+		for variable, key := range cacheArgs.Get {
+			value, err := r.fm.CacheGetValue(ctx, cacheArgs.Type, conn.DomainId(), key)
+			if err != nil {
+				return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.get", nil, err.Error(), http.StatusBadRequest)
+			}
+			val, err := value.String()
+			if err != nil {
+				return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.get", nil, err.Error(), http.StatusBadRequest)
+			}
+			variables[variable] = val
+
 		}
-		variables[cacheArgs.Get.Variable] = value.Raw()
-		_, err = conn.Set(ctx, variables)
+		_, err := conn.Set(ctx, variables)
 		if err != nil {
-			return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.set", nil, err.Error(), http.StatusInternalServerError)
+			return ResponseErr, model.NewAppError("Flow.Cache", "flow.cache.get", nil, err.Error(), http.StatusInternalServerError)
 		}
 
 	case "delete":

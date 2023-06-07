@@ -51,7 +51,7 @@ func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType string, key 
 	}
 
 	value, appErr := v.Get(ctx, key)
-	if err != nil {
+	if appErr != nil {
 		return nil, appErr
 	}
 	return value, nil

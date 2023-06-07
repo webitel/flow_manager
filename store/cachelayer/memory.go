@@ -23,7 +23,6 @@ func NewMemoryCache(conf *MemoryCacheConfig) *MemoryCache {
 }
 
 func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheValue, *model.AppError) {
-
 	value, ok := m.lruCache.Get(key)
 	if !ok {
 		return nil, model.NewAppError("CacheLayer.MemoryCache", "cache.memory_cache.get", nil, fmt.Sprintf("unable to find value by key %s", key), http.StatusInternalServerError)
