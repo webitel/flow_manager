@@ -12,12 +12,12 @@ import (
 
 var g = singleflight.Group{}
 
-func (fm *FlowManager) CacheSetValue(ctx context.Context, cacheType string, domainId int64, key string, value string, expiresAfter int64) *model.AppError {
+func (fm *FlowManager) CacheSetValue(ctx context.Context, cacheType string, domainId int64, key string, value any, expiresAfter int64) *model.AppError {
 	_, cacheKey := cachelayer.FormatKeys(cacheType, "set", domainId, key)
 	return fm.cacheSetValue(ctx, cacheType, cacheKey, value, expiresAfter)
 }
 
-func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType string, key string, value string, expiresAfter int64) *model.AppError {
+func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType string, key string, value any, expiresAfter int64) *model.AppError {
 	v, appErr := fm.GetCacheStoreByType(cacheType)
 	if appErr != nil {
 		return appErr
