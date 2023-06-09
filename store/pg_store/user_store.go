@@ -33,6 +33,8 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 			val = "coalesce(u.name, u.username)::varchar as " + pq.QuoteIdentifier(k)
 		case "extension":
 			val = "u.extension::varchar as " + pq.QuoteIdentifier(k)
+		case "email":
+			val = "coalesce(u.email::varchar, '') as " + pq.QuoteIdentifier(k)
 		case "dnd":
 			val = "u.dnd::varchar as " + pq.QuoteIdentifier(k)
 		case "agent_id":
