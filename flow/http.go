@@ -3,6 +3,7 @@ package flow
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -25,11 +26,26 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	var res *http.Response
 	var str string
 	var httpErr error
+	var uri string
 
 	if props, ok = args.(map[string]interface{}); !ok {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
 	}
-
+	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
+		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, "url is required", http.StatusBadRequest)
+	}
+	uriEncoded := md5.Sum([]byte(uri))
+	cookieVariableName := model.StringValueFromMap("exportCookie", props, "")
+	cacheKey := fmt.Sprintf("%s.%s", uriEncoded, cookieVariableName)
+	// if cookieVariableName != "" {
+	// 	v, err := r.fm.CacheGetValue(ctx, "memory", conn.DomainId(), cacheKey)
+	// 	if err == nil {
+	// 		conn.Set(context.Background(), model.Variables{
+	// 			cookieVariableName: v,
+	// 		})
+	// 		return model.CallResponseOK, nil
+	// 	}
+	// }
 	req, err := buildRequest(conn, props)
 	if err != nil {
 		return nil, err
@@ -50,11 +66,18 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 		})
 	}
 
-	if str = model.StringValueFromMap("exportCookie", props, ""); str != "" {
+	if cookieVariableName != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
+			cookie := strings.Join(res.Header["Set-Cookie"], ";")
+			cookieModel := res.Cookies()
+			fmt.Print(cookieModel)
 			conn.Set(context.Background(), model.Variables{
-				str: strings.Join(res.Header["Set-Cookie"], ";"), // TODO internal variables ?
+				cookieVariableName: cookie, // TODO internal variables ?
 			})
+			err := r.fm.CacheSetValue(ctx, "memory", conn.DomainId(), cacheKey, cookie, 1000)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -118,7 +141,6 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, "url is required", http.StatusBadRequest)
 	}
-
 	if _, ok = props["path"]; ok {
 		if _, ok = props["path"].(map[string]interface{}); ok {
 			for k, v = range props["path"].(map[string]interface{}) {
