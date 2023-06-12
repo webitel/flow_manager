@@ -61,6 +61,8 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		q = "/microsoft?"
 	case "yandex":
 		q = "/yandex?"
+	case "webitel":
+		q = "/webitel?"
 	case "google":
 		q = "/google?"
 
