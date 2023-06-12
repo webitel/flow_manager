@@ -386,13 +386,14 @@ type TTS struct {
 }
 
 type PlaybackDigits struct {
-	SetVar    *string `json:"setVar"`
-	Min       *int    `json:"min" def:"1"`
-	Max       *int    `json:"max"`
-	Tries     *int    `json:"tries"`
-	Timeout   *int    `json:"timeout"`
-	FlushDtmf bool    `json:"flushDTMF"`
-	Regexp    *string `json:"regexp"`
+	SetVar       *string `json:"setVar"`
+	Min          *int    `json:"min" def:"1"`
+	Max          *int    `json:"max"`
+	Tries        *int    `json:"tries"`
+	Timeout      *int    `json:"timeout"`
+	FlushDtmf    bool    `json:"flushDTMF"`
+	Regexp       *string `json:"regexp"`
+	DigitTimeout *int    `json:"digitTimeout"`
 }
 
 type GetSpeech struct {
