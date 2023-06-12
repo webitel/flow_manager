@@ -37,15 +37,15 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	uriEncoded := md5.Sum([]byte(uri))
 	cookieVariableName := model.StringValueFromMap("exportCookie", props, "")
 	cacheKey := fmt.Sprintf("%s.%s", uriEncoded, cookieVariableName)
-	// if cookieVariableName != "" {
-	// 	v, err := r.fm.CacheGetValue(ctx, "memory", conn.DomainId(), cacheKey)
-	// 	if err == nil {
-	// 		conn.Set(context.Background(), model.Variables{
-	// 			cookieVariableName: v,
-	// 		})
-	// 		return model.CallResponseOK, nil
-	// 	}
-	// }
+	if cookieVariableName != "" {
+		v, err := r.fm.CacheGetValue(ctx, "memory", conn.DomainId(), cacheKey)
+		if err == nil {
+			conn.Set(context.Background(), model.Variables{
+				cookieVariableName: v,
+			})
+			return model.CallResponseOK, nil
+		}
+	}
 	req, err := buildRequest(conn, props)
 	if err != nil {
 		return nil, err
@@ -68,13 +68,18 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 
 	if cookieVariableName != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
+			var cookieExpiresAfter int64
 			cookie := strings.Join(res.Header["Set-Cookie"], ";")
-			cookieModel := res.Cookies()
-			fmt.Print(cookieModel)
 			conn.Set(context.Background(), model.Variables{
 				cookieVariableName: cookie, // TODO internal variables ?
 			})
-			err := r.fm.CacheSetValue(ctx, "memory", conn.DomainId(), cacheKey, cookie, 1000)
+			for _, v := range res.Cookies() {
+				expiresAfter := v.Expires.Unix() - time.Now().Unix() - int64(time.Hour.Seconds())
+				if expiresAfter > cookieExpiresAfter {
+					cookieExpiresAfter = expiresAfter
+				}
+			}
+			err := r.fm.CacheSetValue(ctx, "memory", conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
 			if err != nil {
 				return nil, err
 			}
@@ -292,4 +297,7 @@ func encodeURIComponent(str string) string {
 	r := url.QueryEscape(str)
 	r = strings.Replace(r, "+", "%20", -1)
 	return r
+}
+
+type CookieCacheOptions struct {
 }

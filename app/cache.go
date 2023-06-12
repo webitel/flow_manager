@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store/cachelayer"
@@ -12,12 +13,21 @@ import (
 
 var g = singleflight.Group{}
 
+type CacheType string
+
+const (
+	Memory CacheType = "memory"
+	Redis  CacheType = "redis"
+)
+
+// Cache set value sets value to the given type of cache storage. (expiresAfter in seconds!)
 func (fm *FlowManager) CacheSetValue(ctx context.Context, cacheType string, domainId int64, key string, value any, expiresAfter int64) *model.AppError {
-	_, cacheKey := cachelayer.FormatKeys(cacheType, "set", domainId, key)
-	return fm.cacheSetValue(ctx, cacheType, cacheKey, value, expiresAfter)
+	cacheTypeParsed := parseCacheType(cacheType)
+	_, cacheKey := formatKeys(cacheTypeParsed, "set", domainId, key)
+	return fm.cacheSetValue(ctx, cacheTypeParsed, cacheKey, value, expiresAfter)
 }
 
-func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType string, key string, value any, expiresAfter int64) *model.AppError {
+func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType CacheType, key string, value any, expiresAfter int64) *model.AppError {
 	v, appErr := fm.GetCacheStoreByType(cacheType)
 	if appErr != nil {
 		return appErr
@@ -30,9 +40,10 @@ func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType string, key 
 	return nil
 }
 func (fm *FlowManager) CacheGetValue(ctx context.Context, cacheType string, domainId int64, key string) (*cachelayer.CacheValue, *model.AppError) {
-	workerKey, cacheKey := cachelayer.FormatKeys(cacheType, "get", domainId, key)
+	cacheTypeParsed := parseCacheType(cacheType)
+	workerKey, cacheKey := formatKeys(cacheTypeParsed, "get", domainId, key)
 	v, appErr, _ := g.Do(workerKey, func() (interface{}, error) {
-		value, err := fm.cacheGetValue(ctx, cacheType, cacheKey)
+		value, err := fm.cacheGetValue(ctx, cacheTypeParsed, cacheKey)
 		if err != nil {
 			return nil, err
 		}
@@ -45,7 +56,7 @@ func (fm *FlowManager) CacheGetValue(ctx context.Context, cacheType string, doma
 
 	return v.(*cachelayer.CacheValue), nil
 }
-func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType string, key string) (*cachelayer.CacheValue, *model.AppError) {
+func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType CacheType, key string) (*cachelayer.CacheValue, *model.AppError) {
 	v, err := fm.GetCacheStoreByType(cacheType)
 	if err != nil {
 		return nil, err
@@ -59,9 +70,10 @@ func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType string, key 
 }
 
 func (fm *FlowManager) CacheDeleteValue(ctx context.Context, cacheType string, domainId int64, key string) *model.AppError {
-	workerKey, cacheKey := cachelayer.FormatKeys(cacheType, "delete", domainId, key)
+	cacheTypeParsed := parseCacheType(cacheType)
+	workerKey, cacheKey := formatKeys(cacheTypeParsed, "delete", domainId, key)
 	_, err, _ := g.Do(workerKey, func() (interface{}, error) {
-		return nil, fm.cacheDeleteValue(ctx, cacheType, cacheKey)
+		return nil, fm.cacheDeleteValue(ctx, cacheTypeParsed, cacheKey)
 	})
 
 	if err != nil {
@@ -70,7 +82,7 @@ func (fm *FlowManager) CacheDeleteValue(ctx context.Context, cacheType string, d
 
 	return nil
 }
-func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType string, key string) *model.AppError {
+func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType CacheType, key string) *model.AppError {
 	v, err := fm.GetCacheStoreByType(cacheType)
 	if err != nil {
 		return err
@@ -83,7 +95,7 @@ func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType string, k
 	return nil
 }
 
-func (fm *FlowManager) GetCacheStoreByType(cacheType string) (cachelayer.CacheStore, *model.AppError) {
+func (fm *FlowManager) GetCacheStoreByType(cacheType CacheType) (cachelayer.CacheStore, *model.AppError) {
 	v, ok := fm.cacheStore[cacheType]
 	if !ok {
 		wlog.Debug(fmt.Sprintf("unable to find given cache storage (%s), setting memory storage..", cacheType))
@@ -91,4 +103,19 @@ func (fm *FlowManager) GetCacheStoreByType(cacheType string) (cachelayer.CacheSt
 	}
 
 	return v, nil
+}
+
+func parseCacheType(cacheType string) CacheType {
+	switch cacheType {
+	case string(Redis):
+		return Redis
+	default:
+		return Memory
+	}
+}
+
+func formatKeys(cacheType CacheType, method string, domainId int64, key string) (workerKey string, cacheKey string) {
+	cacheKey = fmt.Sprintf("%s.%s", strconv.FormatInt(domainId, 10), key)
+	workerKey = fmt.Sprintf("%s.%s.%s", cacheType, method, cacheKey)
+	return
 }

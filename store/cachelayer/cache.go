@@ -2,9 +2,7 @@ package cachelayer
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -50,10 +48,4 @@ func NewCacheValue(value any) (*CacheValue, *model.AppError) {
 		return nil, err
 	}
 	return &cv, err
-}
-
-func FormatKeys(cacheType string, method string, domainId int64, key string) (workerKey string, cacheKey string) {
-	cacheKey = fmt.Sprintf("%s.%s", strconv.FormatInt(domainId, 10), key)
-	workerKey = fmt.Sprintf("%s.%s.%s", cacheType, method, cacheKey)
-	return
 }
