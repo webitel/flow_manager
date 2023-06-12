@@ -368,8 +368,13 @@ func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString str
 		params.SetVar = model.NewString("MyVar")
 	}
 
-	return c.executeWithContext(ctx, "play_and_get_digits", fmt.Sprintf("%d %d %d %d %s %s silence_stream://250 %s %s", *params.Min, *params.Max,
-		*params.Tries, *params.Timeout, "#", fileString, *params.SetVar, *params.Regexp))
+	dgTimeout := ""
+	if params.DigitTimeout != nil {
+		dgTimeout = " " + strconv.Itoa(*params.DigitTimeout)
+	}
+
+	return c.executeWithContext(ctx, "play_and_get_digits", fmt.Sprintf("%d %d %d %d %s %s silence_stream://250 %s %s%s", *params.Min, *params.Max,
+		*params.Tries, *params.Timeout, "#", fileString, *params.SetVar, *params.Regexp, dgTimeout))
 }
 
 func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, *model.AppError) {
