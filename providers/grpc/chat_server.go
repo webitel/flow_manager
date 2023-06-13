@@ -115,9 +115,6 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 
 	conv.mx.Lock()
 	conf, ok = conv.confirmation[req.ConfirmationId]
-	if ok {
-		delete(conv.confirmation, req.ConfirmationId)
-	}
 	conv.mx.Unlock()
 
 	if !ok {
