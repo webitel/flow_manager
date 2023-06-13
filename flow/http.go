@@ -43,9 +43,12 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	if cookieVariableName != "" && cacheEnabled {
 		v, err := r.fm.CacheGetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey)
 		if err == nil {
-			conn.Set(context.Background(), model.Variables{
+			_, err = conn.Set(context.Background(), model.Variables{
 				cookieVariableName: v,
 			})
+			if err != nil {
+				return nil, err
+			}
 			return model.CallResponseOK, nil
 		}
 	}
@@ -72,9 +75,12 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	if cookieVariableName != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
 			cookie := strings.Join(res.Header["Set-Cookie"], ";")
-			conn.Set(context.Background(), model.Variables{
+			_, err = conn.Set(context.Background(), model.Variables{
 				cookieVariableName: cookie, // TODO internal variables ?
 			})
+			if err != nil {
+				return nil, err
+			}
 			if cacheEnabled {
 				var cookieExpiresAfter int64
 				for _, v := range res.Cookies() {
