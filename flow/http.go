@@ -37,8 +37,10 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	}
 	uriEncoded := md5.Sum([]byte(uri))
 	cookieVariableName := model.StringValueFromMap("exportCookie", props, "")
+	cacheEnabled, _ := strconv.ParseBool(model.StringValueFromMap("cacheCookie", props, ""))
 	cacheKey := fmt.Sprintf("%s.%s", uriEncoded, cookieVariableName)
-	if cookieVariableName != "" {
+
+	if cookieVariableName != "" && cacheEnabled {
 		v, err := r.fm.CacheGetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey)
 		if err == nil {
 			conn.Set(context.Background(), model.Variables{
@@ -69,20 +71,22 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 
 	if cookieVariableName != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
-			var cookieExpiresAfter int64
 			cookie := strings.Join(res.Header["Set-Cookie"], ";")
 			conn.Set(context.Background(), model.Variables{
 				cookieVariableName: cookie, // TODO internal variables ?
 			})
-			for _, v := range res.Cookies() {
-				expiresAfter := v.Expires.Unix() - time.Now().Unix() - int64(time.Hour.Seconds())
-				if expiresAfter > cookieExpiresAfter {
-					cookieExpiresAfter = expiresAfter
+			if cacheEnabled {
+				var cookieExpiresAfter int64
+				for _, v := range res.Cookies() {
+					expiresAfter := v.Expires.Unix() - time.Now().Unix() - int64(time.Hour.Seconds())
+					if expiresAfter > cookieExpiresAfter {
+						cookieExpiresAfter = expiresAfter
+					}
 				}
-			}
-			err := r.fm.CacheSetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
-			if err != nil {
-				return nil, err
+				err := r.fm.CacheSetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
+				if err != nil {
+					return nil, err
+				}
 			}
 		}
 	}
