@@ -3,6 +3,7 @@ package flow
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	"time"
 
 	"github.com/tidwall/gjson"
+	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
 	"gopkg.in/xmlpath.v2"
 )
@@ -25,11 +27,31 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	var res *http.Response
 	var str string
 	var httpErr error
+	var uri string
 
 	if props, ok = args.(map[string]interface{}); !ok {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
 	}
+	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
+		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, "url is required", http.StatusBadRequest)
+	}
+	uriEncoded := md5.Sum([]byte(uri))
+	cookieVariableName := model.StringValueFromMap("exportCookie", props, "")
+	cacheEnabled, _ := strconv.ParseBool(model.StringValueFromMap("cacheCookie", props, ""))
+	cacheKey := fmt.Sprintf("%s.%s", uriEncoded, cookieVariableName)
 
+	if cookieVariableName != "" && cacheEnabled {
+		v, err := r.fm.CacheGetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey)
+		if err == nil {
+			_, err = conn.Set(context.Background(), model.Variables{
+				cookieVariableName: v,
+			})
+			if err != nil {
+				return nil, err
+			}
+			return model.CallResponseOK, nil
+		}
+	}
 	req, err := buildRequest(conn, props)
 	if err != nil {
 		return nil, err
@@ -50,11 +72,30 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 		})
 	}
 
-	if str = model.StringValueFromMap("exportCookie", props, ""); str != "" {
+	if cookieVariableName != "" {
 		if _, ok = res.Header["Set-Cookie"]; ok {
-			conn.Set(context.Background(), model.Variables{
-				str: strings.Join(res.Header["Set-Cookie"], ";"), // TODO internal variables ?
+			cookie := strings.Join(res.Header["Set-Cookie"], ";")
+			_, err = conn.Set(context.Background(), model.Variables{
+				cookieVariableName: cookie, // TODO internal variables ?
 			})
+			if err != nil {
+				return nil, err
+			}
+			if cacheEnabled {
+				var cookieExpiresAfter int64
+				for _, v := range res.Cookies() {
+					expiresAfter := v.Expires.Unix() - time.Now().Unix() - int64(time.Hour.Seconds())
+					if expiresAfter > 0 { // get minimal but not lower than 0 value
+						if cookieExpiresAfter == 0 || expiresAfter < cookieExpiresAfter {
+							cookieExpiresAfter = expiresAfter
+						}
+					}
+				}
+				err := r.fm.CacheSetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
+				if err != nil {
+					return nil, err
+				}
+			}
 		}
 	}
 
@@ -118,7 +159,6 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, "url is required", http.StatusBadRequest)
 	}
-
 	if _, ok = props["path"]; ok {
 		if _, ok = props["path"].(map[string]interface{}); ok {
 			for k, v = range props["path"].(map[string]interface{}) {
@@ -270,4 +310,7 @@ func encodeURIComponent(str string) string {
 	r := url.QueryEscape(str)
 	r = strings.Replace(r, "+", "%20", -1)
 	return r
+}
+
+type CookieCacheOptions struct {
 }

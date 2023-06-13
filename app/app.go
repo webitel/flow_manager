@@ -54,6 +54,8 @@ type FlowManager struct {
 	callWatcher *callWatcher
 	cert        presign.PreSign
 	listWatcher *listWatcher
+
+	cacheStore map[CacheType]cachelayer.CacheStore
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -92,6 +94,16 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.cluster = NewCluster(fm)
 
+	fm.cacheStore = map[CacheType]cachelayer.CacheStore{}
+	fm.cacheStore[Memory] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 10000, DefaultExpiry: 10000})
+	if config.RedisSettings.IsValid() {
+		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
+		if err != nil {
+			outErr = err
+			return
+		}
+		fm.cacheStore[Redis] = storage
+	}
 	fm.chatManager = grpc.NewChatManager()
 
 	grpcSrv := grpc.NewServer(&grpc.Config{
