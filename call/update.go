@@ -24,16 +24,16 @@ func (r *Router) UpdateCid(ctx context.Context, scope *flow.Flow, call model.Cal
 		return nil, ErrorRequiredParameter("UpdateCid", "name and number")
 	}
 
-	if res, err = call.UpdateCid(ctx, name, number); err != nil {
-		return nil, err
-	}
-
 	if argv.Number != "" {
 		number = &argv.Number
 	}
 
 	if argv.Name != "" {
 		name = &argv.Name
+	}
+
+	if res, err = call.UpdateCid(ctx, name, number); err != nil {
+		return nil, err
 	}
 
 	if err = r.fm.UpdateCallFrom(call.Id(), name, number); err != nil {
