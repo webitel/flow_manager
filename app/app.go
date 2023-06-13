@@ -95,7 +95,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.cluster = NewCluster(fm)
 
 	fm.cacheStore = map[CacheType]cachelayer.CacheStore{}
-	fm.cacheStore[Memory] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 1000, DefaultExpiry: 10000})
+	fm.cacheStore[Memory] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 10000, DefaultExpiry: 10000})
 	if config.RedisSettings.IsValid() {
 		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
 		if err != nil {

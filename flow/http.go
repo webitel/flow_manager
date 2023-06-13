@@ -85,8 +85,10 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 				var cookieExpiresAfter int64
 				for _, v := range res.Cookies() {
 					expiresAfter := v.Expires.Unix() - time.Now().Unix() - int64(time.Hour.Seconds())
-					if expiresAfter > cookieExpiresAfter {
-						cookieExpiresAfter = expiresAfter
+					if expiresAfter > 0 { // get minimal but not lower than 0 value
+						if cookieExpiresAfter == 0 || expiresAfter < cookieExpiresAfter {
+							cookieExpiresAfter = expiresAfter
+						}
 					}
 				}
 				err := r.fm.CacheSetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
