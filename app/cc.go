@@ -47,13 +47,14 @@ func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64,
 
 func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppError {
 	req := &cc.AttemptResultRequest{
-		AttemptId:   result.Id,
-		Status:      result.Status,
-		Variables:   result.Variables,
-		Display:     result.StickyDisplay,
-		Description: result.Description,
-		AgentId:     result.AgentId,
-		Redial:      result.Redial,
+		AttemptId:                   result.Id,
+		Status:                      result.Status,
+		Variables:                   result.Variables,
+		Display:                     result.StickyDisplay,
+		Description:                 result.Description,
+		AgentId:                     result.AgentId,
+		Redial:                      result.Redial,
+		ExcludeCurrentCommunication: result.ExcludeCurrentCommunication,
 	}
 
 	if result.ExpiredAt != nil {
