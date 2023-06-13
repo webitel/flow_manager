@@ -234,8 +234,24 @@ func (c *conversation) SendImageMessage(ctx context.Context, url string) (model.
 	return model.CallResponseOK, nil
 }
 
+func (c *conversation) addConfirmationId(id string, ch chan []*client.Message) {
+	c.mx.Lock()
+	c.confirmation[id] = ch
+	c.mx.Unlock()
+}
+
+func (c *conversation) deleteConfirmationId(id string) {
+	c.mx.Lock()
+	delete(c.confirmation, id)
+	c.mx.Unlock()
+}
+
 func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
+
+	ch := make(chan []*client.Message)
+	c.addConfirmationId(id, ch)
+	defer c.deleteConfirmationId(id)
 
 	// TODO rename server api
 	res, err := c.client.api.WaitMessage(ctx, &client.WaitMessageRequest{
@@ -264,11 +280,6 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 	t := time.After(time.Second * time.Duration(timeout))
 
 	wlog.Debug(fmt.Sprintf("conversation %s wait message %s", c.id, time.Second*time.Duration(timeout)))
-
-	ch := make(chan []*client.Message)
-	c.mx.Lock()
-	c.confirmation[id] = ch
-	c.mx.Unlock()
 
 	select {
 	case <-c.Context().Done():
