@@ -25,7 +25,7 @@ type Delete struct {
 	Keys []string `json:"keys,omitempty"`
 }
 
-func (r *router) Cache(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) cache(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var (
 		cacheArgs *CacheArgs
 	)
