@@ -96,7 +96,10 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 				end = append(end, "error/GATEWAY_DOWN")
 			} else {
 				e.Id = nil
-				e.Name = e.Number
+				if e.Name == nil {
+					e.Name = e.Number
+				}
+
 				e.TypeName = "dest"
 				end = append(end, fmt.Sprintf("[%s]sofia/sip/%s", e.ToStringVariables(), *e.Destination))
 			}
