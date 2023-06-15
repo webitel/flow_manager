@@ -136,6 +136,7 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 		case "gateway":
 			if e.Destination != nil {
 				e.Number = model.NewString(getStringValueFromMap("dialString", endpoints[key], ""))
+				e.Name = model.NewString(getStringValueFromMap("displayName", endpoints[key], *e.Number))
 				e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Number, *e.Destination))
 			}
 
