@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
@@ -121,7 +122,11 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 		return nil, model.NewAppError("ConfirmationMessage", "chat.confirmation_message.not_found", nil, "Not found", http.StatusNotFound)
 	}
 
-	conf <- req.Messages
+	select {
+	case <-time.After(time.Second * 5):
+	case conf <- req.Messages:
+
+	}
 
 	return &workflow.ConfirmationMessageResponse{}, nil
 }
