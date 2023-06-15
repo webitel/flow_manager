@@ -66,5 +66,5 @@ func inArr(tokens []string, val string, matchType MatchType) bool {
 			return true
 		}
 	}
-	return false
+	return matchFunc(strings.Join(tokens, " "), val)
 }
