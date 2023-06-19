@@ -23,6 +23,7 @@ type Config struct {
 	Esl                          EslSettings              `json:"esl"`
 	Grpc                         GrpcServeSettings        `json:"grpc"`
 	EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
+	ChatTemplatesSettings        ChatTemplatesSettings    `json:"chat_templates_settings,omitempty"`
 }
 
 type EslSettings struct {
@@ -30,6 +31,9 @@ type EslSettings struct {
 	Port int    `json:"port" flag:"esl_port|10030|ESL server port"`
 }
 
+type ChatTemplatesSettings struct {
+	Path string `json:"host" flag:"chat_templates_path|./message_templates|Path to the root folder of  the chat message templates. Templates used in the chat_history application"`
+}
 type RedisSettings struct {
 	Host     string `json:"host,omitempty" flag:"redis_host||Redis server host"`
 	Port     int    `json:"port,omitempty" flag:"redis_port||Redis server port"`

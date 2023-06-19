@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -51,6 +52,32 @@ func (s SqlChatStore) RoutingFromProfile(domainId, profileId int64) (*model.Rout
 	}
 
 	return routing, nil
+}
+
+func (s SqlChatStore) GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError) {
+	var messages []model.ChatMessage
+	_, err := s.GetReplica().WithContext(ctx).Select(&messages, `select
+		case when m.text isnull and m.file_name notnull then '[' || m.file_name || ']' else m.text end as msg,
+		m.created_at,
+		m.type,
+		case when ch.name isnull then 'Bot' else ch.name end
+	FROM chat.message m
+		LEFT JOIN chat.channel ch ON m.channel_id = ch.id
+	WHERE m.conversation_id = :ConversationId
+	and exists(select 1 from chat.conversation c where c.id = m.conversation_id and c.domain_id = :DomainId)
+	ORDER BY created_at ASC
+	LIMIT :Limit;`, map[string]interface{}{
+		"ConversationId": conversationId,
+		"DomainId":       domainId,
+		"Limit":          limit,
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("SqlChatStore.RoutingFromProfile", "store.sql_chat.routing.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return &messages, nil
 }
 
 func (s SqlChatStore) RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError) {

@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"database/sql"
 
 	"github.com/webitel/flow_manager/model"
@@ -96,7 +97,7 @@ type ListStore interface {
 type ChatStore interface {
 	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
 	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
-
+	GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError)
 	LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
 }
 

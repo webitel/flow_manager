@@ -190,7 +190,11 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 	}
 	apps["cache"] = &Application{
 		AllowNoConnect: true,
-		Handler:        r.doExecute(r.Cache),
+		Handler:        r.doExecute(r.cache),
+	}
+	apps["chatHistory"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.chatHistory),
 	}
 
 	return apps
