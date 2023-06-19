@@ -89,7 +89,7 @@ func (fm *FlowManager) getMessageTemplateByType(messageType string, sender strin
 	)
 	switch messageType {
 	case "text":
-		template, err = html.ParseFiles(fmt.Sprintf("./message_templates/%s/%s.%s", outputType, sender, outputType))
+		template, err = html.ParseFiles(fmt.Sprintf(fm.config.ChatTemplatesSettings.Path+"/%s/%s.%s", outputType, sender, outputType))
 		if err != nil {
 			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_template.fail", nil, err.Error(), http.StatusInternalServerError)
 		}
