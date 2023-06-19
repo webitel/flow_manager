@@ -28,10 +28,10 @@ func (r *router) chatHistory(ctx context.Context, scope *Flow, conn model.Connec
 		return nil, model.NewAppError("ChatHistory", "flow.chat_history.valid_args", nil, "bad arguments", http.StatusBadRequest)
 	}
 	timeoutParsed, err := strconv.Atoi(params.Timeout)
-	if err != nil {
-		return nil, model.NewAppError("ChatHistory", "flow.chat_history.valid_args", nil, err.Error(), http.StatusBadRequest)
+	if timeoutParsed == 0 || err != nil {
+		timeoutParsed = 3000
 	}
-	context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutParsed))
+	ctx, _ = context.WithTimeout(ctx, time.Millisecond*time.Duration(timeoutParsed))
 	messages, appErr := r.fm.GetChatMessagesByConversationId(ctx, conn.DomainId(), params.ConversationId, limitParsed)
 	if err != nil {
 		return nil, appErr

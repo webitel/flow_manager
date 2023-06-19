@@ -73,11 +73,13 @@ func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output s
 }
 
 func (fm *FlowManager) getChatMessageTemplate(message *model.ChatMessage, outputType string, isSender bool) (*html.Template, *model.AppError) {
+	var sender string
 	if isSender {
-		return fm.getMessageTemplateByType(message.Type, "agent", outputType)
+		sender = "agent"
 	} else {
-		return fm.getMessageTemplateByType(message.Type, "client", outputType)
+		sender = "client"
 	}
+	return fm.getMessageTemplateByType(message.Type, sender, outputType)
 }
 
 func (fm *FlowManager) getMessageTemplateByType(messageType string, sender string, outputType string) (*html.Template, *model.AppError) {
@@ -89,12 +91,12 @@ func (fm *FlowManager) getMessageTemplateByType(messageType string, sender strin
 	case "text":
 		template, err = html.ParseFiles(fmt.Sprintf("./message_templates/%s/%s.%s", outputType, sender, outputType))
 		if err != nil {
-			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_agent_template.fail", nil, err.Error(), http.StatusInternalServerError)
+			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_template.fail", nil, err.Error(), http.StatusInternalServerError)
 		}
 	case "file":
 		template, err = html.ParseFiles("./message_templates/%s/%s_file.%s", outputType, sender, outputType)
 		if err != nil {
-			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_agent_file_template.fail", nil, err.Error(), http.StatusInternalServerError)
+			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_file_template.fail", nil, err.Error(), http.StatusInternalServerError)
 		}
 	}
 	return template, nil
