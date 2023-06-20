@@ -11,10 +11,11 @@ import (
 var tok = tokenizer.New()
 
 type ClassifierArgs struct {
-	Cluster   map[string][]string `json:"cluster"`
-	Input     string              `json:"input"`
-	Set       string              `json:"set"`
-	MatchType string              `json:"matchType"`
+	Cluster      map[string][]string `json:"cluster"`
+	Input        string              `json:"input"`
+	Set          string              `json:"set"`
+	PhraseSearch bool                `json:"phraseSearch"`
+	MatchType    string              `json:"matchType"`
 }
 
 type MatchType string
@@ -26,31 +27,39 @@ const (
 
 func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var (
-		argv     ClassifierArgs
-		variable string
+		argv ClassifierArgs
 	)
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
 
-	tokens := tok.Tokenize(strings.ToLower(argv.Input))
-
-	for cluster, elems := range argv.Cluster {
-		for _, word := range elems {
-			if inArr(tokens, strings.ToLower(word), MatchType(strings.ToLower(argv.MatchType))) {
-				variable = cluster
-				goto exit
-			}
-		}
-	}
-exit:
-
 	return conn.Set(ctx, model.Variables{
-		argv.Set: variable,
+		argv.Set: findInCluster(argv.Cluster, argv.Input, argv.MatchType, argv.PhraseSearch),
 	})
 }
 
-func inArr(tokens []string, val string, matchType MatchType) bool {
+func findInCluster(clusters map[string][]string, userInput string, matchType string, phraseSearch bool) string {
+	var tokens []string
+	if !phraseSearch {
+		tokens = tok.Tokenize(strings.ToLower(userInput))
+	}
+	for cluster, elems := range clusters {
+		for _, phrase := range elems {
+			if phraseSearch {
+				if inArr(userInput, MatchType(strings.ToLower(matchType)), strings.ToLower(phrase)) {
+					return cluster
+				}
+			} else {
+				if inArr(strings.ToLower(phrase), MatchType(strings.ToLower(matchType)), tokens...) {
+					return cluster
+				}
+			}
+		}
+	}
+	return ""
+}
+
+func inArr(val string, matchType MatchType, tokens ...string) bool {
 	var matchFunc func(str string, sub string) bool
 	switch matchType {
 	case Part:
