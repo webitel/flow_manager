@@ -38,6 +38,9 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 	})
 }
 
+// findInCluster finds user input in cluster. Variating by match type and phrase search. Match type determines what
+// we can identify as match can be partial or full. Phrase search changes algorithm of search by comparing cluster values to
+// the user input while regular search compares user input to the cluster values.
 func findInCluster(clusters map[string][]string, userInput string, matchType string, phraseSearch bool) string {
 	var tokens []string
 	if !phraseSearch {
