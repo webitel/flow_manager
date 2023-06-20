@@ -42,20 +42,22 @@ func (r *router) classifierHandler(ctx context.Context, scope *Flow, conn model.
 // we can identify as match can be partial or full. Phrase search changes algorithm of search by comparing cluster values to
 // the user input while regular search compares user input to the cluster values.
 func findInCluster(clusters map[string][]string, userInput string, matchType string, phraseSearch bool) string {
-	var tokens []string
+	var (
+		tokens []string
+		found  bool
+	)
 	if !phraseSearch {
 		tokens = tok.Tokenize(strings.ToLower(userInput))
 	}
 	for cluster, elems := range clusters {
 		for _, phrase := range elems {
 			if phraseSearch {
-				if inArr(userInput, MatchType(strings.ToLower(matchType)), strings.ToLower(phrase)) {
-					return cluster
-				}
+				found = inArr(userInput, MatchType(strings.ToLower(matchType)), strings.ToLower(phrase))
 			} else {
-				if inArr(strings.ToLower(phrase), MatchType(strings.ToLower(matchType)), tokens...) {
-					return cluster
-				}
+				found = inArr(strings.ToLower(phrase), MatchType(strings.ToLower(matchType)), tokens...)
+			}
+			if found {
+				return cluster
 			}
 		}
 	}
