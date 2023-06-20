@@ -225,7 +225,7 @@ select c.created_at created_at,
        c.to_name,
        c.to_number,
        c.to_id,
-       c.payload,
+       coalesce(p_vars, '{}'),
        c.domain_id,
        c.answered_at,
        c.bridged_at,
@@ -268,7 +268,8 @@ from (
                     when (t.r).gateway_id isnull then t.gateway_ids
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
-                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids
+                case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
+				coalesce(t.p_vars, '{}') || coalesce((t.r).payload, '{}')  as p_vars
          from (
                   select c                                                             r,
                          array_agg(distinct ch.user_id)
@@ -280,7 +281,8 @@ from (
                          array_agg(distinct ch.gateway_id)
                          filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
                          array_agg(distinct ch.team_id)
-                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids
+                         filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids,
+						 call_center.jsonb_concat_agg(ch.payload) p_vars  					
                   from del_calls c
                            left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id))
                   group by 1
