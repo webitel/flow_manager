@@ -16,7 +16,9 @@ type ChatHistoryArgs struct {
 }
 
 func (r *router) chatHistory(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var params ChatHistoryArgs
+	var params = ChatHistoryArgs{
+		ConversationId: conn.Id(),
+	}
 	if appErr := scope.Decode(args, &params); appErr != nil {
 		return nil, appErr
 	}
