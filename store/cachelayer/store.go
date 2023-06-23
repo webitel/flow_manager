@@ -4,11 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
+	"time"
+
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
 )
 
 const (
@@ -40,6 +42,8 @@ func (e *ExternalStoreManager) Connect(driver, dns string) (*ExternalDb, *model.
 	if err != nil {
 		return nil, model.NewAppError("Cache", "cache.connect.open_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
+	db.SetConnMaxIdleTime(time.Second * (CacheExpire - 60))
 
 	e.cache.AddWithDefaultExpires(dns, &ExternalDb{
 		db: db,
