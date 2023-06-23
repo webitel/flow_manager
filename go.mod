@@ -23,7 +23,7 @@ require (
 	github.com/tidwall/gjson v1.14.3
 	github.com/webitel/call_center v0.0.0-20221229103044-4e3121f5990d
 	github.com/webitel/engine v0.0.0-20230224131740-fae606f7d2f9
-	github.com/webitel/protos/cc v0.0.0-20221215113319-bb59fcd34cfb
+	github.com/webitel/protos/cc v0.0.0-20230623094357-9bf3eb56875a
 	github.com/webitel/protos/engine v0.0.0-20230301123315-c6d5b859609e
 	github.com/webitel/protos/storage v0.0.0-20221027123513-0c1d3b4d5e64
 	github.com/webitel/protos/workflow v0.0.0-20230413090020-f5f4e9d27dc4
