@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/webitel/protos/engine"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/protos/cc"
 )
@@ -65,6 +67,8 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 		req.NextDistributeAt = *result.ReadyAt
 	}
 
+	req.AddCommunications = ccCommunications(result.AddCommunications)
+
 	err := fm.cc.Member().AttemptResult(req)
 
 	if err != nil {
@@ -72,6 +76,51 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 	}
 
 	return nil
+}
+
+func ccCommunications(r []model.CallbackCommunication) []*cc.MemberCommunicationCreateRequest {
+	l := len(r)
+
+	if l == 0 {
+		return nil
+	}
+
+	var comm []*cc.MemberCommunicationCreateRequest
+	if l != 0 {
+		comm = make([]*cc.MemberCommunicationCreateRequest, 0, l)
+		for _, v := range r {
+			if v.Destination != "" && v.Type.Id != nil {
+				c := &cc.MemberCommunicationCreateRequest{
+					Destination: v.Destination,
+					Type: &engine.Lookup{
+						Id: int64(*v.Type.Id),
+					},
+				}
+
+				if v.Priority != nil {
+					c.Priority = int32(*v.Priority)
+				}
+
+				if v.Description != nil {
+					c.Description = *v.Description
+				}
+
+				if v.ResourceId != nil {
+					c.Resource = &engine.Lookup{
+						Id: int64(*v.ResourceId),
+					}
+				}
+
+				if v.Display != nil {
+					c.Display = *v.Display
+				}
+
+				comm = append(comm, c)
+			}
+		}
+	}
+
+	return comm
 }
 
 func (fm *FlowManager) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) *model.AppError {

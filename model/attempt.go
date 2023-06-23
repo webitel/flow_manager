@@ -11,4 +11,5 @@ type AttemptResult struct {
 	AgentId                     int32
 	Redial                      bool
 	ExcludeCurrentCommunication bool
+	AddCommunications           []CallbackCommunication `json:"addCommunications"`
 }
