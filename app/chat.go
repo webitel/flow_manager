@@ -94,7 +94,7 @@ func (fm *FlowManager) getMessageTemplateByType(messageType string, sender strin
 			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_template.fail", nil, err.Error(), http.StatusInternalServerError)
 		}
 	case "file":
-		template, err = html.ParseFiles("./message_templates/%s/%s_file.%s", outputType, sender, outputType)
+		template, err = html.ParseFiles(fmt.Sprintf(fm.config.ChatTemplatesSettings.Path+"/%s/%s_file.%s", outputType, sender, outputType))
 		if err != nil {
 			return nil, model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_file_template.fail", nil, err.Error(), http.StatusInternalServerError)
 		}
