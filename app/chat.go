@@ -45,7 +45,7 @@ func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output s
 		name       string
 	)
 	// get wrapper for messages
-	wrapperTemplate, err := html.ParseFiles(fmt.Sprintf("./message_templates/%s/wrapper.%s", output, output))
+	wrapperTemplate, err := html.ParseFiles(fmt.Sprintf(fm.config.ChatTemplatesSettings.Path+"/%s/wrapper.%s", output, output))
 	if err != nil {
 		return "", model.NewAppError("Flow", "flow_manager.parse_chat_messages.parse_wrapper_template.fail", nil, err.Error(), http.StatusInternalServerError)
 	}
