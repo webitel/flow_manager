@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -13,6 +14,10 @@ import (
 const (
 	HANGUP_NORMAL_TEMPORARY_FAILURE = "NORMAL_TEMPORARY_FAILURE"
 	HANGUP_NO_ROUTE_DESTINATION     = "NO_ROUTE_DESTINATION"
+)
+
+var (
+	fixNamePattern = regexp.MustCompile(`'|"|,`)
 )
 
 func (c *Connection) Answer(ctx context.Context) (model.Response, *model.AppError) {
@@ -62,9 +67,9 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 
 	from = fmt.Sprintf("sip_copy_custom_headers=false,sip_h_X-Webitel-Domain-Id=%d,sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'"+
 		",wbt_from_number='%s',wbt_from_name='%s'",
-		call.DomainId(), call.Id(), call.From().Type, call.From().Id, call.Destination(), call.From().Number, call.From().Name)
+		call.DomainId(), call.Id(), call.From().Type, call.From().Id, call.Destination(), call.From().Number, fixName(call.From().Name))
 
-	from += fmt.Sprintf(",effective_caller_id_name='%s',effective_caller_id_number='%s'", call.From().Name, call.From().Number)
+	from += fmt.Sprintf(",effective_caller_id_name='%s',effective_caller_id_number='%s'", fixName(call.From().Name), call.From().Number)
 
 	dialString += "<sip_route_uri=sip:$${outbound_sip_proxy}," + from
 	for key, val := range vars {
@@ -554,4 +559,8 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+func fixName(n string) string {
+	return fixNamePattern.ReplaceAllString(n, "")
 }
