@@ -1,3 +1,2 @@
-{{.User}}: {
-{{.Text}}
-}
+{{.User}} : {{.Text}},
+{{.CreatedAt}}
