@@ -66,7 +66,7 @@ func (s SqlChatStore) GetMessagesByConversation(ctx context.Context, domainId in
 		case when ch.internal isnull then true else ch.internal end
 	FROM chat.message m
 		LEFT JOIN chat.channel ch ON m.channel_id = ch.id
-	WHERE m.conversation_id = :ConversationId
+	WHERE m.conversation_id = :ConversationId::uuid
 	and exists(select 1 from chat.conversation c where c.id = m.conversation_id and c.domain_id = :DomainId)
 	ORDER BY created_at ASC
 	LIMIT :Limit;`,
@@ -177,7 +177,7 @@ from (select `+strings.Join(f, ", ")+`
                 select *
                 from call_center.cc_member_attempt_history ah
                 where ah.domain_id = c.domain_id
-                    and ah.member_call_id = c.id
+                    and ah.member_call_id = c.id::varchar
             ) ah on true
             left join directory.wbt_user u on u.id = ch.user_id
             left join call_center.cc_agent a on a.user_id = ch.user_id
