@@ -56,21 +56,26 @@ func (s SqlChatStore) RoutingFromProfile(domainId, profileId int64) (*model.Rout
 
 func (s SqlChatStore) GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError) {
 	var messages []model.ChatMessage
-	_, err := s.GetReplica().WithContext(ctx).Select(&messages, `select
-		case when m.text isnull and m.file_name notnull then '[' || m.file_name || ']' else m.text end as msg,
+	_, err := s.GetReplica().WithContext(ctx).Select(
+		&messages,
+		`select
+		case when m.text isnull or m.text = '' and m.file_name notnull then '[' || m.file_name || ']' else m.text end as msg,
 		m.created_at,
 		m.type,
-		case when ch.name isnull then 'Bot' else ch.name end
+		case when ch.name isnull then 'Bot' else ch.name end,
+		case when ch.internal isnull then true else ch.internal end
 	FROM chat.message m
 		LEFT JOIN chat.channel ch ON m.channel_id = ch.id
 	WHERE m.conversation_id = :ConversationId::uuid
 	and exists(select 1 from chat.conversation c where c.id = m.conversation_id and c.domain_id = :DomainId)
 	ORDER BY created_at ASC
-	LIMIT :Limit;`, map[string]interface{}{
-		"ConversationId": conversationId,
-		"DomainId":       domainId,
-		"Limit":          limit,
-	})
+	LIMIT :Limit;`,
+		map[string]interface{}{
+			"ConversationId": conversationId,
+			"DomainId":       domainId,
+			"Limit":          limit,
+		},
+	)
 
 	if err != nil {
 		return nil, model.NewAppError("SqlChatStore.RoutingFromProfile", "store.sql_chat.routing.error", nil,

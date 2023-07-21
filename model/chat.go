@@ -38,8 +38,9 @@ type BroadcastChat struct {
 }
 
 type ChatMessage struct {
-	Text      string `json:"text,omitempty" db:"msg"`
-	CreatedAt string `json:"created_at,omitempty" db:"created_at"`
-	Type      string `json:"type,omitempty" db:"type"`
-	User      string `json:"user,omitempty" db:"name"`
+	Text       string `json:"text,omitempty" db:"msg"`
+	CreatedAt  string `json:"created_at,omitempty" db:"created_at"`
+	Type       string `json:"type,omitempty" db:"type"`
+	User       string `json:"user,omitempty" db:"name"`
+	IsInternal bool   `json:"isInternal" db:"internal"`
 }

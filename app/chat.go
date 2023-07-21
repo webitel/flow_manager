@@ -34,7 +34,7 @@ func (fm *FlowManager) GetChatMessagesByConversationId(ctx context.Context, doma
 }
 
 // ParseChatMessages converts all chat message models to the given output type.
-// All the available templates for this messages filtered by output type are lying in the message_templates folder.
+// All the available templates for these messages filtered by output type are lying in the message_templates folder.
 func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output string) (string, *model.AppError) {
 	if messages == nil || len(*messages) == 0 {
 		return "", model.NewAppError("Flow", "flow_manager.parse_chat_messages.invalid_args", nil, "messages is nil or empty", http.StatusBadRequest)
@@ -42,7 +42,6 @@ func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output s
 	var (
 		messageBuf bytes.Buffer
 		wrapperBuf bytes.Buffer
-		name       string
 	)
 	// get wrapper for messages
 	wrapperTemplate, err := html.ParseFiles(fmt.Sprintf(fm.config.ChatTemplatesSettings.Path+"/%s/wrapper.%s", output, output))
@@ -51,11 +50,8 @@ func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output s
 	}
 
 	// fill with data and insert all found messages to the message buffer
-	for i, v := range *messages {
-		if i == 0 { // check for sender or reciever
-			name = v.User
-		}
-		template, appErr := fm.getChatMessageTemplate(&v, output, v.User == name)
+	for _, v := range *messages {
+		template, appErr := fm.getChatMessageTemplate(&v, output, v.IsInternal)
 		if appErr != nil {
 			return "", appErr
 		}
@@ -72,9 +68,9 @@ func (fm *FlowManager) ParseChatMessages(messages *[]model.ChatMessage, output s
 	return wrapperBuf.String(), nil
 }
 
-func (fm *FlowManager) getChatMessageTemplate(message *model.ChatMessage, outputType string, isSender bool) (*html.Template, *model.AppError) {
+func (fm *FlowManager) getChatMessageTemplate(message *model.ChatMessage, outputType string, isInternal bool) (*html.Template, *model.AppError) {
 	var sender string
-	if isSender {
+	if isInternal {
 		sender = "agent"
 	} else {
 		sender = "client"
