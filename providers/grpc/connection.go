@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"sync"
+	"time"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -34,13 +35,17 @@ func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 }
 
-func newConnection(ctx context.Context, variables map[string]string) *Connection {
+func newConnection(ctx context.Context, variables map[string]string, timeout time.Duration) *Connection {
 	c := &Connection{
 		variables: variables,
 		stop:      make(chan struct{}),
 		result:    make(chan interface{}),
 	}
-	c.ctx, c.cancel = context.WithTimeout(ctx, timeoutFlowSchema)
+
+	if timeout == 0 {
+		timeout = timeoutFlowSchema
+	}
+	c.ctx, c.cancel = context.WithTimeout(ctx, timeout)
 
 	return c
 }

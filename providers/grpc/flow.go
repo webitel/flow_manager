@@ -20,7 +20,7 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(ctx, vars)
+	conn := newConnection(ctx, vars, 0)
 
 	var result *workflow.DistributeAttemptResponse
 
@@ -58,7 +58,7 @@ func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(ctx, vars)
+	conn := newConnection(ctx, vars, 0)
 
 	var result *workflow.ResultAttemptResponse
 
@@ -98,7 +98,7 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(context.Background(), vars)
+	conn := newConnection(context.Background(), vars, 0)
 	id := model.NewId()
 	conn.id = id
 
@@ -118,13 +118,7 @@ func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 		vars = make(map[string]string)
 	}
 
-	var timeout = 30
-
-	if in.TimeoutSec != 0 {
-		timeout = int(in.TimeoutSec)
-	}
-	c, _ := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
-	conn := newConnection(c, vars)
+	conn := newConnection(ctx, vars, time.Duration(in.TimeoutSec)*time.Second)
 	id := model.NewId()
 	conn.id = id
 
