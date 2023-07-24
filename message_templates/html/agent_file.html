@@ -1,4 +1,8 @@
-<div align="right" style="background-color: #F3F5F7;">
-    {{.User}} : {{.Text}},
-    {{.CreatedAt}} 
+<div style="display: table-row; text-align: right;">
+    <div style="background-color: rgba(172,162,140,0.61); margin: auto; font-size: medium; padding: 10px; padding-top: 15px; border-top-left-radius: 12px; border-top-right-radius: 12px; min-height: 23px;">
+        {{.User}}  {{.CreatedAt}}
+    </div>
+    <div style="background-color: rgba(172,162,140,0.24); margin: 0; font-size: normal; padding: 15px; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; min-height: 30px;"   >
+        {{.Text}}
+    </div>
 </div>
