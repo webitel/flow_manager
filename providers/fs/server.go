@@ -2,13 +2,15 @@ package fs
 
 import (
 	"fmt"
+	"io"
+	"net"
+	"net/http"
+	"sync"
+
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 	"github.com/webitel/wlog"
-	"io"
-	"net"
-	"net/http"
 )
 
 const (
@@ -29,6 +31,8 @@ type server struct {
 	didFinishListen chan struct{}
 	consume         chan model.Connection
 	listener        net.Listener
+	stopped         bool
+	sync.RWMutex
 }
 
 func NewServer(cfg *Config) model.Server {
@@ -72,11 +76,23 @@ func (s *server) listen(lis net.Listener) {
 	defer wlog.Debug(fmt.Sprintf("[%s] close server listening", s.Name()))
 	wlog.Debug(fmt.Sprintf("[%s] server listening %s", s.Name(), lis.Addr().String()))
 
-	eventsocket.Listen(lis, s.handleConnection)
+	err := eventsocket.Listen(lis, s.handleConnection)
+	s.RLock()
+	stopped := s.stopped
+	s.RUnlock()
+
+	if err != nil && !stopped {
+		wlog.Error(fmt.Sprintf("[%s] server listening %s, error: %s", s.Name(), lis.Addr().String(), err.Error()))
+		panic(err.Error())
+	}
 	close(s.didFinishListen)
 }
 
 func (s *server) Stop() {
+	s.Lock()
+	s.stopped = true
+	s.Unlock()
+
 	if s.listener != nil {
 		s.listener.Close()
 	}
