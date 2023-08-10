@@ -21,12 +21,12 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/streadway/amqp v1.1.0
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20230802140012-ac80f2929883
-	github.com/webitel/engine v0.0.0-20230802154609-f472d165c467
-	github.com/webitel/protos/cc v0.0.0-20230802125454-00746a3b1f45
-	github.com/webitel/protos/engine v0.0.0-20230802125454-00746a3b1f45
-	github.com/webitel/protos/storage v0.0.0-20230802125454-00746a3b1f45
-	github.com/webitel/protos/workflow v0.0.0-20230802125454-00746a3b1f45
+	github.com/webitel/call_center v0.0.0-20230810110400-89cb4a3c55fd
+	github.com/webitel/engine v0.0.0-20230810110048-53935d18fdce
+	github.com/webitel/protos/cc v0.0.0-20230810105513-705f264b0551
+	github.com/webitel/protos/engine v0.0.0-20230810105513-705f264b0551
+	github.com/webitel/protos/storage v0.0.0-20230810105513-705f264b0551
+	github.com/webitel/protos/workflow v0.0.0-20230810105513-705f264b0551
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
@@ -98,6 +98,7 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
@@ -208,7 +209,6 @@ require (
 	github.com/go-playground/form v3.1.4+incompatible // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/uuid v1.3.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway v1.16.0 // indirect
 	github.com/hashicorp/consul/api v1.23.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
@@ -227,7 +227,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.25.0 // indirect
 	golang.org/x/net v0.13.0 // indirect
-	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/sys v0.11.0 // indirect
 	golang.org/x/text v0.11.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20230731193218-e0aa005b6bdf // indirect
