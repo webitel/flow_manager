@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/webitel/engine/pkg/webitel_client"
+
 	"github.com/webitel/flow_manager/storage"
 
 	"github.com/webitel/flow_manager/providers/email"
@@ -56,6 +58,7 @@ type FlowManager struct {
 	listWatcher *listWatcher
 
 	cacheStore map[CacheType]cachelayer.CacheStore
+	wbtCli     *webitel_client.Client
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -159,6 +162,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if err := fm.InitCacheTimezones(); err != nil {
+		return nil, err
+	}
+
+	if fm.wbtCli, err = webitel_client.New(0, 0, config.DiscoverySettings.Url); err != nil {
 		return nil, err
 	}
 

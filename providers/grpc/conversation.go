@@ -99,8 +99,13 @@ func (c *conversation) Context() context.Context {
 func (c *conversation) Get(name string) (string, bool) {
 	idx := strings.Index(name, ".")
 	if idx > 0 {
-		if m, ok := c.storeMessages[name[0:idx]]; ok {
+		nameRoot := name[0:idx]
+		if m, ok := c.storeMessages[nameRoot]; ok {
 			return gjson.GetBytes(m, name[idx+1:]).String(), true
+		}
+
+		if v, ok := c.variables[nameRoot]; ok {
+			return gjson.GetBytes([]byte(v), name[idx+1:]).String(), true
 		}
 	}
 	v, ok := c.variables[name]
@@ -159,7 +164,7 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
-//todo check not closed
+// todo check not closed
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,

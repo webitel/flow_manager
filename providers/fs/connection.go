@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
+
+	"github.com/tidwall/gjson"
 
 	uuid "github.com/satori/go.uuid"
 	"github.com/webitel/flow_manager/model"
@@ -272,7 +275,22 @@ func (c *Connection) Close() *model.AppError {
 	return nil
 }
 
-func (c *Connection) Get(key string) (value string, ok bool) {
+func (c *Connection) Get(key string) (string, bool) {
+	idx := strings.Index(key, ".")
+
+	if idx > 0 {
+		root := key[0:idx]
+		v, ok := c.get(root)
+		if ok {
+			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
+		}
+	}
+
+	return c.get(key)
+}
+
+func (c *Connection) get(key string) (value string, ok bool) {
+
 	if c.Stopped() {
 		if value, ok = c.variables.Load(key); ok {
 			return
@@ -585,7 +603,7 @@ func (c *Connection) Variables() map[string]string {
 	return c.variables.Data()
 }
 
-//fixme
+// fixme
 func test() {
 	a := func(c model.Call) {}
 	a(&Connection{})
