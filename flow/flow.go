@@ -84,6 +84,20 @@ func (f *Flow) PushSteepLog(name string, s int64) {
 	f.Unlock()
 }
 
+func (f *Flow) ChannelType() string {
+	if f.Connection != nil {
+		switch f.Connection.Type() {
+		case model.ConnectionTypeCall:
+			return "call"
+		case model.ConnectionTypeChat:
+			return "chat"
+
+		}
+	}
+
+	return "task"
+}
+
 func (f *Flow) Logs() []*model.StepLog {
 	f.RLock()
 	defer f.RUnlock()
