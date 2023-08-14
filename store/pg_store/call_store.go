@@ -206,7 +206,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, 
-								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive)
+								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -255,7 +255,8 @@ select c.created_at created_at,
 	   c.talk_sec,
 	   c.amd_ai_result, 
 	   c.amd_ai_logs,
-	   c.amd_ai_positive
+	   c.amd_ai_positive,
+	   c.contact_id
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -475,6 +476,36 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetBlindTransfer", "store.sql_call.set_blind_transfer.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) SetContactId(domainId int64, id string, contactId int64) *model.AppError {
+	_, err := s.GetMaster().Exec(`with ua as (
+    update call_center.cc_calls
+        set contact_id  = :ContactId
+    where id = :Id and domain_id = :DomainId
+    returning id
+), uh as (
+    update call_center.cc_calls_history
+        set contact_id  = :ContactId
+    where id = :Id and domain_id = :DomainId
+        and not exists(select 1 from ua)
+    returning id
+)
+select ua.id as id
+from ua
+union all
+select uh.id as id
+from uh`, map[string]interface{}{
+		"DomainId":  domainId,
+		"ContactId": contactId,
+		"Id":        id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetContactId", "store.sql_call.set_contact.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
 	return nil

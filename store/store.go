@@ -59,6 +59,7 @@ type CallStore interface {
 	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
 	SetUserId(domainId int64, id string, userId int64) *model.AppError
 	SetBlindTransfer(domainId int64, id string, destination string) *model.AppError
+	SetContactId(domainId int64, id string, contactId int64) *model.AppError
 }
 
 type SchemaStore interface {

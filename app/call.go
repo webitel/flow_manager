@@ -14,7 +14,6 @@ import (
 root@dev:/usr/local/bin# journalctl -t flow_manager | grep 2e5cb2b7-4bef-4ec2-907c-ddfde1b6a3e3
 Nov 24 16:57:53 dev flow_manager[13448]: 2020-11-24T16:57:53.758+0200        debug        rabbit/client.go:150        call 2e5cb2b7-4bef-4ec2-907c-ddfde1b6a3e3 [hangup]
 Nov 24 16:57:54 dev flow_manager[13448]: 2020-11-24T16:57:54.185+0200        debug        rabbit/client.go:150        call 2e5cb2b7-4bef-4ec2-907c-ddfde1b6a3e3 [ringing]
-
 */
 type callWatcher struct {
 	fm                 *FlowManager
@@ -117,4 +116,8 @@ func (c *FlowManager) SetCallUserId(domainId int64, id string, userId int64) *mo
 
 func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId string, destination string) *model.AppError {
 	return f.Store.Call().SetBlindTransfer(domainId, callId, destination)
+}
+
+func (f *FlowManager) SetContactId(domainId int64, callId string, contactId int64) *model.AppError {
+	return f.Store.Call().SetContactId(domainId, callId, contactId)
 }
