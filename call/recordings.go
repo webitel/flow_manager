@@ -2,6 +2,7 @@ package call
 
 import (
 	"context"
+	"strings"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
@@ -53,6 +54,8 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 		call.Push(ctx, "wbt_tags", "vm")
 	}
 
+	normalizeRecordName(&argv.Name)
+
 	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
 }
 
@@ -69,9 +72,17 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 		return nil, err
 	}
 
+	normalizeRecordName(&argv.Name)
+
 	if argv.Action == "stop" {
 		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
 	}
 
 	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer)
+}
+
+func normalizeRecordName(s *string) {
+	if strings.Index(*s, " ") != -1 {
+		*s = strings.Replace(*s, " ", "_", -1)
+	}
 }
