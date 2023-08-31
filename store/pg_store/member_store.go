@@ -137,6 +137,7 @@ from (
         select id from call_center.cc_queue q where q.domain_id = :DomainId and q.id = any(:QueueIds::int[])
     )
     and (:Name::varchar isnull or m.name ilike :Name)
+	and (:Id::int8 isnull or m.id = :Id::int8)
     and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
@@ -144,6 +145,7 @@ from (
     limit 1
 ) t`, map[string]interface{}{
 		"DomainId":    domainId,
+		"Id":          req.Id,
 		"QueueIds":    pq.Array(req.QueueIds),
 		"Name":        req.Name,
 		"Today":       req.Today,
