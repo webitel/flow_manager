@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
@@ -87,6 +88,14 @@ func (r *router) PatchMembers(ctx context.Context, scope *Flow, conn model.Conne
 
 	if argv.Patch == nil {
 		return nil, ErrorRequiredParameter("PatchMembers", "patch")
+	}
+
+	if argv.Patch.StopCauseDep != nil && argv.Patch.StopCause == nil {
+		argv.Patch.StopCause = argv.Patch.StopCauseDep
+	}
+
+	if argv.Patch.ReadyAtDep != nil && argv.Patch.ReadyAt == nil {
+		argv.Patch.ReadyAt = argv.Patch.ReadyAtDep
 	}
 
 	res, err := r.fm.PatchMembers(conn.DomainId(), argv.Member, argv.Patch)

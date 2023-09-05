@@ -62,8 +62,10 @@ type PatchMember struct {
 	Priority       *int                         `json:"priority"`
 	BucketId       *int                         `json:"bucket_id"` // todo deprecated
 	Bucket         *SearchEntity                `json:"bucket"`
-	ReadyAt        *int64                       `json:"ready_at"`
-	StopCause      *string                      `json:"stop_cause"`
+	ReadyAtDep     *int64                       `json:"ready_at"` // todo deprecated
+	ReadyAt        *int64                       `json:"readyAt"`
+	StopCauseDep   *string                      `json:"stop_cause"` // todo deprecated
+	StopCause      *string                      `json:"stopCause"`
 	Variables      *Variables                   `json:"variables"`
 	Communications []PatchCallbackCommunication `json:"communications"`
 }
