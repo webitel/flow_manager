@@ -57,5 +57,7 @@ func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversati
 		return nil, err
 	}
 
+	file.MimeType += ";source=media"
+
 	return conv.SendFile(ctx, argv.Text, file)
 }
