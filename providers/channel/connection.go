@@ -2,9 +2,13 @@ package channel
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
+	"strings"
 	"sync"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -29,7 +33,7 @@ func newConnection(c model.ChannelExec) model.Connection {
 		id:        model.NewId(),
 		ctx:       context.Background(),
 		domainId:  c.DomainId,
-		variables: c.Variables,
+		variables: toVariables(c.Variables),
 		schemaId:  c.SchemaId,
 		RWMutex:   sync.RWMutex{},
 	}
@@ -67,11 +71,16 @@ func (c *Connection) Get(key string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
-	if v, ok := c.variables[key]; ok {
-		return fmt.Sprintf("%v", v), true
-	}
+	idx := strings.Index(key, ".")
+	if idx > 0 {
+		nameRoot := key[0:idx]
 
-	return "", false
+		if v, ok := c.variables[nameRoot]; ok {
+			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
+		}
+	}
+	v, ok := c.variables[key]
+	return v, ok
 }
 
 func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
@@ -104,4 +113,14 @@ func (c *Connection) Close() *model.AppError {
 
 func (c *Connection) Variables() map[string]string {
 	return c.variables
+}
+
+func toVariables(in map[string]json.RawMessage) map[string]string {
+	vars := make(map[string]string)
+
+	for k, v := range in {
+		vars[k] = string(v)
+	}
+
+	return vars
 }

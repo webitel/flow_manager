@@ -55,9 +55,9 @@ type Result struct {
 type ResultChannel chan Result
 
 type ChannelExec struct {
-	SchemaId  int               `json:"schema_id"`
-	DomainId  int64             `json:"domain_id"`
-	Variables map[string]string `json:"variables"`
+	SchemaId  int                        `json:"schema_id"`
+	DomainId  int64                      `json:"domain_id"`
+	Variables map[string]json.RawMessage `json:"variables"`
 }
 
 func (v *Variables) ToJson() []byte {
