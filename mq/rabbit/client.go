@@ -181,7 +181,7 @@ func (a *AMQP) subscribeCall() {
 }
 
 func (a *AMQP) subscribeExec() {
-	err := a.channel.QueueBind(a.execName, "flow", model.FlowExchange, true, nil)
+	err := a.channel.QueueBind(a.execName, "exec", model.FlowExchange, true, nil)
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", a.execName, model.FlowExchange, err.Error()))
 		time.Sleep(time.Second)
