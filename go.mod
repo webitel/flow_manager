@@ -19,7 +19,6 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
 	github.com/satori/go.uuid v1.2.0
-	github.com/streadway/amqp v1.1.0
 	github.com/tidwall/gjson v1.14.3
 	github.com/webitel/call_center v0.0.0-20230810110400-89cb4a3c55fd
 	github.com/webitel/engine v0.0.0-20230810110048-53935d18fdce
@@ -34,6 +33,8 @@ require (
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
+
+require github.com/rabbitmq/amqp091-go v1.8.1
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect

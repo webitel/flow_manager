@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/webitel/flow_manager/providers/channel"
+
 	"github.com/webitel/engine/pkg/webitel_client"
 
 	"github.com/webitel/flow_manager/storage"
@@ -32,9 +34,10 @@ type FlowManager struct {
 	Store         store.Store
 	ExternalStore *cachelayer.ExternalStoreManager
 
-	grpcServer model.Server
-	mailServer model.Server
-	eslServer  model.Server
+	grpcServer    model.Server
+	mailServer    model.Server
+	eslServer     model.Server
+	channelServer model.Server
 
 	schemaCache utils.ObjectCache
 	chatManager *grpc.ChatManager
@@ -47,11 +50,12 @@ type FlowManager struct {
 
 	eventQueue mq.MQ
 
-	CallRouter  model.Router
-	GRPCRouter  model.Router
-	EmailRouter model.Router
-	ChatRouter  model.Router
-	FormRouter  model.Router
+	CallRouter    model.Router
+	GRPCRouter    model.Router
+	EmailRouter   model.Router
+	ChatRouter    model.Router
+	FormRouter    model.Router
+	ChannelRouter model.Router
 
 	callWatcher *callWatcher
 	cert        presign.PreSign
@@ -127,13 +131,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		RecordResample: fm.Config().Record.Sample,
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().EmailOAuth)
+	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
+	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 
 	if err := fm.RegisterServers(); err != nil {
 		outErr = err
 		return
 	}
-
-	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 
 	if err = fm.cluster.Start(); err != nil {
 		return nil, err

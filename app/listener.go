@@ -34,6 +34,11 @@ func (f *FlowManager) Listen() {
 		go f.listenInboundEmail(f.stop, &wg, f.mailServer)
 	}
 
+	if f.channelServer != nil {
+		wg.Add(1)
+		go f.listenChannelConnection(f.stop, &wg, f.channelServer)
+	}
+
 	wg.Wait()
 }
 
@@ -100,6 +105,25 @@ func (f *FlowManager) listenInboundEmail(stop chan struct{}, wg *sync.WaitGroup,
 			}
 
 			if err := f.EmailRouter.Handle(c); err != nil {
+				wlog.Error(err.Error())
+			}
+		}
+	}
+}
+
+func (f *FlowManager) listenChannelConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
+	defer wg.Done()
+	wlog.Info(fmt.Sprintf("listen channel connections..."))
+	for {
+		select {
+		case <-stop:
+			return
+		case c, ok := <-srv.Consume():
+			if !ok {
+				return
+			}
+
+			if err := f.ChannelRouter.Handle(c); err != nil {
 				wlog.Error(err.Error())
 			}
 		}

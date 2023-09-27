@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/webitel/flow_manager/channel"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/call"
 	"github.com/webitel/flow_manager/chat_route"
@@ -33,6 +35,7 @@ func main() {
 	chat_route.Init(fm, router)
 	processing.Init(fm, router)
 	email.Init(fm, router)
+	channel.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()

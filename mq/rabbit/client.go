@@ -8,7 +8,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/streadway/amqp"
+	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/wlog"
@@ -30,11 +30,13 @@ type AMQP struct {
 	settings           *model.MQSettings
 	connection         *amqp.Connection
 	channel            *amqp.Channel
-	queueName          string
+	callName           string
+	execName           string
 	nodeName           string
 	connectionAttempts int
 	stopping           bool
 	callEvent          chan model.CallActionData
+	execEvent          chan model.ChannelExec
 	queueEvent         mq.QueueEvent
 	sync.RWMutex
 }
@@ -43,6 +45,7 @@ func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 	mq_ := &AMQP{
 		settings:  &settings,
 		callEvent: make(chan model.CallActionData, CallChanBufferCount),
+		execEvent: make(chan model.ChannelExec, CallChanBufferCount),
 		nodeName:  nodeName,
 	}
 	mq_.queueEvent = NewQueueMQ(mq_)
@@ -79,16 +82,36 @@ func (a *AMQP) initConnection() {
 			time.Sleep(time.Second)
 			os.Exit(1)
 		} else {
+			a.initExchange()
 			a.initQueues()
 		}
 	}
 }
 
+func (a *AMQP) initExchange() {
+	err := a.channel.ExchangeDeclare(
+		model.FlowExchange,
+		"direct",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange to err:%v", err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(1)
+	}
+}
+
 func (a *AMQP) initQueues() {
 	var err error
-	var queue amqp.Queue
+	var callQueue amqp.Queue
+	var execQueue amqp.Queue
 
-	queue, err = a.channel.QueueDeclare(model.CallEventQueueName, true, false, false,
+	callQueue, err = a.channel.QueueDeclare(model.CallEventQueueName, true, false, false,
 		true, nil)
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", model.CallEventQueueName, err.Error()))
@@ -96,21 +119,31 @@ func (a *AMQP) initQueues() {
 		os.Exit(EXIT_DECLARE_QUEUE)
 	}
 
-	a.queueName = queue.Name
-	wlog.Debug(fmt.Sprintf("Success declare queue %v, connected consumers %v", queue.Name, queue.Consumers))
-	a.subscribe()
+	execQueue, err = a.channel.QueueDeclare(model.FlowExecQueueName, true, false, false,
+		true, nil)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", model.FlowExecQueueName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_DECLARE_QUEUE)
+	}
+
+	a.callName = callQueue.Name
+	a.execName = execQueue.Name
+	wlog.Debug(fmt.Sprintf("Success declare queue %v, %v, connected consumers %v", callQueue.Name, execQueue.Name, callQueue.Consumers))
+	a.subscribeCall()
+	a.subscribeExec()
 }
 
-func (a *AMQP) subscribe() {
-	err := a.channel.QueueBind(a.queueName, "events.#", model.CallExchange, true, nil)
+func (a *AMQP) subscribeCall() {
+	err := a.channel.QueueBind(a.callName, "events.#", model.CallExchange, true, nil)
 	if err != nil {
-		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", a.queueName, model.CallExchange, err.Error()))
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", a.callName, model.CallExchange, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
 	}
 
 	msgs, err := a.channel.Consume(
-		a.queueName,
+		a.callName,
 		"",
 		false,
 		false,
@@ -119,7 +152,7 @@ func (a *AMQP) subscribe() {
 		nil,
 	)
 	if err != nil {
-		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", a.queueName, err.Error()))
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", a.callName, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
 	}
@@ -135,6 +168,57 @@ func (a *AMQP) subscribe() {
 			switch m.Exchange {
 			case model.CallExchange:
 				a.handleCallMessage(m.Body)
+			default:
+				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
+			}
+			m.Ack(false)
+		}
+
+		if !a.stopping {
+			a.initConnection()
+		}
+	}()
+}
+
+func (a *AMQP) subscribeExec() {
+	err := a.channel.QueueBind(a.execName, "flow", model.FlowExchange, true, nil)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", a.execName, model.FlowExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	msgs, err := a.channel.Consume(
+		a.execName,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", a.execName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	go func() {
+
+		for m := range msgs {
+			if m.ContentType != "text/json" {
+				wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
+				continue
+			}
+
+			switch m.Exchange {
+			case model.FlowExchange:
+				var data model.ChannelExec
+				if err := json.Unmarshal(m.Body, &data); err != nil {
+					wlog.Warn(fmt.Sprintf("Failed parse event content type: %v\n%s", m.ContentType, string(m.Body)))
+				} else {
+					a.execEvent <- data
+				}
 			default:
 				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
 			}
@@ -197,4 +281,8 @@ func (a *AMQP) SendJSON(exchange string, key string, data []byte) *model.AppErro
 
 func (a *AMQP) ConsumeCallEvent() <-chan model.CallActionData {
 	return a.callEvent
+}
+
+func (a *AMQP) ConsumeExec() <-chan model.ChannelExec {
+	return a.execEvent
 }

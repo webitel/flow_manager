@@ -34,6 +34,10 @@ func (l *LayeredMQ) ConsumeCallEvent() <-chan model.CallActionData {
 	return l.MQLayer.ConsumeCallEvent()
 }
 
+func (l *LayeredMQ) ConsumeExec() <-chan model.ChannelExec {
+	return l.MQLayer.ConsumeExec()
+}
+
 func (l *LayeredMQ) QueueEvent() QueueEvent {
 	return l.MQLayer.QueueEvent()
 }
