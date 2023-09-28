@@ -20,12 +20,12 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
 	github.com/satori/go.uuid v1.2.0
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20230810110400-89cb4a3c55fd
-	github.com/webitel/engine v0.0.0-20230810110048-53935d18fdce
-	github.com/webitel/protos/cc v0.0.0-20230810105513-705f264b0551
-	github.com/webitel/protos/engine v0.0.0-20230810105513-705f264b0551
-	github.com/webitel/protos/storage v0.0.0-20230810105513-705f264b0551
-	github.com/webitel/protos/workflow v0.0.0-20230810105513-705f264b0551
+	github.com/webitel/call_center v0.0.0-20230928075601-637b50759fa9
+	github.com/webitel/engine v0.0.0-20230928092855-6cbbb53daa57
+	github.com/webitel/protos/cc v0.0.0-20230919101002-a30f21070914
+	github.com/webitel/protos/engine v0.0.0-20230919101002-a30f21070914
+	github.com/webitel/protos/storage v0.0.0-20230919101002-a30f21070914
+	github.com/webitel/protos/workflow v0.0.0-20230919101002-a30f21070914
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.10.0
 	golang.org/x/sync v0.3.0
