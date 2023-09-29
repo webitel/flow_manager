@@ -21,9 +21,9 @@ require (
 	github.com/satori/go.uuid v1.2.0
 	github.com/tidwall/gjson v1.14.3
 	github.com/webitel/call_center v0.0.0-20230928075601-637b50759fa9
-	github.com/webitel/engine v0.0.0-20230928092855-6cbbb53daa57
+	github.com/webitel/engine v0.0.0-20230929132314-e8f08f52c140
 	github.com/webitel/protos/cc v0.0.0-20230919101002-a30f21070914
-	github.com/webitel/protos/engine v0.0.0-20230919101002-a30f21070914
+	github.com/webitel/protos/engine v0.0.0-20230929083624-34e29d2feb6a
 	github.com/webitel/protos/storage v0.0.0-20230919101002-a30f21070914
 	github.com/webitel/protos/workflow v0.0.0-20230919101002-a30f21070914
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
@@ -109,7 +109,7 @@ require (
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.2 // indirect
-	github.com/hashicorp/consul/api v1.23.0 // indirect
+	github.com/hashicorp/consul/api v1.25.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.5.0 // indirect
