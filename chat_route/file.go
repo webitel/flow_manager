@@ -19,18 +19,21 @@ type FileMessage struct {
 }
 
 type ImageArgv struct {
-	Url string
+	Url  string
+	Name string
 }
 
 func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
 	var err *model.AppError
-	var argv ImageArgv
+	argv := ImageArgv{
+		Name: "empty",
+	}
 
 	if err = r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
-	return conv.SendImageMessage(ctx, argv.Url)
+	return conv.SendImageMessage(ctx, argv.Url, argv.Name)
 }
 
 func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
