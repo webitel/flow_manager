@@ -117,7 +117,15 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 	case model.ConnectionTypeCall:
 		err = r.fm.SetContactId(conn.DomainId(), conn.Id(), argv.ContactId)
 	default:
-		return model.CallResponseError, model.NewAppError("flow", "flow.todo", nil, "", http.StatusInternalServerError)
+		if argv.SessionId != "" {
+			err = r.fm.SetContactId(conn.DomainId(), argv.SessionId, argv.ContactId)
+		} else {
+			return model.CallResponseError, model.NewAppError("flow", "flow.todo", nil, "", http.StatusInternalServerError)
+		}
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	return conn.Set(ctx, model.Variables{
