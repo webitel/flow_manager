@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -166,6 +169,14 @@ func (c *processingConnection) Get(key string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
+	idx := strings.Index(key, ".")
+	if idx > 0 {
+		nameRoot := key[0:idx]
+
+		if v, ok := c.variables[nameRoot]; ok {
+			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
+		}
+	}
 	if v, ok := c.variables[key]; ok {
 		return fmt.Sprintf("%v", v), true
 	}
