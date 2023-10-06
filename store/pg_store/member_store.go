@@ -197,7 +197,7 @@ from m`, map[string]interface{}{
 		"DomainId":    domainId,
 		"QueueIds":    pq.Array(req.GetQueueIds()),
 		"Id":          req.Id,
-		"Name":        req.Name,
+		"Name":        req.GetName(),
 		"Today":       req.Today,
 		"Completed":   req.Completed,
 		"BucketId":    req.Bucket.GetId(),
