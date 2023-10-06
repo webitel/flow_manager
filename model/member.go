@@ -86,6 +86,14 @@ func (m *SearchMember) GetQueueIds() []int {
 	return getIds(m.Queues)
 }
 
+func (m *SearchMember) GetName() *string {
+	if m.Name == nil || *m.Name == "" {
+		return nil
+	}
+
+	return m.Name
+}
+
 func getIds(src []SearchEntity) []int {
 	l := len(src)
 

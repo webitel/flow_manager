@@ -303,9 +303,14 @@ func (c *Connection) get(key string) (value string, ok bool) {
 			value = c.lastEvent.Get("variable_" + (key))
 		}
 		if value == "" {
-			if key, ok = mapVariables[key]; ok {
-				value = c.lastEvent.Get(key)
+			var mapKey = ""
+			if mapKey, ok = mapVariables[key]; ok {
+				value = c.lastEvent.Get(mapKey)
 			}
+		}
+
+		if value == "" {
+			value = c.lastEvent.Get(key)
 		}
 
 		if value != "" {
