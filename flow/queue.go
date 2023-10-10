@@ -23,8 +23,9 @@ type GetQueueInfo struct {
 }
 
 type GetQueueAgents struct {
-	Queue *model.SearchEntity `json:"queue"`
-	Set   model.Variables     `json:"set"`
+	Channel string              `json:"channel"`
+	Queue   *model.SearchEntity `json:"queue"`
+	Set     model.Variables     `json:"set"`
 }
 
 func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -117,7 +118,9 @@ func (r *router) getQueueMetrics(ctx context.Context, scope *Flow, c model.Conne
 }
 
 func (r *router) getQueueAgents(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var argv GetQueueAgents
+	var argv = GetQueueAgents{
+		Channel: scope.ChannelType(),
+	}
 	var res model.Variables
 
 	err := scope.Decode(args, &argv)
@@ -129,7 +132,7 @@ func (r *router) getQueueAgents(ctx context.Context, scope *Flow, c model.Connec
 		return model.CallResponseError, ErrorRequiredParameter("getQueueAgent", "queue")
 	}
 
-	res, err = r.fm.Store.Queue().GetQueueAgents(c.DomainId(), *argv.Queue.Id, argv.Set)
+	res, err = r.fm.Store.Queue().GetQueueAgents(c.DomainId(), *argv.Queue.Id, argv.Channel, argv.Set)
 	if err != nil {
 		return model.CallResponseError, err
 	}

@@ -130,7 +130,7 @@ from (
 	return t.Variables, nil
 }
 
-func (s SqlQueueStore) GetQueueAgents(domainId int64, queueId int, mapRes model.Variables) (model.Variables, *model.AppError) {
+func (s SqlQueueStore) GetQueueAgents(domainId int64, queueId int, channel string, mapRes model.Variables) (model.Variables, *model.AppError) {
 	var t *properties
 	f := make([]string, 0)
 
@@ -154,13 +154,13 @@ from (
 			   (count(distinct a.id) filter ( where a.status = 'offline' ))::varchar                      as offline,
 			   (count(distinct a.id) filter ( where a.status = 'online' ))::varchar                       as online,
 			   (count(distinct a.id) filter ( where a.status = 'pause' ))::varchar                        as pause,
-			   (count(distinct a.id) filter ( where a.status = 'online' and ac.channel isnull ))::varchar as waiting
+			   (count(distinct a.id) filter ( where a.status = 'online' and ac.state = 'waiting' ))::varchar as waiting
 		from call_center.cc_queue q
 				 inner join call_center.cc_queue_skill qs on qs.queue_id = q.id
 				 inner join call_center.cc_skill_in_agent sa
 							on sa.skill_id = qs.skill_id and sa.capacity between qs.min_capacity and qs.max_capacity
 				 inner join call_center.cc_agent a on a.id = sa.agent_id and (q.team_id isnull or q.team_id = a.team_id)
-				 left join call_center.cc_agent_channel ac on ac.agent_id = a.id
+				 left join call_center.cc_agent_channel ac on ac.agent_id = a.id and ac.channel = :Channel::text
 		where q.domain_id = :DomainId
 		  and q.id = :Id
 		  and qs.enabled
@@ -169,6 +169,7 @@ from (
 ) t`, map[string]interface{}{
 		"Id":       queueId,
 		"DomainId": domainId,
+		"Channel":  channel,
 	})
 
 	if err != nil {
