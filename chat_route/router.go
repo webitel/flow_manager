@@ -100,6 +100,10 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 
+	conn.Set(conn.Context(), map[string]interface{}{
+		model.FlowSchemaNameVariable: routing.Schema.Name,
+	})
+
 	flow.Route(conn.Context(), i, r)
 
 	if !conv.IsTransfer() {
