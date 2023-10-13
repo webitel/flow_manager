@@ -2,6 +2,10 @@ package model
 
 import "fmt"
 
+const (
+	FlowSchemaNameVariable = "flow_schema_name"
+)
+
 type Schema struct {
 	Id        int   `json:"id" db:"id"`
 	DomainId  int64 `json:"domain_id" db:"domain_id"`
