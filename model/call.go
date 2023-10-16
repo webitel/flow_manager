@@ -203,6 +203,7 @@ type CallActionHangup struct {
 	HangupBy       *string        `json:"hangup_by"`
 	Tags           []string       `json:"tags"`
 	AmdResult      *string        `json:"amd_result"`
+	AmdCause       *string        `json:"amd_cause"`
 	RecordStart    *int64         `json:"record_start,string"`
 	RecordStop     *int64         `json:"record_stop,string"`
 	TalkSec        *float32       `json:"talk_sec,string"`
@@ -225,7 +226,7 @@ func (h *CallActionHangup) VariablesToJson() []byte {
 }
 
 func (h *CallActionHangup) Parameters() []byte {
-	if h.RecordStart == nil && h.RecordStop == nil {
+	if h.RecordStart == nil && h.RecordStop == nil && h.AmdCause == nil {
 		return []byte("{}") //FIXME
 	}
 
@@ -235,6 +236,38 @@ func (h *CallActionHangup) Parameters() []byte {
 	}
 	if h.RecordStart != nil {
 		res["record_start"] = *h.RecordStart
+	}
+
+	if h.AmdCause != nil {
+		res["amd_cause"] = *h.AmdCause
+	}
+
+	b, _ := json.Marshal(res)
+	return b
+}
+
+func (h *CallActionHangup) AmdJson() []byte {
+	res := make(map[string]interface{})
+	if h.AmdResult != nil {
+		res["result"] = *h.AmdResult
+	}
+	if h.AmdCause != nil {
+		res["cause"] = *h.AmdCause
+	}
+
+	// or AI
+	if h.AmdAiResult != nil {
+		res["result"] = *h.AmdAiResult
+	}
+	if h.AmdAiResultLog != nil {
+		res["log"] = h.AmdAiResultLog
+	}
+	if h.AmdAiPositive != nil {
+		res["positive"] = *h.AmdAiPositive
+	}
+
+	if len(res) == 0 {
+		return nil
 	}
 
 	b, _ := json.Marshal(res)
