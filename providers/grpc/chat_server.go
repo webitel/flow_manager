@@ -149,6 +149,7 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 	//todo
 	if isTransfer {
 		conv.breakCause = in.Cause
+		conv.setTransferVariable()
 	}
 
 	conv.closeIfBreak()
