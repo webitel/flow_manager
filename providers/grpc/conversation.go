@@ -156,8 +156,22 @@ func (c *conversation) Break(cause string) *model.AppError {
 	c.breakCause = cause
 	c.mx.Unlock()
 
+	c.setTransferVariable()
+
 	c.cancel()
 	return nil
+}
+
+func (c *conversation) setTransferVariable() {
+	if c.IsTransfer() {
+		c.Set(context.TODO(), model.Variables{
+			"chat_transferred": "true",
+		})
+	} else {
+		c.Set(context.TODO(), model.Variables{
+			"chat_transferred": "false",
+		})
+	}
 }
 
 func (c *conversation) ProfileId() int64 {
