@@ -4,6 +4,8 @@ import (
 	"context"
 	"strings"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
@@ -30,6 +32,20 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 			argv.Set: "",
 		})
 		return nil, err
+	}
+
+	if scope.CountTriggers() > 0 {
+		for _, m := range msgs {
+			commandName := flow.TriggerCommandsName(m)
+			if scope.HasTrigger(commandName) {
+				err = scope.TriggerScopeAsync(ctx, commandName, r)
+				if err != nil {
+					wlog.Error(err.Error())
+				}
+
+				return r.recvMessage(ctx, scope, conv, args)
+			}
+		}
 	}
 
 	return conv.Set(ctx, model.Variables{

@@ -24,6 +24,7 @@ type CallDirection string
 
 const (
 	CallExchange       = "call"
+	ChatExchange       = "chat"
 	FlowExchange       = "flow"
 	CallEventQueueName = "workflow-call"
 	FlowExecQueueName  = "workflow-exec"
