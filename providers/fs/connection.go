@@ -53,6 +53,7 @@ type Connection struct {
 	nodeId   string
 	nodeName string
 	transfer bool
+	webCall  string
 	dialPlan string
 	//context         string
 	destination     string
@@ -139,7 +140,7 @@ func (c *Connection) initTransferSchema(event *eventsocket.Event) {
 }
 
 func (c *Connection) TransferSchemaId() *int {
-	if c.dialPlan == "default" && c.transferSchema != 0 {
+	if (c.dialPlan == "default" || c.webCall != "") && c.transferSchema != 0 {
 		return &c.transferSchema
 	}
 
@@ -150,8 +151,9 @@ func (c *Connection) IVRQueueId() *int {
 	return c.schemaId
 }
 
+// TODO
 func (c *Connection) IsTransfer() bool {
-	return c.transfer
+	return c.transfer || c.webCall != ""
 }
 
 func (c *Connection) DialPlan() string {
@@ -166,6 +168,7 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
 	c.transfer = dump.Get("variable_transfer_source") != ""
+	c.webCall = dump.Get("variable_wbt_web_call")
 
 	if direction == "internal" {
 		if dump.Get("Call-Direction") == "outbound" && !isOriginate {
@@ -209,6 +212,14 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 			c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		}
 		//fmt.Println(direction)
+	} else if c.webCall != "" && c.transferSchema != 0 {
+		c.to = &model.CallEndpoint{
+			Type:   model.CallEndpointTypeDestination,
+			Id:     "",
+			Name:   dump.Get("Caller-Orig-Caller-ID-Name"),
+			Number: dump.Get("Caller-Orig-Caller-ID-Number"),
+		}
+		dump.PrettyPrint()
 	} else {
 		c.from.Type = "unknown"
 	}
