@@ -219,7 +219,6 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 			Name:   dump.Get("Caller-Orig-Caller-ID-Name"),
 			Number: dump.Get("Caller-Orig-Caller-ID-Number"),
 		}
-		dump.PrettyPrint()
 	} else {
 		c.from.Type = "unknown"
 	}
