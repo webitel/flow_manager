@@ -52,7 +52,7 @@ func findInCluster(clusters map[string][]string, userInput string, matchType str
 	for cluster, elems := range clusters {
 		for _, phrase := range elems {
 			if phraseSearch {
-				found = inArr(userInput, MatchType(strings.ToLower(matchType)), strings.ToLower(phrase))
+				found = inArr(strings.ToLower(userInput), MatchType(strings.ToLower(matchType)), strings.ToLower(phrase))
 			} else {
 				found = inArr(strings.ToLower(phrase), MatchType(strings.ToLower(matchType)), tokens...)
 			}
