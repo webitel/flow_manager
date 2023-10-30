@@ -2,6 +2,8 @@ package chat_route
 
 import (
 	"context"
+	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/webitel/flow_manager/flow"
@@ -33,7 +35,14 @@ func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversat
 		return nil, err
 	}
 
-	return conv.SendImageMessage(ctx, argv.Url, argv.Name)
+	u, e := url.ParseRequestURI(argv.Url)
+	if e != nil {
+		return model.CallResponseError, model.NewAppError("sendImage", "chat.send_image.valid.url", nil, "bad arguments", http.StatusBadRequest)
+	}
+
+	u.RawQuery = u.Query().Encode()
+
+	return conv.SendImageMessage(ctx, u.String(), argv.Name)
 }
 
 func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
