@@ -4,8 +4,11 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"strings"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -107,22 +110,27 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Get(key string) (string, bool) {
+func (c *Connection) Get(name string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
-	if v, ok := c.variables[key]; ok {
-		return fmt.Sprintf("%v", v), true
-	}
+	idx := strings.Index(name, ".")
+	if idx > 0 {
+		nameRoot := name[0:idx]
 
-	return "", false
+		if v, ok := c.variables[nameRoot]; ok {
+			return gjson.GetBytes([]byte(v), name[idx+1:]).String(), true
+		}
+	}
+	v, ok := c.variables[name]
+	return v, ok
 }
 
 func (c *Connection) Variables() map[string]string {
 	return c.variables
 }
 
-//fixme
+// fixme
 func test() {
 	a := func(c model.GRPCConnection) {}
 	a(&Connection{})
