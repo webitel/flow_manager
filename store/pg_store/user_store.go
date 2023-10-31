@@ -40,6 +40,11 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 		case "agent_id":
 			val = `(select a.id::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "team_id":
+			val = `(select a.team_id::text
+				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "team_name":
+			val = `(select tm.name::text from call_center.cc_agent a left join call_center.cc_team tm on tm.id = a.team_id where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
 		case "agent_status":
 			val = `(select a.status::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
