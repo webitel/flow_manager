@@ -153,3 +153,29 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 
 	return nil
 }
+
+func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action model.ChatAction) error {
+	c, e := cc.getRandCli()
+	if e != nil {
+		return e
+	}
+
+	var a client.UserAction = client.UserAction_Typing
+
+	switch action {
+	case model.ChatActionCancel:
+		a = client.UserAction_Cancel
+
+	}
+
+	msg := &client.SendUserActionRequest{
+		ChannelId: channelId,
+		Action:    a,
+	}
+
+	if _, e = c.messages.SendUserAction(ctx, msg); e != nil {
+		return e
+	}
+
+	return nil
+}

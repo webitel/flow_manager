@@ -39,6 +39,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["menu"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.Menu),
 	}
+	apps["sendAction"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendAction),
+	}
 
 	return apps
 }

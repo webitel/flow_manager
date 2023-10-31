@@ -146,3 +146,12 @@ func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64,
 func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
 	return c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
 }
+
+func (fm *FlowManager) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError {
+	err := fm.chatManager.SendAction(ctx, channelId, action)
+	if err != nil {
+		return model.NewAppError("Chat", "chat.send_action.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return nil
+}
