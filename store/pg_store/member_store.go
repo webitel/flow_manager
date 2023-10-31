@@ -186,7 +186,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     )
     and (:Name::varchar isnull or m.name ilike :Name)
     and (:Id::int8 isnull or m.id = :Id::int8)
-    and (:Today::bool isnull or (:Today and m.created_at >= now()::date))
+    and (:Today::bool isnull or not :Today::bool or (:Today and m.created_at >= now()::date))
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
     and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
