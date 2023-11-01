@@ -232,11 +232,11 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File)
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url string, name string) (model.Response, *model.AppError) {
+func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
-			//Text: url,
+			Text: text,
 			Type: "file", // FIXME
 			File: &client.File{
 				Id:   1, //TODO

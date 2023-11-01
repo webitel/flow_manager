@@ -23,6 +23,7 @@ type FileMessage struct {
 type ImageArgv struct {
 	Url  string
 	Name string
+	Text string
 }
 
 func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -42,7 +43,7 @@ func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversat
 
 	u.RawQuery = u.Query().Encode()
 
-	return conv.SendImageMessage(ctx, u.String(), argv.Name)
+	return conv.SendImageMessage(ctx, u.String(), argv.Name, argv.Text)
 }
 
 func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
