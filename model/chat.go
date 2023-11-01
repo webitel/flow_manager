@@ -8,6 +8,13 @@ const (
 	BreakChatTransferCause = "TRANSFER"
 )
 
+type ChatAction string
+
+const (
+	ChatActionTyping ChatAction = "typing"
+	ChatActionCancel ChatAction = "cancel"
+)
+
 type ChatButton struct {
 	Text string `json:"text"`
 	Type string `json:"type"`
