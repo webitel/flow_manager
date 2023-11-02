@@ -13,6 +13,7 @@ type File struct {
 	Size      int64   `json:"size" db:"size"`
 	MimeType  string  `json:"mime" db:"mime_type"`
 	ViewName  *string `json:"view_name" db:"view_name"`
+	Server    string  `json:"server" db:"-"`
 }
 
 func (f *File) GetViewName() string {
