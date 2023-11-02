@@ -178,6 +178,25 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
+func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+		ConversationId: c.id,
+		Message: &client.Message{
+			Type:    msg.Type,
+			Text:    msg.Text,
+			Buttons: getChatButtons(msg.Buttons),
+			Inline:  getChatButtons(msg.Inline),
+			File:    getFile(msg.File),
+		},
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("Conversation.SendMessage", "conv.send.any.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 // todo check not closed
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
 	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{

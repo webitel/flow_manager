@@ -12,6 +12,9 @@ type callHandler func(ctx context.Context, scope *flow.Flow, conv Conversation, 
 func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	var apps = make(flow.ApplicationHandlers)
 
+	apps["sendMessage"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendMessage),
+	}
 	apps["sendText"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendText),
 	}

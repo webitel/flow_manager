@@ -27,7 +27,14 @@ type ChatMenuArgs struct {
 	Buttons [][]ChatButton `json:"buttons"`
 	Inline  [][]ChatButton `json:"inline"`
 	Text    string         `json:"text"`
-	Set     string         `json:"set"`
+}
+
+type ChatMessageOutbound struct {
+	Type    string
+	Text    string
+	File    *File
+	Buttons [][]ChatButton `json:"buttons"`
+	Inline  [][]ChatButton `json:"inline"`
 }
 
 type BroadcastChat struct {

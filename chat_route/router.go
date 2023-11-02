@@ -20,6 +20,7 @@ type Conversation interface {
 	model.Connection
 	ProfileId() int64
 	Stop(*model.AppError)
+	SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError)
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
 	SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError)
 	SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError)
