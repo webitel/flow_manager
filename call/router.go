@@ -3,12 +3,13 @@ package call
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"net/http"
-	"time"
 )
 
 type Router struct {
@@ -74,7 +75,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	if transferSchemaId != nil && call.IsTransfer() {
 		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
-	} else if call.IsTransfer() && queueId == nil {
+	} else if call.IsTransfer() && queueId == nil && !call.IsOriginateRequest() {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.Destination()))
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {

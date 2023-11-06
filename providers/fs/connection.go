@@ -49,12 +49,13 @@ const (
 var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
 
 type Connection struct {
-	id       string
-	nodeId   string
-	nodeName string
-	transfer bool
-	webCall  string
-	dialPlan string
+	id               string
+	nodeId           string
+	nodeName         string
+	transfer         bool
+	originateRequest bool
+	webCall          string
+	dialPlan         string
 	//context         string
 	destination     string
 	stopped         bool
@@ -164,11 +165,19 @@ func (c *Connection) Dump() {
 	c.lastEvent.PrettyPrint()
 }
 
+func (c *Connection) IsOriginateRequest() bool {
+	return c.originateRequest
+}
+
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
 	c.transfer = dump.Get("variable_transfer_source") != ""
 	c.webCall = dump.Get("variable_wbt_web_call")
+
+	if dump.Get("variable_sip_h_X-Webitel-Origin") == "request" && dump.Get("variable_grpc_originate_success") == "true" {
+		c.originateRequest = true
+	}
 
 	if direction == "internal" {
 		if dump.Get("Call-Direction") == "outbound" && !isOriginate {
