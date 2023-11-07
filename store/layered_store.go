@@ -75,3 +75,7 @@ func (s *LayeredStore) Log() LogStore {
 func (s *LayeredStore) File() FileStore {
 	return s.DatabaseLayer.File()
 }
+
+func (s *LayeredStore) WebHook() WebHookStore {
+	return s.DatabaseLayer.WebHook()
+}

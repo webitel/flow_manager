@@ -1,15 +1,18 @@
-package web_chat
+package web_hook
 
 import (
 	"fmt"
-	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"net"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/webitel/engine/discovery"
+
+	"github.com/gorilla/handlers"
+	"github.com/gorilla/mux"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 )
 
 type server struct {
@@ -26,20 +29,25 @@ type server struct {
 	Router     *mux.Router
 }
 
-func NewServer(app App, host string, port int) model.Server {
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+	//TODO implement me
+	panic("implement me")
+}
+
+func NewServer(a App, host string, port int) model.Server {
 	s := &server{
-		app:        app,
 		host:       host,
 		port:       port,
 		consume:    make(chan model.Connection),
 		RootRouter: mux.NewRouter(),
+		app:        a,
 	}
 	s.InitApi()
 	return s
 }
 
 func (s *server) Name() string {
-	return "WebChat"
+	return "web hook"
 }
 
 func (s *server) Start() *model.AppError {
@@ -51,7 +59,7 @@ func (s *server) Start() *model.AppError {
 	addr := fmt.Sprintf("%s:%d", s.host, s.port)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
-		return model.NewAppError("Chat", "chat.server.start", nil, err.Error(), http.StatusInternalServerError)
+		return model.NewAppError("http", "http.server.start", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	s.ListenAddr = listener.Addr().(*net.TCPAddr)
@@ -59,8 +67,8 @@ func (s *server) Start() *model.AppError {
 
 	go func() {
 		var err error
-		defer wlog.Debug(fmt.Sprintf("[WebChat] close server listening"))
-		wlog.Debug(fmt.Sprintf("[WebChat] server listening %s", s.ListenAddr.String()))
+		defer wlog.Debug(fmt.Sprintf("[http] close server listening"))
+		wlog.Debug(fmt.Sprintf("[http] server listening %s", s.ListenAddr.String()))
 		err = s.Server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
 			wlog.Critical(fmt.Sprintf("error starting server, err:%v", err))
@@ -90,5 +98,5 @@ func (s *server) Consume() <-chan model.Connection {
 }
 
 func (s *server) Type() model.ConnectionType {
-	return model.ConnectionTypeWebChat
+	return model.ConnectionTypeWebHook
 }

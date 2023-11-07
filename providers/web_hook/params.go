@@ -1,9 +1,10 @@
-package web_chat
+package web_hook
 
 import (
-	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
+
+	"github.com/gorilla/mux"
 )
 
 const (

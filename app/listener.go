@@ -39,6 +39,11 @@ func (f *FlowManager) Listen() {
 		go f.listenChannelConnection(f.stop, &wg, f.channelServer)
 	}
 
+	if f.httpServer != nil {
+		wg.Add(1)
+		go f.listenWebHookConnection(f.stop, &wg, f.httpServer)
+	}
+
 	wg.Wait()
 }
 
@@ -124,6 +129,25 @@ func (f *FlowManager) listenChannelConnection(stop chan struct{}, wg *sync.WaitG
 			}
 
 			if err := f.ChannelRouter.Handle(c); err != nil {
+				wlog.Error(err.Error())
+			}
+		}
+	}
+}
+
+func (f *FlowManager) listenWebHookConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
+	defer wg.Done()
+	wlog.Info(fmt.Sprintf("listen web hook connections..."))
+	for {
+		select {
+		case <-stop:
+			return
+		case c, ok := <-srv.Consume():
+			if !ok {
+				return
+			}
+
+			if err := f.WebHookRouter.Handle(c); err != nil {
 				wlog.Error(err.Error())
 			}
 		}

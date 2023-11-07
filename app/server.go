@@ -24,6 +24,10 @@ func (f *FlowManager) RegisterServers() *model.AppError {
 	if err != nil {
 		return err
 	}
+	err = startServer(f.httpServer)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -33,6 +37,7 @@ func (f *FlowManager) StopServers() {
 	stopServer(f.eslServer)
 	stopServer(f.mailServer)
 	stopServer(f.channelServer)
+	stopServer(f.httpServer)
 }
 
 func startServer(s model.Server) *model.AppError {

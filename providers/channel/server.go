@@ -19,8 +19,10 @@ type server struct {
 
 func New(receiver <-chan model.ChannelExec) model.Server {
 	return &server{
-		receiver: receiver,
-		consume:  make(chan model.Connection, 100),
+		receiver:        receiver,
+		consume:         make(chan model.Connection, 100),
+		didFinishListen: make(chan struct{}),
+		stopped:         make(chan struct{}),
 	}
 }
 

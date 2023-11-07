@@ -67,6 +67,10 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 		req.NextDistributeAt = *result.ReadyAt
 	}
 
+	if result.WaitBetweenRetries != nil {
+		req.WaitBetweenRetries = *result.WaitBetweenRetries
+	}
+
 	req.AddCommunications = ccCommunications(result.AddCommunications)
 
 	err := fm.cc.Member().AttemptResult(req)

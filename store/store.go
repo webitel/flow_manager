@@ -24,6 +24,7 @@ type Store interface {
 	User() UserStore
 	Log() LogStore
 	File() FileStore
+	WebHook() WebHookStore
 }
 
 type CacheStore interface {
@@ -122,4 +123,8 @@ type LogStore interface {
 
 type FileStore interface {
 	GetMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError)
+}
+
+type WebHookStore interface {
+	Get(id string) (model.WebHook, *model.AppError)
 }

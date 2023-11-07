@@ -13,7 +13,7 @@ const (
 	ConnectionTypeCall ConnectionType = iota
 	ConnectionTypeGrpc
 	ConnectionTypeEmail
-	ConnectionTypeWebChat
+	ConnectionTypeWebHook
 	ConnectionTypeChat
 	ConnectionTypeForm
 	ConnectionTypeChannel

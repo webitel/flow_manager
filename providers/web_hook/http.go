@@ -1,11 +1,12 @@
-package web_chat
+package web_hook
 
 import (
 	"fmt"
-	"github.com/gorilla/mux"
-	"github.com/webitel/wlog"
 	"net/http"
 	"strings"
+
+	"github.com/gorilla/mux"
+	"github.com/webitel/wlog"
 )
 
 type RecoveryLogger struct {

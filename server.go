@@ -8,6 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/webitel/flow_manager/webhook"
+
 	"github.com/webitel/flow_manager/channel"
 
 	"github.com/webitel/flow_manager/app"
@@ -36,6 +38,7 @@ func main() {
 	processing.Init(fm, router)
 	email.Init(fm, router)
 	channel.Init(fm, router)
+	webhook.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()

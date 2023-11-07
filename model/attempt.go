@@ -12,4 +12,5 @@ type AttemptResult struct {
 	Redial                      bool
 	ExcludeCurrentCommunication bool
 	AddCommunications           []CallbackCommunication `json:"addCommunications"`
+	WaitBetweenRetries          *int32                  `json:"waitBetweenRetries"`
 }

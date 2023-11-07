@@ -38,6 +38,7 @@ type FlowManager struct {
 	mailServer    model.Server
 	eslServer     model.Server
 	channelServer model.Server
+	httpServer    model.Server
 
 	schemaCache utils.ObjectCache
 	chatManager *grpc.ChatManager
@@ -56,6 +57,7 @@ type FlowManager struct {
 	ChatRouter    model.Router
 	FormRouter    model.Router
 	ChannelRouter model.Router
+	WebHookRouter model.Router
 
 	callWatcher *callWatcher
 	cert        presign.PreSign
@@ -133,6 +135,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().EmailOAuth)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
+	//fm.httpServer = web_hook.NewServer(fm, "0.0.0.0", 5689)
 
 	if err := fm.RegisterServers(); err != nil {
 		outErr = err

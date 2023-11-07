@@ -10,6 +10,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/store"
 
 	"github.com/go-gorp/gorp"
@@ -47,6 +48,7 @@ type SqlSupplierOldStores struct {
 	user        store.UserStore
 	log         store.LogStore
 	file        store.FileStore
+	webHook     store.WebHookStore
 }
 
 type SqlSupplier struct {
@@ -82,6 +84,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.user = NewSqlUserStore(supplier)
 	supplier.oldStores.log = NewSqlLogStore(supplier)
 	supplier.oldStores.file = NewSqlFileStore(supplier)
+	supplier.oldStores.webHook = NewSqlWebHookStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -197,6 +200,29 @@ func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			return json.Unmarshal(*s, target)
 		}
 		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
+
+	case *[]string:
+		binder := func(holder, target interface{}) error {
+			s, ok := holder.(*[]byte)
+			if !ok {
+				return errors.New("store.sql.convert_string_array")
+			}
+
+			if *s == nil {
+				return nil
+			}
+
+			var a pq.StringArray
+
+			if err := a.Scan(*s); err != nil {
+				return err
+			} else {
+				*(target).(*[]string) = []string(a)
+				return nil
+			}
+		}
+		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
+
 	}
 	return gorp.CustomScanner{}, false
 }
@@ -255,4 +281,8 @@ func (ss *SqlSupplier) Log() store.LogStore {
 
 func (ss *SqlSupplier) File() store.FileStore {
 	return ss.oldStores.file
+}
+
+func (ss *SqlSupplier) WebHook() store.WebHookStore {
+	return ss.oldStores.webHook
 }
