@@ -147,6 +147,15 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 			if e.HasPush != nil && *e.HasPush {
 				e.Variables = append(e.Variables, "execute_on_originate=wbt_send_hook")
 			}
+			var tmp string
+			tmp = call.GetVariable("variable_wbt_contact_id")
+			if tmp != "" {
+				e.Variables = append(e.Variables, fmt.Sprintf("wbt_contact_id=%s", tmp))
+			}
+			tmp = call.GetVariable("variable_wbt_hide_contact")
+			if tmp != "" {
+				e.Variables = append(e.Variables, fmt.Sprintf("wbt_hide_contact=%s", tmp))
+			}
 			//if e.Destination != nil {
 			//e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Destination, call.DomainName()))
 			//}
