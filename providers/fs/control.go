@@ -525,18 +525,28 @@ func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
 }
 
 func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
-	if file.Type == nil {
+
+	if file == nil || file.Type == nil {
 		return "", false
 	}
 
 	switch *file.Type {
 	case "audio/mp3", "audio/mpeg":
+		if file.Id == nil {
+			return "", false
+		}
 		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, domainId), true
 
 	case "audio/wav":
+		if file.Id == nil {
+			return "", false
+		}
 		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, domainId), true
 
 	case "video/mp4":
+		if file.Id == nil {
+			return "", false
+		}
 		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, domainId), true
 
 	case "tone":
