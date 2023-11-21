@@ -335,6 +335,7 @@ type Call interface {
 	From() *CallEndpoint
 	To() *CallEndpoint
 	IsTransfer() bool
+	IsOriginateRequest() bool
 	Direction() CallDirection
 	Destination() string
 	SetDomainName(name string)
