@@ -211,6 +211,7 @@ type CallActionHangup struct {
 	AmdAiResult    *string        `json:"amd_ai_result"`
 	AmdAiResultLog []string       `json:"amd_ai_logs"`
 	AmdAiPositive  *bool          `json:"amd_ai_positive"`
+	CDR            *bool          `json:"cdr"`
 }
 
 type CallActionSTT struct {

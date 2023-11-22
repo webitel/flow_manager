@@ -177,6 +177,20 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 	return nil
 }
 
+func (s SqlCallStore) Delete(id string) *model.AppError {
+	_, err := s.GetMaster().Exec(`delete from call_center.cc_calls
+where id = :Id;`, map[string]interface{}{
+		"Id": id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.Delete", "store.sql_call.delete.error", nil,
+			fmt.Sprintf("Id=%v, %v", id, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
 func (s SqlCallStore) MoveToHistory() *model.AppError {
 	_, err := s.GetMaster().Exec(`
 with del_calls as materialized (

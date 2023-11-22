@@ -53,6 +53,7 @@ type CallStore interface {
 	SetBridged(call *model.CallActionBridge) *model.AppError
 	SetHangup(call *model.CallActionHangup) *model.AppError
 	MoveToHistory() *model.AppError
+	Delete(id string) *model.AppError
 	UpdateFrom(id string, name, number *string) *model.AppError
 	SaveTranscribe(callId, transcribe string) *model.AppError
 

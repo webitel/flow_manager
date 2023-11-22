@@ -70,18 +70,24 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 func (f *FlowManager) handleCallAction(data model.CallActionData) {
 	action := data.GetEvent()
 
-	switch action.(type) {
+	switch call := action.(type) {
 	case *model.CallActionRinging:
-		if err := f.Store.Call().Save(action.(*model.CallActionRinging)); err != nil {
+		if err := f.Store.Call().Save(call); err != nil {
 			wlog.Error(err.Error())
 		}
 	case *model.CallActionBridge:
-		if err := f.Store.Call().SetBridged(action.(*model.CallActionBridge)); err != nil {
+		if err := f.Store.Call().SetBridged(call); err != nil {
 			wlog.Error(err.Error())
 		}
 	case *model.CallActionHangup:
-		if err := f.Store.Call().SetHangup(action.(*model.CallActionHangup)); err != nil {
-			wlog.Error(err.Error())
+		if call.CDR != nil && !*call.CDR {
+			if err := f.Store.Call().Delete(call.Id); err != nil {
+				wlog.Error(err.Error())
+			}
+		} else {
+			if err := f.Store.Call().SetHangup(call); err != nil {
+				wlog.Error(err.Error())
+			}
 		}
 
 	default:
