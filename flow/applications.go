@@ -83,6 +83,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.classifierHandler),
 	}
+	apps["monoPay"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.monopayHandler),
+	}
 	apps["js"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Js),
