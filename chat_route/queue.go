@@ -49,7 +49,7 @@ import (
 */
 
 type Queue struct {
-	Id   int    `json:"id"`
+	Id   int32  `json:"id"`
 	Name string `json:"name"`
 }
 
@@ -99,6 +99,14 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		return nil, err
 	}
 
+	if q.Queue.Id == 0 && q.Queue.Name != "" {
+		var err *model.AppError
+		if q.Queue.Id, err = r.fm.FindQueueByName(conv.DomainId(), q.Queue.Name); err != nil {
+			wCancel()
+			return nil, err
+		}
+	}
+
 	if len(q.Timers) > 0 {
 		for k, t := range q.Timers {
 			t.Name = fmt.Sprintf("queue-timer-%d", k)
@@ -126,7 +134,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 	res, err := r.fm.JoinChatToInboundQueue(ctx, &cc.ChatJoinToQueueRequest{
 		ConversationId: conv.Id(),
 		Queue: &cc.ChatJoinToQueueRequest_Queue{
-			Id:   int32(q.Queue.Id),
+			Id:   q.Queue.Id,
 			Name: q.Queue.Name,
 		},
 		Priority:      q.Priority,
