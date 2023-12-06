@@ -178,3 +178,19 @@ from (
 
 	return t.Variables, nil
 }
+
+func (s SqlQueueStore) FindQueueByName(domainId int64, name string) (int32, *model.AppError) {
+	res, err := s.GetReplica().SelectInt(`select q.id
+from call_center.cc_queue q
+where q.domain_id = :DomainId::int8 and q.name = :Name::text
+limit 1`, map[string]interface{}{
+		"DomainId": domainId,
+		"Name":     name,
+	})
+
+	if err != nil {
+		return 0, model.NewAppError("SqlQueueStore.FindQueueByName", "store.sql_queue.find.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return int32(res), nil
+}

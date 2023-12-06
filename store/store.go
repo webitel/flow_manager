@@ -106,6 +106,7 @@ type QueueStore interface {
 	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError)
 	GetQueueData(domainId int64, search *model.SearchEntity, mapRes model.Variables) (model.Variables, *model.AppError)
 	GetQueueAgents(domainId int64, queueId int, channel string, mapRes model.Variables) (model.Variables, *model.AppError)
+	FindQueueByName(domainId int64, name string) (int32, *model.AppError)
 }
 
 type MemberStore interface {

@@ -164,8 +164,17 @@ func (c *conversation) Break(cause string) *model.AppError {
 
 func (c *conversation) setTransferVariable() {
 	if c.IsTransfer() {
+		vars := c.DumpExportVariables()
+		if vars == nil {
+			vars = make(map[string]string)
+		}
+		vars["chat_transferred"] = "true"
+		c.client.api.SetVariables(context.TODO(), &client.SetVariablesRequest{
+			ChannelId: c.id,
+			Variables: vars,
+		})
 		c.Set(context.TODO(), model.Variables{
-			"chat_transferred": "true",
+			"chat_transferred": "false",
 		})
 	} else {
 		c.Set(context.TODO(), model.Variables{
