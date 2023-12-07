@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	_ "github.com/mbobakov/grpc-consul-resolver"
 	"time"
 
 	"github.com/webitel/flow_manager/providers/channel"
@@ -167,7 +168,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if err = fm.cc.Start(); err != nil {
 		return nil, err
 	}
-
 	if err := fm.InitCacheTimezones(); err != nil {
 		return nil, err
 	}

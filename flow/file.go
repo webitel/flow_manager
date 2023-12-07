@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/webitel/flow_manager/model"
@@ -55,9 +56,14 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 		id = argv.File.Id
 	}
 
-	link, err := r.fm.GeneratePreSignetResourceSignature("/any/file", "download", id, conn.DomainId(), argv.Expire*1000)
+	parsedId, err := strconv.ParseInt(id, 10, 64)
 	if err != nil {
-		return nil, err
+		return model.CallResponseError, ErrorRequiredParameter("GenerateLink", "file id")
+	}
+
+	link, appErr := r.fm.GeneratePreSignedResourceSignature(ctx, "download", "file", parsedId, conn.DomainId(), map[string]string{"expire": strconv.FormatInt(argv.Expire*1000, 10)})
+	if appErr != nil {
+		return nil, appErr
 	}
 
 	if argv.Source != "" {
