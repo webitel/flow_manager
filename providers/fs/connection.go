@@ -623,7 +623,14 @@ func (c *Connection) CancelQueue() bool {
 }
 
 func (c *Connection) Variables() map[string]string {
-	return c.variables.Data()
+	c.RLock()
+	v := c.variables
+	c.RUnlock()
+	if v != nil {
+		return v.Data()
+	}
+
+	return nil
 }
 
 // fixme
