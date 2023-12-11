@@ -60,14 +60,13 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 	if err != nil {
 		return model.CallResponseError, ErrorRequiredParameter("GenerateLink", "file id")
 	}
-
-	link, appErr := r.fm.GeneratePreSignedResourceSignature(ctx, "download", "file", parsedId, conn.DomainId(), map[string]string{"expire": strconv.FormatInt(argv.Expire*1000, 10)})
+	source := argv.Source
+	if source == "" {
+		source = "file"
+	}
+	link, appErr := r.fm.GeneratePreSignedResourceSignature(ctx, "download", source, parsedId, conn.DomainId(), map[string]string{"expires": strconv.FormatInt(argv.Expire*1000, 10)})
 	if appErr != nil {
 		return nil, appErr
-	}
-
-	if argv.Source != "" {
-		link += "&source=" + argv.Source
 	}
 
 	return conn.Set(ctx, model.Variables{
