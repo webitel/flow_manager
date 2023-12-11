@@ -9,6 +9,7 @@ import (
 type TTSArgs struct {
 	Message   string `json:"message,omitempty"`
 	ProfileId int    `json:"profileId,omitempty"`
+	Server    string `json:"server,omitempty"`
 }
 
 func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
