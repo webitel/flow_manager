@@ -220,7 +220,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, 
-								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id)
+								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -270,7 +270,8 @@ select c.created_at created_at,
 	   c.amd_ai_result, 
 	   c.amd_ai_logs,
 	   c.amd_ai_positive,
-	   c.contact_id
+	   c.contact_id,
+	   c.search_number
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -280,7 +281,8 @@ from (
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
                 case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
-				coalesce(t.p_vars, '{}') || coalesce((t.r).payload, '{}')  as p_vars
+				coalesce(t.p_vars, '{}') || coalesce((t.r).payload, '{}')  as p_vars,
+				t.search_number
          from (
                   select c                                                             r,
                          array_agg(distinct ch.user_id)
@@ -293,11 +295,25 @@ from (
                          filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
                          array_agg(distinct ch.team_id)
                          filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids,
-						 call_center.jsonb_concat_agg(ch.payload) p_vars  					
+						 call_center.jsonb_concat_agg(ch.payload) p_vars,
+						 string_agg(distinct nums.from_number, '|') filter ( where  nums.from_number != '' and nums.from_number notnull ) search_number
                   from del_calls c
                            left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id))
-                  group by 1
-              ) t
+						   left join lateral (
+										select c.from_number
+										union distinct
+										select c.to_number
+										union distinct
+										select c.destination
+										union distinct
+										select ch.from_number
+										union distinct
+										select ch.to_number
+										union distinct
+										select ch.destination
+									) nums on true
+							  group by 1
+						  ) t
      ) c`)
 	if err != nil {
 		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
