@@ -25,5 +25,5 @@ func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Conversatio
 		return model.CallResponseError, err
 	}
 
-	return conv.SendFile(ctx, "", &model.File{Url: uri})
+	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri})
 }
