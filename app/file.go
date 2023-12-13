@@ -10,13 +10,13 @@ import (
 )
 
 func (fm *FlowManager) SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError) {
-	link, err := fm.GeneratePreSignetResourceSignature("/any/file", "download", strconv.Itoa(file.Id), domainId, expire*1000)
-	if err != nil {
-		return nil, err
+	if source == "" {
+		source = "file"
 	}
 
-	if source != "" {
-		link += "&source=" + source
+	link, err := fm.GeneratePreSignedResourceSignature(context.Background(), "download", source, int64(file.Id), domainId, map[string]string{"expires": strconv.FormatInt(expire*1000, 10)})
+	if err != nil {
+		return nil, err
 	}
 
 	file.Url = server + link

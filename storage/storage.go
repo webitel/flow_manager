@@ -127,3 +127,18 @@ func (api *Api) Download(ctx context.Context, domainId int64, id int64) (io.Read
 
 	return reader, nil
 }
+
+func (api *Api) GenerateFileLink(ctx context.Context, fileId, domainId int64, source, action string, query map[string]string) (string, error) {
+	uri, err := api.file.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
+		DomainId: domainId,
+		FileId:   fileId,
+		Source:   source,
+		Action:   action,
+		Query:    query,
+	})
+	if err != nil {
+		return "", err
+	}
+	return uri.Url, nil
+
+}
