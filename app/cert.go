@@ -19,14 +19,20 @@ func (fm *FlowManager) GenerateSignature(msg []byte) (string, *model.AppError) {
 }
 
 func (fm *FlowManager) GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType string, voice string, language string) (string, *model.AppError) {
-
-	resp, err := fm.storage.GenerateFileLink(ctx, 0, domainId, "tts", "download", map[string]string{
+	params := map[string]string{
 		"text":       text,
 		"profile_id": strconv.Itoa(profileId),
-		"text_type":  textType,
-		"voice":      voice,
-		"language":   language,
-	})
+	}
+	if textType != "" {
+		params["text_type"] = textType
+	}
+	if voice != "" {
+		params["voice"] = voice
+	}
+	if language != "" {
+		params["language"] = language
+	}
+	resp, err := fm.storage.GenerateFileLink(ctx, 0, domainId, "tts", "download", params)
 
 	if err != nil {
 		return "", model.NewAppError("GenerateTTSLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
