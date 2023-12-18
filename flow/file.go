@@ -18,6 +18,7 @@ type GenerateLinkArgs struct {
 		Id   string `json:"id"`
 		Name string `json:"name"` // TODO
 	} `json:"file"`
+	Query map[string]string `json:"query"`
 }
 
 type PrintFileArgs struct {
@@ -56,15 +57,19 @@ func (r *router) generateLink(ctx context.Context, scope *Flow, conn model.Conne
 		id = argv.File.Id
 	}
 
-	parsedId, err := strconv.ParseInt(id, 10, 64)
-	if err != nil {
-		return model.CallResponseError, ErrorRequiredParameter("GenerateLink", "file id")
-	}
+	parsedId, _ := strconv.ParseInt(id, 10, 64)
 	source := argv.Source
 	if source == "" {
-		source = "file"
+		source = "media"
 	}
-	link, appErr := r.fm.GeneratePreSignedResourceSignature(ctx, "download", source, parsedId, conn.DomainId(), map[string]string{"expires": strconv.FormatInt(argv.Expire*1000, 10)})
+
+	if argv.Query == nil {
+		argv.Query = make(map[string]string)
+	}
+
+	argv.Query["expires"] = strconv.FormatInt(argv.Expire*1000, 10)
+
+	link, appErr := r.fm.GeneratePreSignedResourceSignature(ctx, "download", source, parsedId, conn.DomainId(), argv.Query)
 	if appErr != nil {
 		return nil, appErr
 	}
