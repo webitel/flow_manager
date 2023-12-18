@@ -9,6 +9,9 @@ import (
 type TTSArgs struct {
 	Message   string `json:"message,omitempty"`
 	ProfileId int    `json:"profileId,omitempty"`
+	Language  string `json:"language,omitempty"`
+	Voice     string `json:"voice,omitempty"`
+	TextType  string `json:"textType,omitempty"`
 	Server    string `json:"server,omitempty"`
 }
 
@@ -20,10 +23,10 @@ func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Conversatio
 		return nil, err
 	}
 
-	uri, err := r.fm.GenerateTTSLink(ctx, argv.Message, conv.DomainId(), argv.ProfileId)
+	uri, err := r.fm.GenerateTTSLink(ctx, argv.Message, conv.DomainId(), argv.ProfileId, argv.TextType, argv.Voice, argv.Language)
 	if err != nil {
 		return model.CallResponseError, err
 	}
-
-	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri})
+	name := "voice_message"
+	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri, MimeType: "audio/mpeg", Name: name})
 }
