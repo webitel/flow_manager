@@ -24,6 +24,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendTTS"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendTTS),
 	}
+	apps["STT"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.STT),
+	}
 	apps["sendImage"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendImage),
 	}

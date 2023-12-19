@@ -32,6 +32,16 @@ func (fm *FlowManager) DownloadFile(domainId int64, id int64) (io.ReadCloser, *m
 	return reader, nil
 }
 
+func (fm *FlowManager) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError) {
+	resp, err := fm.storage.GetFileTranscription(ctx, fileId, domainId, profileId, language)
+
+	if err != nil {
+		return "", model.NewAppError("GenerateTTSLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return resp, nil
+
+}
+
 func (fm *FlowManager) GetFileMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError) {
 	return fm.Store.File().GetMetadata(domainId, ids)
 }
