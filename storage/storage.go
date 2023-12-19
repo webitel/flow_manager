@@ -14,7 +14,8 @@ import (
 )
 
 type Api struct {
-	file storage.FileServiceClient
+	file       storage.FileServiceClient
+	transcript storage.FileTranscriptServiceClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -27,8 +28,10 @@ func NewClient(consulTarget string) (*Api, error) {
 	}
 
 	fileService := storage.NewFileServiceClient(conn)
+	fileTranscript := storage.NewFileTranscriptServiceClient(conn)
 	return &Api{
-		file: fileService,
+		file:       fileService,
+		transcript: fileTranscript,
 	}, nil
 }
 
@@ -140,5 +143,20 @@ func (api *Api) GenerateFileLink(ctx context.Context, fileId, domainId int64, so
 		return "", err
 	}
 	return uri.Url, nil
+
+}
+
+func (api *Api) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
+
+	resp, err := api.transcript.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
+		FileId:    fileId,
+		Locale:    language,
+		ProfileId: profileId,
+		DomainId:  domainId,
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.Transcript, nil
 
 }
