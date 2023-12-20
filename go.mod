@@ -18,14 +18,14 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pborman/uuid v1.2.1
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
-	github.com/satori/go.uuid v1.2.0
+	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20231016113709-0c9af6452b82
-	github.com/webitel/engine v0.0.0-20230929132314-e8f08f52c140
-	github.com/webitel/protos/cc v0.0.0-20231016113342-4e297ed227c4
-	github.com/webitel/protos/engine v0.0.0-20231031150352-4b6d95d66426
+	github.com/webitel/call_center v0.0.0-20231220151106-e1840f1a31e4
+	github.com/webitel/engine v0.0.0-20231219131344-033714018987
+	github.com/webitel/protos/cc v0.0.0-20231219144336-af0e727d5b1e
+	github.com/webitel/protos/engine v0.0.0-20231219125449-5b30bbcb08c0
 	github.com/webitel/protos/storage v0.0.0-20231219144336-af0e727d5b1e
-	github.com/webitel/protos/workflow v0.0.0-20231016113342-4e297ed227c4
+	github.com/webitel/protos/workflow v0.0.0-20231219144336-af0e727d5b1e
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.4.0

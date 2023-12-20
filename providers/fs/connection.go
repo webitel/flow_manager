@@ -539,8 +539,10 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args in
 
 	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.Id(), app, args))
 
-	guid := uuid.NewV4()
-	var err error
+	guid, err := uuid.NewV4()
+	if err != nil {
+		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.gen_uuid", nil, err.Error(), http.StatusInternalServerError)
+	}
 
 	e := make(chan *eventsocket.Event, 1)
 
