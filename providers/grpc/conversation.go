@@ -20,7 +20,7 @@ type conversation struct {
 	profileId     int64
 	schemaId      int32
 	domainId      int64
-	variables     map[string]string
+	variables     *model.ThreadSafeStringMap
 	client        *ChatClientConnection
 	mx            sync.RWMutex
 	ctx           context.Context
@@ -45,7 +45,7 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		profileId:     profileId,
 		schemaId:      schemaId,
 		domainId:      domainId,
-		variables:     make(map[string]string),
+		variables:     model.NewThreadSafeStringMap(),
 		client:        cli,
 		chBridge:      nil,
 		mx:            sync.RWMutex{},
@@ -104,17 +104,17 @@ func (c *conversation) Get(name string) (string, bool) {
 			return gjson.GetBytes(m, name[idx+1:]).String(), true
 		}
 
-		if v, ok := c.variables[nameRoot]; ok {
+		if v, ok := c.variables.Load(nameRoot); ok {
 			return gjson.GetBytes([]byte(v), name[idx+1:]).String(), true
 		}
 	}
-	v, ok := c.variables[name]
+	v, ok := c.variables.Load(name)
 	return v, ok
 }
 
 func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v)
+		c.variables.Store(k, fmt.Sprintf("%v", v))
 	}
 	return model.CallResponseOK, nil
 }
@@ -188,7 +188,7 @@ func (c *conversation) ProfileId() int64 {
 }
 
 func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type:    msg.Type,
@@ -206,9 +206,8 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 	return model.CallResponseOK, nil
 }
 
-// todo check not closed
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
-	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type: "text", // FIXME
@@ -223,6 +222,24 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
+func (c *conversation) sendMessage(ctx context.Context, req *client.SendMessageRequest) error {
+	_, err := c.client.api.SendMessage(ctx, req)
+	if err != nil {
+		textErr := err.Error()
+		if strings.Index(textErr, `"id":"chat.send.channel.from.closed"`) != -1 {
+			c.client.api.CloseConversation(c.ctx, &client.CloseConversationRequest{
+				ConversationId: c.id,
+				Cause:          "error",
+			})
+			c.Break("error")
+		}
+
+		return model.NewAppError("Conversation.SendTextMessage", "conv.send_msg.app_err", nil, textErr, http.StatusInternalServerError)
+	}
+
+	return nil
+}
+
 func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
 	req := &client.Message{
 		Type:    "text",
@@ -231,7 +248,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 	}
 	//menu.Set // fixme
 
-	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &client.SendMessageRequest{
 		Message:        req,
 		ConversationId: c.Id(),
 	})
@@ -244,7 +261,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 }
 
 func (c *conversation) SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError) {
-	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Type: "file", // FIXME
@@ -261,7 +278,7 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File)
 }
 
 func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
-	_, err := c.client.api.SendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &client.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &client.Message{
 			Text: text,
@@ -452,7 +469,7 @@ func (c *conversation) DumpExportVariables() map[string]string {
 }
 
 func (c *conversation) Variables() map[string]string {
-	return c.variables
+	return c.variables.Data()
 }
 
 func (c *conversation) SetQueue(key *model.InQueueKey) bool {

@@ -73,7 +73,9 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 
 	if req.Message != nil {
 		if req.Message.Variables != nil {
-			conv.variables = req.Message.Variables
+			for k, v := range req.Message.Variables {
+				conv.variables.Store(k, v)
+			}
 		}
 
 		conv.Set(ctx, model.Variables{
