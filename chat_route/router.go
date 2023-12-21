@@ -88,6 +88,10 @@ func (r *Router) handle(conn model.Connection) {
 	} else {
 		//TODO ERROR
 	}
+
+	if routing == nil {
+		err = model.NewAppError("Chat", "chat.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
+	}
 	if err != nil {
 		conv.Stop(err)
 		return
