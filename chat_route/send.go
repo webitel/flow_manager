@@ -50,6 +50,7 @@ func (r *Router) sendMessage(ctx context.Context, scope *flow.Flow, conv Convers
 			}
 
 			argv.File.MimeType += ";source=media"
+			argv.Type = "file"
 		}
 	}
 
