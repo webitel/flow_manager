@@ -2,9 +2,11 @@ package app
 
 import (
 	"fmt"
-	_ "github.com/mbobakov/grpc-consul-resolver"
 	"time"
 
+	"github.com/webitel/flow_manager/providers/web_hook"
+
+	_ "github.com/mbobakov/grpc-consul-resolver"
 	"github.com/webitel/flow_manager/providers/channel"
 
 	"github.com/webitel/engine/pkg/webitel_client"
@@ -136,7 +138,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().EmailOAuth)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
-	//fm.httpServer = web_hook.NewServer(fm, "0.0.0.0", 5689)
+
+	if len(fm.Config().WebHook.Addr) > 1 {
+		fm.httpServer = web_hook.NewServer(fm, fm.Config().WebHook.Addr)
+	}
 
 	if err := fm.RegisterServers(); err != nil {
 		outErr = err

@@ -21,6 +21,7 @@ type Config struct {
 	PreSignedCertificateLocation string                   `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate"`
 	Dev                          bool                     `json:"dev" flag:"dev|false|Dev mode"`
 	Esl                          EslSettings              `json:"esl"`
+	WebHook                      WebHookSettings          `json:"web_hook"`
 	Grpc                         GrpcServeSettings        `json:"grpc"`
 	EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
 	ChatTemplatesSettings        ChatTemplatesSettings    `json:"chat_templates_settings,omitempty"`
@@ -65,6 +66,10 @@ type SqlSettings struct {
 	MaxOpenConns                *int     `json:"max_open_conns" flag:"sql_max_open_conns|5|Maximum open connections"`
 	ConnMaxLifetimeMilliseconds *int     `json:"conn_max_lifetime_milliseconds" flag:"sql_conn_max_lifetime_milliseconds|300000|Connection maximum lifetime milliseconds"`
 	Trace                       bool     `json:"trace" flag:"sql_trace|false|Trace SQL"`
+}
+
+type WebHookSettings struct {
+	Addr string `json:"addr" flag:"web_addr|localhost:5689|Web hook address"`
 }
 
 type MQSettings struct {

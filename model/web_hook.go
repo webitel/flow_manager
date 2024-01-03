@@ -1,6 +1,7 @@
 package model
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 )
@@ -19,6 +20,8 @@ type WebHook struct {
 	Authorization  *string  `json:"authorization" db:"authorization"`
 	allowedOrigins []originPattern
 }
+
+type JsonValue json.RawMessage
 
 type originPattern interface {
 	match(origin string) bool

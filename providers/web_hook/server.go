@@ -17,8 +17,7 @@ import (
 
 type server struct {
 	app             App
-	host            string
-	port            int
+	addr            string
 	didFinishListen chan struct{}
 	consume         chan model.Connection
 	startOnce       sync.Once
@@ -34,10 +33,9 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 	panic("implement me")
 }
 
-func NewServer(a App, host string, port int) model.Server {
+func NewServer(a App, addr string) model.Server {
 	s := &server{
-		host:       host,
-		port:       port,
+		addr:       addr,
 		consume:    make(chan model.Connection),
 		RootRouter: mux.NewRouter(),
 		app:        a,
@@ -56,8 +54,7 @@ func (s *server) Start() *model.AppError {
 		Handler: handlers.RecoveryHandler(handlers.RecoveryLogger(&RecoveryLogger{}), handlers.PrintRecoveryStack(true))(handler),
 	}
 
-	addr := fmt.Sprintf("%s:%d", s.host, s.port)
-	listener, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		return model.NewAppError("http", "http.server.start", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -86,11 +83,11 @@ func (s *server) Stop() {
 }
 
 func (s *server) Host() string {
-	return s.host
+	return s.ListenAddr.Network()
 }
 
 func (s *server) Port() int {
-	return s.port
+	return s.ListenAddr.Port
 }
 
 func (s *server) Consume() <-chan model.Connection {

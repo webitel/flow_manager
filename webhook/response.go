@@ -2,7 +2,6 @@ package webhook
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/webitel/flow_manager/providers/web_hook"
 
@@ -14,7 +13,7 @@ import (
 type HttpResponse struct {
 	Headers      map[string]string `json:"headers"`
 	ResponseCode *int              `json:"responseCode" db:"responseCode"`
-	Body         json.RawMessage   `json:"body"`
+	Body         *model.JsonValue  `json:"body"`
 }
 
 func (r *Router) httpResponse(ctx context.Context, scope *flow.Flow, hook *web_hook.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -29,8 +28,8 @@ func (r *Router) httpResponse(ctx context.Context, scope *flow.Flow, hook *web_h
 		hook.SetHeader(k, v)
 	}
 
-	if len(argv.Body) > 0 {
-		hook.WriteBody(argv.Body)
+	if argv.Body != nil && len(*argv.Body) > 0 {
+		hook.WriteBody(*argv.Body)
 	}
 
 	if argv.ResponseCode != nil {

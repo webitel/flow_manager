@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -11,6 +12,8 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/webitel/flow_manager/model"
 )
+
+var jsonValueT = reflect.TypeOf(&model.JsonValue{})
 
 /*
 \d := map[string]interface{}{
@@ -32,11 +35,59 @@ import (
 	}
 */
 
+func (f *Flow) parseValidJson(in string) string {
+	l := len(in)
+	if l <= 3 {
+		return in
+	}
+
+	res := bytes.NewBufferString("")
+
+	var token string
+
+	for i := 0; i < l; i++ {
+		/*
+			36 = $
+			123 = {
+			125 = }
+		*/
+		if in[i] == 36 && l > i+2 && in[i+1] == 123 && in[i+2] != 125 && token == "" {
+			i = i + 2
+			token += string(in[i])
+		} else if token != "" {
+			if in[i] == 125 {
+				token, _ = f.Connection.Get(token)
+				if token != "" {
+					ll := len(token)
+					if l > 2 && (token[0] == 91 || token[0] == 123) && (token[ll-1] == 93 || token[ll-1] == 125) {
+						i++
+						res.Truncate(res.Len() - 1)
+					}
+					res.WriteString(token)
+
+					token = ""
+				}
+			} else {
+				token += string(in[i])
+			}
+		} else {
+			res.WriteString(string(in[i]))
+		}
+	}
+	return res.String()
+}
+
 func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 		kind := from.Kind()
 		if kind == reflect.String {
 			switch to.Kind() {
+			case reflect.Ptr:
+				if to.AssignableTo(jsonValueT) {
+					d := f.Connection.ParseText(data.(string))
+					o := model.JsonValue(d)
+					return &o, nil
+				}
 			case reflect.Slice:
 				var res interface{}
 				body, err := json.Marshal(data)
@@ -77,6 +128,18 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 			case reflect.Bool:
 				return f.Connection.ParseText(data.(string)), nil
 			}
+		} else if (kind == reflect.Map || kind == reflect.Slice) && to.AssignableTo(jsonValueT) {
+			body, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(body) < 2 {
+				return data, nil
+			}
+
+			txt := []byte(f.parseValidJson(string(body)))
+			return txt, nil
 		}
 		return data, nil
 	}

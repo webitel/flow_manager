@@ -15,6 +15,7 @@ func (s *server) InitApi() {
 	s.Router = s.RootRouter.PathPrefix("/").Subrouter()
 	hook := s.Router.PathPrefix("/hook").Subrouter()
 	hook.Handle("/{id}", s.ApiHandler(startHook)).Methods("POST")
+	hook.Handle("/{id}", s.ApiHandler(startHook)).Methods("GET")
 }
 
 func startHook(c *Context, w http.ResponseWriter, r *http.Request) {
@@ -33,13 +34,13 @@ func startHook(c *Context, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//h.InitOrigin()
-	//if !h.AllowOrigin(c.IpAddress) {
-	//	c.Err = model.NewAppError("WebHook", "hook.valid.origin", nil, "", http.StatusMethodNotAllowed)
-	//	return
-	//}
+	h.InitOrigin()
+	if !h.AllowOrigin(c.IpAddress) {
+		c.Err = model.NewAppError("WebHook", "hook.valid.origin", nil, "", http.StatusMethodNotAllowed)
+		return
+	}
 
-	stopC, stopF := context.WithTimeout(context.TODO(), time.Second*60)
+	stopC, stopF := context.WithTimeout(context.TODO(), time.Second*60) // TODO maxTimeout
 
 	conn := &Connection{
 		id:        model.NewId(),
@@ -52,15 +53,25 @@ func startHook(c *Context, w http.ResponseWriter, r *http.Request) {
 		response:  w,
 	}
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
+	if r.Method != http.MethodGet {
 
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+
+		}
+
+		err = json.Unmarshal(body, &conn.variables)
+
+		if err != nil {
+
+		}
 	}
 
-	err = json.Unmarshal(body, &conn.variables)
-
-	if err != nil {
-
+	if conn.variables == nil {
+		conn.variables = make(map[string]string)
+		for k, v := range r.URL.Query() {
+			conn.variables[k] = v[0]
+		}
 	}
 
 	c.s.consume <- conn
