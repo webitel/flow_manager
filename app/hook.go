@@ -9,18 +9,18 @@ import (
 
 var hookGroup singleflight.Group
 
-func (f *FlowManager) GetHookById(id string) (hook model.WebHook, err *model.AppError) {
+func (f *FlowManager) GetHookById(key string) (hook model.WebHook, err *model.AppError) {
 
-	v, err2, _ := hookGroup.Do(id, func() (interface{}, error) {
-		return f.Store.WebHook().Get(id)
+	v, err2, _ := hookGroup.Do(key, func() (interface{}, error) {
+		return f.Store.WebHook().Get(key)
 	})
 
-	if err != nil {
+	if err2 != nil {
 		switch err2.(type) {
 		case *model.AppError:
 			return hook, err2.(*model.AppError)
 		default:
-			return hook, model.NewAppError("Hook", "hook.settings.get", nil, err.Error(), http.StatusInternalServerError)
+			return hook, model.NewAppError("Hook", "hook.settings.get", nil, err2.Error(), http.StatusInternalServerError)
 		}
 	}
 

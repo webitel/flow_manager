@@ -16,9 +16,9 @@ func NewSqlWebHookStore(sqlStore SqlStore) store.WebHookStore {
 
 func (s SqlWebHookStore) Get(id string) (model.WebHook, *model.AppError) {
 	var hook model.WebHook
-	err := s.GetReplica().SelectOne(&hook, `select id, name, schema_id, origin, domain_id, "authorization"
+	err := s.GetReplica().SelectOne(&hook, `select key, name, schema_id, origin, domain_id, "authorization"
 from flow.web_hook
-where id = :Id;`, map[string]interface{}{
+where key = :Id;`, map[string]interface{}{
 		"Id": id,
 	})
 

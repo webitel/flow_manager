@@ -11,7 +11,7 @@ const (
 )
 
 type WebHook struct {
-	Id             string   `json:"id" db:"id"`
+	Key            string   `json:"key" db:"key"`
 	Name           string   `json:"name" db:"name"`
 	Enabled        bool     `json:"enabled" db:"enabled"`
 	SchemaId       int      `json:"schema_id" db:"schema_id"`
