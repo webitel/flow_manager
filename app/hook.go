@@ -12,7 +12,12 @@ var hookGroup singleflight.Group
 func (f *FlowManager) GetHookById(key string) (hook model.WebHook, err *model.AppError) {
 
 	v, err2, _ := hookGroup.Do(key, func() (interface{}, error) {
-		return f.Store.WebHook().Get(key)
+		h, e := f.Store.WebHook().Get(key)
+		if e != nil {
+			return h, e
+		}
+
+		return h, nil
 	})
 
 	if err2 != nil {
