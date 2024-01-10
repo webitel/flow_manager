@@ -36,7 +36,10 @@ require (
 
 require github.com/rabbitmq/amqp091-go v1.8.1
 
-require github.com/redis/go-redis/v9 v9.0.5
+require (
+	github.com/h2non/filetype v1.1.3
+	github.com/redis/go-redis/v9 v9.0.5
+)
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.2.1 // indirect

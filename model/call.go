@@ -408,9 +408,17 @@ type Call interface {
 }
 
 type PlaybackFile struct {
-	Type *string `json:"type"`
-	Id   *int    `json:"id"`
-	Name *string `json:"name"`
+	Type *string         `json:"type"`
+	Id   *int            `json:"id"`
+	Name *string         `json:"name"`
+	Args *map[string]any `json:"args"`
+}
+
+type HttpFileArgs struct {
+	Url      string            `json:"url,omitempty"`
+	FileType string            `json:"fileType,omitempty"`
+	Method   string            `json:"method,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
 }
 
 type TTS struct {
