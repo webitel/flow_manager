@@ -51,6 +51,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendAction"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendAction),
 	}
+	apps["unSet"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.UnSet),
+	}
 
 	return apps
 }

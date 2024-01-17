@@ -37,6 +37,7 @@ type Conversation interface {
 
 	SetQueue(*model.InQueueKey) bool
 	GetQueueKey() *model.InQueueKey
+	UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError)
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {

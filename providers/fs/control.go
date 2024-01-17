@@ -2,8 +2,11 @@ package fs
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"github.com/h2non/filetype"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -560,6 +563,42 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 			return "silence_stream://-1", true
 		}
 		return fmt.Sprintf("silence_stream://%s", *file.Name), true
+	case "http_audio":
+		var (
+			args model.HttpFileArgs
+		)
+		if file.Args == nil {
+			return "", false
+		}
+		bytes, err := json.Marshal(file.Args)
+		if err != nil {
+			return "", false
+		}
+		err = json.Unmarshal(bytes, &args)
+		if err != nil {
+			return "", false
+		}
+		url, err := url.Parse("(storage_var)/sys/redirect/playback")
+		if err != nil {
+			return "", false
+		}
+		params := url.Query()
+		params.Add("url", args.Url)
+		params.Add("method", args.Method)
+		for key, value := range args.Headers {
+			params.Add(key, value)
+		}
+		url.RawQuery = params.Encode()
+		stringUrl := strings.Replace(url.String(), "(storage_var)", "$${cdr_url}", 1)
+		tp := filetype.GetType(args.FileType)
+		switch tp.MIME.Value {
+		case "audio/wav":
+			return fmt.Sprintf("http_cache://https://%s", stringUrl), true
+		case "audio/mp3", "audio/mpeg":
+			return fmt.Sprintf("shout://%s", stringUrl), true
+		default:
+			return "", false
+		}
 
 	case "local":
 		if file.Name == nil {

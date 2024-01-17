@@ -414,6 +414,28 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 	return model.CallResponseOK, nil
 }
 
+func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError) {
+	vars := model.Variables{}
+	req := &client.SetVariablesRequest{
+		ChannelId: c.id,
+		Variables: make(map[string]string),
+	}
+
+	for _, v := range varKeys {
+		// TODO
+		vars[v] = ""
+		req.Variables[v] = ""
+	}
+
+	_, err := c.client.api.SetVariables(ctx, req)
+
+	if err != nil {
+		wlog.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
+	}
+
+	return c.Set(ctx, vars)
+}
+
 func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
 
 	if c.chBridge != nil {

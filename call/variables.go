@@ -3,12 +3,13 @@ package call
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
-type UnSetArg string
+type UnSetArg []string
 
 func (r *Router) setAll(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	if vars, ok := args.(map[string]interface{}); ok {
@@ -32,11 +33,17 @@ func (r *Router) UnSet(ctx context.Context, scope *flow.Flow, call model.Call, a
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
-	if argv == "" {
+	if len(argv) == 0 {
 		return nil, ErrorRequiredParameter("unSet", "value")
 	}
 
-	return call.UnSet(ctx, string(argv))
+	for _, v := range argv {
+		if res, err := call.UnSet(ctx, v); err != nil {
+			return res, err
+		}
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func getStringValueFromMap(name string, params map[string]interface{}, def string) (res string) {
