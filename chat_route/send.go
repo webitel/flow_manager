@@ -26,7 +26,12 @@ func (r *Router) sendMessage(ctx context.Context, scope *flow.Flow, conv Convers
 		if argv.File.Url != "" && argv.File.Id == 0 {
 			argv.File.Id = 1
 		} else {
-			server := argv.File.Server
+			var server string
+			if argv.File.Server != "" {
+				server = argv.File.Server
+			} else {
+				server = argv.Server // TODO
+			}
 
 			if strings.HasSuffix(server, "/") {
 				server = server[:len(server)-1]
@@ -45,6 +50,7 @@ func (r *Router) sendMessage(ctx context.Context, scope *flow.Flow, conv Convers
 			}
 
 			argv.File.MimeType += ";source=media"
+			argv.Type = "file"
 		}
 	}
 

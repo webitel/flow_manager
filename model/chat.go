@@ -33,6 +33,7 @@ type ChatMessageOutbound struct {
 	Type    string
 	Text    string
 	File    *File
+	Server  string         `json:"server" db:"-"` // TODO
 	Buttons [][]ChatButton `json:"buttons"`
 	Inline  [][]ChatButton `json:"inline"`
 }
