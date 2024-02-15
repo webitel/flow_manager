@@ -14,19 +14,18 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/oauth2"
-
-	"github.com/emersion/go-sasl"
-
-	"github.com/emersion/go-message/mail"
+	"github.com/webitel/wlog"
 
 	"github.com/emersion/go-imap"
+
+	"golang.org/x/oauth2"
+
 	"github.com/emersion/go-imap/client"
 	"github.com/jordan-wright/email"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 
 	_ "github.com/emersion/go-message/charset"
+	"github.com/emersion/go-message/mail"
 )
 
 type Profile struct {
@@ -53,28 +52,30 @@ type Profile struct {
 	mbox        *imap.MailboxStatus
 	lastMessage time.Time
 
-	authMethod string
-	params     *model.MailParams
-	Tls        bool
+	authMethod  string
+	oauthConfig oauth2.Config
+	token       *oauth2.Token
+	Tls         bool
 }
 
 func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 	return &Profile{
-		Id:         params.Id,
-		DomainId:   params.DomainId,
-		updatedAt:  params.UpdatedAt,
-		server:     srv,
-		login:      params.Login,
-		password:   params.Password,
-		smtpHost:   params.SmtpHost,
-		smtpPort:   params.SmtpPort,
-		imapHost:   params.ImapHost,
-		imapPort:   params.ImapPort,
-		Mailbox:    params.Mailbox,
-		flowId:     params.FlowId,
-		name:       params.Name,
-		params:     params.Params,
-		authMethod: params.AuthType,
+		Id:          params.Id,
+		DomainId:    params.DomainId,
+		updatedAt:   params.UpdatedAt,
+		server:      srv,
+		login:       params.Login,
+		password:    params.Password,
+		smtpHost:    params.SmtpHost,
+		smtpPort:    params.SmtpPort,
+		imapHost:    params.ImapHost,
+		imapPort:    params.ImapPort,
+		Mailbox:     params.Mailbox,
+		flowId:      params.FlowId,
+		name:        params.Name,
+		oauthConfig: params.OAuthConfig(),
+		token:       params.Token,
+		authMethod:  params.AuthType,
 	}
 }
 
@@ -105,30 +106,32 @@ func (p *Profile) Login() *model.AppError {
 		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	if p.authMethod == model.MailAuthTypeOAuth2 && p.params != nil {
+	if p.authMethod == model.MailAuthTypeOAuth2 {
 		var ok bool
-		var oauthConf oauth2.Config
-		ok, err = p.client.SupportAuth(sasl.OAuthBearer)
+		ok, err = p.client.SupportAuth(Xoauth2)
 		if err != nil {
-			return model.NewAppError("Email", "email.oauth.support", nil, err.Error(), http.StatusInternalServerError)
+			return model.NewAppError("Email", "email.xoauth2.support", nil, err.Error(), http.StatusInternalServerError)
 		}
 
 		if !ok {
-			return model.NewAppError("Email", "email.oauth.support", nil, "Not support", http.StatusInternalServerError)
+			return model.NewAppError("Email", "email.xoauth2.support", nil, "Not support", http.StatusInternalServerError)
 		}
 
-		oauthConf, ok = p.server.OAuth2MailConfig(p.imapHost)
-		if !ok {
-			return model.NewAppError("Email", "email.oauth.support", nil, "Not configure", http.StatusInternalServerError)
+		lastExpiry := p.token.Expiry
+
+		ts := p.oauthConfig.TokenSource(context.Background(), p.token)
+		newToken, err := ts.Token()
+		if err != nil {
+			return model.NewAppError("Email", "email.login.token", nil, err.Error(), http.StatusUnauthorized)
 		}
 
-		ts := oauthConf.TokenSource(context.Background(), p.params.OAuth2)
-		newToken, _ := ts.Token()
+		if !newToken.Expiry.Equal(lastExpiry) {
+			p.storeToken(newToken)
+		}
 
-		saslClient := sasl.NewOAuthBearerClient(&sasl.OAuthBearerOptions{
-			Username: p.login,
-			Token:    newToken.AccessToken,
-		})
+		p.token = newToken
+
+		saslClient := NewXoauth2Client(p.login, newToken.AccessToken)
 
 		err = p.client.Authenticate(saslClient)
 		if err != nil {
@@ -183,9 +186,16 @@ func (p *Profile) storeErr(err *model.AppError) {
 	p.server.storeError(p, err)
 }
 
+func (p *Profile) storeToken(token *oauth2.Token) {
+	p.server.storeToken(p, token)
+}
+
 func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	if !p.logged {
-		return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
+		if err := p.Login(); err != nil {
+			return nil, err
+		}
+		//return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
 	}
 	res := make([]*model.Email, 0)
 
@@ -269,9 +279,13 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	}
 
 	var auth smtp.Auth
-	var tok string
 	if p.authMethod == model.MailAuthTypeOAuth2 {
-		auth = NewOAuth2Smtp(p.login, "", tok)
+		appErr := p.Login()
+		if appErr != nil {
+			return nil, appErr
+		}
+		//  Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
+		auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
 	} else {
 		auth = smtp.PlainAuth("", p.login, p.password, p.smtpHost)
 	}

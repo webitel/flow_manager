@@ -1,7 +1,5 @@
 package model
 
-import "golang.org/x/oauth2"
-
 const (
 	DATABASE_DRIVER_POSTGRES = "postgres"
 )
@@ -14,16 +12,15 @@ type Config struct {
 	Record      struct {
 		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording"`
 	} `json:"record"`
-	SqlSettings                  SqlSettings              `json:"sql_settings"`
-	MQSettings                   MQSettings               `json:"mq_settings"`
-	RedisSettings                RedisSettings            `json:"redis_settings"`
-	DiscoverySettings            DiscoverySettings        `json:"discovery_settings"`
-	PreSignedCertificateLocation string                   `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate"`
-	Dev                          bool                     `json:"dev" flag:"dev|false|Dev mode"`
-	Esl                          EslSettings              `json:"esl"`
-	Grpc                         GrpcServeSettings        `json:"grpc"`
-	EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
-	ChatTemplatesSettings        ChatTemplatesSettings    `json:"chat_templates_settings,omitempty"`
+	SqlSettings                  SqlSettings           `json:"sql_settings"`
+	MQSettings                   MQSettings            `json:"mq_settings"`
+	RedisSettings                RedisSettings         `json:"redis_settings"`
+	DiscoverySettings            DiscoverySettings     `json:"discovery_settings"`
+	PreSignedCertificateLocation string                `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate"`
+	Dev                          bool                  `json:"dev" flag:"dev|false|Dev mode"`
+	Esl                          EslSettings           `json:"esl"`
+	Grpc                         GrpcServeSettings     `json:"grpc"`
+	ChatTemplatesSettings        ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 }
 
 type EslSettings struct {

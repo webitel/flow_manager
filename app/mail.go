@@ -8,7 +8,7 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-var smtpGroup singleflight.Group
+var mailGroup singleflight.Group
 
 func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
 	key := fmt.Sprintf("%d-", domainId)
@@ -20,7 +20,7 @@ func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (
 		key += fmt.Sprintf("%s-", *search.Name)
 	}
 
-	settings, err, _ := smtpGroup.Do(key, func() (interface{}, error) {
+	settings, err, _ := mailGroup.Do(key, func() (interface{}, error) {
 		settings, err := f.Store.Email().SmtpSettings(domainId, search)
 		if err != nil {
 			return nil, err
