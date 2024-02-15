@@ -5,8 +5,8 @@ go 1.19
 require (
 	github.com/BoRuDar/configuration/v4 v4.2.2
 	github.com/emersion/go-imap v1.2.1
-	github.com/emersion/go-message v0.15.0
-	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
+	github.com/emersion/go-message v0.18.0
+	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.7.0
@@ -219,7 +219,7 @@ require (
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231012201019-e917dd12ba7a // indirect

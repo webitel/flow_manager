@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 
+	"golang.org/x/oauth2"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -44,6 +46,7 @@ type EmailStore interface {
 	SetError(profileId int, appErr *model.AppError) *model.AppError
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
+	SetToken(id int, token *oauth2.Token) *model.AppError
 	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
 }
 
