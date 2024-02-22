@@ -117,6 +117,10 @@ func (p *Profile) Login() *model.AppError {
 			return model.NewAppError("Email", "email.xoauth2.support", nil, "Not support", http.StatusInternalServerError)
 		}
 
+		if p.token == nil {
+			return model.NewAppError("Email", "email.xoauth2.support", nil, "Not found token", http.StatusInternalServerError)
+		}
+
 		lastExpiry := p.token.Expiry
 
 		ts := p.oauthConfig.TokenSource(context.Background(), p.token)
