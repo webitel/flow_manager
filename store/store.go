@@ -71,6 +71,7 @@ type SchemaStore interface {
 	Get(domainId int64, id int) (*model.Schema, *model.AppError)
 	GetUpdatedAt(domainId int64, id int) (int64, *model.AppError)
 	GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError)
+	GetVariable(domainId int64, name string) (*model.SchemaVariable, *model.AppError)
 }
 
 type CallRoutingStore interface {
