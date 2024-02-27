@@ -34,9 +34,10 @@ type MailServer struct {
 	stopped         chan struct{}
 	startOnce       sync.Once
 	consume         chan model.Connection
+	debug           bool
 }
 
-func New(storageApi *storage.Api, s store.EmailStore) model.Server {
+func New(storageApi *storage.Api, s store.EmailStore, debug bool) model.Server {
 	return &MailServer{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
@@ -44,6 +45,7 @@ func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),
 		storage:         storageApi,
+		debug:           debug,
 	}
 }
 

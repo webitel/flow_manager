@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"net/textproto"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -56,6 +57,8 @@ type Profile struct {
 	oauthConfig oauth2.Config
 	token       *oauth2.Token
 	Tls         bool
+
+	debug bool
 }
 
 func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
@@ -76,6 +79,7 @@ func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 		oauthConfig: params.OAuthConfig(),
 		token:       params.Token,
 		authMethod:  params.AuthType,
+		debug:       srv.debug,
 	}
 }
 
@@ -100,10 +104,13 @@ func (p *Profile) Login() *model.AppError {
 	if p.Tls {
 		tlsConfig.InsecureSkipVerify = true
 	}
-
 	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
 	if err != nil {
 		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	if p.debug {
+		p.client.SetDebug(os.Stdout)
 	}
 
 	if p.authMethod == model.MailAuthTypeOAuth2 {

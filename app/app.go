@@ -134,7 +134,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		Port:           fm.Config().Esl.Port,
 		RecordResample: fm.Config().Record.Sample,
 	})
-	fm.mailServer = email.New(fm.storage, fm.Store.Email())
+	fm.mailServer = email.New(fm.storage, fm.Store.Email(), config.DebugImap)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 	//fm.httpServer = web_hook.NewServer(fm, "0.0.0.0", 5689)

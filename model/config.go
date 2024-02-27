@@ -9,6 +9,7 @@ type Config struct {
 	Id          string  `json:"id" flag:"id|1|Service id"`
 	ExternalSql bool    `json:"external_sql" flag:"external_sql|false|Enable external sql query"`
 	AllowUseMQ  bool    `json:"allow_use_mq" flag:"allow_use_mq|false|Allow push message to MQ"`
+	DebugImap   bool    `json:"debug_imap" flag:"debug_imap|false|Debug IMAP protocol"`
 	Record      struct {
 		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording"`
 	} `json:"record"`
