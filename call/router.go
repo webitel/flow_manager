@@ -33,6 +33,10 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	fm.CallRouter = router
 }
 
+func (r *Router) GlobalVariable(domainId int64, name string) string {
+	return r.fm.SchemaVariable(context.TODO(), domainId, name)
+}
+
 func (r *Router) Handlers() flow.ApplicationHandlers {
 	return r.apps
 }
@@ -160,7 +164,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
-	i := flow.New(flow.Config{
+	i := flow.New(r, flow.Config{
 		Name:     routing.Schema.Name,
 		Schema:   routing.Schema.Schema,
 		Handler:  r,

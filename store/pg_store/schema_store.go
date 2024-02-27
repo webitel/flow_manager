@@ -77,7 +77,7 @@ where sg.id = :SchemaId and sg.domain_id = :DomainId`, map[string]interface{}{
 
 func (s SqlSchemaStore) GetVariable(domainId int64, name string) (*model.SchemaVariable, *model.AppError) {
 	var v *model.SchemaVariable
-	err := s.GetMaster().SelectOne(&v, `select value::text as value, encrypt
+	err := s.GetMaster().SelectOne(&v, `select value #>> '{}' as value, encrypt
 from flow.scheme_variable
 where domain_id = :DomainId and name = :Name`, map[string]interface{}{
 		"DomainId": domainId,

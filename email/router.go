@@ -28,6 +28,10 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	fm.EmailRouter = r
 }
 
+func (r *Router) GlobalVariable(domainId int64, name string) string {
+	return r.fm.SchemaVariable(context.TODO(), domainId, name)
+}
+
 func (r *Router) Handlers() flow.ApplicationHandlers {
 	return r.apps
 }
@@ -60,7 +64,7 @@ func (r *Router) Handle(emailConnection model.Connection) *model.AppError {
 		return err
 	}
 
-	f := flow.New(flow.Config{
+	f := flow.New(r, flow.Config{
 		Timezone: "",
 		Name:     s.Name,
 		Handler:  r,

@@ -88,9 +88,7 @@ func (f *Flow) parseGlobalVariables(text string) string {
 	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
 		r := compileVar.FindStringSubmatch(varName)
 		if len(r) > 0 {
-			//out = f.
-
-			fmt.Println(r[1])
+			out = f.router.GlobalVariable(f.Connection.DomainId(), r[1])
 		}
 
 		return

@@ -19,8 +19,8 @@ type Schema struct {
 }
 
 type SchemaVariable struct {
-	Encrypted     bool   `json:"encrypted" db:"encrypted"`
-	Value         string `json:"value" db:"value"`
+	Encrypt       bool   `json:"encrypt" db:"encrypt"`
+	Value         []byte `json:"value" db:"value"`
 	ComputedValue string `json:"computed_value" db:"-"`
 }
 

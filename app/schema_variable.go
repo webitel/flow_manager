@@ -13,7 +13,7 @@ import (
 var variableGroup singleflight.Group
 var variableCache utils.ObjectCache
 
-func initCache() {
+func init() {
 	variableCache = utils.NewLruWithParams(10000, "variable", 10, "")
 }
 
@@ -33,25 +33,42 @@ func (f *FlowManager) SchemaVariable(ctx context.Context, domainId int64, name s
 }
 
 func (f *FlowManager) schemaVariable(key string, domainId int64, name string) string {
-
 	sb, err := f.Store.Schema().GetVariable(domainId, name)
 	if err != nil {
 		wlog.Error(fmt.Sprintf("get schema variable error: %s", err.Error()))
 		return ""
 	}
 
-	if sb.Encrypted {
-		b, err2 := f.cert.DecryptBytes([]byte(sb.Value))
+	if sb.Encrypt {
+		b, err2 := f.cert.DecryptBytes(sb.Value)
 		if err2 != nil {
 			wlog.Error(fmt.Sprintf("decrypt schema variable error: %s", err2.Error()))
 			return ""
 		}
-		val := string(b)
-
+		val := removeQuote(b)
 		variableCache.AddWithDefaultExpires(key, val)
 		return val
 	} else {
-		variableCache.AddWithDefaultExpires(key, sb.Value)
-		return sb.Value
+		val := removeQuote(sb.Value)
+		variableCache.AddWithDefaultExpires(key, val)
+		return val
 	}
+}
+
+func removeQuote(text []byte) string {
+	l := len(text)
+	if l < 2 {
+		return string(text)
+	}
+
+	if text[0] == '"' {
+		text = text[1:]
+		l = l - 1
+	}
+
+	if text[l-1] == '"' {
+		text = text[:l-1]
+	}
+
+	return string(text)
 }

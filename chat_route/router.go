@@ -53,6 +53,10 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	fm.ChatRouter = router
 }
 
+func (r *Router) GlobalVariable(domainId int64, name string) string {
+	return r.fm.SchemaVariable(context.TODO(), domainId, name)
+}
+
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 
 	go r.handle(conn)
@@ -98,7 +102,7 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	i := flow.New(flow.Config{
+	i := flow.New(r, flow.Config{
 		Name:     routing.Schema.Name,
 		Schema:   routing.Schema.Schema,
 		Handler:  r,
