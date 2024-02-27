@@ -225,6 +225,10 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 		return nil, appErr
 	}
 
+	if len(uids) > 900 {
+		uids = uids[:900]
+	}
+
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(uids...)
 	section := &imap.BodySectionName{}
@@ -235,7 +239,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 
 	go func() {
 		if err := p.client.UidFetch(seqSet, items, messages); err != nil {
-			//log.Fatal(err) //TODO
+			wlog.Error(fmt.Sprintf("email profile \"%s\" fetch error: %s", p.name, err.Error()))
 		}
 		close(done)
 	}()
@@ -243,7 +247,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	for msg := range messages {
 		e, err := p.parseMessage(msg, section)
 		if err != nil {
-			wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
+			wlog.Error(fmt.Sprintf("email profile \"%s\" , error: %s", p.name, err.Error()))
 			continue
 		}
 
