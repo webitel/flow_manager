@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	FetchProfileInterval = time.Second * 20
+	FetchProfileInterval = time.Second * 2
 	SizeCache            = 1000
 )
 
@@ -125,10 +125,10 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 	}
 
 	pp = newProfile(s, params)
-	if err = pp.Login(); err != nil {
-
-		return nil, err
-	}
+	//if err = pp.Login(); err != nil {
+	//
+	//	return nil, err
+	//}
 
 	s.profiles.Add(id, pp)
 

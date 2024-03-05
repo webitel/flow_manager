@@ -155,6 +155,7 @@ func (p *Profile) Login() *model.AppError {
 	}
 
 	p.logged = true
+	wlog.Debug(fmt.Sprintf("profile %s logged in", p.name))
 	return nil
 }
 
@@ -173,6 +174,7 @@ func (p *Profile) Logout() *model.AppError {
 	p.logged = false
 	p.client.Close()
 	p.client = nil
+	wlog.Debug(fmt.Sprintf("profile %s logged out", p.name))
 	return nil
 }
 
@@ -385,6 +387,10 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				wlog.Error(fmt.Sprintf("email [%s] error: %s", m.From, err.Error()))
 				continue
 			}
+			if fileName == "" {
+				fileName = model.NewId()
+			}
+
 			var file model.File
 			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
 				Name:     fileName,

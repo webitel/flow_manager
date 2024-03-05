@@ -138,9 +138,7 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 
 func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
-set enabled = false,
-    fetch_err = :Err,
-    state = 'error'
+set fetch_err = :Err
 where id = :Id`, map[string]interface{}{
 		"Id":  profileId,
 		"Err": appErr.DetailedError,
@@ -184,7 +182,7 @@ from (
             array_to_string("reply_to", ',') as reply_to,
             in_reply_to,
             body,
-            html,
+            coalesce(html, body) as html,
 			(select jsonb_agg(row_to_json(t)) 
 			from (
 				select f.id, f.name, f.size, f.mime_type as mime 
