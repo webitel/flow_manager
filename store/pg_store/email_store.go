@@ -138,9 +138,7 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 
 func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
-set enabled = false,
-    fetch_err = :Err,
-    state = 'error'
+set fetch_err = :Err
 where id = :Id`, map[string]interface{}{
 		"Id":  profileId,
 		"Err": appErr.DetailedError,
