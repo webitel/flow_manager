@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	FetchProfileInterval = time.Second * 2
+	FetchProfileInterval = time.Second * 20
 	SizeCache            = 1000
 )
 
@@ -138,11 +138,8 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
-		wlog.Error(err.Error())
-
-		if err = s.store.SetError(p.Id, err); err != nil {
-			wlog.Error(err.Error())
-		}
+		s.storeError(profile, err)
+		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 		return
 	}
 
@@ -187,6 +184,7 @@ func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 	if saveErr != nil {
 		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
 	}
+	s.profiles.Remove(p.Id)
 }
 
 func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
