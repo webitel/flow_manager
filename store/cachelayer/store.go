@@ -8,6 +8,7 @@ import (
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
