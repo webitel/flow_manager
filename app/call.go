@@ -2,12 +2,17 @@ package app
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"time"
 
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
+)
+
+const (
+	refreshMissedNotification = "refresh_missed"
 )
 
 /*
@@ -101,10 +106,30 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 	}
 }
 
+func (c *callWatcher) notificationMissedCalls(call model.MissedCall) {
+	n := model.Notification{
+		DomainId:  call.DomainId,
+		Action:    refreshMissedNotification,
+		CreatedAt: model.GetMillis(),
+		ForUsers:  []int64{call.UserId},
+		Body: map[string]interface{}{
+			"call_id": call.Id,
+		},
+	}
+	err := c.fm.eventQueue.SendJSON("engine", "notification."+strconv.Itoa(int(call.DomainId)), n.ToJson())
+	if err != nil {
+		wlog.Error(err.Error())
+	}
+}
+
 func (c *callWatcher) storeHangupCalls() {
-	if err := c.fm.Store.Call().MoveToHistory(); err != nil {
+	if missed, err := c.fm.Store.Call().MoveToHistory(); err != nil {
 		wlog.Error(err.Error())
 		time.Sleep(time.Second * 5)
+	} else if len(missed) != 0 {
+		for _, v := range missed {
+			c.notificationMissedCalls(v)
+		}
 	}
 }
 
