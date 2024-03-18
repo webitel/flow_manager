@@ -9,4 +9,5 @@ type ParseText func(conn Connection, text string) string
 
 type Router interface {
 	Handle(conn Connection) *AppError
+	GlobalVariable(domainId int64, name string) string
 }

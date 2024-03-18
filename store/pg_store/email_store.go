@@ -1,8 +1,11 @@
 package sqlstore
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
+
+	"golang.org/x/oauth2"
 
 	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/model"
@@ -24,7 +27,7 @@ func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask,
 	_, err := s.GetReplica().Select(&tasks, ` update call_center.cc_email_profile
  set last_activity_at = now(),
      state = 'active'
- where enabled and
+ where ( (enabled and "listen")) and 
        last_activity_at < now() - (fetch_interval || ' sec')::interval
 returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
@@ -84,7 +87,8 @@ func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError)
        t.flow_id,
        t.domain_id,
        coalesce(t.auth_type, 'plain') as auth_type,
-       t.params
+       t.params,
+	   t.token
 from call_center.cc_email_profile t
 where t.id = :Id`, map[string]interface{}{
 		"Id": id,
@@ -96,6 +100,24 @@ where t.id = :Id`, map[string]interface{}{
 	}
 
 	return profile, nil
+}
+
+func (s *SqlEmailStore) SetToken(id int, token *oauth2.Token) *model.AppError {
+	data, _ := json.Marshal(token)
+	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
+set updated_at = now(),
+    token = :Token
+where id = :Id`, map[string]interface{}{
+		"Id":    id,
+		"Token": data,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlEmailStore.SetToken", "store.sql_email.set_token.error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }
 
 func (s SqlEmailStore) GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError) {
@@ -116,9 +138,7 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 
 func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
-set enabled = false,
-    fetch_err = :Err,
-    state = 'error'
+set fetch_err = :Err
 where id = :Id`, map[string]interface{}{
 		"Id":  profileId,
 		"Err": appErr.DetailedError,
@@ -193,10 +213,16 @@ from (
 func (s SqlEmailStore) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
 	var smptSettings *model.SmtSettings
 	err := s.GetReplica().SelectOne(&smptSettings, `select jsonb_build_object('user', p.login, 'password', p.password) as auth,
-		p.smtp_port as port, p.smtp_host as server, coalesce((p.params->>'insecure')::bool, false) as tls, coalesce(p.auth_type, 'plain') as auth_type, p.params
+       p.smtp_port                                                 as port,
+       p.smtp_host                                                 as server,
+       coalesce((p.params ->> 'insecure')::bool, false)            as tls,
+       coalesce(p.auth_type, 'plain')                              as auth_type,
+       p.params,
+       p.token,
+       p.id
 from call_center.cc_email_profile p
 where p.domain_id = :DomainId::int8
-    and (p.id = :Id::int or p.name = :Name::varchar)
+  and (p.id = :Id::int or p.name = :Name::varchar)
 limit 1`, map[string]interface{}{
 		"DomainId": domainId,
 		"Id":       search.Id,

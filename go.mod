@@ -5,8 +5,8 @@ go 1.19
 require (
 	github.com/BoRuDar/configuration/v4 v4.2.2
 	github.com/emersion/go-imap v1.2.1
-	github.com/emersion/go-message v0.15.0
-	github.com/emersion/go-sasl v0.0.0-20200509203442-7bfe0ed36a21
+	github.com/emersion/go-message v0.18.0
+	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.7.0
@@ -21,9 +21,9 @@ require (
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.14.3
 	github.com/webitel/call_center v0.0.0-20231220151106-e1840f1a31e4
-	github.com/webitel/engine v0.0.0-20240108120113-5db7b02703f2
+	github.com/webitel/engine v0.0.0-20240223154524-0299d7bfc485
 	github.com/webitel/protos/cc v0.0.0-20231219144336-af0e727d5b1e
-	github.com/webitel/protos/engine v0.0.0-20231219144336-af0e727d5b1e
+	github.com/webitel/protos/engine v0.0.0-20240223125725-aa59d0fb791b
 	github.com/webitel/protos/storage v0.0.0-20231219144336-af0e727d5b1e
 	github.com/webitel/protos/workflow v0.0.0-20231219144336-af0e727d5b1e
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
@@ -38,6 +38,7 @@ require github.com/rabbitmq/amqp091-go v1.8.1
 
 require (
 	github.com/h2non/filetype v1.1.3
+	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/redis/go-redis/v9 v9.0.5
 )
 
@@ -219,7 +220,7 @@ require (
 	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
-	golang.org/x/text v0.13.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231012201019-e917dd12ba7a // indirect

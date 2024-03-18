@@ -112,20 +112,12 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	mail.SetBody(argv.Type, argv.Message)
 	var dialer *gomail.Dialer
 	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
-		if argv.Smtp.Params == nil {
-			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, "Not found token", http.StatusInternalServerError)
-		}
-		oa, ok := r.fm.MailServer().OAuth2MailConfig(argv.Smtp.Server)
-		if !ok {
-			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, "Not found token config", http.StatusInternalServerError)
-		}
-		ts := oa.TokenSource(context.Background(), argv.Smtp.Params.OAuth2)
-		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, "")
-		tok, err := ts.Token()
+		token, err := r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
 		if err != nil {
-			return nil, model.NewAppError("Email", "flow.email.send.oauth_err", nil, err.Error(), http.StatusInternalServerError)
+			return model.CallResponseError, err
 		}
-		dialer.Auth = email.NewOAuth2Smtp(argv.Smtp.Auth.User, "", tok.AccessToken)
+		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, "")
+		dialer.Auth = email.NewOAuth2Smtp(argv.Smtp.Auth.User, "Bearer", token)
 
 	} else {
 		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, argv.Smtp.Auth.Password)

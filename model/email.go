@@ -1,9 +1,24 @@
 package model
 
-import "golang.org/x/oauth2"
+import (
+	"strings"
+
+	"golang.org/x/oauth2"
+)
+
+const (
+	MailGmail   = "gmail"
+	MailOutlook = "outlook"
+)
+
+type OAuth2Config struct {
+	ClientId     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	RedirectURL  string `json:"redirect_url"`
+}
 
 type MailParams struct {
-	OAuth2 *oauth2.Token `json:"oauth2"`
+	OAuth2 *OAuth2Config `json:"oauth2"`
 }
 
 const (
@@ -49,20 +64,54 @@ type EmailProfileTask struct {
 }
 
 type EmailProfile struct {
-	Id        int         `json:"id" db:"id"`
-	DomainId  int64       `json:"domain_id" db:"domain_id"`
-	Name      string      `json:"name" db:"name"`
-	FlowId    int         `json:"flow_id" db:"flow_id"`
-	Login     string      `json:"login" db:"login"`
-	Password  string      `json:"password" db:"password"`
-	Mailbox   string      `json:"mailbox" db:"mailbox"`
-	SmtpHost  string      `json:"smtp_host" db:"smtp_host"`
-	SmtpPort  int         `json:"smtp_port" db:"smtp_port"`
-	ImapHost  string      `json:"imap_host" db:"imap_host"`
-	ImapPort  int         `json:"imap_port" db:"imap_port"`
-	UpdatedAt int64       `json:"updated_at" db:"updated_at"`
-	Params    *MailParams `json:"params" db:"params"`
-	AuthType  string      `json:"auth_type" db:"auth_type"`
+	Id        int           `json:"id" db:"id"`
+	DomainId  int64         `json:"domain_id" db:"domain_id"`
+	Name      string        `json:"name" db:"name"`
+	FlowId    int           `json:"flow_id" db:"flow_id"`
+	Login     string        `json:"login" db:"login"`
+	Password  string        `json:"password" db:"password"`
+	Mailbox   string        `json:"mailbox" db:"mailbox"`
+	SmtpHost  string        `json:"smtp_host" db:"smtp_host"`
+	SmtpPort  int           `json:"smtp_port" db:"smtp_port"`
+	ImapHost  string        `json:"imap_host" db:"imap_host"`
+	ImapPort  int           `json:"imap_port" db:"imap_port"`
+	UpdatedAt int64         `json:"updated_at" db:"updated_at"`
+	Params    *MailParams   `json:"params" db:"params"`
+	Token     *oauth2.Token `json:"token" db:"token"`
+	AuthType  string        `json:"auth_type" db:"auth_type"`
+}
+
+func (p *EmailProfile) OAuthConfig() oauth2.Config {
+
+	if p.Params != nil && p.Params.OAuth2 != nil {
+		return OAuthConfig(p.ImapHost, p.Params.OAuth2)
+	}
+
+	return oauth2.Config{}
+}
+
+func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
+	if strings.Index(host, MailGmail+".com") > -1 {
+
+	} else if strings.Index(host, MailOutlook) == 0 && config != nil {
+		return oauth2.Config{
+			ClientID:     config.ClientId,
+			ClientSecret: config.ClientSecret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize",
+				TokenURL: "https://login.microsoftonline.com/organizations/oauth2/v2.0/token",
+			},
+			RedirectURL: config.RedirectURL,
+			Scopes: []string{
+				"https://outlook.office.com/User.Read",
+				"https://outlook.office.com/IMAP.AccessAsUser.All",
+				"https://outlook.office.com/SMTP.Send",
+				"offline_access",
+			},
+		}
+	}
+
+	return oauth2.Config{}
 }
 
 func (e *Email) AttachmentIds() []int64 {

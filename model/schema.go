@@ -18,6 +18,12 @@ type Schema struct {
 	Debug      bool         `json:"debug" db:"debug"`
 }
 
+type SchemaVariable struct {
+	Encrypt       bool   `json:"encrypt" db:"encrypt"`
+	Value         []byte `json:"value" db:"value"`
+	ComputedValue string `json:"computed_value" db:"-"`
+}
+
 func (s *Schema) Hash() string {
 	return fmt.Sprintf("%d.%d", s.Id, s.DomainId)
 }

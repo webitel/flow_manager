@@ -33,6 +33,10 @@ func NewRouter(fm *app.FlowManager) Router {
 	return router
 }
 
+func (r *router) GlobalVariable(domainId int64, name string) string {
+	return r.fm.SchemaVariable(context.TODO(), domainId, name)
+}
+
 func (r *router) Handlers() ApplicationHandlers {
 	return r.apps
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 
+	"golang.org/x/oauth2"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -44,6 +46,7 @@ type EmailStore interface {
 	SetError(profileId int, appErr *model.AppError) *model.AppError
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
+	SetToken(id int, token *oauth2.Token) *model.AppError
 	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
 }
 
@@ -68,6 +71,7 @@ type SchemaStore interface {
 	Get(domainId int64, id int) (*model.Schema, *model.AppError)
 	GetUpdatedAt(domainId int64, id int) (int64, *model.AppError)
 	GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError)
+	GetVariable(domainId int64, name string) (*model.SchemaVariable, *model.AppError)
 }
 
 type CallRoutingStore interface {

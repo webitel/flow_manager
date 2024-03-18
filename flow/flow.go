@@ -27,6 +27,7 @@ type Tag struct {
 }
 
 type Flow struct {
+	router      model.Router
 	timezone    *time.Location
 	handler     Handler
 	Connection  model.Connection
@@ -51,8 +52,9 @@ type Config struct {
 	Conn     model.Connection
 }
 
-func New(conf Config) *Flow {
+func New(r model.Router, conf Config) *Flow {
 	i := &Flow{}
+	i.router = r
 	i.handler = conf.Handler
 	i.name = conf.Name
 	if conf.Conn != nil {
@@ -111,6 +113,7 @@ func (f *Flow) Logs() []*model.StepLog {
 
 func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	i := &Flow{}
+	i.router = f.router
 	i.handler = f.handler
 	i.name = name
 	i.Connection = f.Connection

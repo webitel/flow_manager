@@ -2,7 +2,6 @@ package email
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,10 +34,9 @@ type MailServer struct {
 	stopped         chan struct{}
 	startOnce       sync.Once
 	consume         chan model.Connection
-	oauth2Conf      map[string]oauth2.Config
 }
 
-func New(storageApi *storage.Api, s store.EmailStore, oauth2Conf map[string]oauth2.Config) model.Server {
+func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 	return &MailServer{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
@@ -46,7 +44,6 @@ func New(storageApi *storage.Api, s store.EmailStore, oauth2Conf map[string]oaut
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),
 		storage:         storageApi,
-		oauth2Conf:      oauth2Conf,
 	}
 }
 
@@ -126,10 +123,10 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 	}
 
 	pp = newProfile(s, params)
-	if err = pp.Login(); err != nil {
-
-		return nil, err
-	}
+	//if err = pp.Login(); err != nil {
+	//
+	//	return nil, err
+	//}
 
 	s.profiles.Add(id, pp)
 
@@ -139,14 +136,14 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
-		wlog.Error(err.Error())
-
-		if err = s.store.SetError(p.Id, err); err != nil {
-			wlog.Error(err.Error())
-		}
+		s.storeError(profile, err)
+		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 		return
 	}
 
+	attempts := 0
+
+retry:
 	err = profile.Login()
 	if err != nil {
 		s.storeError(profile, err)
@@ -156,6 +153,12 @@ func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	var emails []*model.Email
 	emails, err = profile.Read()
 	if err != nil {
+		if err.DetailedError == "Not logged in" {
+			if attempts == 0 {
+				attempts = attempts + 1
+				goto retry
+			}
+		}
 		wlog.Error(fmt.Sprintf("[%s] error: %s", profile, err.Error()))
 		return
 	}
@@ -179,6 +182,14 @@ func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 	if saveErr != nil {
 		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
 	}
+	s.profiles.Remove(p.Id)
+}
+
+func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
+	err := s.store.SetToken(p.Id, token)
+	if err != nil {
+		wlog.Error(fmt.Sprintf("profile_id=%d, store token error: %s", p.Id, err.Error()))
+	}
 }
 
 func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError {
@@ -201,19 +212,4 @@ func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError 
 	}
 
 	return nil
-}
-
-func (s *MailServer) OAuth2MailConfig(host string) (c oauth2.Config, ok bool) {
-	if s.oauth2Conf == nil {
-		ok = false
-		return
-	}
-
-	if strings.Index(host, "gmail.com") > -1 {
-		c, ok = s.oauth2Conf[MailGmail]
-	} else if strings.Index(host, "outlook.") == 0 {
-		c, ok = s.oauth2Conf[MailOutlook]
-	}
-
-	return
 }

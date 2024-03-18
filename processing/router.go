@@ -37,6 +37,10 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	fm.FormRouter = router
 }
 
+func (r *Router) GlobalVariable(domainId int64, name string) string {
+	return r.fm.SchemaVariable(context.TODO(), domainId, name)
+}
+
 func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
@@ -67,7 +71,7 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	i := flow.New(flow.Config{
+	i := flow.New(r, flow.Config{
 		Name:     s.Name,
 		Schema:   s.Schema,
 		Handler:  r,

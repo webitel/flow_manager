@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,12 @@ import (
 )
 
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
+
+var compileVar *regexp.Regexp
+
+func init() {
+	compileVar = regexp.MustCompile(`\$\$\{([\s\S]*?)\}`)
+}
 
 /*
 \d := map[string]interface{}{
@@ -77,6 +84,24 @@ func (f *Flow) parseValidJson(in string) string {
 	return res.String()
 }
 
+func (f *Flow) parseGlobalVariables(text string) string {
+	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
+		r := compileVar.FindStringSubmatch(varName)
+		if len(r) > 0 {
+			out = f.router.GlobalVariable(f.Connection.DomainId(), r[1])
+		}
+
+		return
+	})
+
+	return text
+}
+
+func (f *Flow) parseString(text string) string {
+	text = f.parseGlobalVariables(text)
+	return f.Connection.ParseText(text)
+}
+
 func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 		kind := from.Kind()
@@ -84,7 +109,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 			switch to.Kind() {
 			case reflect.Ptr:
 				if to.AssignableTo(jsonValueT) {
-					d := f.Connection.ParseText(data.(string))
+					d := f.parseString(data.(string))
 					o := model.JsonValue(d)
 					return &o, nil
 				}
@@ -99,7 +124,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 					return data, nil
 				}
 
-				txt := []byte(f.Connection.ParseText(string(body[1 : len(body)-1])))
+				txt := []byte(f.parseString(string(body[1 : len(body)-1])))
 
 				err = json.Unmarshal(txt, &res)
 				if err != nil {
@@ -107,12 +132,12 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				}
 				return res, nil
 			case reflect.String:
-				return f.Connection.ParseText(data.(string)), nil
+				return f.parseString(data.(string)), nil
 			case reflect.Interface:
-				return f.Connection.ParseText(data.(string)), nil
+				return f.parseString(data.(string)), nil
 			//fixme added more types
 			case reflect.Int, reflect.Uint, reflect.Uint32, reflect.Uint64, reflect.Int64, reflect.Int32:
-				v := f.Connection.ParseText(data.(string))
+				v := f.parseString(data.(string))
 				if v == "" {
 					return 0, nil
 				}
@@ -126,7 +151,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				}
 				return v, nil
 			case reflect.Bool:
-				return f.Connection.ParseText(data.(string)), nil
+				return f.parseString(data.(string)), nil
 			}
 		} else if (kind == reflect.Map || kind == reflect.Slice) && to.AssignableTo(jsonValueT) {
 			body, err := json.Marshal(data)
