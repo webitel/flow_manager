@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/wlog"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +50,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 			if err != nil {
 				return nil, err
 			}
+			wlog.Debug("http: found cookie cache entry, setting cache value")
 			return model.CallResponseOK, nil
 		}
 	}

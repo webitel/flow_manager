@@ -50,7 +50,7 @@ func (r *RedisCache) Set(ctx context.Context, key string, value any, expiresAfte
 	expires := time.Duration(expiresAfter * int64(time.Second))
 	err := r.redis.Set(ctx, key, value, expires).Err()
 	if err != nil {
-		return model.NewAppError("CacheLayer.RedisCache", "cache.redis_cache.get", nil, err.Error(), http.StatusInternalServerError)
+		return model.NewAppError("CacheLayer.RedisCache", "cache.redis_cache.set", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return nil
 }
