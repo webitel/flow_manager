@@ -51,6 +51,12 @@ const (
 	CallActionHangupName  = "hangup"
 )
 
+type MissedCall struct {
+	DomainId int64  `json:"domain_id" db:"domain_id"`
+	Id       string `json:"id" db:"id"`
+	UserId   int64  `json:"user_id" db:"user_id"`
+}
+
 type CallAction struct {
 	Id        string `json:"id"`
 	AppId     string `json:"app_id"`

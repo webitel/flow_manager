@@ -191,8 +191,9 @@ where id = :Id;`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlCallStore) MoveToHistory() *model.AppError {
-	_, err := s.GetMaster().Exec(`
+func (s SqlCallStore) MoveToHistory() ([]model.MissedCall, *model.AppError) {
+	var missedCalls []model.MissedCall
+	_, err := s.GetMaster().Select(&missedCalls, `
 with del_calls as materialized (
     select *
     from call_center.cc_calls c
@@ -211,15 +212,16 @@ dd as (
         select del_calls.id
         from del_calls
     )
-)
-insert
+),
+ins as (
+    insert
 into call_center.cc_calls_history (created_at, id, direction, destination, parent_id, app_id, from_type, from_name,
                                    from_number, from_id,
                                    to_type, to_name, to_number, to_id, payload, domain_id, answered_at, bridged_at,
                                    hangup_at, hold_sec, cause, sip_code, bridged_id,
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
-                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params, 
+                                   tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params,
 								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number)
 select c.created_at created_at,
        c.id::uuid,
@@ -267,7 +269,7 @@ select c.created_at created_at,
 	   c.params,
 	   c.blind_transfer,
 	   c.talk_sec,
-	   c.amd_ai_result, 
+	   c.amd_ai_result,
 	   c.amd_ai_logs,
 	   c.amd_ai_positive,
 	   c.contact_id,
@@ -314,13 +316,18 @@ from (
 									) nums on true
 							  group by 1
 						  ) t
-     ) c`)
+     ) c
+    returning  id, parent_id::uuid, bridged_id, user_id, domain_id
+)
+select id, user_id, domain_id
+from ins
+where bridged_id isnull and parent_id notnull and user_id notnull`)
 	if err != nil {
-		return model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
+		return nil, model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
 			err.Error(), extractCodeFromErr(err))
 	}
 
-	return nil
+	return missedCalls, nil
 }
 
 func (s SqlCallStore) UpdateFrom(id string, name, number *string) *model.AppError {
