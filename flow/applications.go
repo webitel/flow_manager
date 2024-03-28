@@ -184,6 +184,14 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.addContact),
 	}
+	apps["notification"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.notification),
+	}
+	apps["joinAgentToTask"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.joinAgentToTask),
+	}
 
 	return apps
 }

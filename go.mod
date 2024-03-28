@@ -20,12 +20,12 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20231220151106-e1840f1a31e4
-	github.com/webitel/engine v0.0.0-20240223154524-0299d7bfc485
-	github.com/webitel/protos/cc v0.0.0-20231219144336-af0e727d5b1e
-	github.com/webitel/protos/engine v0.0.0-20240223125725-aa59d0fb791b
-	github.com/webitel/protos/storage v0.0.0-20231219144336-af0e727d5b1e
-	github.com/webitel/protos/workflow v0.0.0-20231219144336-af0e727d5b1e
+	github.com/webitel/call_center v0.0.0-20240328133833-12ec1ae345b2
+	github.com/webitel/engine v0.0.0-20240327135406-7469d4bcb04b
+	github.com/webitel/protos/cc v0.0.0-20240328133631-6fe516ff9b1c
+	github.com/webitel/protos/engine v0.0.0-20240328112808-7000c2969bbe
+	github.com/webitel/protos/storage v0.0.0-20240328112808-7000c2969bbe
+	github.com/webitel/protos/workflow v0.0.0-20240328112808-7000c2969bbe
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.13.0
 	golang.org/x/sync v0.4.0
@@ -157,9 +157,11 @@ require (
 	github.com/moricho/tparallel v0.3.1 // indirect
 	github.com/nakabonne/nestif v0.3.1 // indirect
 	github.com/nbutton23/zxcvbn-go v0.0.0-20210217022336-fa2cb2858354 // indirect
+	github.com/nicksnyder/go-i18n v1.10.1 // indirect
 	github.com/nishanths/exhaustive v0.9.5 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
 	github.com/nunnatsa/ginkgolinter v0.9.0 // indirect
+	github.com/olebedev/emitter v0.0.0-20190110104742-e8d1457e6aee // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pelletier/go-toml v1.9.5 // indirect
 	github.com/pelletier/go-toml/v2 v2.0.5 // indirect
@@ -195,6 +197,7 @@ require (
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.2.1 // indirect
 	github.com/stbenjam/no-sprintf-host-port v0.1.1 // indirect
+	github.com/streadway/amqp v1.1.0 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
 	github.com/stretchr/testify v1.8.3 // indirect
 	github.com/subosito/gotenv v1.4.1 // indirect
@@ -210,9 +213,11 @@ require (
 	github.com/ultraware/funlen v0.0.3 // indirect
 	github.com/ultraware/whitespace v0.0.5 // indirect
 	github.com/uudashr/gocognit v1.0.6 // indirect
+	github.com/webitel/protos/fs v0.0.0-20240327130525-7501c51c7a8e // indirect
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.2.0 // indirect
 	gitlab.com/bosi/decorder v0.2.3 // indirect
+	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
@@ -221,6 +226,7 @@ require (
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/time v0.0.0-20220411224347-583f2d630306 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231012201019-e917dd12ba7a // indirect
