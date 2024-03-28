@@ -17,6 +17,10 @@ type JoinAgentToTaskArgs struct {
 		Enabled    bool
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
+		Form       struct {
+			Id   int
+			Name string
+		} `json:"form"`
 	}
 	Bridged          []interface{} `json:"bridged"`
 	Timeout          int32         `json:"timeout"`
@@ -61,9 +65,13 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
 		}
+
+		if argv.Processing.Form.Id > 0 {
+			req.Processing.FormSchemaId = uint32(argv.Processing.Form.Id)
+		}
 	}
 
-	res, err := r.fm.TaskJoinToAgent(context.Background(), req)
+	res, err := r.fm.TaskJoinToAgent(ctx, req)
 
 	if err != nil {
 		wlog.Error(err.Error())
