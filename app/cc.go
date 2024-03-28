@@ -25,6 +25,9 @@ func (fm *FlowManager) CreateMember(domainId int64, queueId int, holdSec int, me
 func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error) {
 	return fm.cc.Member().CallJoinToAgent(ctx, in)
 }
+func (fm *FlowManager) TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (cc.MemberService_TaskJoinToAgentClient, error) {
+	return fm.cc.Member().TaskJoinToAgent(ctx, in)
+}
 
 func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64, extension string) *model.AppError {
 	agentId, err := fm.Store.User().GetAgentIdByExtension(domainId, extension)
