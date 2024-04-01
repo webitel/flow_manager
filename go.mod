@@ -20,9 +20,7 @@ require (
 	github.com/robertkrimen/otto v0.0.0-20211024170158-b87d35c0b86f
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.14.3
-	github.com/webitel/call_center v0.0.0-20240328133833-12ec1ae345b2
-	github.com/webitel/engine v0.0.0-20240327135406-7469d4bcb04b
-	github.com/webitel/protos/cc v0.0.0-20240328133631-6fe516ff9b1c
+	github.com/webitel/protos/cc v0.0.0-20240401125538-65d07de06373
 	github.com/webitel/protos/engine v0.0.0-20240328112808-7000c2969bbe
 	github.com/webitel/protos/storage v0.0.0-20240328112808-7000c2969bbe
 	github.com/webitel/protos/workflow v0.0.0-20240328112808-7000c2969bbe

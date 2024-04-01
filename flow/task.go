@@ -13,7 +13,8 @@ type JoinAgentToTaskArgs struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
-	Processing *struct {
+	Communication model.CallbackCommunication
+	Processing    *struct {
 		Enabled    bool
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
@@ -57,6 +58,21 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 		//Variables:        c.DumpExportVariables(),
 		QueueName:        argv.QueueName,
 		CancelDistribute: argv.CancelDistribute,
+		Destination: &cc.MemberCommunication{
+			Destination: argv.Communication.Destination,
+			Type:        &cc.MemberCommunicationType{},
+		},
+	}
+
+	if argv.Communication.Type.Id != nil {
+		req.Destination.Type.Id = int32(*argv.Communication.Type.Id)
+	}
+	if argv.Communication.Type.Name != nil {
+		req.Destination.Type.Name = *argv.Communication.Type.Name
+	}
+
+	if argv.Communication.Description != nil {
+		req.Destination.Destination = *argv.Communication.Description
 	}
 
 	if argv.Processing != nil && argv.Processing.Enabled {
