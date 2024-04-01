@@ -72,7 +72,7 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 	}
 
 	if argv.Communication.Description != nil {
-		req.Destination.Destination = *argv.Communication.Description
+		req.Destination.Description = *argv.Communication.Description
 	}
 
 	if argv.Processing != nil && argv.Processing.Enabled {
