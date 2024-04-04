@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/lib/pq"
@@ -78,6 +79,7 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 	}
 
 	var vars = make(map[string]string)
+	vars[model.CallVariableSchemaIds] = strconv.Itoa(scope.SchemaId())
 	if sendOnAnswer, ok := props["sendOnAnswer"].(string); ok {
 		vars["execute_on_answer"] = "send_dtmf " + strings.Replace(sendOnAnswer, "'", "", -1)
 	}

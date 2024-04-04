@@ -165,12 +165,16 @@ func (r *Router) handle(conn model.Connection) {
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(r, flow.Config{
+		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
 		Schema:   routing.Schema.Schema,
 		Handler:  r,
 		Conn:     call,
 		Timezone: routing.TimezoneName,
 	})
+	if err = call.SetSchemaId(i.SchemaId()); err != nil {
+		wlog.Error(err.Error())
+	}
 
 	flow.Route(conn.Context(), i, r)
 	<-conn.Context().Done()
@@ -181,6 +185,6 @@ func (r *Router) handle(conn model.Connection) {
 		flow.Route(ctxDisc, d, r)
 	}
 
-	r.fm.StoreLog(routing.SchemaId, conn.Id(), i.Logs())
+	r.fm.StoreLog(i.SchemaId(), conn.Id(), i.Logs())
 
 }

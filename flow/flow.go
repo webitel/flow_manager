@@ -27,6 +27,7 @@ type Tag struct {
 }
 
 type Flow struct {
+	schemaId    int
 	router      model.Router
 	timezone    *time.Location
 	handler     Handler
@@ -45,6 +46,7 @@ type Flow struct {
 }
 
 type Config struct {
+	SchemaId int
 	Timezone string
 	Name     string
 	Handler  Handler
@@ -56,6 +58,7 @@ func New(r model.Router, conf Config) *Flow {
 	i := &Flow{}
 	i.router = r
 	i.handler = conf.Handler
+	i.schemaId = conf.SchemaId
 	i.name = conf.Name
 	if conf.Conn != nil {
 		i.name += fmt.Sprintf(" [%s]", conf.Conn.Id())
@@ -74,6 +77,10 @@ func New(r model.Router, conf Config) *Flow {
 	parseFlowArray(i, i.currentNode, conf.Schema)
 
 	return i
+}
+
+func (f *Flow) SchemaId() int {
+	return f.schemaId
 }
 
 func (f *Flow) PushSteepLog(name string, s int64) {

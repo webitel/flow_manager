@@ -9,6 +9,8 @@ import (
 	"github.com/webitel/wlog"
 )
 
+const CallVariableSchemaIds = "wbt_schema_ids"
+
 type CallResponse struct {
 	Status string
 }
@@ -218,6 +220,7 @@ type CallActionHangup struct {
 	AmdAiResultLog []string       `json:"amd_ai_logs"`
 	AmdAiPositive  *bool          `json:"amd_ai_positive"`
 	CDR            *bool          `json:"cdr"`
+	SchemaIds      []int          `json:"schema_ids"`
 }
 
 type CallActionSTT struct {
@@ -347,6 +350,7 @@ type Call interface {
 	Direction() CallDirection
 	Destination() string
 	SetDomainName(name string)
+	SetSchemaId(id int) *AppError
 	DomainName() string
 	Dump()
 	IVRQueueId() *int

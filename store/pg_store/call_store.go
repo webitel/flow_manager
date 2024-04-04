@@ -113,9 +113,10 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, 
-			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive)
+			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, schema_ids)
 values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, 
-	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult, :AmdAiResultLog, :AmdAiPositive)
+	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult, 
+	:AmdAiResultLog, :AmdAiPositive, :SchemaIds::int[])
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
@@ -130,7 +131,8 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       timestamp = EXCLUDED.timestamp,
       amd_ai_result = EXCLUDED.amd_ai_result,
       amd_ai_logs = EXCLUDED.amd_ai_logs,
-      amd_ai_positive = EXCLUDED.amd_ai_positive
+      amd_ai_positive = EXCLUDED.amd_ai_positive,
+      schema_ids = EXCLUDED.schema_ids
      `, map[string]interface{}{
 		"Id":             call.Id,
 		"State":          call.Event,
@@ -148,6 +150,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"AmdAiResult":    call.AmdAiResult,
 		"AmdAiResultLog": pq.Array(call.AmdAiResultLog),
 		"AmdAiPositive":  call.AmdAiPositive,
+		"SchemaIds":      pq.Array(call.SchemaIds),
 	})
 
 	if err != nil {
@@ -222,7 +225,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params,
-								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number)
+								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number, schema_ids)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -273,7 +276,8 @@ select c.created_at created_at,
 	   c.amd_ai_logs,
 	   c.amd_ai_positive,
 	   c.contact_id,
-	   c.search_number
+	   c.search_number,
+       c.schema_ids
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,

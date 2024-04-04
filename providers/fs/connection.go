@@ -258,6 +258,11 @@ func (c *Connection) SetDomainName(name string) {
 	c.domainName = name
 }
 
+func (c *Connection) SetSchemaId(id int) *model.AppError {
+	_, err := c.Push(context.Background(), model.CallVariableSchemaIds, strconv.Itoa(id))
+	return err
+}
+
 func (c *Connection) DomainName() string {
 	return c.domainName
 }
