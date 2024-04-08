@@ -1,9 +1,8 @@
 package client
 
 import (
+	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
 	"context"
-	// "github.com/webitel/flow_manager/providers/grpc/workflow"
-	"github.com/webitel/protos/workflow"
 )
 
 type QueueApi interface {

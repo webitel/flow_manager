@@ -7,15 +7,16 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 
-	"github.com/webitel/protos/storage"
+	gogrpc "buf.build/gen/go/webitel/storage/grpc/go/_gogrpc"
+	storage "buf.build/gen/go/webitel/storage/protocolbuffers/go"
 	"google.golang.org/grpc"
 
 	_ "github.com/mbobakov/grpc-consul-resolver"
 )
 
 type Api struct {
-	file       storage.FileServiceClient
-	transcript storage.FileTranscriptServiceClient
+	file       gogrpc.FileServiceClient
+	transcript gogrpc.FileTranscriptServiceClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -27,8 +28,8 @@ func NewClient(consulTarget string) (*Api, error) {
 		return nil, err
 	}
 
-	fileService := storage.NewFileServiceClient(conn)
-	fileTranscript := storage.NewFileTranscriptServiceClient(conn)
+	fileService := gogrpc.NewFileServiceClient(conn)
+	fileTranscript := gogrpc.NewFileTranscriptServiceClient(conn)
 	return &Api{
 		file:       fileService,
 		transcript: fileTranscript,

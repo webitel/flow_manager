@@ -5,10 +5,11 @@ import (
 	"time"
 
 	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/engine/chat"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
+
+	gogrpc "buf.build/gen/go/webitel/chat/grpc/go/_gogrpc"
 )
 
 var (
@@ -20,8 +21,8 @@ type ChatClientConnection struct {
 	id       string
 	host     string
 	client   *grpc.ClientConn
-	api      client.ChatServiceClient
-	messages client.MessagesClient
+	api      gogrpc.ChatServiceClient
+	messages gogrpc.MessagesClient
 }
 
 func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
@@ -43,8 +44,8 @@ func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 		return nil, err
 	}
 
-	connection.api = client.NewChatServiceClient(connection.client)
-	connection.messages = client.NewMessagesClient(connection.client)
+	connection.api = gogrpc.NewChatServiceClient(connection.client)
+	connection.messages = gogrpc.NewMessagesClient(connection.client)
 
 	return connection, nil
 }

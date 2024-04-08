@@ -9,9 +9,9 @@ import (
 	"sync"
 	"time"
 
+	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"github.com/tidwall/gjson"
 	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/engine/chat"
 	"github.com/webitel/wlog"
 )
 
@@ -29,7 +29,7 @@ type conversation struct {
 	chBridge      chan struct{}
 	breakCause    string
 
-	confirmation    map[string]chan []*client.Message
+	confirmation    map[string]chan []*proto.Message
 	exportVariables []string
 	nodeId          string
 	userId          int64
@@ -53,7 +53,7 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		cancel:        cancel,
 		userId:        userId,
 		storeMessages: make(map[string][]byte),
-		confirmation:  make(map[string]chan []*client.Message),
+		confirmation:  make(map[string]chan []*proto.Message),
 		nodeId:        cli.Name(),
 	}
 }
@@ -169,7 +169,7 @@ func (c *conversation) setTransferVariable() {
 			vars = make(map[string]string)
 		}
 		vars["chat_transferred"] = "true"
-		c.client.api.SetVariables(context.TODO(), &client.SetVariablesRequest{
+		c.client.api.SetVariables(context.TODO(), &proto.SetVariablesRequest{
 			ChannelId: c.id,
 			Variables: vars,
 		})
@@ -188,9 +188,9 @@ func (c *conversation) ProfileId() int64 {
 }
 
 func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	err := c.sendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &client.Message{
+		Message: &proto.Message{
 			Type:    msg.Type,
 			Text:    msg.Text,
 			Buttons: getChatButtons(msg.Buttons),
@@ -207,9 +207,9 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 }
 
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
-	err := c.sendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &client.Message{
+		Message: &proto.Message{
 			Type: "text", // FIXME
 			Text: text,
 		},
@@ -222,12 +222,12 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) sendMessage(ctx context.Context, req *client.SendMessageRequest) error {
+func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRequest) error {
 	_, err := c.client.api.SendMessage(ctx, req)
 	if err != nil {
 		textErr := err.Error()
 		if strings.Index(textErr, `"id":"chat.send.channel.from.closed"`) != -1 {
-			c.client.api.CloseConversation(c.ctx, &client.CloseConversationRequest{
+			c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
 				ConversationId: c.id,
 				Cause:          "error",
 			})
@@ -241,14 +241,14 @@ func (c *conversation) sendMessage(ctx context.Context, req *client.SendMessageR
 }
 
 func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
-	req := &client.Message{
+	req := &proto.Message{
 		Type:    "text",
 		Text:    menu.Text,
 		Buttons: getChatButtons(menu.Buttons),
 	}
 	//menu.Set // fixme
 
-	err := c.sendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		Message:        req,
 		ConversationId: c.Id(),
 	})
@@ -261,9 +261,9 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 }
 
 func (c *conversation) SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError) {
-	err := c.sendMessage(ctx, &client.SendMessageRequest{
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &client.Message{
+		Message: &proto.Message{
 			Type: "file", // FIXME
 			Text: text,
 			File: getFile(f),
@@ -277,13 +277,13 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File)
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
-	err := c.sendMessage(ctx, &client.SendMessageRequest{
+func (c *conversation) proto(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &client.Message{
+		Message: &proto.Message{
 			Text: text,
 			Type: "file", // FIXME
-			File: &client.File{
+			File: &proto.File{
 				Id:   1, //TODO
 				Url:  url,
 				Name: name,
@@ -298,7 +298,7 @@ func (c *conversation) SendImageMessage(ctx context.Context, url string, name st
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) addConfirmationId(id string, ch chan []*client.Message) {
+func (c *conversation) addConfirmationId(id string, ch chan []*proto.Message) {
 	c.mx.Lock()
 	c.confirmation[id] = ch
 	c.mx.Unlock()
@@ -313,12 +313,12 @@ func (c *conversation) deleteConfirmationId(id string) {
 func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
 
-	ch := make(chan []*client.Message)
+	ch := make(chan []*proto.Message)
 	c.addConfirmationId(id, ch)
 	defer c.deleteConfirmationId(id)
 
 	// TODO rename server api
-	res, err := c.client.api.WaitMessage(ctx, &client.WaitMessageRequest{
+	res, err := c.client.api.WaitMessage(ctx, &proto.WaitMessageRequest{
 		ConversationId: c.id,
 		ConfirmationId: id,
 	})
@@ -374,7 +374,7 @@ func (c *conversation) Stop(err *model.AppError) {
 		cause = err.Id
 	}
 
-	_, e := c.client.api.CloseConversation(c.ctx, &client.CloseConversationRequest{
+	_, e := c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
 		ConversationId: c.id,
 		Cause:          cause,
 	})
@@ -399,7 +399,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 
 	if len(exp) > 0 {
 		if c.BreakCause() == "" {
-			_, err := c.client.api.SetVariables(ctx, &client.SetVariablesRequest{
+			_, err := c.client.api.SetVariables(ctx, &proto.SetVariablesRequest{
 				ChannelId: c.id,
 				Variables: transferVars,
 			})
@@ -416,7 +416,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 
 func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError) {
 	vars := model.Variables{}
-	req := &client.SetVariablesRequest{
+	req := &proto.SetVariablesRequest{
 		ChannelId: c.id,
 		Variables: make(map[string]string),
 	}
@@ -453,8 +453,8 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 		}
 	}
 
-	res, err := c.client.api.InviteToConversation(ctx, &client.InviteToConversationRequest{
-		User: &client.User{
+	res, err := c.client.api.InviteToConversation(ctx, &proto.InviteToConversationRequest{
+		User: &proto.User{
 			UserId:   userId,
 			Type:     "webitel",
 			Internal: true,
@@ -522,19 +522,19 @@ func (c *conversation) actualizeClient(cli *ChatClientConnection) {
 	}
 }
 
-func getChatButtons(buttons [][]model.ChatButton) []*client.Buttons {
+func getChatButtons(buttons [][]model.ChatButton) []*proto.Buttons {
 	l := len(buttons)
 
 	if l == 0 {
 		return nil
 	}
 
-	res := make([]*client.Buttons, 0, l)
+	res := make([]*proto.Buttons, 0, l)
 
 	for _, v := range buttons {
-		btns := make([]*client.Button, 0, len(v))
+		btns := make([]*proto.Button, 0, len(v))
 		for _, b := range v {
-			btns = append(btns, &client.Button{
+			btns = append(btns, &proto.Button{
 				Text: b.Text,
 				Type: b.Type,
 				Url:  b.Url,
@@ -542,7 +542,7 @@ func getChatButtons(buttons [][]model.ChatButton) []*client.Buttons {
 			})
 		}
 
-		res = append(res, &client.Buttons{
+		res = append(res, &proto.Buttons{
 			Button: btns,
 		})
 	}
@@ -550,12 +550,12 @@ func getChatButtons(buttons [][]model.ChatButton) []*client.Buttons {
 	return res
 }
 
-func getFile(f *model.File) *client.File {
+func getFile(f *model.File) *proto.File {
 	if f == nil {
 		return nil
 	}
 
-	return &client.File{
+	return &proto.File{
 		Id:   int64(f.Id), //TODO
 		Url:  f.Url,
 		Mime: f.MimeType,

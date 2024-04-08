@@ -8,11 +8,12 @@ import (
 	"strings"
 	"time"
 
+	chat "buf.build/gen/go/webitel/chat/protocolbuffers/go"
+	gogrpc "buf.build/gen/go/webitel/workflow/grpc/go/_gogrpc"
+	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/protos/engine/chat"
-	"github.com/webitel/protos/workflow"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -30,7 +31,7 @@ var (
 type chatApi struct {
 	conversations utils.ObjectCache
 	*server
-	workflow.UnsafeFlowChatServerServiceServer
+	gogrpc.UnsafeFlowChatServerServiceServer
 }
 
 func NewChatApi(s *server) *chatApi {

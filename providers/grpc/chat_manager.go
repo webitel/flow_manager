@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"sync"
 
+	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"github.com/webitel/flow_manager/model"
-	client "github.com/webitel/protos/engine/chat"
 
 	"github.com/webitel/engine/discovery"
 	"github.com/webitel/wlog"
@@ -125,7 +125,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		return e
 	}
 
-	msg := &client.Message{
+	msg := &proto.Message{
 		Type:      req.Type,
 		Text:      req.Text,
 		File:      getFile(req.File),
@@ -137,7 +137,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		msg.Inline = getChatButtons(req.Menu.Inline)
 	}
 
-	res, e := c.messages.BroadcastMessage(ctx, &client.BroadcastMessageRequest{
+	res, e := c.messages.BroadcastMessage(ctx, &proto.BroadcastMessageRequest{
 		Message: msg,
 		From:    req.Profile.Id,
 		Peer:    req.Peer,
@@ -160,15 +160,15 @@ func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action 
 		return e
 	}
 
-	var a client.UserAction = client.UserAction_Typing
+	var a proto.UserAction = proto.UserAction_Typing
 
 	switch action {
 	case model.ChatActionCancel:
-		a = client.UserAction_Cancel
+		a = proto.UserAction_Cancel
 
 	}
 
-	msg := &client.SendUserActionRequest{
+	msg := &proto.SendUserActionRequest{
 		ChannelId: channelId,
 		Action:    a,
 	}

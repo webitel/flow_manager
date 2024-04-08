@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
+	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/protos/workflow"
 )
 
 const (

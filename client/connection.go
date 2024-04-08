@@ -3,7 +3,8 @@ package client
 import (
 	"time"
 
-	"github.com/webitel/protos/workflow"
+	gogrpc "buf.build/gen/go/webitel/workflow/grpc/go/_gogrpc"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 )
@@ -13,8 +14,8 @@ type fConnection struct {
 	host   string
 	client *grpc.ClientConn
 
-	queue      workflow.FlowServiceClient
-	processing workflow.FlowProcessingServiceClient
+	queue      gogrpc.FlowServiceClient
+	processing gogrpc.FlowProcessingServiceClient
 }
 
 func NewFlowConnection(name, url string) (*fConnection, error) {
@@ -30,8 +31,8 @@ func NewFlowConnection(name, url string) (*fConnection, error) {
 		return nil, err
 	}
 
-	connection.queue = workflow.NewFlowServiceClient(connection.client)
-	connection.processing = workflow.NewFlowProcessingServiceClient(connection.client)
+	connection.queue = gogrpc.NewFlowServiceClient(connection.client)
+	connection.processing = gogrpc.NewFlowProcessingServiceClient(connection.client)
 
 	return connection, nil
 }

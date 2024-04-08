@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"io"
 
+	cc "buf.build/gen/go/webitel/cc/protocolbuffers/go"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/protos/cc"
 	"github.com/webitel/wlog"
 )
 

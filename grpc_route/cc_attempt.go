@@ -3,9 +3,9 @@ package grpc_route
 import (
 	"context"
 
+	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	flow2 "github.com/webitel/protos/workflow"
 )
 
 type DoDistributeCancelArgs struct {
@@ -55,9 +55,9 @@ func (r *Router) cancel(ctx context.Context, scope *flow.Flow, conn model.GRPCCo
 		return nil, err
 	}
 
-	conn.Result(&flow2.DistributeAttemptResponse{
-		Result: &flow2.DistributeAttemptResponse_Cancel_{
-			Cancel: &flow2.DistributeAttemptResponse_Cancel{
+	conn.Result(&workflow.DistributeAttemptResponse{
+		Result: &workflow.DistributeAttemptResponse_Cancel_{
+			Cancel: &workflow.DistributeAttemptResponse_Cancel{
 				Description:       argv.Description,
 				NextDistributeSec: uint32(argv.WaitBetweenRetries),
 				Stop:              argv.Stop,
@@ -78,9 +78,9 @@ func (r *Router) confirm(ctx context.Context, scope *flow.Flow, conn model.GRPCC
 		return nil, err
 	}
 
-	conn.Result(&flow2.DistributeAttemptResponse{
-		Result: &flow2.DistributeAttemptResponse_Confirm_{
-			Confirm: &flow2.DistributeAttemptResponse_Confirm{
+	conn.Result(&workflow.DistributeAttemptResponse{
+		Result: &workflow.DistributeAttemptResponse_Confirm_{
+			Confirm: &workflow.DistributeAttemptResponse_Confirm{
 				Destination: argv.Destination,
 				Display:     argv.Display,
 			},
@@ -100,9 +100,9 @@ func (r *Router) success(ctx context.Context, scope *flow.Flow, conn model.GRPCC
 		return nil, err
 	}
 
-	conn.Result(&flow2.ResultAttemptResponse{
-		Result: &flow2.ResultAttemptResponse_Success_{
-			Success: &flow2.ResultAttemptResponse_Success{},
+	conn.Result(&workflow.ResultAttemptResponse{
+		Result: &workflow.ResultAttemptResponse_Success_{
+			Success: &workflow.ResultAttemptResponse_Success{},
 		},
 		Variables: exportVars(conn, argv.Export),
 	})
@@ -121,7 +121,7 @@ func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRP
 		return nil, err
 	}
 
-	abandoned := &flow2.ResultAttemptResponse_Abandoned{
+	abandoned := &workflow.ResultAttemptResponse_Abandoned{
 		Status:                      argv.Status,
 		MaxAttempts:                 argv.MaxAttempts,
 		WaitBetweenRetries:          argv.WaitBetweenRetries,
@@ -136,8 +136,8 @@ func (r *Router) abandoned(ctx context.Context, scope *flow.Flow, conn model.GRP
 		abandoned.AgentId = *argv.AgentId
 	}
 
-	conn.Result(&flow2.ResultAttemptResponse{
-		Result: &flow2.ResultAttemptResponse_Abandoned_{
+	conn.Result(&workflow.ResultAttemptResponse{
+		Result: &workflow.ResultAttemptResponse_Abandoned_{
 			Abandoned: abandoned,
 		},
 		Variables: exportVars(conn, argv.Export),
@@ -160,9 +160,9 @@ func (r *Router) retry(ctx context.Context, scope *flow.Flow, conn model.GRPCCon
 		resourceId = int32(*argv.Resource.Id)
 	}
 
-	retry := &flow2.ResultAttemptResponse{
-		Result: &flow2.ResultAttemptResponse_Retry_{
-			Retry: &flow2.ResultAttemptResponse_Retry{
+	retry := &workflow.ResultAttemptResponse{
+		Result: &workflow.ResultAttemptResponse_Retry_{
+			Retry: &workflow.ResultAttemptResponse_Retry{
 				NextResource: argv.NextResource,
 				Sleep:        argv.Sleep,
 				ResourceId:   resourceId,
