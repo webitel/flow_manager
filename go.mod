@@ -41,10 +41,10 @@ require (
 	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240404140117-0cc0abc10b4f.2
 	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.33.0-20240404140117-0cc0abc10b4f.1
 	github.com/h2non/filetype v1.1.3
-	github.com/mattn/go-sqlite3 v1.14.6
+	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/redis/go-redis/v9 v9.0.5
-	github.com/webitel/call_center v0.0.0-20240404084002-175dce843e75
-	github.com/webitel/engine v0.0.0-20240408093415-335bcd6ed982
+	github.com/webitel/call_center v0.0.0-20240404084002-d1463ef11b
+	github.com/webitel/engine v0.0.0-20240327135406-92c34c5834
 )
 
 require (
@@ -118,7 +118,6 @@ require (
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
 	github.com/gostaticanalysis/forcetypeassert v0.1.0 // indirect
 	github.com/gostaticanalysis/nilerr v0.1.1 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/consul/api v1.25.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -216,6 +215,8 @@ require (
 	github.com/ultraware/funlen v0.0.3 // indirect
 	github.com/ultraware/whitespace v0.0.5 // indirect
 	github.com/uudashr/gocognit v1.0.6 // indirect
+	github.com/webitel/protos/cc v0.0.0-20240401125538-65d07de06373 // indirect
+	github.com/webitel/protos/engine v0.0.0-20240327132302-ffcc68b6314f // indirect
 	github.com/yagipy/maintidx v1.0.0 // indirect
 	github.com/yeya24/promlinter v0.2.0 // indirect
 	gitlab.com/bosi/decorder v0.2.3 // indirect
@@ -245,5 +246,3 @@ require (
 	mvdan.cc/lint v0.0.0-20170908181259-adc824a0674b // indirect
 	mvdan.cc/unparam v0.0.0-20221223090309-7455f1af531d // indirect
 )
-
-replace github.com/webitel/call_center => ../call_center
