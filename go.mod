@@ -43,8 +43,8 @@ require (
 	github.com/h2non/filetype v1.1.3
 	github.com/mattn/go-sqlite3 v1.14.16
 	github.com/redis/go-redis/v9 v9.0.5
-	github.com/webitel/call_center v0.0.0-20240408094329-d1463ef11b35
-	github.com/webitel/engine v0.0.0-20240408093415-335bcd6ed982
+	github.com/webitel/call_center v0.0.0-20240408103605-18e28c2527f8
+	github.com/webitel/engine v0.0.0-20240408103355-9cefa54a140c
 )
 
 require (
