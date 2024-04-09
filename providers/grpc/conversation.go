@@ -260,6 +260,26 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 
 }
 
+func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
+	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+		ConversationId: c.id,
+		Message: &proto.Message{
+			Type: "file", // FIXME
+			Text: text,
+			File: &proto.File{
+				Url:  url,
+				Name: name,
+			},
+		},
+	})
+
+	if err != nil {
+		return nil, model.NewAppError("Conversation.SendImageMessage", "conv.send.image.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *conversation) SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
