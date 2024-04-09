@@ -33,8 +33,8 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/call_center v0.0.0-20240408104603-4686bcc5d6d1
-	github.com/webitel/engine v0.0.0-20240408110400-017e524bb2f6
+	github.com/webitel/call_center v0.0.0-20240409112304-1b26e2176623
+	github.com/webitel/engine v0.0.0-20240409111830-4781844bb052
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
@@ -53,7 +53,6 @@ require (
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/go-playground/form v3.1.4+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.18.0 // indirect
 	github.com/hashicorp/consul/api v1.28.2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
