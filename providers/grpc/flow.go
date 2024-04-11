@@ -65,6 +65,11 @@ func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 	conn.schemaId = int(in.SchemaId)
 	conn.domainId = in.DomainId
 	conn.id = model.NewId()
+	sc := in.GetScope()
+	if sc != nil {
+		conn.scope.Id = sc.Id
+		conn.scope.Channel = sc.Channel
+	}
 
 	s.consume <- conn
 
