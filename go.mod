@@ -10,8 +10,8 @@ require (
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.33.0-20240402125447-cb375844242f.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.3.0-20240402131908-59ee244702ce.2
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.33.0-20240402131908-59ee244702ce.1
-	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240404140117-0cc0abc10b4f.2
-	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.33.0-20240404140117-0cc0abc10b4f.1
+	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240411120545-24ef43af6db3.2
+	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.33.0-20240411120545-24ef43af6db3.1
 	github.com/BoRuDar/configuration/v4 v4.5.0
 	github.com/emersion/go-imap v1.2.1
 	github.com/emersion/go-message v0.18.1

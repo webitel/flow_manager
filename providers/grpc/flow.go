@@ -102,6 +102,12 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	id := model.NewId()
 	conn.id = id
 
+	sc := in.GetScope()
+	if sc != nil {
+		conn.scope.Id = sc.Id
+		conn.scope.Channel = sc.Channel
+	}
+
 	conn.schemaId = int(in.SchemaId)
 	conn.domainId = in.DomainId
 

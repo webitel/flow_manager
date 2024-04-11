@@ -551,3 +551,36 @@ from uh`, map[string]interface{}{
 
 	return nil
 }
+
+func (s SqlCallStore) SetVariables(id string, vars *model.CallVariables) *model.AppError {
+	_, err := s.GetMaster().Exec(`with a as (
+    update call_center.cc_calls c
+        set payload = coalesce(payload, '{}') || :Vars
+    where c.id = :Id::uuid
+    returning c.id
+), h as (
+    update call_center.cc_calls_history c
+        set payload = coalesce(payload, '{}') || :Vars
+    where c.id = :Id::uuid
+    returning c.id
+)
+select *
+from (
+    select id
+    from a
+    union all
+    select id
+    from h
+ ) as t
+where t.id notnull
+limit 1`, map[string]interface{}{
+		"Id":   id,
+		"Vars": vars.ToMapJson(),
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetVariables", "store.sql_call.set_vars.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}

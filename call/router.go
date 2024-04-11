@@ -180,9 +180,13 @@ func (r *Router) handle(conn model.Connection) {
 	<-conn.Context().Done()
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
+		call.ClearExportVariables()
+
 		//TODO config
-		ctxDisc, _ := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
+		ctxDisc, cn := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 		flow.Route(ctxDisc, d, r)
+		cn()
+		r.fm.StoreCallVariables(call.Id(), call.DumpExportVariables())
 	}
 
 	r.fm.StoreLog(i.SchemaId(), conn.Id(), i.Logs())

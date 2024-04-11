@@ -135,3 +135,16 @@ func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId string, dest
 func (f *FlowManager) SetContactId(domainId int64, callId string, contactId int64) *model.AppError {
 	return f.Store.Call().SetContactId(domainId, callId, contactId)
 }
+
+func (f *FlowManager) StoreCallVariables(id string, vars map[string]string) *model.AppError {
+	if len(vars) == 0 {
+		return nil
+	}
+
+	cv := make(model.CallVariables)
+	for k, v := range vars {
+		cv[k] = v
+	}
+
+	return f.Store.Call().SetVariables(id, &cv)
+}

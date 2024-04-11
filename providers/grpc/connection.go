@@ -22,8 +22,10 @@ type Connection struct {
 	stop      chan struct{}
 	ctx       context.Context
 
-	result chan interface{}
-	cancel context.CancelFunc
+	result          chan interface{}
+	cancel          context.CancelFunc
+	exportVariables []string
+	scope           model.Scope
 
 	request interface{}
 
@@ -128,6 +130,37 @@ func (c *Connection) Get(name string) (string, bool) {
 
 func (c *Connection) Variables() map[string]string {
 	return c.variables
+}
+
+func (c *Connection) Scope() model.Scope {
+	return c.scope
+}
+
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+	c.Lock()
+	defer c.Unlock()
+	for _, v := range vars {
+		if v == "" {
+			continue
+		}
+		c.exportVariables = append(c.exportVariables, v)
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) DumpExportVariables() map[string]string {
+	c.RLock()
+	defer c.RUnlock()
+
+	var res map[string]string
+	if len(c.exportVariables) > 0 {
+		res = make(map[string]string)
+		for _, v := range c.exportVariables {
+			res[v], _ = c.Get(v)
+		}
+	}
+	return res
 }
 
 // fixme

@@ -27,6 +27,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["retry"] = &flow.Application{
 		Handler: grpcHandlerMiddleware(r.retry),
 	}
+	apps["export"] = &flow.Application{
+		Handler: grpcHandlerMiddleware(r.export),
+	}
 
 	return apps
 }

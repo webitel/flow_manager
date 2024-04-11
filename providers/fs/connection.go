@@ -397,6 +397,12 @@ func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Re
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) ClearExportVariables() {
+	c.Lock()
+	c.exportVariables = nil
+	c.Unlock()
+}
+
 func (c *Connection) DumpExportVariables() map[string]string {
 	c.RLock()
 	defer c.RUnlock()

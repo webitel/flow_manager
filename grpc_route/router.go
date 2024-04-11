@@ -74,6 +74,20 @@ func (r *Router) handle(conn model.Connection) {
 
 	flow.Route(conn.Context(), i, r)
 	conn.Close()
+	r.disconnected(gr)
+}
+
+func (r *Router) disconnected(gr model.GRPCConnection) {
+	scope := gr.Scope()
+	if scope.Id != "" {
+		switch scope.Channel {
+		case "call":
+			r.fm.StoreCallVariables(scope.Id, gr.DumpExportVariables())
+
+		default:
+
+		}
+	}
 }
 
 func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {

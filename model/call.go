@@ -287,6 +287,17 @@ func (h *CallActionHangup) AmdJson() []byte {
 
 type CallVariables map[string]interface{}
 
+func (v *CallVariables) ToMapJson() []byte {
+	if v != nil {
+		d, e := json.Marshal(v)
+		if e == nil {
+			return d
+		}
+	}
+
+	return []byte("{}")
+}
+
 func (c *CallActionData) GetEvent() interface{} {
 	if c.parsed != nil {
 		return c.parsed
@@ -394,6 +405,8 @@ type Call interface {
 	Ringback(ctx context.Context, export bool, call, hold, transfer *PlaybackFile) (Response, *AppError)
 
 	DumpExportVariables() map[string]string
+	ClearExportVariables()
+
 	Queue(ctx context.Context, ringFile string) (Response, *AppError)
 	Intercept(ctx context.Context, id string) (Response, *AppError)
 	GetVariable(string) string
