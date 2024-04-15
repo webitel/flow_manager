@@ -93,7 +93,7 @@ func (p *EmailProfile) OAuthConfig() oauth2.Config {
 func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
 	if strings.Index(host, MailGmail+".com") > -1 {
 
-	} else if strings.Index(host, MailOutlook) == 0 && config != nil {
+	} else if strings.Index(host, "office365") > -1 && config != nil {
 		return oauth2.Config{
 			ClientID:     config.ClientId,
 			ClientSecret: config.ClientSecret,
