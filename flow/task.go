@@ -19,7 +19,7 @@ type JoinAgentToTaskArgs struct {
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
 		Form       struct {
-			Id   int
+			Id   int32
 			Name string
 		} `json:"form"`
 	}
@@ -83,7 +83,9 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 		}
 
 		if argv.Processing.Form.Id > 0 {
-			req.Processing.FormSchemaId = uint32(argv.Processing.Form.Id)
+			req.Processing.Form = &cc.QueueFormSchema{
+				Id: argv.Processing.Form.Id,
+			}
 		}
 	}
 

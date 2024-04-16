@@ -19,6 +19,10 @@ type JoinAgentArgs struct {
 		Enabled    bool
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
+		Form       struct {
+			Id   int32
+			Name string
+		} `json:"form"`
 	}
 	Ringtone         model.PlaybackFile `json:"ringtone"`
 	Bridged          []interface{}      `json:"bridged"`
@@ -90,6 +94,12 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 			Enabled:    true,
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
+		}
+
+		if argv.Processing.Form.Id > 0 {
+			req.Processing.Form = &cc.QueueFormSchema{
+				Id: argv.Processing.Form.Id,
+			}
 		}
 	}
 
