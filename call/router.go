@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/webitel/flow_manager/app"
@@ -76,10 +77,14 @@ func (r *Router) handle(conn model.Connection) {
 
 	queueId := call.IVRQueueId()
 	transferSchemaId := call.TransferSchemaId()
+	isTransfer := call.IsTransfer()
 
-	if transferSchemaId != nil && call.IsTransfer() {
+	// TODO WTEL-4370
+	blXfer := strings.HasSuffix(call.GetVariable("variable_transfer_history"), fmt.Sprintf(":bl_xfer:%s/default/XML", call.Destination()))
+
+	if transferSchemaId != nil && isTransfer {
 		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
-	} else if call.IsTransfer() && queueId == nil && !call.IsOriginateRequest() {
+	} else if isTransfer && queueId == nil && (blXfer || !call.IsOriginateRequest()) {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.Destination()))
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
