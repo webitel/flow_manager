@@ -12,6 +12,7 @@ type Config struct {
 	Record      struct {
 		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording"`
 	} `json:"record"`
+	DebugImap                    bool              `json:"debug_imap" flag:"debug_imap|false|Debug IMAP protocol"`
 	SqlSettings                  SqlSettings       `json:"sql_settings"`
 	MQSettings                   MQSettings        `json:"mq_settings"`
 	RedisSettings                RedisSettings     `json:"redis_settings"`

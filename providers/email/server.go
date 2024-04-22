@@ -33,10 +33,11 @@ type MailServer struct {
 	startOnce       sync.Once
 	consume         chan model.Connection
 	running         map[int]bool
+	debug           bool
 	sync.RWMutex
 }
 
-func New(storageApi *storage.Api, s store.EmailStore) model.Server {
+func New(storageApi *storage.Api, s store.EmailStore, debug bool) model.Server {
 	return &MailServer{
 		store:           s,
 		profiles:        utils.NewLru(SizeCache),
@@ -45,6 +46,7 @@ func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 		consume:         make(chan model.Connection),
 		storage:         storageApi,
 		running:         make(map[int]bool),
+		debug:           debug,
 	}
 }
 
