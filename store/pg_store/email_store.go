@@ -24,12 +24,16 @@ func NewSqlEmailStore(sqlStore SqlStore) store.EmailStore {
 func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
 	var tasks []*model.EmailProfileTask
 
-	_, err := s.GetReplica().Select(&tasks, ` update call_center.cc_email_profile
- set last_activity_at = now(),
-     state = 'active'
- where ( (enabled and "listen")) and 
-       last_activity_at < now() - (fetch_interval || ' sec')::interval
-returning id, ( extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
+	_, err := s.GetReplica().Select(&tasks, `update call_center.cc_email_profile
+set last_activity_at = now(),
+    state            = 'active'
+where id in (select id
+             from call_center.cc_email_profile
+             where ((enabled and "listen"))
+               and last_activity_at < now() - (fetch_interval || ' sec')::interval
+             order by last_activity_at nulls first
+             limit 100 for update skip locked )
+returning id, (extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
 	if err != nil {
 		return nil, model.NewAppError("SqlEmailStore.ProfileTaskFetch", "store.sql_email.task_profiles.error", nil,

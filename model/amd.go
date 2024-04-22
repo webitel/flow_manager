@@ -13,4 +13,5 @@ type AmdParameters struct {
 }
 
 type AmdMLParameters struct {
+	Tags []string
 }

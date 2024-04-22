@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/smtp"
 	"net/textproto"
@@ -101,7 +102,9 @@ func (p *Profile) Login() *model.AppError {
 		tlsConfig.InsecureSkipVerify = true
 	}
 
-	p.client, err = client.DialTLS(fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
+	dialer := new(net.Dialer)
+	dialer.Timeout = time.Second * 20
+	p.client, err = client.DialWithDialerTLS(dialer, fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
 	if err != nil {
 		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -250,7 +253,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 }
 
 func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.AppError) {
-	id, err := generateMessageID()
+	id, err := model.GenerateMailID()
 	if err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -285,10 +288,6 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 
 	var auth smtp.Auth
 	if p.authMethod == model.MailAuthTypeOAuth2 {
-		appErr := p.Login()
-		if appErr != nil {
-			return nil, appErr
-		}
 		//  Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
 		auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
 	} else {

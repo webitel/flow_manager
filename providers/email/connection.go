@@ -10,19 +10,28 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+type PKey struct {
+	Id        int
+	UpdatedAt int64
+	FlowId    int
+	DomainId  int64
+}
+
 type connection struct {
 	id        string
-	profile   *Profile
+	srv       *MailServer
 	email     *model.Email
 	variables model.Variables
 	ctx       context.Context
+	pkey      PKey
 	sync.RWMutex
 }
 
-func NewConnection(profile *Profile, email *model.Email) *connection {
+func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 	c := &connection{
 		id:        email.MessageId,
-		profile:   profile,
+		srv:       srv,
+		pkey:      pkey,
 		email:     email,
 		variables: make(map[string]interface{}),
 		ctx:       context.Background(),
@@ -75,6 +84,10 @@ func (c *connection) Get(key string) (string, bool) {
 	return fmt.Sprintf("%v", v), true
 }
 
+func (c *connection) GetProfile() (*Profile, *model.AppError) {
+	return c.srv.GetProfile(c.pkey.Id, c.pkey.UpdatedAt)
+}
+
 func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	c.Lock()
 	defer c.Unlock()
@@ -91,7 +104,7 @@ func (c *connection) ParseText(text string) string {
 }
 
 func (c *connection) SchemaId() int {
-	return c.profile.flowId
+	return c.pkey.FlowId
 }
 
 func (c *connection) Close() *model.AppError {
@@ -99,7 +112,7 @@ func (c *connection) Close() *model.AppError {
 }
 
 func (c *connection) DomainId() int64 {
-	return c.profile.DomainId
+	return c.pkey.DomainId
 }
 
 func (c *connection) Context() context.Context {
@@ -115,7 +128,7 @@ func (c *connection) Variables() map[string]string {
 	return vars
 }
 
-//fixme
+// fixme
 func test() {
 	a := func(c model.EmailConnection) {}
 	a(&connection{})

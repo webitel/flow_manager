@@ -483,7 +483,7 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res m
 }
 
 func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, *model.AppError) {
-	return c.executeWithContext(ctx, "wbt_amd", "")
+	return c.executeWithContext(ctx, "wbt_amd", strings.Join(params.Tags, ","))
 }
 
 func (c *Connection) Pickup(ctx context.Context, name string) (model.Response, *model.AppError) {

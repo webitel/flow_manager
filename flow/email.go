@@ -28,6 +28,8 @@ type EmailArgs struct {
 	Attachment struct {
 		Files []model.File `json:"files"`
 	} `json:"attachment"`
+	RetryCount int `json:"retryCount"`
+	Store      bool
 }
 
 type GetEmailInfo struct {
@@ -81,6 +83,9 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 
 func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *model.AppError) {
 
+	var files []model.File
+	var err *model.AppError
+
 	mail := gomail.NewMessage()
 	mail.SetHeader("To", argv.To...)
 
@@ -101,7 +106,7 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 		for _, v := range argv.Attachment.Files {
 			ids = append(ids, int64(v.Id))
 		}
-		files, err := r.fm.GetFileMetadata(domainId, ids)
+		files, err = r.fm.GetFileMetadata(domainId, ids)
 		if err != nil {
 			wlog.Error(err.Error())
 		} else {
@@ -112,7 +117,8 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	mail.SetBody(argv.Type, argv.Message)
 	var dialer *gomail.Dialer
 	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
-		token, err := r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
+		var token string
+		token, err = r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
 		if err != nil {
 			return model.CallResponseError, err
 		}
@@ -127,8 +133,46 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	}
 
-	if sErr := dialer.DialAndSend(mail); sErr != nil {
+	id, sErr := model.GenerateMailID()
+	if sErr != nil {
+		return model.CallResponseError, model.NewAppError("Email", "flow.email.gen_id.app_err", nil, sErr.Error(), http.StatusInternalServerError)
+	}
+
+	mail.SetHeader("Message-Id", id)
+
+retry:
+
+	if sErr = dialer.DialAndSend(mail); sErr != nil {
+		if argv.RetryCount > 0 {
+			argv.RetryCount = argv.RetryCount - 1
+			wlog.Error(sErr.Error())
+			goto retry
+		}
 		return nil, model.NewAppError("Email", "flow.email.send.app_err", nil, sErr.Error(), http.StatusInternalServerError)
+	}
+
+	if argv.Store && argv.Smtp.Id > 0 { // TODO STORE DB
+		rr := &model.Email{
+			Direction: "outbound",
+			MessageId: id,
+			Subject:   argv.Subject,
+			ProfileId: argv.Smtp.Id,
+			From:      []string{argv.From},
+			To:        argv.To,
+			//Sender:    argv.Sender,
+			//ReplyTo:   argv.ReplyTo,
+			InReplyTo: argv.ReplyToId,
+			//CC:        argv.CC,
+			Body:        []byte(argv.Message),
+			HtmlBody:    []byte(argv.Message),
+			Attachments: files,
+		}
+
+		if argv.ReplyToId != "" {
+			rr.InReplyTo = argv.ReplyToId[1 : len(argv.ReplyToId)-1]
+		}
+
+		r.fm.Store.Email().Save(domainId, rr)
 	}
 
 	return model.CallResponseOK, nil

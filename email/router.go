@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/wlog"
 	"net/http"
 
 	"github.com/webitel/flow_manager/app"
@@ -52,6 +53,11 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 }
 
 func (r *Router) Handle(emailConnection model.Connection) *model.AppError {
+	go r.handle(emailConnection)
+	return nil
+}
+
+func (r *Router) handle(emailConnection model.Connection) {
 	conn := &emailParser{
 		timezoneName:    "",
 		EmailConnection: emailConnection.(model.EmailConnection),
@@ -61,7 +67,8 @@ func (r *Router) Handle(emailConnection model.Connection) *model.AppError {
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), conn.SchemaId())
 	if err != nil {
-		return err
+		wlog.Error(fmt.Sprintf("[%s] error: %s", conn.Id(), err.Error()))
+		return
 	}
 
 	f := flow.New(r, flow.Config{
@@ -73,8 +80,6 @@ func (r *Router) Handle(emailConnection model.Connection) *model.AppError {
 	})
 
 	flow.Route(conn.Context(), f, r)
-
-	return nil
 }
 
 func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {

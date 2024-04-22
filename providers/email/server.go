@@ -2,6 +2,8 @@ package email
 
 import (
 	"fmt"
+	"golang.org/x/sync/singleflight"
+	"net/http"
 	"sync"
 	"time"
 
@@ -17,13 +19,9 @@ import (
 )
 
 var (
-	FetchProfileInterval = time.Second * 20
+	FetchProfileInterval = time.Second * 10
 	SizeCache            = 1000
-)
-
-const (
-	MailGmail   = "gmail"
-	MailOutlook = "outlook"
+	profileSGroup        singleflight.Group
 )
 
 type MailServer struct {
@@ -34,6 +32,8 @@ type MailServer struct {
 	stopped         chan struct{}
 	startOnce       sync.Once
 	consume         chan model.Connection
+	running         map[int]bool
+	sync.RWMutex
 }
 
 func New(storageApi *storage.Api, s store.EmailStore) model.Server {
@@ -44,6 +44,7 @@ func New(storageApi *storage.Api, s store.EmailStore) model.Server {
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),
 		storage:         storageApi,
+		running:         make(map[int]bool),
 	}
 }
 
@@ -83,11 +84,31 @@ func (s *MailServer) Consume() <-chan model.Connection {
 	return s.consume
 }
 
+func (s *MailServer) startRunning(id int) {
+	s.Lock()
+	s.running[id] = true
+	s.Unlock()
+}
+
+func (s *MailServer) stopRunning(id int) {
+	s.Lock()
+	delete(s.running, id)
+	s.Unlock()
+}
+
+func (s *MailServer) hasRunning(id int) bool {
+	s.RLock()
+	_, ok := s.running[id]
+	s.RUnlock()
+	return ok
+}
+
 func (s *MailServer) listen() {
 	defer func() {
 		wlog.Debug("stop listen email server...")
 		close(s.stopped)
 	}()
+
 	wlog.Debug("start listen emails")
 	for {
 		select {
@@ -100,7 +121,13 @@ func (s *MailServer) listen() {
 				time.Sleep(time.Second * 5)
 			} else {
 				for _, v := range tasks {
-					s.fetchNewMessageInProfile(v)
+					if !s.hasRunning(v.Id) {
+						s.startRunning(v.Id)
+						go func(p *model.EmailProfileTask) {
+							s.fetchNewMessageInProfile(p)
+							s.stopRunning(p.Id)
+						}(v)
+					}
 				}
 			}
 		}
@@ -117,18 +144,29 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 		}
 	}
 
-	params, err := s.store.GetProfile(id)
-	if err != nil {
-		return nil, err
+	v, doErr, shared := profileSGroup.Do(fmt.Sprintf("%d-%d", id, updatedAt), func() (interface{}, error) {
+		params, err := s.store.GetProfile(id)
+		if err != nil {
+			return nil, err
+		}
+
+		return newProfile(s, params), nil
+	})
+
+	if doErr != nil {
+		switch doErr.(type) {
+		case *model.AppError:
+			return nil, doErr.(*model.AppError)
+		default:
+			return nil, model.NewAppError("Email", "email.profile.create.app_err", nil, doErr.Error(), http.StatusInternalServerError)
+		}
 	}
 
-	pp = newProfile(s, params)
-	//if err = pp.Login(); err != nil {
-	//
-	//	return nil, err
-	//}
+	pp = v.(*Profile)
 
-	s.profiles.Add(id, pp)
+	if !shared {
+		s.profiles.Add(id, pp)
+	}
 
 	return pp, nil
 }
@@ -168,7 +206,12 @@ retry:
 			wlog.Error(fmt.Sprintf("%s, error: %s", profile, err.Error()))
 			continue
 		}
-		s.consume <- NewConnection(profile, email)
+		s.consume <- NewConnection(s, PKey{
+			Id:        profile.Id,
+			UpdatedAt: p.UpdatedAt,
+			FlowId:    profile.flowId,
+			DomainId:  profile.DomainId,
+		}, email)
 	}
 	err = profile.Logout()
 	if err != nil {
