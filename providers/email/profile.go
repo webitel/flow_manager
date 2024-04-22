@@ -86,6 +86,23 @@ func (p *Profile) String() string {
 }
 
 func (p *Profile) Login() *model.AppError {
+	done := make(chan *model.AppError)
+	// TODO WTEL-4468
+	go func() {
+		done <- p.clientLogin()
+	}()
+	select {
+	case err := <-done:
+		if err != nil {
+			return err
+		}
+		return nil
+	case <-time.After(time.Minute):
+		return model.NewAppError("Email", "email.login.timeout", nil, "Timeout", 500)
+	}
+}
+
+func (p *Profile) clientLogin() *model.AppError {
 	p.Lock()
 	defer p.Unlock()
 
