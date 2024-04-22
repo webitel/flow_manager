@@ -1,7 +1,13 @@
 package model
 
 import (
+	"crypto/rand"
+	"fmt"
+	"math"
+	"math/big"
+	"os"
 	"strings"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -93,7 +99,7 @@ func (p *EmailProfile) OAuthConfig() oauth2.Config {
 func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
 	if strings.Index(host, MailGmail+".com") > -1 {
 
-	} else if strings.Index(host, MailOutlook) == 0 && config != nil {
+	} else if strings.Index(host, "office365") > -1 && config != nil {
 		return oauth2.Config{
 			ClientID:     config.ClientId,
 			ClientSecret: config.ClientSecret,
@@ -125,4 +131,31 @@ func (e *Email) AttachmentIds() []int64 {
 	}
 
 	return ids
+}
+
+var maxBigInt = big.NewInt(math.MaxInt64)
+
+// GenerateMailID generates and returns a string suitable for an RFC 2822
+// compliant Message-ID, e.g.:
+// <1444789264909237300.3464.1819418242800517193@DESKTOP01>
+//
+// The following parameters are used to generate a Message-ID:
+// - The nanoseconds since Epoch
+// - The calling PID
+// - A cryptographically random int64
+// - The sending hostname
+func GenerateMailID() (string, error) {
+	t := time.Now().UnixNano()
+	pid := os.Getpid()
+	rint, err := rand.Int(rand.Reader, maxBigInt)
+	if err != nil {
+		return "", err
+	}
+	h, err := os.Hostname()
+	// If we can't get the hostname, we'll use localhost
+	if err != nil {
+		h = "localhost.localdomain"
+	}
+	msgid := fmt.Sprintf("<%d.%d.%d@%s>", t, pid, rint, h)
+	return msgid, nil
 }
