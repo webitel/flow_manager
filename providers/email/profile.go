@@ -227,6 +227,10 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 		return nil, appErr
 	}
 
+	if len(uids) == 0 {
+		return res, nil
+	}
+
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(uids...)
 	section := &imap.BodySectionName{}
