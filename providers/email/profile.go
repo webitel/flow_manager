@@ -96,10 +96,10 @@ func (p *Profile) Login() *model.AppError {
 	p.logged = false
 	var err error
 
-	tlsConfig := &tls.Config{}
+	var tlsConfig *tls.Config
 
-	// todo
 	if p.Tls {
+		tlsConfig = &tls.Config{}
 		tlsConfig.InsecureSkipVerify = true
 	}
 
