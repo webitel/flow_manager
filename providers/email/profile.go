@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"net/textproto"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -107,6 +108,10 @@ func (p *Profile) Login() *model.AppError {
 	p.client, err = client.DialWithDialerTLS(dialer, fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
 	if err != nil {
 		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	if p.server.debug {
+		p.client.SetDebug(os.Stdout)
 	}
 
 	if p.authMethod == model.MailAuthTypeOAuth2 {
