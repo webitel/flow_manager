@@ -24,6 +24,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["attemptResult"] = &flow.Application{
 		Handler: processingHandlerMiddleware(r.attemptResult),
 	}
+	apps["resumeAttempt"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.resumeAttempt),
+	}
 
 	return apps
 }

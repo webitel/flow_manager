@@ -25,6 +25,7 @@ func (fm *FlowManager) CreateMember(domainId int64, queueId int, holdSec int, me
 func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (gogrpc.MemberService_CallJoinToAgentClient, error) {
 	return fm.cc.Member().CallJoinToAgent(ctx, in)
 }
+
 func (fm *FlowManager) TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (gogrpc.MemberService_TaskJoinToAgentClient, error) {
 	return fm.cc.Member().TaskJoinToAgent(ctx, in)
 }
@@ -137,4 +138,8 @@ func (fm *FlowManager) CancelAttempt(ctx context.Context, att model.InQueueKey, 
 	}
 
 	return nil
+}
+
+func (fm *FlowManager) ResumeAttempt(ctx context.Context, attemptId int64, domainId int64) error {
+	return fm.cc.Member().ResumeAttempt(ctx, attemptId, domainId)
 }
