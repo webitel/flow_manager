@@ -38,6 +38,7 @@ require github.com/rabbitmq/amqp091-go v1.8.1
 
 require (
 	github.com/h2non/filetype v1.1.3
+	github.com/k3a/html2text v1.2.1
 	github.com/mattn/go-sqlite3 v1.14.6
 	github.com/redis/go-redis/v9 v9.0.5
 )

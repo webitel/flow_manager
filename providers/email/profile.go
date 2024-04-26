@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/k3a/html2text"
 	"io"
 	"io/ioutil"
 	"net"
@@ -415,6 +416,10 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 			}
 			m.Attachments = append(m.Attachments, file)
 		}
+	}
+
+	if len(text) == 0 && len(html) != 0 {
+		text = []byte(html2text.HTML2Text(string(html)))
 	}
 
 	if text != nil {
