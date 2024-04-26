@@ -23,6 +23,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/h2non/filetype v1.1.3
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
+	github.com/k3a/html2text v1.2.1
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/mbobakov/grpc-consul-resolver v1.5.3
@@ -33,7 +34,7 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/call_center v0.0.0-20240425092354-4485596f8c8e
+	github.com/webitel/call_center v0.0.0-20240426093900-968cf17176f8
 	github.com/webitel/engine v0.0.0-20240409111830-4781844bb052
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.19.0
