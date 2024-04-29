@@ -48,6 +48,9 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 		case "agent_status":
 			val = `(select a.status::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "status_payload":
+			val = `(select coalesce(a.status_payload, '')::text
+				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
 		case "super_extension":
 			val = `(select su.extension::text
 from call_center.cc_agent a
