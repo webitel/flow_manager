@@ -21,10 +21,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
                       from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, 
-					  attempt_id, member_id, grantee_id, params)
+					  attempt_id, member_id, grantee_id, params, heartbeat)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
         :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, 
-		:AttemptId, :MemberId, :GranteeId, jsonb_build_object('sip_id', :SipId::varchar))
+		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -48,7 +48,8 @@ on conflict (id)
 		attempt_id = EXCLUDED.attempt_id,
 		member_id = EXCLUDED.member_id,
 		grantee_Id = EXCLUDED.grantee_Id,
-		params = EXCLUDED.params
+		params = EXCLUDED.params,
+        heartbeat = EXCLUDED.heartbeat
 		`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
@@ -77,7 +78,8 @@ on conflict (id)
 		"MemberId":  call.GetMemberIdId(),
 		"GranteeId": call.GranteeId,
 		"Payload":   nil,
-		"SipId":     call.SipId,
+		"Params":    call.GetParams(),
+		"Hb":        call.Heartbeat,
 	})
 
 	if err != nil {
@@ -197,7 +199,15 @@ where id = :Id;`, map[string]interface{}{
 func (s SqlCallStore) MoveToHistory() ([]model.MissedCall, *model.AppError) {
 	var missedCalls []model.MissedCall
 	_, err := s.GetMaster().Select(&missedCalls, `
-with del_calls as materialized (
+with hb as materialized (
+	update call_center.cc_calls
+	set state = 'hangup',
+		sip_code = 500,
+		hangup_at = now() - interval '2s',
+		hangup_by = 'service',
+		cause = 'MEDIA_TIMEOUT'
+	where heartbeat < now() - (((params->>'heartbeat')::int * 3) || ' sec')::interval),
+del_calls as materialized (
     select *
     from call_center.cc_calls c
         where c.hangup_at < now() - '1 sec'::interval
@@ -580,6 +590,21 @@ limit 1`, map[string]interface{}{
 
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetVariables", "store.sql_call.set_vars.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) SetHeartbeat(id string) *model.AppError {
+	_, err := s.GetMaster().Exec(`update call_center.cc_calls
+set heartbeat = now() + (params->>'heartbeat' || ' sec')::interval
+where id = :Id`, map[string]interface{}{
+		"Id": id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SetHeartbeat", "store.sql_call.heartbeat.error", nil,
+			fmt.Sprintf("Id=%v %v", id, err.Error()), extractCodeFromErr(err))
 	}
 
 	return nil

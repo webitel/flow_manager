@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/webitel/wlog"
 )
@@ -44,13 +45,14 @@ const (
 )
 
 const (
-	CallActionRingingName = "ringing"
-	CallActionActiveName  = "active"
-	CallActionBridgeName  = "bridge"
-	CallActionHoldName    = "hold"
-	CallActionDtmfName    = "dtmf"
-	CallActionSTTName     = "stt"
-	CallActionHangupName  = "hangup"
+	CallActionRingingName   = "ringing"
+	CallActionActiveName    = "active"
+	CallActionBridgeName    = "bridge"
+	CallActionHoldName      = "hold"
+	CallActionDtmfName      = "dtmf"
+	CallActionSTTName       = "stt"
+	CallActionHangupName    = "hangup"
+	CallActionHeartbeatName = "heartbeat"
 )
 
 type MissedCall struct {
@@ -132,6 +134,7 @@ type CallActionInfo struct {
 	Queue       *QueueInfo     `json:"queue"`
 	GranteeId   *int           `json:"grantee_id"`
 	SipId       *string        `json:"sip_id"`
+	Heartbeat   int            `json:"heartbeat,omitempty"`
 }
 
 type CallActionRinging struct {
@@ -190,11 +193,26 @@ func (r *CallActionRinging) GetTo() *CallEndpoint {
 	return nil
 }
 
+func (r *CallActionRinging) GetParams() []byte {
+	arr := make([]string, 0, 0)
+	if r.SipId != nil {
+		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, *r.SipId))
+	}
+	if r.Heartbeat > 0 {
+		arr = append(arr, fmt.Sprintf(`"heartbeat":%d`, r.Heartbeat))
+	}
+	return []byte(`{` + strings.Join(arr, ",") + `}`)
+}
+
 type CallActionActive struct {
 	CallAction
 }
 
 type CallActionHold struct {
+	CallAction
+}
+
+type CallActionHeartbeat struct {
 	CallAction
 }
 
@@ -315,6 +333,11 @@ func (c *CallActionData) GetEvent() interface{} {
 
 	case CallActionHoldName:
 		c.parsed = &CallActionHold{
+			CallAction: c.CallAction,
+		}
+
+	case CallActionHeartbeatName:
+		c.parsed = &CallActionHeartbeat{
 			CallAction: c.CallAction,
 		}
 

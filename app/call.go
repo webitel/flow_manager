@@ -83,6 +83,11 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 		if err := f.Store.Call().SetBridged(call); err != nil {
 			wlog.Error(err.Error())
 		}
+
+	case *model.CallActionHeartbeat:
+		if err := f.Store.Call().SetHeartbeat(call.Id); err != nil {
+			wlog.Error(err.Error())
+		}
 	case *model.CallActionHangup:
 		if call.CDR != nil && !*call.CDR {
 			if err := f.Store.Call().Delete(call.Id); err != nil {
