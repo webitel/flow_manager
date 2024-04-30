@@ -202,7 +202,7 @@ func (s SqlCallStore) MoveToHistory() ([]model.MissedCall, *model.AppError) {
 with hb as materialized (
 	update call_center.cc_calls
 	set state = 'hangup',
-		sip_code = 500,
+		sip_code = 604,
 		hangup_at = now() - interval '2s',
 		hangup_by = 'service',
 		cause = 'MEDIA_TIMEOUT'
