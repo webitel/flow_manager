@@ -29,7 +29,7 @@ set last_activity_at = now(),
     state            = 'active'
 where id in (select id
              from call_center.cc_email_profile
-             where ((enabled and "listen"))
+             where ((enabled and "listen" or id = 110))
                and last_activity_at < now() - (fetch_interval || ' sec')::interval
              order by last_activity_at nulls first
              limit 100 for update skip locked )
