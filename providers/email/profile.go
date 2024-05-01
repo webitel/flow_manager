@@ -79,6 +79,7 @@ func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 		oauthConfig: params.OAuthConfig(),
 		token:       params.Token,
 		authMethod:  params.AuthType,
+		Tls:         params.Tls(),
 	}
 }
 
@@ -320,8 +321,17 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	} else {
 		auth = smtp.PlainAuth("", p.login, p.password, p.smtpHost)
 	}
+	if p.Tls {
+		tlsConfig := &tls.Config{
+			//ServerName: "smtp.office365.com",
+			InsecureSkipVerify: true,
+		}
+		err = e.SendWithStartTLS(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth, tlsConfig)
+	} else {
+		err = e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth)
+	}
 
-	if err := e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth); err != nil {
+	if err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
 

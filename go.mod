@@ -12,7 +12,7 @@ require (
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/jordan-wright/email v0.0.0-20200322182553-8eef2508c362
+	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/lib/pq v1.10.9
 	github.com/mbobakov/grpc-consul-resolver v1.5.2
 	github.com/mitchellh/mapstructure v1.5.0

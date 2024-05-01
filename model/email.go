@@ -24,7 +24,8 @@ type OAuth2Config struct {
 }
 
 type MailParams struct {
-	OAuth2 *OAuth2Config `json:"oauth2"`
+	OAuth2   *OAuth2Config `json:"oauth2"`
+	Insecure bool          `json:"insecure"`
 }
 
 const (
@@ -94,6 +95,10 @@ func (p *EmailProfile) OAuthConfig() oauth2.Config {
 	}
 
 	return oauth2.Config{}
+}
+
+func (p *EmailProfile) Tls() bool {
+	return p.Params != nil && p.Params.Insecure
 }
 
 func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
