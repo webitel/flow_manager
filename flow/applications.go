@@ -192,6 +192,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.joinAgentToTask),
 	}
+	apps["global"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.global),
+	}
 
 	return apps
 }
