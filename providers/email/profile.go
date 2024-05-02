@@ -319,13 +319,15 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	if p.authMethod == model.MailAuthTypeOAuth2 {
 		//  Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
 		auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
+	} else if p.Tls {
+		auth = LoginAuth(p.login, p.password)
 	} else {
 		auth = smtp.PlainAuth("", p.login, p.password, p.smtpHost)
 	}
 	if p.Tls {
 		tlsConfig := &tls.Config{
 			//ServerName: "smtp.office365.com",
-			InsecureSkipVerify: true,
+			//InsecureSkipVerify: true,
 		}
 		err = e.SendWithStartTLS(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth, tlsConfig)
 		wlog.Debug(fmt.Sprintf("[%s] reply tls to %s", p.name, parent.From))
@@ -468,6 +470,39 @@ func (a *OAuth2Smtp) Next(fromServer []byte, more bool) ([]byte, error) {
 	if more {
 		// We've already sent everything.
 		return nil, fmt.Errorf("unexpected server challenge: %s", fromServer)
+	}
+	return nil, nil
+}
+
+type loginAuth struct {
+	username, password string
+}
+
+// loginAuth returns an Auth that implements the LOGIN authentication
+// mechanism as defined in RFC 4616.
+func LoginAuth(username, password string) smtp.Auth {
+	return &loginAuth{username, password}
+}
+
+func (a *loginAuth) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	return "LOGIN", nil, nil
+}
+
+func (a *loginAuth) Next(fromServer []byte, more bool) ([]byte, error) {
+	command := string(fromServer)
+	command = strings.TrimSpace(command)
+	command = strings.TrimSuffix(command, ":")
+	command = strings.ToLower(command)
+
+	if more {
+		if command == "username" {
+			return []byte(fmt.Sprintf("%s", a.username)), nil
+		} else if command == "password" {
+			return []byte(fmt.Sprintf("%s", a.password)), nil
+		} else {
+			// We've already sent everything.
+			return nil, fmt.Errorf("unexpected server challenge: %s", command)
+		}
 	}
 	return nil, nil
 }
