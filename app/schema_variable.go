@@ -1,8 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/model"
 
 	"github.com/webitel/wlog"
 
@@ -30,6 +32,34 @@ func (f *FlowManager) SchemaVariable(ctx context.Context, domainId int64, name s
 	})
 
 	return v.(string)
+}
+
+func (f *FlowManager) SetSchemaVariable(ctx context.Context, domainId int64, vars map[string]*model.SchemaVariable) *model.AppError {
+	if len(vars) == 0 {
+		return nil
+	}
+	var err error
+	var appErr *model.AppError
+
+	for k, v := range vars {
+		if v.Encrypt {
+			v.Value, err = f.cert.EncryptBytes(v.Value)
+			if err != nil {
+				return model.NewAppError("SetSchemaVariable", "app.", nil, err.Error(), 500)
+			}
+		}
+		var buffer bytes.Buffer
+		buffer.WriteString(`"`)
+		buffer.Write(v.Value)
+		buffer.WriteString(`"`)
+		v.Value = buffer.Bytes()
+
+		if appErr = f.Store.Schema().SetVariable(domainId, k, v); appErr != nil {
+			wlog.Error(appErr.Error())
+		}
+	}
+
+	return nil
 }
 
 func (f *FlowManager) schemaVariable(key string, domainId int64, name string) string {

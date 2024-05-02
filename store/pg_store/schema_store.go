@@ -90,3 +90,23 @@ where domain_id = :DomainId and name = :Name`, map[string]interface{}{
 
 	return v, nil
 }
+
+func (s SqlSchemaStore) SetVariable(domainId int64, name string, val *model.SchemaVariable) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into flow.scheme_variable(domain_id, name, value, encrypt)
+values (:DomainId, :Name, :Value, :Encrypt)
+on conflict (domain_id, name)
+    do update set
+      value = EXCLUDED.value,
+      encrypt = EXCLUDED.encrypt`, map[string]interface{}{
+		"DomainId": domainId,
+		"Name":     name,
+		"Value":    val.Value,
+		"Encrypt":  val.Encrypt,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlSchemaStore.SetVariable", "store.sql_schema.set_var.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
