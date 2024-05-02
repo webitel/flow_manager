@@ -326,8 +326,8 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	}
 	if p.Tls {
 		tlsConfig := &tls.Config{
-			//ServerName: "smtp.office365.com",
-			//InsecureSkipVerify: true,
+			ServerName:         fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort),
+			InsecureSkipVerify: true,
 		}
 		err = e.SendWithStartTLS(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth, tlsConfig)
 		wlog.Debug(fmt.Sprintf("[%s] reply tls to %s", p.name, parent.From))
