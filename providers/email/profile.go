@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/k3a/html2text"
 	"io"
 	"io/ioutil"
 	"net"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/k3a/html2text"
 
 	"github.com/webitel/wlog"
 
@@ -327,6 +328,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 			InsecureSkipVerify: true,
 		}
 		err = e.SendWithStartTLS(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth, tlsConfig)
+		wlog.Debug(fmt.Sprintf("[%s] reply tls to %s", p.name, parent.From))
 	} else {
 		err = e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth)
 	}
