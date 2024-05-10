@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	timeoutFlowSchema = 30 * time.Second //todo config ?
+	timeoutFlowSchema = 5 * time.Second //todo config ?
 )
 
 func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
