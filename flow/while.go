@@ -97,6 +97,7 @@ func nextStep(req *whileArgs) {
 }
 
 func endCycle(req *whileArgs) {
+	wlog.Debug("while endCycle!")
 	req.step = 0
 }
 
