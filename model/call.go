@@ -239,6 +239,7 @@ type CallActionHangup struct {
 	AmdAiPositive  *bool          `json:"amd_ai_positive"`
 	CDR            *bool          `json:"cdr"`
 	SchemaIds      []int          `json:"schema_ids"`
+	HangupPhrase   *string        `json:"hangup_phrase,omitempty"`
 }
 
 type CallActionSTT struct {
