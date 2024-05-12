@@ -238,7 +238,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params,
 								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number, 
-  								   schema_ids, hangup_phrase)
+  								   schema_ids, hangup_phrase, blind_transfers)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -291,7 +291,8 @@ select c.created_at created_at,
 	   c.contact_id,
 	   c.search_number,
        c.schema_ids,
-	   c.hangup_phrase
+	   c.hangup_phrase,
+	   c.blind_transfers
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -522,7 +523,8 @@ where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
 
 func (s SqlCallStore) SetBlindTransfer(domainId int64, id string, destination string) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
-set blind_transfer = :Destination 
+set blind_transfer = :Destination::varchar,
+    blind_transfers = coalesce(blind_transfers, '[]')::jsonb || jsonb_build_object('number', :Destination::varchar, 'time', (extract(epoch from now())::numeric * 1000)::int8)
 where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 		"Id":          id,
 		"DomainId":    domainId,
