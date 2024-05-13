@@ -76,7 +76,7 @@ func inArr(val string, matchType MatchType, tokens ...string) bool {
 	}
 
 	for _, v := range tokens {
-		if matchFunc(val, v) {
+		if matchFunc(v, val) {
 			return true
 		}
 	}
