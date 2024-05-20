@@ -11,4 +11,5 @@ type SearchUser struct {
 	Id        *int    `json:"id"`
 	Name      *string `json:"name"`
 	Extension *string `json:"extension" db:"extension"`
+	AgentId   *int    `json:"agentId"`
 }

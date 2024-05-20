@@ -82,6 +82,7 @@ from (
 		from directory.wbt_user u
 		where u.dc = :DomainId
 		and (:Id::int8 isnull or u.id = :Id)
+		and (case when :AgentId::int notnull then (u.id = (select a.user_id from call_center.cc_agent a where a.id = :AgentId and a.domain_id = :DomainId)) else true end)
 		and (:Extension::varchar isnull or u.extension = :Extension)
 		and (:Name::varchar isnull or coalesce(u.name, u.username) = :Name::varchar)
 		limit 1
@@ -89,6 +90,7 @@ from (
 		"Id":        search.Id,
 		"Name":      search.Name,
 		"Extension": search.Extension,
+		"AgentId":   search.AgentId,
 		"DomainId":  domainId,
 	})
 
