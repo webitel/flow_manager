@@ -134,13 +134,13 @@ func (fm *FlowManager) GetChatRouteFromUserId(domainId int64, userId int64) (*mo
 	return routing, nil
 }
 
-func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat) *model.AppError {
-	err := fm.chatManager.BroadcastMessage(ctx, domainId, req)
+func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat) (*model.BroadcastChatResponse, *model.AppError) {
+	resp, err := fm.chatManager.BroadcastMessage(ctx, domainId, req)
 	if err != nil {
-		return model.NewAppError("Chat", "chat.broadcast.error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, model.NewAppError("Chat", "chat.broadcast.error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return nil
+	return resp, nil
 }
 
 func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
