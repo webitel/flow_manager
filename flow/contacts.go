@@ -34,6 +34,7 @@ type UpdateContactRequest struct {
 }
 
 type LinkContactArgv struct {
+	Token     string `json:"token"` // TODO deprecated (for chat)
 	SessionId string `json:"sessionId"`
 	ContactId int64  `json:"contactId"`
 }
@@ -116,6 +117,9 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 	switch conn.Type() {
 	case model.ConnectionTypeCall:
 		err = r.fm.SetContactId(conn.DomainId(), conn.Id(), argv.ContactId)
+	case model.ConnectionTypeChat:
+		err = r.fm.ContactLinkToChat(argv.Token, fmt.Sprintf("%v", argv.ContactId), conn.Id())
+
 	default:
 		if argv.SessionId != "" {
 			err = r.fm.SetContactId(conn.DomainId(), argv.SessionId, argv.ContactId)

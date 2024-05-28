@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	gogrpc "buf.build/gen/go/webitel/chat/grpc/go/_gogrpc"
+	chgrpc "buf.build/gen/go/webitel/chat/grpc/go/messages/messagesgrpc"
 )
 
 var (
@@ -22,6 +23,7 @@ type ChatClientConnection struct {
 	host     string
 	client   *grpc.ClientConn
 	api      gogrpc.ChatServiceClient
+	contacts chgrpc.ContactLinkingServiceClient
 	messages gogrpc.MessagesClient
 }
 
@@ -46,6 +48,7 @@ func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 
 	connection.api = gogrpc.NewChatServiceClient(connection.client)
 	connection.messages = gogrpc.NewMessagesClient(connection.client)
+	connection.contacts = chgrpc.NewContactLinkingServiceClient(connection.client)
 
 	return connection, nil
 }
