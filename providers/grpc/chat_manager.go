@@ -148,6 +148,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		Message: msg,
 		From:    req.Profile.Id,
 		Peer:    req.Peer,
+		Timeout: req.Timeout,
 	})
 
 	if e != nil {
