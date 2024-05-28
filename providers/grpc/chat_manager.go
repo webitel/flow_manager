@@ -3,10 +3,10 @@ package grpc
 import (
 	"buf.build/gen/go/webitel/chat/protocolbuffers/go/messages"
 	"context"
-	"errors"
 	"fmt"
 	"google.golang.org/grpc/metadata"
 	"sync"
+	"time"
 
 	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"github.com/webitel/flow_manager/model"
@@ -121,10 +121,10 @@ func (cm *ChatManager) wakeUp() {
 	cm.poolConnections.RecheckConnections(list.Ids())
 }
 
-func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat) error {
+func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat) (*model.BroadcastChatResponse, error) {
 	c, e := cc.getRandCli()
 	if e != nil {
-		return e
+		return nil, e
 	}
 
 	msg := &proto.Message{
@@ -138,22 +138,31 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		msg.Buttons = getChatButtons(req.Menu.Buttons)
 		msg.Inline = getChatButtons(req.Menu.Inline)
 	}
-
-	res, e := c.messages.BroadcastMessage(ctx, &proto.BroadcastMessageRequest{
+	var newContext context.Context
+	if req.Timeout != 0 {
+		newContext, _ = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Second)
+	} else {
+		newContext = ctx
+	}
+	broadcastResponse, e := c.messages.BroadcastMessage(newContext, &proto.BroadcastMessageRequest{
 		Message: msg,
 		From:    req.Profile.Id,
 		Peer:    req.Peer,
 	})
 
 	if e != nil {
-		return e
+		return nil, e
 	}
 
-	if len(res.Failure) > 0 {
-		return errors.New(res.Failure[0].String())
+	res := model.BroadcastChatResponse{
+		Failed: make([]*model.FailedReceiver, 0),
 	}
 
-	return nil
+	for _, peer := range broadcastResponse.GetFailure() {
+		res.Failed = append(res.Failed, &model.FailedReceiver{Id: peer.Peer, Error: peer.Error.Message})
+	}
+	res.Variables = broadcastResponse.Variables
+	return &res, nil
 }
 
 func (cc *ChatManager) LinkContact(token string, contactId string, conversationId string) error {

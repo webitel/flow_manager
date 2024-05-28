@@ -50,6 +50,20 @@ type BroadcastChat struct {
 	Variables    map[string]string
 	DomainId     int64
 	ResponseCode string `json:"responseCode"`
+	// FailedReceivers used to set the variable name in which will be saved failed receivers. (if not set then info about failed receivers will not be saved)
+	FailedReceivers string `json:"failedReceivers"`
+	// Timeout determines how much time chat_manager is waiting (in secs) for the response from the host(telegram|whatsapp..) on our callback url.
+	Timeout int64 `json:"timeout"`
+}
+
+type BroadcastChatResponse struct {
+	Failed    []*FailedReceiver `json:"failed"`
+	Variables map[string]string
+}
+
+type FailedReceiver struct {
+	Id    string `json:"id,omitempty"`
+	Error string `json:"error,omitempty"`
 }
 
 type ChatMessage struct {
