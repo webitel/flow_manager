@@ -1,9 +1,11 @@
 package grpc
 
 import (
+	"buf.build/gen/go/webitel/chat/protocolbuffers/go/messages"
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/metadata"
 	"sync"
 
 	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
@@ -151,6 +153,24 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		return errors.New(res.Failure[0].String())
 	}
 
+	return nil
+}
+
+func (cc *ChatManager) LinkContact(token string, contactId string, conversationId string) error {
+	c, e := cc.getRandCli()
+	if e != nil {
+		return e
+	}
+	// TODO
+	header := metadata.New(map[string]string{"x-webitel-access": token})
+	ctx := metadata.NewOutgoingContext(context.TODO(), header)
+	_, e = c.contacts.LinkContactToClient(ctx, &messages.LinkContactToClientRequest{
+		ConversationId: conversationId,
+		ContactId:      contactId,
+	})
+	if e != nil {
+		return e
+	}
 	return nil
 }
 

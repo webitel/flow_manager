@@ -155,3 +155,12 @@ func (fm *FlowManager) SenChatAction(ctx context.Context, channelId string, acti
 
 	return nil
 }
+
+func (fm *FlowManager) ContactLinkToChat(token string, contactId string, conversationId string) *model.AppError {
+	err := fm.chatManager.LinkContact(token, contactId, conversationId)
+	if err != nil {
+		return model.NewAppError("Chat", "chat.link_contact.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return nil
+}
