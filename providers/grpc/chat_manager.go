@@ -140,7 +140,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	}
 	var newContext context.Context
 	if req.Timeout != 0 {
-		newContext, _ = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Second)
+		newContext, _ = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Millisecond)
 	} else {
 		newContext = ctx
 	}
