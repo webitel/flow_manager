@@ -118,7 +118,7 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 	case model.ConnectionTypeCall:
 		err = r.fm.SetContactId(conn.DomainId(), conn.Id(), argv.ContactId)
 	case model.ConnectionTypeChat:
-		err = r.fm.ContactLinkToChat(argv.Token, fmt.Sprintf("%v", argv.ContactId), conn.Id())
+		err = r.fm.ContactLinkToChat(ctx, fmt.Sprintf("%v", argv.ContactId), conn.Id())
 
 	default:
 		if argv.SessionId != "" {
