@@ -34,7 +34,6 @@ type UpdateContactRequest struct {
 }
 
 type LinkContactArgv struct {
-	Token     string `json:"token"` // TODO deprecated (for chat)
 	SessionId string `json:"sessionId"`
 	ContactId int64  `json:"contactId"`
 }
