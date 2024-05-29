@@ -5,8 +5,8 @@ go 1.19
 require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.3.0-20240425073914-85c52be6ff00.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.33.0-20240425073914-85c52be6ff00.1
-	buf.build/gen/go/webitel/chat/grpc/go v1.3.0-20240527133227-7fcca6c163ea.3
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.1-20240527133227-7fcca6c163ea.1
+	buf.build/gen/go/webitel/chat/grpc/go v1.3.0-20240529130243-4bbb230be33b.3
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.1-20240529130243-4bbb230be33b.1
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.34.1-20240517121312-fb197671fcfd.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.3.0-20240402131908-59ee244702ce.2
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.33.0-20240402131908-59ee244702ce.1
@@ -34,7 +34,7 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/call_center v0.0.0-20240426093900-968cf17176f8
+	github.com/webitel/call_center v0.0.0-20240527141654-367a8931c772
 	github.com/webitel/engine v0.0.0-20240409111830-4781844bb052
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.19.0

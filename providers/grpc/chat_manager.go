@@ -4,7 +4,6 @@ import (
 	"buf.build/gen/go/webitel/chat/protocolbuffers/go/messages"
 	"context"
 	"fmt"
-	"google.golang.org/grpc/metadata"
 	"sync"
 	"time"
 
@@ -166,15 +165,12 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	return &res, nil
 }
 
-func (cc *ChatManager) LinkContact(token string, contactId string, conversationId string) error {
+func (cc *ChatManager) LinkContact(ctx context.Context, contactId string, conversationId string) error {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return e
 	}
-	// TODO
-	header := metadata.New(map[string]string{"x-webitel-access": token})
-	ctx := metadata.NewOutgoingContext(context.TODO(), header)
-	_, e = c.contacts.LinkContactToClient(ctx, &messages.LinkContactToClientRequest{
+	_, e = c.contacts.LinkContactToClientNA(ctx, &messages.LinkContactToClientNARequest{
 		ConversationId: conversationId,
 		ContactId:      contactId,
 	})
