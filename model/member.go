@@ -42,7 +42,8 @@ type CallbackMember struct {
 	Agent         struct {
 		Id *int `json:"id"`
 	} `json:"agent"`
-	ExpireAt *int64 `json:"expire_at"`
+	ExpireAt  *int64  `json:"expire_at"`
+	StopCause *string `json:"stop_cause,omitempty"`
 }
 
 type SearchMember struct {
