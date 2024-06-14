@@ -4,6 +4,7 @@ const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
 	ConversationSessionId            = "uuid"
+	ConversationProfileId            = "wbt_profile_id"
 
 	BreakChatTransferCause = "TRANSFER"
 )

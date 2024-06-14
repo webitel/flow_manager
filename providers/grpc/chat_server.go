@@ -84,6 +84,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 	}
 	conv.Set(ctx, map[string]interface{}{
 		model.ConversationSessionId: conv.id,
+		model.ConversationProfileId: conv.profileId,
 	})
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
