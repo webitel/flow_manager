@@ -24,7 +24,7 @@ type Conversation interface {
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
 	SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError)
 	SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError)
-	ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError)
+	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *model.AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
 	Export(ctx context.Context, vars []string) (model.Response, *model.AppError)
 	DumpExportVariables() map[string]string

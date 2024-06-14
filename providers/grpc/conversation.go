@@ -15,6 +15,10 @@ import (
 	"github.com/webitel/wlog"
 )
 
+var (
+	ErrWaitMessageTimeout = model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
+)
+
 type conversation struct {
 	id            string
 	profileId     int64
@@ -332,7 +336,26 @@ func (c *conversation) deleteConfirmationId(id string) {
 	c.mx.Unlock()
 }
 
-func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError) {
+func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *model.AppError) {
+	msgs, err := c.receive(ctx, timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	if messageTimeout > 0 {
+		var m []*proto.Message
+		for err == nil {
+			m, err = c.receive(ctx, messageTimeout)
+			msgs = append(msgs, m...)
+		}
+	}
+	if len(msgs) > 0 && name != "" {
+		c.storeMessages[name], _ = json.Marshal(msgs[0])
+	}
+	return messageToText(msgs...), nil
+}
+
+func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Message, *model.AppError) {
 	id := model.NewId()
 
 	ch := make(chan []*proto.Message)
@@ -350,13 +373,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 	}
 
 	if len(res.Messages) > 0 {
-		//FIXME save msg
-		msgs := make([]string, 0, len(res.Messages))
-		for _, m := range res.Messages {
-			msgs = append(msgs, m.Text)
-		}
-
-		return msgs, nil
+		return res.Messages, nil
 	}
 
 	if timeout == 0 {
@@ -370,19 +387,14 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 	select {
 	case <-c.Context().Done():
 		wlog.Debug(fmt.Sprintf("conversation %s wait message: cancel", c.id))
-		break
+		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Cancel", http.StatusInternalServerError)
 	case <-t:
 		wlog.Debug(fmt.Sprintf("conversation %s wait message: timeout", c.id))
-		break
-	case msgs := <-ch:
-		wlog.Debug(fmt.Sprintf("conversation %s receive message: %s", c.id, msgs))
-		if len(msgs) > 0 && name != "" {
-			c.storeMessages[name], _ = json.Marshal(msgs[0])
-		}
-		return messageToText(msgs...), nil
+		return nil, ErrWaitMessageTimeout
+	case msgsProto := <-ch:
+		wlog.Debug(fmt.Sprintf("conversation %s receive message: %v", c.id, msgsProto))
+		return msgsProto, nil
 	}
-
-	return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Timeout", http.StatusInternalServerError)
 }
 
 func (c *conversation) NodeName() string {

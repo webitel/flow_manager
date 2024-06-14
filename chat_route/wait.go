@@ -11,12 +11,15 @@ import (
 )
 
 type ReceiveMessage struct {
-	Timeout int
-	Set     string
+	Timeout        int
+	MessageTimeout int `json:"messageTimeout"`
+	Delimiter      string
+	Set            string
 }
 
 func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
 	var argv ReceiveMessage
+	delimiter := " "
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
@@ -26,7 +29,11 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 		return model.CallResponseOK, nil
 	}
 
-	msgs, err := conv.ReceiveMessage(ctx, argv.Set, argv.Timeout)
+	if len(argv.Delimiter) != 0 {
+		delimiter = argv.Delimiter
+	}
+
+	msgs, err := conv.ReceiveMessage(ctx, argv.Set, argv.Timeout, argv.MessageTimeout)
 	if err != nil {
 		conv.Set(ctx, model.Variables{
 			argv.Set: "",
@@ -49,6 +56,6 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 	}
 
 	return conv.Set(ctx, model.Variables{
-		argv.Set: strings.Join(msgs, " "),
+		argv.Set: strings.Join(msgs, delimiter),
 	})
 }
