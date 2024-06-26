@@ -48,6 +48,7 @@ type EmailStore interface {
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
 	SetToken(id int, token *oauth2.Token) *model.AppError
 	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
+	SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
 }
 
 type CallStore interface {

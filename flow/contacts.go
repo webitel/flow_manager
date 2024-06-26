@@ -3,10 +3,9 @@ package flow
 import (
 	"context"
 	"fmt"
-	"net/http"
-
 	"github.com/webitel/engine/pkg/webitel_client"
 	"github.com/webitel/flow_manager/model"
+	"net/http"
 )
 
 type GetContactRequest struct {
@@ -34,8 +33,10 @@ type UpdateContactRequest struct {
 }
 
 type LinkContactArgv struct {
-	SessionId string `json:"sessionId"`
-	ContactId int64  `json:"contactId"`
+	SessionId  string  `json:"sessionId"`
+	ContactId  int64   `json:"contactId"`
+	ContactIds []int64 `json:"contactIds"`
+	Channel    string  `json:"channel"`
 }
 
 func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -109,22 +110,41 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 		return nil, err
 	}
 
-	if argv.ContactId == 0 {
-		return model.CallResponseError, model.ErrorRequiredParameter("linkContact", "ContactId")
+	contacts := argv.ContactIds
+
+	if argv.ContactId != 0 {
+		contacts = []int64{argv.ContactId}
 	}
 
-	switch conn.Type() {
+	if len(contacts) == 0 {
+		return model.CallResponseError, model.ErrorRequiredParameter("linkContact", "Contact")
+	}
+
+	if argv.SessionId == "" {
+		argv.SessionId = conn.Id()
+	}
+
+	channel := conn.Type()
+
+	switch argv.Channel {
+	case "call":
+		channel = model.ConnectionTypeCall
+	case "email":
+		channel = model.ConnectionTypeEmail
+	case "chat":
+		channel = model.ConnectionTypeChat
+	}
+
+	switch channel {
 	case model.ConnectionTypeCall:
-		err = r.fm.SetContactId(conn.DomainId(), conn.Id(), argv.ContactId)
+		err = r.fm.CallSetContactId(conn.DomainId(), argv.SessionId, contacts[0])
 	case model.ConnectionTypeChat:
-		err = r.fm.ContactLinkToChat(ctx, fmt.Sprintf("%v", argv.ContactId), conn.Id())
+		err = r.fm.ContactLinkToChat(ctx, argv.SessionId, fmt.Sprintf("%v", contacts[0]))
+	case model.ConnectionTypeEmail:
+		err = r.fm.MailSetContacts(ctx, conn.DomainId(), argv.SessionId, contacts)
 
 	default:
-		if argv.SessionId != "" {
-			err = r.fm.SetContactId(conn.DomainId(), argv.SessionId, argv.ContactId)
-		} else {
-			return model.CallResponseError, model.NewAppError("flow", "flow.todo", nil, "", http.StatusInternalServerError)
-		}
+		return model.CallResponseError, model.NewAppError("flow", "flow.todo", nil, "", http.StatusInternalServerError)
 	}
 
 	if err != nil {
@@ -132,7 +152,7 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 	}
 
 	return conn.Set(ctx, model.Variables{
-		"wbt_contact_id": fmt.Sprintf("%d", argv.ContactId),
+		"wbt_contact_id": fmt.Sprintf("%d", contacts[0]), // TODO
 	})
 }
 

@@ -137,7 +137,7 @@ func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId string, dest
 	return f.Store.Call().SetBlindTransfer(domainId, callId, destination)
 }
 
-func (f *FlowManager) SetContactId(domainId int64, callId string, contactId int64) *model.AppError {
+func (f *FlowManager) CallSetContactId(domainId int64, callId string, contactId int64) *model.AppError {
 	return f.Store.Call().SetContactId(domainId, callId, contactId)
 }
 

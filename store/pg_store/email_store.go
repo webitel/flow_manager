@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -21,7 +22,7 @@ func NewSqlEmailStore(sqlStore SqlStore) store.EmailStore {
 	return st
 }
 
-func (s SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
+func (s *SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
 	var tasks []*model.EmailProfileTask
 
 	_, err := s.GetReplica().Select(&tasks, `update call_center.cc_email_profile
@@ -43,7 +44,7 @@ returning id, (extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 	return tasks, nil
 }
 
-func (s SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
+func (s *SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
 	id, err := s.GetMaster().SelectInt(`insert into call_center.cc_email ("from", "to", profile_id, subject, cc, body, direction, message_id, sender, reply_to,
                       in_reply_to, parent_id, html, attachment_ids)
 values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
@@ -75,7 +76,7 @@ values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :Message
 	return nil
 }
 
-func (s SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError) {
+func (s *SqlEmailStore) GetProfile(id int) (*model.EmailProfile, *model.AppError) {
 	var profile *model.EmailProfile
 
 	err := s.GetReplica().SelectOne(&profile, `select t.id,
@@ -124,7 +125,7 @@ where id = :Id`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlEmailStore) GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError) {
+func (s *SqlEmailStore) GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError) {
 	updatedAt, err := s.GetMaster().SelectInt(`select (extract(EPOCH from updated_at) * 1000)::int8 updated_at
 from call_center.cc_email_profile
 where id = :Id and domain_id = :DomainId`, map[string]interface{}{
@@ -140,7 +141,7 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 	return updatedAt, nil
 }
 
-func (s SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
+func (s *SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
 set fetch_err = :Err
 where id = :Id`, map[string]interface{}{
@@ -156,13 +157,13 @@ where id = :Id`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlEmailStore) GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError) {
+func (s *SqlEmailStore) GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError) {
 	f := make([]string, 0, 0)
 
 	for k, v := range mapRes {
 		var val = ""
 		switch v {
-		case "from", "to", "subject",
+		case "from", "to", "subject", "contact_ids",
 			"cc", "sender", "reply_to", "in_reply_to", "body", "html", "attachments", "message_id", "id":
 			val = fmt.Sprintf("coalesce(\"%s\"::text, '') as %s", v, pq.QuoteIdentifier(k))
 			f = append(f, val)
@@ -194,7 +195,8 @@ from (
 				where f.uuid = e.message_id
 					and f.domain_id = :DomainId
                 limit 40
-			) t)::text as attachments
+			) t)::text as attachments,
+			coalesce(array_to_json(contact_ids)::text, '') as contact_ids
         from call_center.cc_email e
         where (id = :Id or message_id = :MessageId)
             and exists(select 1 from call_center.cc_email_profile p where p.domain_id = :DomainId and p.id = e.profile_id)
@@ -214,7 +216,7 @@ from (
 	return t.Variables, nil
 }
 
-func (s SqlEmailStore) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
+func (s *SqlEmailStore) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
 	var smptSettings *model.SmtSettings
 	err := s.GetReplica().SelectOne(&smptSettings, `select jsonb_build_object('user', p.login, 'password', p.password) as auth,
        p.smtp_port                                                 as port,
@@ -239,4 +241,20 @@ limit 1`, map[string]interface{}{
 	}
 
 	return smptSettings, nil
+}
+
+func (s *SqlEmailStore) SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError {
+	_, err := s.GetMaster().WithContext(ctx).Exec(`update call_center.cc_email
+set contact_ids = :ContactIds 
+where message_id = :Id`, map[string]interface{}{
+		"ContactIds": pq.Array(contactIds),
+		"Id":         id,
+	})
+
+	if err != nil {
+		return model.NewAppError("SqlEmailStore.SetContact", "store.sql_email.set_contact", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }
