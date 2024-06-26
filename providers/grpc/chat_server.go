@@ -219,7 +219,6 @@ func pettyMessage(msg *chat.Message) model.ChatMessage {
 
 	if msg.From != nil {
 		m.User = msg.From.FirstName
-		m.IsInternal = true
 	}
 
 	return m

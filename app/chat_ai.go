@@ -24,7 +24,7 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 	for _, v := range r.Messages {
 		request.Messages = append(request.Messages, &chat_ai.Message{
 			Message: v.Text,
-			Sender:  aiChatSender(v.IsInternal),
+			Sender:  aiChatSender(v.User),
 		})
 	}
 
@@ -36,8 +36,8 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 	return result, nil
 }
 
-func aiChatSender(internal bool) string {
-	if internal {
+func aiChatSender(userName string) string {
+	if userName != "" {
 		return "human"
 	}
 
