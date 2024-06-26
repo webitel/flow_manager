@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 
 	"golang.org/x/oauth2"
 
@@ -27,6 +28,7 @@ type Store interface {
 	Log() LogStore
 	File() FileStore
 	WebHook() WebHookStore
+	SystemcSettings() SystemcSettings
 }
 
 type CacheStore interface {
@@ -137,4 +139,8 @@ type FileStore interface {
 
 type WebHookStore interface {
 	Get(id string) (model.WebHook, *model.AppError)
+}
+
+type SystemcSettings interface {
+	Get(ctx context.Context, domainId int64, name string) (json.RawMessage, *model.AppError)
 }

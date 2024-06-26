@@ -7,9 +7,23 @@ import (
 	"time"
 )
 
+const SysConnectionName = "chat_ai_connection"
+
 var aiConnections = chat_ai.NewHub()
 
 func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model.ChatAiAnswer) (*chat_ai.MessageResponse, error) {
+	if r.Connection == "" {
+		var appErr *model.AppError
+		r.Connection, appErr = fm.GetSystemSettingsString(ctx, domainId, SysConnectionName)
+		if appErr != nil {
+			return nil, appErr
+		}
+	}
+
+	if r.Connection == "" {
+		return nil, model.NewRequestError("app.chat_ai.answer", "connection is required")
+	}
+
 	cli, err := aiConnections.GetClient(r.Connection)
 	if err != nil {
 		return nil, err
@@ -28,6 +42,7 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 			Sender:  aiChatSender(v.User),
 		})
 	}
+
 	rctx := ctx
 	if r.Timeout > 0 {
 		var cancel context.CancelFunc

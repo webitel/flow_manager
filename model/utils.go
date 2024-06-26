@@ -5,6 +5,7 @@ import (
 	"encoding/base32"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/pborman/uuid"
@@ -52,6 +53,14 @@ func NewAppError(where string, id string, params map[string]interface{}, details
 	ap.IsOAuth = false
 	//ap.Translate(translateFunc)
 	return ap
+}
+
+func NewInternalError(id string, massage string) *AppError {
+	return NewAppError("App", id, nil, massage, http.StatusInternalServerError)
+}
+
+func NewRequestError(id string, massage string) *AppError {
+	return NewAppError("App", id, nil, massage, http.StatusBadRequest)
 }
 
 func InterfaceToString(_args interface{}) string {
