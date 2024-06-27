@@ -69,6 +69,7 @@ type PatchMember struct {
 	StopCause      *string                      `json:"stopCause"`
 	Variables      *Variables                   `json:"variables"`
 	Communications []PatchCallbackCommunication `json:"communications"`
+	QueueId        *int                         `json:"queueId"`
 }
 
 func (p *PatchMember) CommunicationsToJson() *string {
