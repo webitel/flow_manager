@@ -186,6 +186,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     set name = coalesce(:UName::varchar, mu.name),
         priority = coalesce(:UPriority::int, mu.priority),
         bucket_id = coalesce(:UBucketId::int, mu.bucket_id),
+        queue_id = coalesce(:UQueueId::int, mu.queue_id),
         ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else mu.ready_at end,
         stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else mu.stop_cause end,
         stop_at = case when :UStopCause::varchar notnull then now() else mu.stop_at end,
@@ -227,6 +228,7 @@ from m`, map[string]interface{}{
 		"UReadyAt":       patch.ReadyAt,
 		"UStopCause":     patch.StopCause,
 		"UVariables":     patch.Variables.ToString(),
+		"UQueueId":       patch.QueueId,
 		"Communications": patch.CommunicationsToJson(),
 	})
 
