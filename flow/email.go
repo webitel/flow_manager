@@ -24,6 +24,8 @@ type EmailArgs struct {
 	Smtp       model.SmtSettings   `json:"smtp"`
 	Subject    string              `json:"subject"`
 	To         []string            `json:"to"`
+	ContactIds []int64             `json:"contactIds"` // if store
+	OwnerId    *int64              `json:"ownerId"`
 	Async      bool                `json:"async"`
 	Attachment struct {
 		Files []model.File `json:"files"`
@@ -89,6 +91,10 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	mail := gomail.NewMessage()
 	mail.SetHeader("To", argv.To...)
 
+	if argv.From == "" && argv.Smtp.Auth.User != "" {
+		argv.From = argv.Smtp.Auth.User
+	}
+
 	if argv.From != "" {
 		mail.SetHeader("From", argv.From)
 	}
@@ -99,6 +105,10 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 
 	if argv.ReplyToId != "" {
 		mail.SetHeader("In-Reply-To", argv.ReplyToId[1:len(argv.ReplyToId)-1])
+	}
+
+	if len(argv.Cc) != 0 {
+		mail.SetHeader("CC", argv.Cc...)
 	}
 
 	if len(argv.Attachment.Files) != 0 {
@@ -159,13 +169,21 @@ retry:
 			ProfileId: argv.Smtp.Id,
 			From:      []string{argv.From},
 			To:        argv.To,
-			//Sender:    argv.Sender,
-			//ReplyTo:   argv.ReplyTo,
-			InReplyTo: argv.ReplyToId,
-			//CC:        argv.CC,
+			Sender:    []string{argv.From},
+			//ReplyTo:     argv.ReplyTo,
+			InReplyTo:   argv.ReplyToId,
+			CC:          argv.Cc,
 			Body:        []byte(argv.Message),
 			HtmlBody:    []byte(argv.Message),
 			Attachments: files,
+		}
+
+		if argv.OwnerId != nil && *argv.OwnerId > 0 {
+			rr.OwnerId = argv.OwnerId
+		}
+
+		if len(argv.ContactIds) != 0 {
+			rr.ContactIds = argv.ContactIds
 		}
 
 		if argv.ReplyToId != "" {

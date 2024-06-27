@@ -47,6 +47,8 @@ type Email struct {
 	Body        []byte   `json:"body" db:"body"`
 	HtmlBody    []byte   `json:"html_body" db:"html_body"`
 	AttemptId   *int64   `json:"attempt_id" db:"attempt_id"`
+	ContactIds  []int64  `json:"contactIds" db:"contact_ids"`
+	OwnerId     *int64   `json:"ownerId" db:"owner_id"`
 	Attachments []File
 }
 
