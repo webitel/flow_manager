@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/tidwall/gjson"
 	"strings"
 	"sync"
 
@@ -76,12 +77,20 @@ func (c *connection) NodeId() string {
 	return c.id
 }
 
-func (c *connection) Get(key string) (string, bool) {
-	v, ok := c.variables[key]
-	if !ok {
-		return "", false
+func (c *connection) Get(name string) (string, bool) {
+	c.RLock()
+	defer c.RUnlock()
+
+	idx := strings.Index(name, ".")
+	if idx > 0 {
+		nameRoot := name[0:idx]
+
+		if v, ok := c.variables[nameRoot]; ok {
+			return gjson.GetBytes([]byte(fmt.Sprintf("%v", v)), name[idx+1:]).String(), true
+		}
 	}
-	return fmt.Sprintf("%v", v), true
+	v, ok := c.variables[name]
+	return fmt.Sprintf("%v", v), ok
 }
 
 func (c *connection) GetProfile() (*Profile, *model.AppError) {
