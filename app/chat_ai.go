@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/chat_ai"
 	"github.com/webitel/flow_manager/model"
+	"strings"
 	"time"
 )
 
@@ -29,9 +30,11 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 		return nil, err
 	}
 
+	cat := strings.Split(r.Categories, ",")
+
 	request := &chat_ai.MessageRequest{
 		UserMetadata: r.Variables,
-		Categories:   r.Categories,
+		Categories:   cat,
 		Messages:     make([]*chat_ai.Message, 0, len(r.Messages)),
 		ModelName:    r.Model,
 	}
