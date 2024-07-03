@@ -5,8 +5,8 @@ go 1.19
 require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.3.0-20240425073914-85c52be6ff00.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.33.0-20240425073914-85c52be6ff00.1
-	buf.build/gen/go/webitel/chat/grpc/go v1.3.0-20240529130243-4bbb230be33b.3
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.1-20240529130243-4bbb230be33b.1
+	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240702123651-b7b4a56e22ca.2
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240702143950-364c79a4f8d2.2
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.34.1-20240517121312-fb197671fcfd.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.3.0-20240402131908-59ee244702ce.2
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.33.0-20240402131908-59ee244702ce.1
@@ -45,7 +45,7 @@ require (
 )
 
 require (
-	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.34.1-20240502201324-7530ea77434f.1 // indirect
+	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.34.2-20231027202514-3f42134f4c56.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -78,7 +78,7 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240401170217-c3f982113cda // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
-	google.golang.org/protobuf v1.34.1 // indirect
+	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect

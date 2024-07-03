@@ -1,6 +1,7 @@
 package chat_route
 
 import (
+	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"context"
 	"fmt"
 	"net/http"
@@ -19,7 +20,7 @@ type Router struct {
 type Conversation interface {
 	model.Connection
 	ProfileId() int64
-	Stop(*model.AppError)
+	Stop(err *model.AppError, cause proto.CloseConversationCause)
 	SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError)
 	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
 	SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError)
@@ -98,7 +99,7 @@ func (r *Router) handle(conn model.Connection) {
 		err = model.NewAppError("Chat", "chat.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
 	}
 	if err != nil {
-		conv.Stop(err)
+		conv.Stop(err, proto.CloseConversationCause_flow_err)
 		return
 	}
 
@@ -117,7 +118,7 @@ func (r *Router) handle(conn model.Connection) {
 	flow.Route(conn.Context(), i, r)
 
 	if !conv.IsTransfer() {
-		conv.Stop(nil)
+		conv.Stop(nil, proto.CloseConversationCause_flow_end)
 	}
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
