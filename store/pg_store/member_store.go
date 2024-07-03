@@ -186,6 +186,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     set name = coalesce(:UName::varchar, mu.name),
         priority = coalesce(:UPriority::int, mu.priority),
         bucket_id = coalesce(:UBucketId::int, mu.bucket_id),
+        queue_id = coalesce(:UQueueId::int, mu.queue_id),
         ready_at = case when :UReadyAt::int8 notnull then to_timestamp(:UReadyAt::int8 /1000) else mu.ready_at end,
         stop_cause = case when :UStopCause::varchar notnull then :UStopCause::varchar else mu.stop_cause end,
         stop_at = case when :UStopCause::varchar notnull then now() else mu.stop_at end,
@@ -227,6 +228,7 @@ from m`, map[string]interface{}{
 		"UReadyAt":       patch.ReadyAt,
 		"UStopCause":     patch.StopCause,
 		"UVariables":     patch.Variables.ToString(),
+		"UQueueId":       patch.QueueId,
 		"Communications": patch.CommunicationsToJson(),
 	})
 
@@ -243,7 +245,7 @@ from m`, map[string]interface{}{
 
 func (s SqlMemberStore) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_member(queue_id, communications, name, variables, 
-	ready_at, domain_id, timezone_id, priority, bucket_id, expire_at, agent_id)
+	ready_at, domain_id, timezone_id, priority, bucket_id, expire_at, agent_id, stop_cause, stop_at)
 select q.id queue_id, 
 	   json_build_array(
               jsonb_build_object('destination', :Number::varchar)
@@ -260,7 +262,9 @@ select q.id queue_id,
 	   :Priority,
 	   :BucketId,
 	   case when :ExpireAt::int8 notnull and :ExpireAt::int8 > 0 then to_timestamp(:ExpireAt::int8/1000::double precision) at time zone tz.sys_name end,
-	   :AgentId
+	   :AgentId,
+	   :StopCause,
+	   case when :StopCause::varchar notnull then now() end
 from call_center.cc_queue q
 	inner join flow.calendar c on c.id = q.calendar_id
     inner join flow.calendar_timezones tz on tz.id = c.timezone_id
@@ -280,6 +284,7 @@ where q.id = :QueueId::int4 and q.domain_id = :DomainId::int8`, map[string]inter
 		"ExpireAt":              member.ExpireAt,
 		"AgentId":               member.Agent.Id,
 		"CommunicationPriority": member.Communication.Priority,
+		"StopCause":             member.StopCause,
 	})
 
 	if err != nil {

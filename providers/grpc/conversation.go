@@ -196,6 +196,7 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 			Buttons: getChatButtons(msg.Buttons),
 			Inline:  getChatButtons(msg.Inline),
 			File:    getFile(msg.File),
+			NoInput: msg.NoInput,
 		},
 	})
 
@@ -245,6 +246,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 		Type:    "text",
 		Text:    menu.Text,
 		Buttons: getChatButtons(menu.Buttons),
+		NoInput: menu.NoInput,
 	}
 	//menu.Set // fixme
 

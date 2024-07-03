@@ -31,6 +31,10 @@ func (r *router) callbackQueue(ctx context.Context, scope *Flow, c model.Connect
 		member.Communication.Type.Id = member.Communication.TypeId
 	}
 
+	if member.StopCause != nil && *member.StopCause == "" {
+		member.StopCause = nil
+	}
+
 	if err := r.fm.CreateMember(c.DomainId(), params.QueueId, params.HoldSec, &member); err != nil {
 		return nil, err
 	}

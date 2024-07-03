@@ -4,6 +4,7 @@ const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
 	ConversationSessionId            = "uuid"
+	ConversationProfileId            = "wbt_profile_id"
 
 	BreakChatTransferCause = "TRANSFER"
 )
@@ -27,6 +28,7 @@ type ChatMenuArgs struct {
 	Buttons [][]ChatButton `json:"buttons"`
 	Inline  [][]ChatButton `json:"inline"`
 	Text    string         `json:"text"`
+	NoInput bool           `json:"noInput"`
 }
 
 type ChatMessageOutbound struct {
@@ -36,6 +38,7 @@ type ChatMessageOutbound struct {
 	Server  string         `json:"server" db:"-"` // TODO
 	Buttons [][]ChatButton `json:"buttons"`
 	Inline  [][]ChatButton `json:"inline"`
+	NoInput bool           `json:"noInput"`
 }
 
 type BroadcastChat struct {
