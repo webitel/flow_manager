@@ -235,7 +235,7 @@ func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRe
 		if strings.Index(textErr, `"id":"chat.send.channel.from.closed"`) != -1 {
 			c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
 				ConversationId: c.id,
-				Cause:          "error",
+				Cause:          proto.CloseConversationCause_flow_err,
 			})
 			c.Break("error")
 		}
@@ -436,11 +436,10 @@ func (c *conversation) NodeName() string {
 	return c.NodeId()
 }
 
-func (c *conversation) Stop(err *model.AppError) {
-	var cause = ""
+func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCause) {
 	if err != nil {
 		wlog.Error(fmt.Sprintf("conversation %s stop with error: %s", c.id, err.Error()))
-		cause = err.Id
+		cause = proto.CloseConversationCause_flow_err
 	}
 
 	_, e := c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
