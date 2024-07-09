@@ -132,11 +132,18 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 	q += "&text=" + UrlEncoded(argv.Text)
 
 	if argv.GetSpeech != nil {
-		if _, err := call.GoogleTranscribe(ctx); err != nil {
+		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 			return nil, err
 		}
 
 		if _, err := call.TTS(ctx, q, argv.GetDigits, argv.GetSpeech.Timeout); err != nil {
+			return nil, err
+		}
+		if _, err := call.GoogleTranscribeStop(ctx); err != nil {
+			return nil, err
+		}
+
+		if _, err := call.Sleep(ctx, 200); err != nil {
 			return nil, err
 		}
 

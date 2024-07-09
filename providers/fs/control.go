@@ -446,9 +446,40 @@ func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
 	//return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
 }
 
-func (c *Connection) GoogleTranscribe(ctx context.Context) (model.Response, *model.AppError) {
-	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s start uk-UA interim", c.id)); err != nil {
-		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, *model.AppError) {
+	if config.Lang == "" {
+		config.Lang = "en-US"
+	}
+
+	switch config.Version {
+	case "v2":
+		boolString := func(b bool) string {
+			if b {
+				return " true"
+			} else {
+				return " false"
+			}
+		}
+		vars := map[string]interface{}{
+			"GOOGLE_SPEECH_CLOUD_SERVICES_VERSION": "v2",
+			"GOOGLE_SPEECH_RECOGNIZER_PARENT":      config.Recognizer,
+			"GOOGLE_SPEECH_TO_TEXT_URI":            config.Uri,
+		}
+		if len(config.AlternativeLang) != 0 {
+			vars["GOOGLE_SPEECH_ALTERNATIVE_LANGUAGE_CODES"] = strings.Join(config.AlternativeLang, ",")
+		}
+		c.Set(ctx, vars)
+		str := "uuid_google_transcribe2 " + c.id + " start " + config.Lang + boolString(config.Interim) + boolString(config.SingleUtterance) +
+			boolString(config.SeparateRecognition) + " " + strconv.Itoa(config.MaxAlternatives) + boolString(config.ProfanityFilter) +
+			boolString(config.WordTime) + boolString(config.Punctuation) + " 8000 " + config.Model + " " + boolString(config.Enhanced)
+
+		if _, err := c.Api(str); err != nil {
+			return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+		}
+	default:
+		if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s start %s interim", c.id, config.Lang)); err != nil {
+			return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+		}
 	}
 
 	return model.CallResponseOK, nil

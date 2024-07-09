@@ -24,7 +24,7 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 	}
 
 	if argv.GetSpeech != nil {
-		if _, err := call.GoogleTranscribe(ctx); err != nil {
+		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 			return nil, err
 		}
 		if _, err := call.Playback(ctx, argv.Files); err != nil {
