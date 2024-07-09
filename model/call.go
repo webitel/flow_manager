@@ -441,7 +441,7 @@ type Call interface {
 	Pickup(ctx context.Context, name string) (Response, *AppError)
 	PickupHash(name string) string
 
-	GoogleTranscribe(ctx context.Context) (Response, *AppError)
+	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)
 	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
 
 	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
@@ -490,7 +490,22 @@ type PlaybackDigits struct {
 }
 
 type GetSpeech struct {
-	Timeout int `json:"timeout"`
+	Timeout             int      `json:"timeout"`
+	Version             string   `json:"version"`             // (v1, v2) V1 default
+	Model               string   `json:"model"`               //v2
+	Uri                 string   `json:"uri"`                 //v2
+	Recognizer          string   `json:"recognizer"`          //v2
+	Lang                string   `json:"lang"`                //V2
+	Interim             bool     `json:"interim"`             //V2
+	SingleUtterance     bool     `json:"singleUtterance"`     //V2
+	SeparateRecognition bool     `json:"separateRecognition"` //V2
+	MaxAlternatives     int      `json:"maxAlternatives"`     //V2
+	ProfanityFilter     bool     `json:"profanityFilter"`     //V2
+	WordTime            bool     `json:"wordTime"`            //V2
+	Punctuation         bool     `json:"punctuation"`         //V2
+	Enhanced            bool     `json:"enhanced"`            //V2
+	Hints               string   `json:"hints"`               //V2
+	AlternativeLang     []string `json:"alternativeLang"`     //v2
 }
 
 type PlaybackArgs struct {

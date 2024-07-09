@@ -40,6 +40,7 @@ require (
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.63.0
+	google.golang.org/protobuf v1.34.2
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
@@ -78,7 +79,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240401170217-c3f982113cda // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240401170217-c3f982113cda // indirect
-	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/sourcemap.v1 v1.0.5 // indirect
