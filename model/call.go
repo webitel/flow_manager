@@ -491,6 +491,7 @@ type PlaybackDigits struct {
 
 type GetSpeech struct {
 	Timeout             int      `json:"timeout"`
+	DisableBreakFinal   bool     `json:"disableBreakFinal"`
 	Version             string   `json:"version"`             // (v1, v2) V1 default
 	Model               string   `json:"model"`               //v2
 	Uri                 string   `json:"uri"`                 //v2

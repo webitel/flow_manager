@@ -465,6 +465,9 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 			"GOOGLE_SPEECH_RECOGNIZER_PARENT":      config.Recognizer,
 			"GOOGLE_SPEECH_TO_TEXT_URI":            config.Uri,
 		}
+		if config.DisableBreakFinal {
+			vars["GOOGLE_DISABLE_BREAK"] = "true"
+		}
 		if len(config.AlternativeLang) != 0 {
 			vars["GOOGLE_SPEECH_ALTERNATIVE_LANGUAGE_CODES"] = strings.Join(config.AlternativeLang, ",")
 		}
