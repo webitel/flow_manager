@@ -298,6 +298,33 @@ func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
 	return
 }
 
+func (c *Connection) PushSpeechMessage(msg model.SpeechMessage) {
+	c.Lock()
+	c.speechMessages = append(c.speechMessages, msg)
+	c.Unlock()
+}
+
+func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
+	c.Lock()
+	cnt := len(c.speechMessages)
+	c.Unlock()
+	if cnt == 0 {
+		return nil
+	}
+
+	if cnt < limit {
+		limit = cnt
+	}
+	res := make([]model.SpeechMessage, 0, limit)
+	c.Lock()
+
+	for _, v := range c.speechMessages[(cnt - limit):] {
+		res = append(res, v)
+	}
+	c.Unlock()
+	return res
+}
+
 func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	var tmp string
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))

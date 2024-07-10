@@ -149,8 +149,15 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		if _, err := call.Sleep(ctx, 200); err != nil {
 			return nil, err
 		}
+		answer := call.GetVariable("variable_google_transcript")
+		if argv.GetSpeech.Question != "" {
+			call.PushSpeechMessage(model.SpeechMessage{
+				Question: argv.GetSpeech.Question,
+				Answer:   answer,
+			})
+		}
 
-		if err := r.fm.Store.Call().SaveTranscribe(call.Id(), call.GetVariable("variable_google_transcript")); err != nil {
+		if err := r.fm.Store.Call().SaveTranscribe(call.Id(), answer); err != nil {
 			return nil, err
 		}
 		return model.CallResponseOK, nil
