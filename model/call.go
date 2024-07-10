@@ -420,6 +420,9 @@ type Call interface {
 	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
 	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
 	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)
+	PushSpeechMessage(msg SpeechMessage)
+	SpeechMessages(limit int) []SpeechMessage
+
 	TTS(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
 	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
 
@@ -490,6 +493,11 @@ type PlaybackDigits struct {
 	DigitTimeout *int    `json:"digitTimeout"`
 }
 
+type SpeechMessage struct {
+	Question string
+	Answer   string
+}
+
 type GetSpeech struct {
 	Timeout             int      `json:"timeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`
@@ -508,6 +516,7 @@ type GetSpeech struct {
 	Enhanced            bool     `json:"enhanced"`            //V2
 	Hints               string   `json:"hints"`               //V2
 	AlternativeLang     []string `json:"alternativeLang"`     //v2
+	Question            string   `json:"question"`
 }
 
 type PlaybackArgs struct {
