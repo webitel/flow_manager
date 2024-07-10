@@ -443,6 +443,7 @@ type Call interface {
 
 	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)
 	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
+	RefreshVars(ctx context.Context) (Response, *AppError)
 
 	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
 	Push(ctx context.Context, name, tag string) (Response, *AppError)

@@ -350,6 +350,10 @@ func (c *Connection) PlaybackUrl(ctx context.Context, url string) (model.Respons
 	return c.executeWithContext(ctx, "playback", url)
 }
 
+func (c *Connection) RefreshVars(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "dump", "")
+}
+
 func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
 	fileString, ok := getFileString(c.DomainId(), files)
 	if !ok {
