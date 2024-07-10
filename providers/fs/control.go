@@ -314,6 +314,8 @@ func (c *Connection) TTS(ctx context.Context, path string, digits *model.Playbac
 	var url string
 
 	if timeout > 0 {
+		// TODO file_string don't supported separated
+		path = strings.ReplaceAll(path, "!", ".")
 		url = fmt.Sprintf("file_string://%s!silence_stream://%d", tmp+path+"."+format, timeout)
 	} else {
 		url = tmp + path + "&." + format
