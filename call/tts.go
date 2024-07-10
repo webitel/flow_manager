@@ -142,7 +142,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		if _, err := call.GoogleTranscribeStop(ctx); err != nil {
 			return nil, err
 		}
-
+		call.Answer(ctx) // TODO refresh vars
 		if _, err := call.Sleep(ctx, 200); err != nil {
 			return nil, err
 		}
