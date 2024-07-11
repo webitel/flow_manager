@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -366,11 +367,18 @@ where id = :Id`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlCallStore) SaveTranscribe(callId, transcribe string) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_transcribe (call_id, transcribe)
-values (:CallId::varchar, :Transcribe::varchar)`, map[string]interface{}{
-		"CallId":     callId,
-		"Transcribe": transcribe,
+// todo only mod_google
+func (s SqlCallStore) SaveTranscript(transcribe *model.CallActionTranscript) *model.AppError {
+	r, _ := json.Marshal(transcribe.Transcript)
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_transcribe (call_id, confidence, transcribe, response)
+select :CallId, (x.j->'alternatives'->0->'confidence')::text::numeric,
+        x.j->'alternatives'->0->>'transcript' as transcript,
+        x.j
+from (
+    select :R::jsonb as j
+) x;`, map[string]interface{}{
+		"CallId": transcribe.Id,
+		"R":      r,
 	})
 
 	if err != nil {

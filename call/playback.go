@@ -38,9 +38,6 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 			return nil, err
 		}
 
-		if err = r.fm.Store.Call().SaveTranscribe(call.Id(), call.GetVariable("variable_google_transcript")); err != nil {
-			return nil, err
-		}
 		return model.CallResponseOK, nil
 
 	} else if argv.GetDigits != nil {

@@ -69,7 +69,7 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 	}
 
 	if result.err != nil {
-		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, result.err.Error(), http.StatusBadRequest)
+		return nil, model.NewAppError("Flow.Js", "flow.js.runtime_err", nil, result.err.Error()+" js: "+argv.Data, http.StatusBadRequest)
 	}
 
 	return conn.Set(ctx, model.Variables{
