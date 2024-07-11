@@ -84,6 +84,11 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 			wlog.Error(err.Error())
 		}
 
+	case *model.CallActionTranscript:
+		if err := f.Store.Call().SaveTranscript(call); err != nil {
+			wlog.Error(err.Error())
+		}
+
 	case *model.CallActionHeartbeat:
 		if err := f.Store.Call().SetHeartbeat(call.Id); err != nil {
 			wlog.Error(err.Error())

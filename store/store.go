@@ -61,7 +61,7 @@ type CallStore interface {
 	MoveToHistory() ([]model.MissedCall, *model.AppError)
 	Delete(id string) *model.AppError
 	UpdateFrom(id string, name, number *string) *model.AppError
-	SaveTranscribe(callId, transcribe string) *model.AppError
+	SaveTranscript(transcribe *model.CallActionTranscript) *model.AppError
 	SetHeartbeat(id string) *model.AppError
 
 	LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)

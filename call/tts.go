@@ -157,9 +157,6 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			})
 		}
 
-		if err := r.fm.Store.Call().SaveTranscribe(call.Id(), answer); err != nil {
-			return nil, err
-		}
 		return model.CallResponseOK, nil
 	}
 	if argv.Provider == "yandex" {

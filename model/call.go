@@ -45,14 +45,15 @@ const (
 )
 
 const (
-	CallActionRingingName   = "ringing"
-	CallActionActiveName    = "active"
-	CallActionBridgeName    = "bridge"
-	CallActionHoldName      = "hold"
-	CallActionDtmfName      = "dtmf"
-	CallActionSTTName       = "stt"
-	CallActionHangupName    = "hangup"
-	CallActionHeartbeatName = "heartbeat"
+	CallActionRingingName    = "ringing"
+	CallActionActiveName     = "active"
+	CallActionBridgeName     = "bridge"
+	CallActionHoldName       = "hold"
+	CallActionDtmfName       = "dtmf"
+	CallActionSTTName        = "stt"
+	CallActionHangupName     = "hangup"
+	CallActionHeartbeatName  = "heartbeat"
+	CallActionTranscriptName = "transcript"
 )
 
 type MissedCall struct {
@@ -247,6 +248,11 @@ type CallActionSTT struct {
 	Transcript string `json:"transcript"`
 }
 
+type CallActionTranscript struct {
+	CallAction
+	Transcript interface{} `json:"transcript"`
+}
+
 func (h *CallActionHangup) VariablesToJson() []byte {
 	if h.Payload == nil {
 		return []byte("{}") //FIXME
@@ -348,6 +354,10 @@ func (c *CallActionData) GetEvent() interface{} {
 		}
 	case CallActionHangupName:
 		c.parsed = &CallActionHangup{
+			CallAction: c.CallAction,
+		}
+	case CallActionTranscriptName:
+		c.parsed = &CallActionTranscript{
 			CallAction: c.CallAction,
 		}
 	}
@@ -494,8 +504,10 @@ type PlaybackDigits struct {
 }
 
 type SpeechMessage struct {
-	Question string
-	Answer   string
+	Question   string
+	Answer     string
+	Final      bool
+	Confidence int
 }
 
 type GetSpeech struct {
