@@ -484,6 +484,10 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 		config.Lang = "en-US"
 	}
 
+	if config.SampleRate == 0 {
+		config.SampleRate = 8000
+	}
+
 	switch config.Version {
 	case "v2":
 		boolString := func(b bool) string {
@@ -507,7 +511,8 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 		c.Set(ctx, vars)
 		str := "uuid_google_transcribe2 " + c.id + " start " + config.Lang + boolString(config.Interim) + boolString(config.SingleUtterance) +
 			boolString(config.SeparateRecognition) + " " + strconv.Itoa(config.MaxAlternatives) + boolString(config.ProfanityFilter) +
-			boolString(config.WordTime) + boolString(config.Punctuation) + " 8000 " + config.Model + " " + boolString(config.Enhanced)
+			boolString(config.WordTime) + boolString(config.Punctuation) + " " + strconv.Itoa(config.SampleRate) + " " + config.Model + " " +
+			boolString(config.Enhanced) + " " + config.Hints
 
 		if _, err := c.Api(str); err != nil {
 			return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)

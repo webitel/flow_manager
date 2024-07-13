@@ -528,6 +528,7 @@ type GetSpeech struct {
 	Enhanced            bool     `json:"enhanced"`            //V2
 	Hints               string   `json:"hints"`               //V2
 	AlternativeLang     []string `json:"alternativeLang"`     //v2
+	SampleRate          int      `json:"sampleRate"`          //v2
 	Question            string   `json:"question"`
 }
 
