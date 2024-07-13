@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"time"
 )
 
 func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -33,10 +34,10 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 		if _, err := call.GoogleTranscribeStop(ctx); err != nil {
 			return nil, err
 		}
-
-		if _, err := call.Sleep(ctx, 200); err != nil {
-			return nil, err
-		}
+		time.Sleep(time.Millisecond * 200)
+		call.Set(ctx, map[string]interface{}{
+			"google_refresh_vars": "todo",
+		}) // TODO refresh vars
 
 		return model.CallResponseOK, nil
 
