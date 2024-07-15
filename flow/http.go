@@ -54,7 +54,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 			return model.CallResponseOK, nil
 		}
 	}
-	req, err := buildRequest(conn, props)
+	req, err := r.buildRequest(conn, props)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +147,7 @@ func buildHttpClient(props map[string]interface{}) *http.Client {
 	return client
 }
 
-func buildRequest(c model.Connection, props map[string]interface{}) (*http.Request, *model.AppError) {
+func (r *router) buildRequest(c model.Connection, props map[string]interface{}) (*http.Request, *model.AppError) {
 	var ok bool
 	var uri string
 	var err error
@@ -164,7 +164,7 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 	if _, ok = props["path"]; ok {
 		if _, ok = props["path"].(map[string]interface{}); ok {
 			for k, v = range props["path"].(map[string]interface{}) {
-				str = parseMapValue(c, v)
+				str = r.parseMapValue(c, v)
 				uri = strings.Replace(uri, "${"+k+"}", encodeURIComponent(str), -1)
 			}
 		}
@@ -178,7 +178,7 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 	if _, ok = props["headers"]; ok {
 		if _, ok = props["headers"].(map[string]interface{}); ok {
 			for k, v = range props["headers"].(map[string]interface{}) {
-				headers[strings.ToLower(k)] = parseMapValue(c, v)
+				headers[strings.ToLower(k)] = r.parseMapValue(c, v)
 			}
 		}
 	}
@@ -200,7 +200,7 @@ func buildRequest(c model.Connection, props map[string]interface{}) (*http.Reque
 			switch props["data"].(type) {
 			case map[string]interface{}:
 				for k, v = range props["data"].(map[string]interface{}) {
-					urlEncodeData.Set(k, parseMapValue(c, v))
+					urlEncodeData.Set(k, r.parseMapValue(c, v))
 				}
 				str = urlEncodeData.Encode()
 			case string:
@@ -300,10 +300,14 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 	return model.CallResponseOK, nil
 }
 
-func parseMapValue(c model.Connection, v interface{}) (str string) {
+func (r *router) parseMapValue(c model.Connection, v interface{}) (str string) {
 	str = model.InterfaceToString(v)
-	if strings.HasPrefix(str, "${") && strings.HasSuffix(str, "}") {
-		str, _ = c.Get(str[2 : len(str)-1])
+	if strings.HasSuffix(str, "}") {
+		if strings.HasPrefix(str, "$${") {
+			str = r.GlobalVariable(c.DomainId(), str[3:len(str)-1])
+		} else if strings.HasPrefix(str, "${") {
+			str, _ = c.Get(str[2 : len(str)-1])
+		}
 	}
 	return str
 }
