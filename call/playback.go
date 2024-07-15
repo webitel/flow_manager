@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"strconv"
 	"time"
 )
 
@@ -27,6 +28,12 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 	if argv.GetSpeech != nil {
 		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 			return nil, err
+		}
+		if argv.GetSpeech.Timeout > 0 {
+			argv.Files = append(argv.Files, &model.PlaybackFile{
+				Type: model.NewString("silence"),
+				Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
+			})
 		}
 		if _, err := call.Playback(ctx, argv.Files); err != nil {
 			return nil, err
