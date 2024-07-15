@@ -18,6 +18,7 @@ import (
 var (
 	compileProtectedFunctions = regexp.MustCompile(`\b(function|case|if|return|new|switch|var|this|typeof|for|while|break|do|continue)\b`)
 	compileVars               = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
+	compileVarsGlobal         = regexp.MustCompile(`\$\$\{([\s\S]*?)\}`)
 	compileFunctions          = regexp.MustCompile(`\&(year|yday|mon|mday|week|mweek|wday|hour|minute|minute_of_day|time_of_day|date_time)\(([\s\S]*?)\)`)
 	regSpace                  = regexp.MustCompile(`\s`)
 )
@@ -83,6 +84,11 @@ func (r *router) conditionHandler(ctx context.Context, scope *Flow, conn model.C
 
 func parseExpression(expression string) string {
 
+	expression = compileVarsGlobal.ReplaceAllStringFunc(expression, func(varName string) string {
+		l := compileVars.FindStringSubmatch(varName)
+		return fmt.Sprintf(`sys.getGlobalVariable("%s")`, l[1])
+	})
+
 	expression = compileVars.ReplaceAllStringFunc(expression, func(varName string) string {
 		l := compileVars.FindStringSubmatch(varName)
 		return fmt.Sprintf(`sys.getVariable("%s")`, l[1])
@@ -101,6 +107,14 @@ func parseExpression(expression string) string {
 
 func injectJsSysObject(conn model.Connection, vm *otto.Otto, flow *Flow) *otto.Object {
 	sys, _ := vm.Object("sys = {}")
+	sys.Set("getGlobalVariable", func(call otto.FunctionCall) otto.Value {
+		val := flow.router.GlobalVariable(conn.DomainId(), call.Argument(0).String())
+		res, err := vm.ToValue(val)
+		if err != nil {
+			return otto.Value{}
+		}
+		return res
+	})
 	sys.Set("getVariable", func(call otto.FunctionCall) otto.Value {
 		val, _ := conn.Get(call.Argument(0).String())
 		res, err := vm.ToValue(val)
@@ -398,7 +412,7 @@ func equalsDateTimeRange(datetime int, strRange string, maxVal int) (result bool
 
 var weakdays = []int{1, 2, 3, 4, 5, 6, 7}
 
-//todo move helper (calendar use)
+// todo move helper (calendar use)
 func getWeekday(in time.Time) int {
 	return weakdays[in.Weekday()]
 }
