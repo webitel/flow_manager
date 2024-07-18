@@ -209,7 +209,7 @@ with hb as materialized (
 		hangup_at = now() - interval '2s',
 		hangup_by = 'service',
 		cause = 'MEDIA_TIMEOUT'
-	where hangup_at isnull and and cause isnull and heartbeat < now() - (((params->>'heartbeat')::int * 3) || ' sec')::interval),
+	where hangup_at isnull and cause isnull and heartbeat < now() - (((params->>'heartbeat')::int * 3) || ' sec')::interval),
 del_calls as materialized (
     select *
     from call_center.cc_calls c
