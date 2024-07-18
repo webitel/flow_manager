@@ -513,6 +513,7 @@ type SpeechMessage struct {
 type GetSpeech struct {
 	Timeout             int      `json:"timeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`
+	BreakFinalOnTimeout bool     `json:"breakFinalOnTimeout"`
 	Version             string   `json:"version"`             // (v1, v2) V1 default
 	Model               string   `json:"model"`               //v2
 	Uri                 string   `json:"uri"`                 //v2

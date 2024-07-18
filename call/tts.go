@@ -3,13 +3,11 @@ package call
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/model"
 	"net/url"
 	"strconv"
 	"strings"
-	"time"
-
-	"github.com/webitel/flow_manager/flow"
-	"github.com/webitel/flow_manager/model"
 )
 
 type TTSArgs struct {
@@ -137,14 +135,37 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			return nil, err
 		}
 
-		if _, err := call.TTS(ctx, q, argv.GetDigits, argv.GetSpeech.Timeout); err != nil {
+		timeout := 0
+		if argv.GetSpeech.Timeout > 0 && !argv.GetSpeech.BreakFinalOnTimeout {
+			timeout = argv.GetSpeech.Timeout
+		}
+
+		if _, err := call.TTS(ctx, q, argv.GetDigits, timeout); err != nil {
 			return nil, err
 		}
+
+		if call.HangupCause() != "" {
+			// todo err
+		}
+		if argv.GetSpeech.Timeout > 0 && argv.GetSpeech.BreakFinalOnTimeout {
+			call.Set(ctx, map[string]interface{}{
+				"google_play_sleep_timeout": "true",
+			})
+			isFinal, _ := call.Get("google_final")
+			if isFinal != "true" {
+				if _, err := call.Playback(ctx, []*model.PlaybackFile{{
+					Type: model.NewString("silence"),
+					Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
+				}}); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		if _, err := call.GoogleTranscribeStop(ctx); err != nil {
 			return nil, err
 		}
 
-		time.Sleep(time.Millisecond * 200)
 		call.Set(ctx, map[string]interface{}{
 			"google_refresh_vars": "todo",
 		}) // TODO refresh vars

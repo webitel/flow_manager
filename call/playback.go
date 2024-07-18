@@ -5,7 +5,6 @@ import (
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"strconv"
-	"time"
 )
 
 func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -29,19 +28,39 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 			return nil, err
 		}
-		if argv.GetSpeech.Timeout > 0 {
+
+		if argv.GetSpeech.Timeout > 0 && !argv.GetSpeech.BreakFinalOnTimeout {
 			argv.Files = append(argv.Files, &model.PlaybackFile{
 				Type: model.NewString("silence"),
 				Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
 			})
 		}
+
 		if _, err := call.Playback(ctx, argv.Files); err != nil {
 			return nil, err
 		}
+		if call.HangupCause() != "" {
+			// todo err
+		}
+		if argv.GetSpeech.Timeout > 0 && argv.GetSpeech.BreakFinalOnTimeout {
+			call.Set(ctx, map[string]interface{}{
+				"google_play_sleep_timeout": "true",
+			})
+			isFinal, _ := call.Get("google_final")
+			if isFinal != "true" {
+				if _, err := call.Playback(ctx, []*model.PlaybackFile{{
+					Type: model.NewString("silence"),
+					Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
+				}}); err != nil {
+					return nil, err
+				}
+			}
+		}
+
 		if _, err := call.GoogleTranscribeStop(ctx); err != nil {
 			return nil, err
 		}
-		time.Sleep(time.Millisecond * 200)
+
 		call.Set(ctx, map[string]interface{}{
 			"google_refresh_vars": "todo",
 		}) // TODO refresh vars

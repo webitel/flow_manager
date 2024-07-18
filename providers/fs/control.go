@@ -505,6 +505,13 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 		if config.DisableBreakFinal {
 			vars["GOOGLE_DISABLE_BREAK"] = "true"
 		}
+
+		if config.BreakFinalOnTimeout {
+			vars["GOOGLE_BREAK_ON_TIMEOUT"] = "true"
+		} else {
+			vars["GOOGLE_BREAK_ON_TIMEOUT"] = "false"
+		}
+
 		if len(config.AlternativeLang) != 0 {
 			vars["GOOGLE_SPEECH_ALTERNATIVE_LANGUAGE_CODES"] = strings.Join(config.AlternativeLang, ",")
 		}
