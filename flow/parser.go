@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -15,12 +14,6 @@ import (
 )
 
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
-
-var compileVar *regexp.Regexp
-
-func init() {
-	compileVar = regexp.MustCompile(`\$\$\{([\s\S]*?)\}`)
-}
 
 /*
 \d := map[string]interface{}{
@@ -85,8 +78,8 @@ func (f *Flow) parseValidJson(in string) string {
 }
 
 func (f *Flow) parseGlobalVariables(text string) string {
-	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
+	text = compileVarsGlobal.ReplaceAllStringFunc(text, func(varName string) (out string) {
+		r := compileVarsGlobal.FindStringSubmatch(varName)
 		if len(r) > 0 {
 			out = f.router.GlobalVariable(f.Connection.DomainId(), r[1])
 		}
