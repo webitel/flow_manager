@@ -10,39 +10,56 @@ import (
 )
 
 var (
-	systemCache = utils.NewLruWithParams(100, "system_settings", 60, "")
+	systemCache = utils.NewLruWithParams(300, "system_settings", 60, "")
 	systemGroup = singleflight.Group{}
 )
 
 func (fm *FlowManager) GetSystemSettingsString(ctx context.Context, domainId int64, name string) (string, *model.AppError) {
+	s, err := fm.GetSystemSettings(ctx, domainId, name)
+	if err != nil {
+		return "", err
+	}
+
+	return s.StringValue, nil
+}
+
+func (fm *FlowManager) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError) {
 	key := fmt.Sprintf("%d-%s", domainId, name)
 	c, ok := systemCache.Get(key)
 	if ok {
-		return c.(string), nil
+		return c.(model.SysValue), nil
 	}
 
 	v, err, share := systemGroup.Do(fmt.Sprintf("%d-%s", domainId, name), func() (interface{}, error) {
 		res, err := fm.Store.SystemcSettings().Get(ctx, domainId, name)
 		if err != nil {
-			return "", err
+			return model.SysValue{}, err
 		}
-		var val string
+		var val interface{}
+		var s model.SysValue
 		json.Unmarshal(res, &val)
-		return val, nil
+		switch b := val.(type) {
+		case bool:
+			s.BoolValue = b
+		case string:
+			s.StringValue = b
+		}
+
+		return s, nil
 	})
 
 	if err != nil {
 		switch err.(type) {
 		case *model.AppError:
-			return "", err.(*model.AppError)
+			return model.SysValue{}, err.(*model.AppError)
 		default:
-			return "", model.NewInternalError("app.sys_settings.get", err.Error())
+			return model.SysValue{}, model.NewInternalError("app.sys_settings.get", err.Error())
 		}
 	}
 
 	if !share {
-		systemCache.Add(key, v.(string))
+		systemCache.Add(key, v.(model.SysValue))
 	}
 
-	return v.(string), nil
+	return v.(model.SysValue), nil
 }
