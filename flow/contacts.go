@@ -59,9 +59,9 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 		return nil, err
 	}
 
-	if argv.LocateContactRequest.Id == "" {
-		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "id")
-	}
+	//if argv.LocateContactRequest. == "" {
+	//	return model.CallResponseError, model.ErrorRequiredParameter("getContact", "id")
+	//}
 
 	res, err = r.fm.LocateContact(argv.Token, &argv.LocateContactRequest)
 	if err != nil {

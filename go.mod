@@ -1,13 +1,13 @@
 module github.com/webitel/flow_manager
 
-go 1.19
+go 1.22.0
 
 require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.3.0-20240425073914-85c52be6ff00.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.33.0-20240425073914-85c52be6ff00.1
-	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240702123651-b7b4a56e22ca.2
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240702143950-364c79a4f8d2.2
-	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.34.1-20240517121312-fb197671fcfd.1
+	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240703121916-db3266bbfcd3.2
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240703121916-db3266bbfcd3.2
+	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.34.2-20240724130654-91f864624152.2
 	buf.build/gen/go/webitel/storage/grpc/go v1.3.0-20240402131908-59ee244702ce.2
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.33.0-20240402131908-59ee244702ce.1
 	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240411120545-24ef43af6db3.2
@@ -29,13 +29,13 @@ require (
 	github.com/mbobakov/grpc-consul-resolver v1.5.3
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pborman/uuid v1.2.1
-	github.com/rabbitmq/amqp091-go v1.9.0
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
 	github.com/webitel/call_center v0.0.0-20240527141654-367a8931c772
-	github.com/webitel/engine v0.0.0-20240409111830-4781844bb052
+	github.com/webitel/engine v0.0.0-20240725113537-577386ebe3e6
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/sync v0.7.0
@@ -46,7 +46,9 @@ require (
 )
 
 require (
-	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.34.2-20231027202514-3f42134f4c56.2 // indirect
+	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.34.2-20240502201324-7530ea77434f.2 // indirect
+	buf.build/gen/go/webitel/webitel-go/grpc/go v1.4.0-20240725111140-8ade8003e454.2 // indirect
+	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.34.2-20240725111140-8ade8003e454.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect

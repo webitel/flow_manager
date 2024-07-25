@@ -167,12 +167,10 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	/* TODO WTEL-4809
-	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), "autolink_call_to_contact")
+	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkCallToContact)
 	if autoLink.BoolValue {
 
 	}
-	*/
 
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
