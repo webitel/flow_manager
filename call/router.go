@@ -169,7 +169,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkCallToContact)
 	if autoLink.BoolValue {
-
+		r.linkContact(call)
 	}
 
 	call.timezoneName = routing.TimezoneName

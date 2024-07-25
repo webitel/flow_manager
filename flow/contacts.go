@@ -11,6 +11,7 @@ import (
 type GetContactRequest struct {
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
+	Id     string `json:"id"`
 	webitel_client.LocateContactRequest
 }
 
@@ -58,10 +59,13 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 	if err = scope.Decode(args, &argv.LocateContactRequest); err != nil {
 		return nil, err
 	}
+	if argv.LocateContactRequest.Etag == "" {
+		argv.LocateContactRequest.Etag = argv.Id
+	}
 
-	//if argv.LocateContactRequest. == "" {
-	//	return model.CallResponseError, model.ErrorRequiredParameter("getContact", "id")
-	//}
+	if argv.LocateContactRequest.Etag == "" {
+		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "etag")
+	}
 
 	res, err = r.fm.LocateContact(argv.Token, &argv.LocateContactRequest)
 	if err != nil {
