@@ -148,6 +148,11 @@ func (r *Router) handle(conn model.Connection) {
 		}
 	}
 
+	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkCallToContact)
+	if autoLink.BoolValue {
+		r.linkContact(call)
+	}
+
 	if err != nil {
 		if err == model.ErrNotFoundRoute {
 			r.notFoundRoute(call)
@@ -165,11 +170,6 @@ func (r *Router) handle(conn model.Connection) {
 		r.notFoundRoute(call)
 
 		return
-	}
-
-	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkCallToContact)
-	if autoLink.BoolValue {
-		r.linkContact(call)
 	}
 
 	call.timezoneName = routing.TimezoneName

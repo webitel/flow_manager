@@ -170,6 +170,15 @@ func (c *Connection) IsOriginateRequest() bool {
 	return c.originateRequest
 }
 
+func (c *Connection) GetContactId() int {
+	if conId, ok := c.Get("wbt_contact_id"); ok {
+		contactId, _ := strconv.Atoi(conId)
+		return contactId
+	}
+
+	return 0
+}
+
 func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	direction := dump.Get("variable_sip_h_X-Webitel-Direction")
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""

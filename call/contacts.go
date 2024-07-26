@@ -9,7 +9,7 @@ import (
 )
 
 func (r *Router) linkContact(call model.Call) {
-	if c, _ := call.Get("wbt_contact_id"); c != "" {
+	if c := call.GetContactId(); c != 0 {
 		return
 	}
 
@@ -36,31 +36,33 @@ func (r *Router) linkContact(call model.Call) {
 		return
 	}
 
+	userIdStr, _ := call.Get("sip_h_X-Webitel-User-Id")
+	userId, _ := strconv.Atoi(userIdStr)
+	var contactId *int
+
 	if len(list.Data) == 1 {
 		call.Set(call.Context(), model.Variables{
 			"wbt_contact_id": list.Data[0].Id,
 		})
 
 		cId, _ := strconv.Atoi(list.Data[0].Id)
+		contactId = &cId
 		r.fm.CallSetContactId(call.DomainId(), call.Id(), int64(cId))
+	}
 
-		userIdStr, _ := call.Get("sip_h_X-Webitel-User-Id")
-		userId, _ := strconv.Atoi(userIdStr)
-		if userId > 0 {
-			n := model.Notification{
-				DomainId:  call.DomainId(),
-				Action:    "set_contact", // TODO
-				CreatedAt: model.GetMillis(),
-				ForUsers:  []int64{int64(userId)},
-				Body: map[string]interface{}{
-					"id":         call.Id(),
-					"contact_id": list.Data[0].Id,
-					"channel":    model.CallExchange,
-				},
-			}
-
-			r.fm.UserNotification(n)
+	if userId > 0 {
+		n := model.Notification{
+			DomainId:  call.DomainId(),
+			Action:    "set_contact", // TODO
+			CreatedAt: model.GetMillis(),
+			ForUsers:  []int64{int64(userId)},
+			Body: map[string]interface{}{
+				"id":         call.Id(),
+				"contact_id": contactId,
+				"channel":    model.CallExchange,
+			},
 		}
 
+		r.fm.UserNotification(n)
 	}
 }

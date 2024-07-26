@@ -466,6 +466,8 @@ type Call interface {
 	SetQueueCancel(cancel context.CancelFunc) bool
 	CancelQueue() bool
 	HangupCause() string
+
+	GetContactId() int
 }
 
 type PlaybackFile struct {
