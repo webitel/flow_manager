@@ -125,6 +125,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	}
 	vars := call.DumpExportVariables()
 
+	if cid := call.GetContactId(); cid != 0 {
+		vars["wbt_contact_id"] = fmt.Sprintf("%d", cid)
+	}
+
 	/*
 		l := scope.Logs()
 		if len(l) > 0 {

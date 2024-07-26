@@ -3,8 +3,8 @@ module github.com/webitel/flow_manager
 go 1.22.0
 
 require (
-	buf.build/gen/go/webitel/cc/grpc/go v1.3.0-20240425073914-85c52be6ff00.2
-	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.33.0-20240425073914-85c52be6ff00.1
+	buf.build/gen/go/webitel/cc/grpc/go v1.4.0-20240527133229-8d9250d78122.2
+	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.34.2-20240527133229-8d9250d78122.2
 	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240703121916-db3266bbfcd3.2
 	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240703121916-db3266bbfcd3.2
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.34.2-20240724130654-91f864624152.2
@@ -34,7 +34,7 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/call_center v0.0.0-20240527141654-367a8931c772
+	github.com/webitel/call_center v0.0.0-20240724125933-0749f15dcada
 	github.com/webitel/engine v0.0.0-20240725113537-577386ebe3e6
 	github.com/webitel/wlog v0.0.0-20220608103744-93b33e61bd28
 	golang.org/x/oauth2 v0.19.0
