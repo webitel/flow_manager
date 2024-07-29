@@ -41,7 +41,7 @@ func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Conne
 	var resp *http.Response
 
 	argv := TopicExtraction{
-		Limit: 20,
+		Limit: 4,
 	}
 
 	if err := scope.Decode(args, &argv); err != nil {
