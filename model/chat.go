@@ -1,5 +1,10 @@
 package model
 
+import (
+	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
+	"context"
+)
+
 const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
@@ -75,4 +80,29 @@ type ChatMessage struct {
 	Type       string `json:"type,omitempty" db:"type"`
 	User       string `json:"user,omitempty" db:"name"`
 	IsInternal bool   `json:"isInternal" db:"internal"`
+}
+
+type Conversation interface {
+	Connection
+	ProfileId() int64
+	Stop(err *AppError, cause proto.CloseConversationCause)
+	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
+	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
+	SendImageMessage(ctx context.Context, url string, name string, text string) (Response, *AppError)
+	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *AppError)
+	Bridge(ctx context.Context, userId int64, timeout int) *AppError
+	Export(ctx context.Context, vars []string) (Response, *AppError)
+	DumpExportVariables() map[string]string
+	NodeName() string
+	SchemaId() int32
+	UserId() int64
+	BreakCause() string
+	IsTransfer() bool
+	SendFile(ctx context.Context, text string, f *File) (Response, *AppError)
+
+	SetQueue(*InQueueKey) bool
+	GetQueueKey() *InQueueKey
+	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	LastMessages(limit int) []ChatMessage
 }

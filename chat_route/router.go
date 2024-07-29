@@ -17,30 +17,7 @@ type Router struct {
 	apps flow.ApplicationHandlers
 }
 
-type Conversation interface {
-	model.Connection
-	ProfileId() int64
-	Stop(err *model.AppError, cause proto.CloseConversationCause)
-	SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError)
-	SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError)
-	SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError)
-	SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError)
-	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *model.AppError)
-	Bridge(ctx context.Context, userId int64, timeout int) *model.AppError
-	Export(ctx context.Context, vars []string) (model.Response, *model.AppError)
-	DumpExportVariables() map[string]string
-	NodeName() string
-	SchemaId() int32
-	UserId() int64
-	BreakCause() string
-	IsTransfer() bool
-	SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError)
-
-	SetQueue(*model.InQueueKey) bool
-	GetQueueKey() *model.InQueueKey
-	UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError)
-	LastMessages(limit int) []model.ChatMessage
-}
+type Conversation model.Conversation // TODO
 
 func Init(fm *app.FlowManager, fr flow.Router) {
 	var router = &Router{
