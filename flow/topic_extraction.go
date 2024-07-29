@@ -119,6 +119,7 @@ func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Conne
 	if err != nil {
 		return model.CallResponseError, Error("topicExtraction", err)
 	}
+
 	req.Header.Add("Content-Type", "application/json")
 	client := &http.Client{
 		Timeout: time.Second * 10,
@@ -127,11 +128,14 @@ func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Conne
 	if err != nil {
 		return model.CallResponseError, Error("topicExtraction", err)
 	}
+
 	defer resp.Body.Close()
+
 	bodyResponse, err = io.ReadAll(resp.Body)
 	if err != nil {
 		return model.CallResponseError, Error("topicExtraction", err)
 	}
+
 	err = json.Unmarshal(bodyResponse, &result)
 	if err != nil {
 		return model.CallResponseError, Error("topicExtraction", err)
