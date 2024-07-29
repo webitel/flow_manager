@@ -75,7 +75,7 @@ func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Conne
 				})
 			}
 
-			argv.Messages = append(data.Messages, TopicMessage{
+			data.Messages = append(data.Messages, TopicMessage{
 				Message: v.Answer,
 				Sender:  "user",
 			})
