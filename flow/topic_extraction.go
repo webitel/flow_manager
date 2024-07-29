@@ -32,8 +32,8 @@ type TopicExtraction struct {
 	Limit          int            `json:"limit"`
 	Messages       []TopicMessage `json:"messages"`
 
-	Response           string `json:"response"`
-	ResponseConfidence string `json:"responseConfidence"`
+	Score        string `json:"score"`
+	DefinedTopic string `json:"definedTopic"`
 }
 
 func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -142,14 +142,14 @@ func (r *router) topicExtraction(ctx context.Context, scope *Flow, c model.Conne
 	}
 
 	set := make(model.Variables)
-	if argv.ResponseConfidence != "" {
-		set[argv.ResponseConfidence] = fmt.Sprintf("%v", result.Confidence)
+	if argv.Score != "" {
+		set[argv.Score] = fmt.Sprintf("%v", result.Confidence)
 	}
-	if argv.Response != "" {
+	if argv.DefinedTopic != "" {
 		if len(result.Topics) == 0 {
-			set[argv.Response] = ""
+			set[argv.DefinedTopic] = ""
 		} else {
-			set[argv.Response] = result.Topics[0]
+			set[argv.DefinedTopic] = result.Topics[0]
 		}
 
 	}
