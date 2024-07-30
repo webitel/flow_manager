@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/chat_ai"
 	"github.com/webitel/flow_manager/model"
+	"time"
 )
 
 var aiConnections = chat_ai.NewHub()
@@ -27,8 +28,14 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 			Sender:  aiChatSender(v.User),
 		})
 	}
+	rctx := ctx
+	if r.Timeout > 0 {
+		var cancel context.CancelFunc
+		rctx, cancel = context.WithTimeout(ctx, time.Duration(r.Timeout)*time.Second)
+		defer cancel()
+	}
 
-	result, err := cli.Api().Answer(ctx, request)
+	result, err := cli.Api().Answer(rctx, request)
 	if err != nil {
 		return nil, err
 	}
