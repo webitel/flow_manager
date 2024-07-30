@@ -79,3 +79,7 @@ func (s *LayeredStore) File() FileStore {
 func (s *LayeredStore) WebHook() WebHookStore {
 	return s.DatabaseLayer.WebHook()
 }
+
+func (s *LayeredStore) SystemcSettings() SystemcSettings {
+	return s.DatabaseLayer.SystemcSettings()
+}

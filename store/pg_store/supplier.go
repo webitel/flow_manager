@@ -51,6 +51,7 @@ type SqlSupplierOldStores struct {
 	log         store.LogStore
 	file        store.FileStore
 	webHook     store.WebHookStore
+	sysSettings store.SystemcSettings
 }
 
 type SqlSupplier struct {
@@ -87,6 +88,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.log = NewSqlLogStore(supplier)
 	supplier.oldStores.file = NewSqlFileStore(supplier)
 	supplier.oldStores.webHook = NewSqlWebHookStore(supplier)
+	supplier.oldStores.sysSettings = NewSqlSysSettingsStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -287,4 +289,8 @@ func (ss *SqlSupplier) File() store.FileStore {
 
 func (ss *SqlSupplier) WebHook() store.WebHookStore {
 	return ss.oldStores.webHook
+}
+
+func (ss *SqlSupplier) SystemcSettings() store.SystemcSettings {
+	return ss.oldStores.sysSettings
 }

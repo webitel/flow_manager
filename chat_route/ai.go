@@ -23,7 +23,7 @@ func (r *Router) chatAi(ctx context.Context, scope *flow.Flow, conv Conversation
 
 	res, err := r.fm.ChatAnswerAi(ctx, conv.DomainId(), argv)
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("sendImage", "chat.chat_ai.result", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, model.NewAppError("chatAi", "chat.chat_ai.result", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	vars := make(model.Variables)
