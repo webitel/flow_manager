@@ -17,3 +17,12 @@ func NewClient(conn *grpc.ClientConn) *Client {
 func (c *Client) Api() ChatServiceClient {
 	return c.api
 }
+
+func (c *Client) Close() error {
+	err := c.connection.Close()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}

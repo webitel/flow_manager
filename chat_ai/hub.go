@@ -15,7 +15,7 @@ type Hub struct {
 
 func NewHub() *Hub {
 	return &Hub{
-		connections: utils.NewLru(100),
+		connections: utils.NewLru(100), // TODO add LRU hook delete
 	}
 }
 
