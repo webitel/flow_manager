@@ -1,0 +1,38 @@
+syntax = "proto3";
+option go_package = "github.com/webitel/flow_manager/chat_ai";
+
+package chatbot;
+
+service ChatService {
+  rpc Answer(MessageRequest) returns (MessageResponse);
+}
+
+message Message{
+  string message = 1;
+  string sender = 2;
+}
+
+message MessageRequest {
+  // customer specified metadata
+  map<string, string> user_metadata = 1;
+
+  // categories from DB to use
+  repeated string categories = 2;
+
+  // messages between user and AI, old messages first, new messages last
+  repeated Message messages = 3;
+
+  // model to use
+  string model_name = 4;
+}
+
+message MessageResponse {
+  // response from ai
+  string response_message = 1;
+
+  // categories used while generating the response
+  repeated string used_categories = 2;
+
+  // used document ids
+  repeated string used_document_ids = 3;
+}

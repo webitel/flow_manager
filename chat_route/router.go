@@ -39,6 +39,7 @@ type Conversation interface {
 	SetQueue(*model.InQueueKey) bool
 	GetQueueKey() *model.InQueueKey
 	UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError)
+	LastMessages(limit int) []model.ChatMessage
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {

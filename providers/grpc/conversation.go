@@ -34,6 +34,7 @@ type conversation struct {
 	nodeId          string
 	userId          int64
 	queueKey        *model.InQueueKey
+	messages        []*proto.Message
 
 	chat *chatApi
 }
@@ -238,6 +239,8 @@ func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRe
 		return model.NewAppError("Conversation.SendTextMessage", "conv.send_msg.app_err", nil, textErr, http.StatusInternalServerError)
 	}
 
+	c.saveMessages(req.Message)
+
 	return nil
 }
 
@@ -332,6 +335,37 @@ func (c *conversation) deleteConfirmationId(id string) {
 	c.mx.Unlock()
 }
 
+func (c *conversation) saveMessages(msgs ...*proto.Message) {
+	c.mx.Lock()
+	c.messages = append(c.messages, msgs...)
+	c.mx.Unlock()
+}
+
+func (c *conversation) countMessages() int {
+	c.mx.RLock()
+	cnt := len(c.messages)
+	c.mx.RUnlock()
+	return cnt
+}
+
+func (c *conversation) LastMessages(limit int) []model.ChatMessage {
+	cnt := c.countMessages()
+	if cnt == 0 {
+		return nil
+	}
+
+	if cnt < limit {
+		limit = cnt
+	}
+	res := make([]model.ChatMessage, 0, limit)
+	c.mx.Lock()
+	for _, v := range c.messages[(cnt - limit):] {
+		res = append(res, pettyMessage(v))
+	}
+	c.mx.Unlock()
+	return res
+}
+
 func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int) ([]string, *model.AppError) {
 	id := model.NewId()
 
@@ -355,7 +389,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 		for _, m := range res.Messages {
 			msgs = append(msgs, m.Text)
 		}
-
+		c.saveMessages(res.Messages...)
 		return msgs, nil
 	}
 
@@ -379,6 +413,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout 
 		if len(msgs) > 0 && name != "" {
 			c.storeMessages[name], _ = json.Marshal(msgs[0])
 		}
+		c.saveMessages(msgs...)
 		return messageToText(msgs...), nil
 	}
 

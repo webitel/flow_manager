@@ -82,6 +82,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 		conv.Set(ctx, model.Variables{
 			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
 		})
+		conv.saveMessages(req.Message)
 	}
 	conv.Set(ctx, map[string]interface{}{
 		model.ConversationSessionId: conv.id,
@@ -197,6 +198,31 @@ func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*c
 
 	conv.actualizeClient(cli)
 	return conv, nil
+}
+
+func pettyMessage(msg *chat.Message) model.ChatMessage {
+	m := model.ChatMessage{
+		Text:       msg.Text,
+		CreatedAt:  "",
+		Type:       msg.Type,
+		User:       "", // TODO
+		IsInternal: true,
+	}
+
+	if m.Text == "" {
+		if msg.Contact != nil {
+			m.Text = msg.Contact.Contact
+		} else if msg.File != nil {
+			m.Text = msg.File.Name
+		} // todo buttons ?
+	}
+
+	if msg.From != nil {
+		m.User = msg.From.FirstName
+		m.IsInternal = true
+	}
+
+	return m
 }
 
 func messageToText(messages ...*chat.Message) []string {
