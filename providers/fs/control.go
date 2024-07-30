@@ -151,7 +151,8 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 		if v == "" {
 			continue
 		}
-		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
+		tmp, _ := c.Get(v)
+		exp[fmt.Sprintf("usr_%s", v)] = strings.ReplaceAll(tmp, "'", "")
 
 		c.exportVariables = append(c.exportVariables, v)
 	}
