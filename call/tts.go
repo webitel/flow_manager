@@ -35,10 +35,11 @@ type TTSArgs struct {
 		FadeOut int64   `json:"fadeOut"`
 	} `json:"background"`
 
-	TextType   string                `json:"textType"`
-	Terminator string                `json:"terminator"`
-	GetDigits  *model.PlaybackDigits `json:"getDigits"`
-	GetSpeech  *model.GetSpeech      `json:"getSpeech"`
+	TextType      string                 `json:"textType"`
+	Terminator    string                 `json:"terminator"`
+	GetDigits     *model.PlaybackDigits  `json:"getDigits"`
+	GetSpeech     *model.GetSpeech       `json:"getSpeech"`
+	VoiceSettings map[string]interface{} `json:"voice_settings"`
 }
 
 func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
@@ -83,6 +84,9 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 
 	default:
 		q = "/?"
+		for k, v := range argv.VoiceSettings {
+			q += fmt.Sprintf("&%s=%v", k, v)
+		}
 	}
 
 	q += fmt.Sprintf("&domain_id=%d", call.DomainId())
