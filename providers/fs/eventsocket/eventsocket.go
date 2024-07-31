@@ -86,7 +86,6 @@ type HandleFunc func(*Connection)
 //			...
 //		}
 //	}
-//
 func ListenAndServe(addr string, fn HandleFunc) error {
 	srv, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -126,7 +125,6 @@ func Listen(srv net.Listener, fn HandleFunc) error {
 //		ev.PrettyPrint()
 //		...
 //	}
-//
 func Dial(addr, passwd string) (*Connection, error) {
 	c, err := net.Dial("tcp", addr)
 	if err != nil {

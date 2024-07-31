@@ -363,10 +363,28 @@ func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
+func escapeFsMultiset(src string) string {
+	res := ""
+	s := []rune(src)
+	l := len(s)
+
+	for i := 0; i < l; i++ {
+		if s[i] == '~' && i > 0 && s[i-1] != '\\' {
+			res += `\` + string(s[i])
+		} else if s[i] == '\'' && s[i-1] != '\\' {
+			res += `\\` + string(s[i])
+		} else {
+			res += string(s[i])
+		}
+	}
+
+	return res
+}
+
 func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars model.Variables) (model.Response, *model.AppError) {
 	str := "^^"
 	for k, v := range vars {
-		str += fmt.Sprintf(`~'%s%s'='%v'`, pref, k, v)
+		str += fmt.Sprintf(`~'%s%s'=%v`, pref, k, escapeFsMultiset(fmt.Sprintf("%v", v)))
 	}
 
 	return c.executeWithContext(ctx, "multiset", str)
