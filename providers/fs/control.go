@@ -266,7 +266,7 @@ func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response
 }
 
 func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) (model.Response, *model.AppError) {
-	fileString, ok := getFileString(c.DomainId(), files)
+	fileString, ok := c.getFileString(files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
 	} else {
@@ -384,7 +384,7 @@ func (c *Connection) RefreshVars(ctx context.Context) (model.Response, *model.Ap
 }
 
 func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
-	fileString, ok := getFileString(c.DomainId(), files)
+	fileString, ok := c.getFileString(files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
 	}
@@ -446,19 +446,19 @@ func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) 
 func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, transfer *model.PlaybackFile) (model.Response, *model.AppError) {
 	vars := model.Variables{}
 	if call != nil {
-		if l, ok := buildFileLink(c.domainId, call); ok {
+		if l, ok := c.buildFileLink(call); ok {
 			vars["ringback"] = l
 		}
 	}
 
 	if hold != nil {
-		if l, ok := buildFileLink(c.domainId, hold); ok {
+		if l, ok := c.buildFileLink(hold); ok {
 			vars["hold_music"] = l
 		}
 	}
 
 	if transfer != nil {
-		if l, ok := buildFileLink(c.domainId, transfer); ok {
+		if l, ok := c.buildFileLink(transfer); ok {
 			vars["transfer_ringback"] = l
 		}
 	}
@@ -588,11 +588,11 @@ func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variabl
 	return model.CallResponseOK, nil
 }
 
-func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
+func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 	fileString := make([]string, 0, len(files))
 
 	for _, v := range files {
-		if str, ok := buildFileLink(domainId, v); ok {
+		if str, ok := c.buildFileLink(v); ok {
 			fileString = append(fileString, str)
 		}
 	}
@@ -606,7 +606,7 @@ func getFileString(domainId int64, files []*model.PlaybackFile) (string, bool) {
 	}
 }
 
-func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
+func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 
 	if file == nil || file.Type == nil {
 		return "", false
@@ -617,19 +617,19 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, domainId), true
+		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, c.domainId), true
 
 	case "audio/wav":
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, domainId), true
+		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, c.domainId), true
 
 	case "video/mp4":
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, domainId), true
+		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, c.domainId), true
 
 	case "tone":
 		if file.Name == nil {
@@ -642,6 +642,7 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 			return "silence_stream://-1", true
 		}
 		return fmt.Sprintf("silence_stream://%s", *file.Name), true
+
 	case "http_audio":
 		var (
 			args model.HttpFileArgs
@@ -684,6 +685,27 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 			return "", false
 		}
 		return *file.Name, true
+
+	case "tts":
+		if file.TTS == nil {
+			return "", false
+		}
+		tts := file.TTS
+
+		var protocol string
+		var q = fmt.Sprintf("/?%s", tts.QueryParams(c.domainId))
+
+		rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
+		if format == "mp3" {
+			protocol = "shout://$${cdr_url}/sys/tts"
+		} else {
+			protocol = "http_cache://http://$${cdr_url}/sys/tts"
+		}
+		q += "&format=" + format
+		if rate != "" {
+			q += "&rate=" + rate
+		}
+		return protocol + q + "&." + format, true
 	default:
 		return "", false
 	}

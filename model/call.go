@@ -475,6 +475,7 @@ type PlaybackFile struct {
 	Id   *int            `json:"id"`
 	Name *string         `json:"name"`
 	Args *map[string]any `json:"args"`
+	TTS  *TTSSettings    `json:"tts"`
 }
 
 type HttpFileArgs struct {

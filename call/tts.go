@@ -5,29 +5,22 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/url"
 	"strconv"
-	"strings"
 )
 
 type TTSArgs struct {
-	Profile struct {
-		Id int `json:"id"`
-	} `json:"profile"`
-	Key      string `json:"key"`
-	Token    string `json:"token"`
-	Provider string `json:"provider"`
+	model.TTSSettings
+	Key      string `json:"key"`      // todo deprecated
+	Token    string `json:"token"`    // todo deprecated
+	Provider string `json:"provider"` // todo deprecated
+	Region   string `json:"region"`   // todo deprecated
 
-	Language string `json:"language"`
-	Voice    string `json:"voice"`
-	Text     string `json:"text"`
-	Region   string `json:"region"`
 	//google
 	SpeakingRate     string `json:"speakingRate"`
 	Pitch            string `json:"pitch"`
 	VolumeGainDb     string `json:"volumeGainDb"`
 	EffectsProfileId string `json:"effectsProfileId"`
-	KeyLocation      string `json:"keyLocation"`
+	KeyLocation      string `json:"keyLocation"` // todo deprecated
 	Background       *struct {
 		FileUri string  `json:"url"`
 		Volume  float64 `json:"volume"`
@@ -35,16 +28,17 @@ type TTSArgs struct {
 		FadeOut int64   `json:"fadeOut"`
 	} `json:"background"`
 
-	TextType      string                 `json:"textType"`
-	Terminator    string                 `json:"terminator"`
-	GetDigits     *model.PlaybackDigits  `json:"getDigits"`
-	GetSpeech     *model.GetSpeech       `json:"getSpeech"`
-	VoiceSettings map[string]interface{} `json:"voice_settings"`
+	Terminator string                `json:"terminator"`
+	GetDigits  *model.PlaybackDigits `json:"getDigits"`
+	GetSpeech  *model.GetSpeech      `json:"getSpeech"`
 }
 
 func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv TTSArgs
 	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+	if err := r.Decode(scope, args, &argv.TTSSettings); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +73,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			q += "&effectsProfileId=" + argv.EffectsProfileId
 		}
 		if argv.KeyLocation != "" {
-			q += "&keyLocation=" + UrlEncoded(argv.KeyLocation)
+			q += "&keyLocation=" + model.UrlEncoded(argv.KeyLocation)
 		}
 
 	default:
@@ -95,11 +89,11 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 	}
 
 	if argv.Key != "" {
-		q += "&key=" + UrlEncoded(argv.Key)
+		q += "&key=" + model.UrlEncoded(argv.Key)
 	}
 
 	if argv.Token != "" {
-		q += "&token=" + UrlEncoded(argv.Token)
+		q += "&token=" + model.UrlEncoded(argv.Token)
 	}
 
 	if argv.TextType != "" {
@@ -132,7 +126,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		}
 	}
 
-	q += "&text=" + UrlEncoded(argv.Text)
+	q += "&text=" + model.UrlEncoded(argv.Text)
 
 	if argv.GetSpeech != nil {
 		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
@@ -188,30 +182,4 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return call.TTSOpus(ctx, q, argv.GetDigits, 0)
 	}
 	return call.TTS(ctx, q, argv.GetDigits, 0)
-}
-
-func UrlEncoded(str string) string {
-	var res = url.Values{"": {str}}.Encode()
-
-	if len(res) < 2 {
-		return ""
-	}
-
-	return compatibleJSEncodeURIComponent(res[1:])
-	//u, err := url.ParseRequestURI(str)
-	//if err != nil {
-	//	return compatibleJSEncodeURIComponent(url.QueryEscape(str))
-	//}
-	//return compatibleJSEncodeURIComponent(u.String())
-}
-
-func compatibleJSEncodeURIComponent(str string) string {
-	resultStr := str
-	resultStr = strings.Replace(resultStr, "+", "%20", -1)
-	resultStr = strings.Replace(resultStr, "%21", "!", -1)
-	//resultStr = strings.Replace(resultStr, "%27", "'", -1)
-	resultStr = strings.Replace(resultStr, "%28", "(", -1)
-	resultStr = strings.Replace(resultStr, "%29", ")", -1)
-	resultStr = strings.Replace(resultStr, "%2A", "*", -1)
-	return resultStr
 }
