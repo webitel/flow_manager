@@ -487,6 +487,7 @@ type PlaybackDigits struct {
 	FlushDtmf    bool    `json:"flushDTMF"`
 	Regexp       *string `json:"regexp"`
 	DigitTimeout *int    `json:"digitTimeout"`
+	Terminators  string  `json:"terminators"`
 }
 
 type GetSpeech struct {
