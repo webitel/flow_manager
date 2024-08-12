@@ -435,9 +435,8 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	c.RLock()
 	defer c.RUnlock()
 
-	var res map[string]string
+	var res = make(map[string]string)
 	if len(c.exportVariables) > 0 {
-		res = make(map[string]string)
 		for _, v := range c.exportVariables {
 			res[v], _ = c.Get(v)
 		}
