@@ -216,6 +216,8 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 				var b model.JsonView
 				if appErr := scope.Decode(props["data"], &b); appErr == nil {
 					body, err = json.Marshal(b)
+				} else {
+					err = appErr
 				}
 			default:
 				body, err = json.Marshal(props["data"])
