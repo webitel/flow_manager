@@ -132,6 +132,8 @@ func (s SqlMemberStore) GetProperties(domainId int64, req *model.SearchMember, m
 			val = "bucket_id::varchar as " + pq.QuoteIdentifier(k)
 		case "count_destinations":
 			val = "array_length(m.sys_destinations, 1)::varchar as " + pq.QuoteIdentifier(k)
+		case "all_destinations":
+			val = "array_length(m.search_destinations, 1)::varchar as " + pq.QuoteIdentifier(k)
 		default:
 
 			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
