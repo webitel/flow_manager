@@ -108,7 +108,7 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 	}
 
 	if len(argv.Cc) != 0 {
-		mail.SetHeader("CC", argv.Cc...)
+		mail.SetHeader("Cc", argv.Cc...)
 	}
 
 	if len(argv.Attachment.Files) != 0 {
