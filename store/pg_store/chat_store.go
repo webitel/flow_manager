@@ -170,7 +170,7 @@ from (select `+strings.Join(f, ", ")+`
                 from chat.channel ch
                 where ch.conversation_id = c.id
                     and ch.internal
-                order by c.created_at desc
+                order by ch.created_at desc
                 limit 1
             ) ch on true
             left join lateral (
