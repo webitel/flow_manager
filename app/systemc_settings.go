@@ -58,7 +58,7 @@ func (fm *FlowManager) GetSystemSettings(ctx context.Context, domainId int64, na
 	}
 
 	if !share {
-		systemCache.Add(key, v.(model.SysValue))
+		systemCache.AddWithDefaultExpires(key, v.(model.SysValue))
 	}
 
 	return v.(model.SysValue), nil
