@@ -9,8 +9,8 @@ import (
 )
 
 func (f *FlowManager) Listen() {
-	wlog.Info("listening connections...")
-	defer wlog.Info("stopped listen new connection")
+	f.log.Info("listening connections...")
+	defer f.log.Info("stopped listen new connection")
 	defer close(f.stopped)
 	var wg sync.WaitGroup
 
@@ -49,7 +49,7 @@ func (f *FlowManager) Listen() {
 
 func (f *FlowManager) listenCallConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
 	defer wg.Done()
-	wlog.Info(fmt.Sprintf("listen call connections..."))
+	f.log.Info("listen call connections...")
 	for {
 		select {
 		case <-stop:
@@ -60,7 +60,7 @@ func (f *FlowManager) listenCallConnection(stop chan struct{}, wg *sync.WaitGrou
 			}
 
 			if err := f.CallRouter.Handle(c); err != nil {
-				wlog.Error(err.Error())
+				c.Log().Error(err.Error())
 			}
 		}
 	}
@@ -81,15 +81,15 @@ func (f *FlowManager) listenGrpcConnection(stop chan struct{}, wg *sync.WaitGrou
 			switch c.Type() {
 			case model.ConnectionTypeChat:
 				if err := f.ChatRouter.Handle(c); err != nil {
-					wlog.Error(err.Error())
+					c.Log().Error(err.Error())
 				}
 			case model.ConnectionTypeForm:
 				if err := f.FormRouter.Handle(c); err != nil {
-					wlog.Error(err.Error())
+					c.Log().Error(err.Error())
 				}
 			default:
 				if err := f.GRPCRouter.Handle(c); err != nil {
-					wlog.Error(err.Error())
+					c.Log().Error(err.Error())
 				}
 			}
 
@@ -110,7 +110,7 @@ func (f *FlowManager) listenInboundEmail(stop chan struct{}, wg *sync.WaitGroup,
 			}
 
 			if err := f.EmailRouter.Handle(c); err != nil {
-				wlog.Error(err.Error())
+				c.Log().Error(err.Error())
 			}
 		}
 	}
@@ -129,7 +129,7 @@ func (f *FlowManager) listenChannelConnection(stop chan struct{}, wg *sync.WaitG
 			}
 
 			if err := f.ChannelRouter.Handle(c); err != nil {
-				wlog.Error(err.Error())
+				c.Log().Error(err.Error())
 			}
 		}
 	}
@@ -137,7 +137,7 @@ func (f *FlowManager) listenChannelConnection(stop chan struct{}, wg *sync.WaitG
 
 func (f *FlowManager) listenWebHookConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
 	defer wg.Done()
-	wlog.Info(fmt.Sprintf("listen web hook connections..."))
+	f.log.Info("listen web hook connections...")
 	for {
 		select {
 		case <-stop:
@@ -148,7 +148,7 @@ func (f *FlowManager) listenWebHookConnection(stop chan struct{}, wg *sync.WaitG
 			}
 
 			if err := f.WebHookRouter.Handle(c); err != nil {
-				wlog.Error(err.Error())
+				c.Log().Error(err.Error())
 			}
 		}
 	}

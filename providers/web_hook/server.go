@@ -26,6 +26,7 @@ type server struct {
 	ListenAddr *net.TCPAddr
 	RootRouter *mux.Router
 	Router     *mux.Router
+	log        *wlog.Logger
 }
 
 func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
@@ -39,6 +40,10 @@ func NewServer(a App, addr string) model.Server {
 		consume:    make(chan model.Connection),
 		RootRouter: mux.NewRouter(),
 		app:        a,
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "web hook"),
+		),
 	}
 	s.InitApi()
 	return s
@@ -64,11 +69,11 @@ func (s *server) Start() *model.AppError {
 
 	go func() {
 		var err error
-		defer wlog.Debug(fmt.Sprintf("[http] close server listening"))
-		wlog.Debug(fmt.Sprintf("[http] server listening %s", s.ListenAddr.String()))
+		defer s.log.Debug("close server listening")
+		s.log.Debug(fmt.Sprintf("server listening %s", s.ListenAddr.String()))
 		err = s.Server.Serve(listener)
 		if err != nil && err != http.ErrServerClosed {
-			wlog.Critical(fmt.Sprintf("error starting server, err:%v", err))
+			s.log.Critical(fmt.Sprintf("error starting server, err:%v", err))
 			time.Sleep(time.Second)
 		}
 		close(s.didFinishListen)

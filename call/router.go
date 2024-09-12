@@ -10,7 +10,6 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
 type Router struct {
@@ -44,9 +43,9 @@ func (r *Router) Handlers() flow.ApplicationHandlers {
 
 func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.CallEndpoint {
 	if in == nil {
-		wlog.Error(fmt.Sprintf("call %s not found to", call.Id()))
+		call.Log().Error("not found TO")
 		if _, err := call.HangupAppErr(call.Context()); err != nil {
-			wlog.Error(err.Error())
+			call.Log().Err(err)
 		}
 		return nil
 	} else {
@@ -61,9 +60,9 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 }
 
 func (e *Router) notFoundRoute(call model.Call) {
-	wlog.Warn(fmt.Sprintf("call %s not found route schema", call.Id()))
+	call.Log().Debug("not found route schema")
 	if _, err := call.HangupNoRoute(call.Context()); err != nil {
-		wlog.Error(err.Error())
+		call.Log().Err(err)
 	}
 }
 
@@ -86,32 +85,28 @@ func (r *Router) handle(conn model.Connection) {
 	if transferSchemaId != nil && isTransfer {
 		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
 	} else if isTransfer && queueId == nil && (ccXfer || !call.IsOriginateRequest()) {
-		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
-			call.From().String(), call.Destination()))
+		call.Log().Info("transfer from: " + call.From().String() + " to destination " + call.Destination())
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
 			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
 		}
 
 		r.fm.SetBlindTransferNumber(call.DomainId(), call.Id(), call.Destination())
 	} else if queueId != nil {
-		wlog.Info(fmt.Sprintf("call %s [%d %s] is ivr from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
-			call.From().String(), call.Destination()))
+		call.Log().Info("ivr from: " + call.From().String() + " to destination " + call.Destination())
 
 		routing, err = r.fm.SearchOutboundFromQueueRouting(call.DomainId(), *queueId)
 
 	} else {
-		wlog.Info(fmt.Sprintf("call %s [%d %s] from: [%s] to: [%s] destination %s", call.Id(), call.DomainId(), call.Direction(),
-			call.From().String(), call.To().String(), call.Destination()))
-
 		from := call.From()
 		if from == nil {
-			wlog.Error("not allowed call: from is empty")
+			call.Log().Error("not allowed call: from is empty")
 			if _, err = call.HangupAppErr(call.Context()); err != nil {
-				wlog.Error(err.Error())
+				call.Log().Err(err)
 			}
 
 			return
 		}
+		call.Log().Info("call from: " + call.From().String() + " to: " + call.To().String() + ", destination: " + call.Destination())
 
 		switch call.Direction() {
 		case model.CallDirectionInbound:
@@ -126,12 +121,11 @@ func (r *Router) handle(conn model.Connection) {
 			case model.CallEndpointTypeDestination:
 				if id := to.IntId(); id == nil {
 					if _, err = call.HangupNoRoute(call.Context()); err != nil {
-						wlog.Error(err.Error())
+						call.Log().Err(err)
 					}
 
 					return
 				} else {
-					wlog.Debug(fmt.Sprintf("call %s search schema from gateway \"%s\" [%d]", call.Id(), to.Name, *id))
 					routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
 				}
 
@@ -158,9 +152,9 @@ func (r *Router) handle(conn model.Connection) {
 		if err == model.ErrNotFoundRoute {
 			r.notFoundRoute(call)
 		} else {
-			wlog.Error(err.Error())
+			call.Log().Err(err)
 			if _, err = call.HangupAppErr(call.Context()); err != nil {
-				wlog.Error(err.Error())
+				call.Log().Err(err)
 			}
 		}
 
@@ -184,7 +178,7 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 	if err = call.SetSchemaId(i.SchemaId()); err != nil {
-		wlog.Error(err.Error())
+		call.Log().Err(err)
 	}
 
 	flow.Route(conn.Context(), i, r)

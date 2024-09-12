@@ -29,8 +29,8 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 	var req *ApplicationRequest
 	var s time.Time
 
-	wlog.Debug(fmt.Sprintf("flow \"%s\" start conn %s", i.name, i.Connection.Id()))
-	defer wlog.Debug(fmt.Sprintf("flow \"%s\" stopped conn %s", i.name, i.Connection.Id()))
+	i.log.Debug("start flow " + i.name)
+	defer i.log.Debug("stop flow " + i.name)
 
 	for {
 		req = i.NextRequest()
@@ -39,13 +39,13 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 		}
 
 		if i.IsCancel() {
-			wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
+			i.log.Debug("break")
 			return
 		}
 
 		if req.limiter != nil {
 			if req.limiter.MaxCount() {
-				wlog.Debug(fmt.Sprintf("flow \"%s\" app=\"%s\" max limit %d goto [%s]", i.Name(), req.Name, req.limiter.max, req.limiter.failover))
+				i.log.Debug(fmt.Sprintf("max limit %d goto [%s]", req.limiter.max, req.limiter.failover))
 				if !i.Goto(req.limiter.failover) {
 					return
 				}
@@ -66,18 +66,28 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 				i.PushSteepLog(req.log.Name, s.UnixNano()/1000)
 			}
 			if res.Err != nil {
-				wlog.Warn(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Err.Error(), time.Since(s)))
+				i.log.Warn("application "+req.Id()+", error: "+res.Err.Error(),
+					wlog.String("method", req.Id()),
+					wlog.Any("args", req.Args()),
+					wlog.Duration("duration", time.Since(s)),
+				)
 			} else {
-				wlog.Debug(fmt.Sprintf("\"%s\" %v [%v] - %s (%s)", i.Name(), req.Id(), req.Args(), res.Res.String(), time.Since(s)))
+				i.log.Debug("application "+req.Id()+", success: "+res.Res.String(),
+					wlog.String("method", req.Id()),
+					wlog.Any("args", req.Args()),
+					wlog.Duration("duration", time.Since(s)),
+				)
 			}
 
 			if req.IsCancel() {
 				i.SetCancel()
-				wlog.Debug(fmt.Sprintf("flow \"%s\" set break from application \"%s\"", i.Name(), req.Name))
+				i.log.Debug("set break from application"+req.Name,
+					wlog.String("method", req.Name),
+				)
 			}
 
 			if i.IsCancel() {
-				wlog.Debug(fmt.Sprintf("flow \"%s\" break", i.Name()))
+				i.log.Debug("set break from flow")
 				return
 			}
 		}

@@ -35,6 +35,7 @@ type MailServer struct {
 	running         map[int]bool
 	debug           bool
 	sync.RWMutex
+	log *wlog.Logger
 }
 
 func New(storageApi *storage.Api, s store.EmailStore, debug bool) model.Server {
@@ -47,6 +48,7 @@ func New(storageApi *storage.Api, s store.EmailStore, debug bool) model.Server {
 		storage:         storageApi,
 		running:         make(map[int]bool),
 		debug:           debug,
+		log:             wlog.GlobalLogger(),
 	}
 }
 
@@ -107,11 +109,11 @@ func (s *MailServer) hasRunning(id int) bool {
 
 func (s *MailServer) listen() {
 	defer func() {
-		wlog.Debug("stop listen email server...")
+		s.log.Debug("stop listen email server...")
 		close(s.stopped)
 	}()
 
-	wlog.Debug("start listen emails")
+	s.log.Debug("start listen emails")
 	for {
 		select {
 		case <-s.didFinishListen:
@@ -119,7 +121,7 @@ func (s *MailServer) listen() {
 		case <-time.After(FetchProfileInterval):
 			tasks, err := s.store.ProfileTaskFetch("")
 			if err != nil {
-				wlog.Error(err.Error())
+				s.log.Error(err.Error())
 				time.Sleep(time.Second * 5)
 			} else {
 				for _, v := range tasks {
@@ -177,7 +179,7 @@ func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
 		s.storeError(profile, err)
-		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+		s.log.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 		return
 	}
 
@@ -187,7 +189,7 @@ retry:
 	err = profile.Login()
 	if err != nil {
 		s.storeError(profile, err)
-		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+		s.log.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 	}
 
 	var emails []*model.Email
@@ -199,13 +201,13 @@ retry:
 				goto retry
 			}
 		}
-		wlog.Error(fmt.Sprintf("[%s] error: %s", profile, err.Error()))
+		s.log.Error(fmt.Sprintf("[%s] error: %s", profile, err.Error()))
 		return
 	}
 
 	for _, email := range emails {
 		if err = s.store.Save(profile.DomainId, email); err != nil {
-			wlog.Error(fmt.Sprintf("%s, error: %s", profile, err.Error()))
+			s.log.Err(err)
 			continue
 		}
 		s.consume <- NewConnection(s, PKey{
@@ -218,14 +220,14 @@ retry:
 	err = profile.Logout()
 	if err != nil {
 		s.storeError(profile, err)
-		wlog.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+		s.log.Err(err)
 	}
 }
 
 func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 	saveErr := s.store.SetError(p.Id, err)
 	if saveErr != nil {
-		wlog.Error(fmt.Sprintf("%s, error: %s", p, saveErr.Error()))
+		s.log.Err(saveErr)
 	}
 	s.profiles.Remove(p.Id)
 }
@@ -233,7 +235,7 @@ func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
 	err := s.store.SetToken(p.Id, token)
 	if err != nil {
-		wlog.Error(fmt.Sprintf("profile_id=%d, store token error: %s", p.Id, err.Error()))
+		s.log.Err(err)
 	}
 }
 

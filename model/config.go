@@ -24,6 +24,14 @@ type Config struct {
 	Grpc                         GrpcServeSettings `json:"grpc"`
 	//EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
+	Log                   LogSettings           `json:"log"`
+}
+
+type LogSettings struct {
+	Lvl  string `json:"lvl" flag:"log_lvl|debug|Log level"`
+	Json bool   `json:"json" flag:"log_json|false|Log format JSON"`
+	Otel bool   `json:"otel" flag:"log_otel|false|Log OTEL"`
+	File string `json:"file" flag:"log_file||Log file directory"`
 }
 
 type EslSettings struct {

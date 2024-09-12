@@ -114,7 +114,7 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 		call.GetVariable("variable_originate_disposition") == "ORIGINATOR_CANCEL" &&
 		call.GetVariable("variable_sip_redirect_dialstring") != "" &&
 		call.GetVariable("variable_webitel_detect_redirect") != "false" {
-		wlog.Warn(fmt.Sprintf("call %s detect sip redirect to %s, break this route", call.Id(), call.GetVariable("variable_sip_redirect_dialstring")))
+		call.Log().Debug("detect sip redirect to " + call.GetVariable("variable_sip_redirect_dialstring") + ", break this route")
 		scope.SetCancel()
 	}
 	//call.Dump()

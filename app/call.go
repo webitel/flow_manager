@@ -49,8 +49,8 @@ func (c *callWatcher) Stop() {
 }
 
 func (f *FlowManager) listenCallEvents(stop chan struct{}) {
-	wlog.Info(fmt.Sprintf("listen call events..."))
-	defer wlog.Debug(fmt.Sprintf("stop listening call events..."))
+	f.log.Info(fmt.Sprintf("listen call events..."))
+	defer f.log.Debug(fmt.Sprintf("stop listening call events..."))
 	for {
 		select {
 		case <-stop:
@@ -61,7 +61,11 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 			}
 
 			if c.DomainId == 0 {
-				wlog.Error(fmt.Sprintf("call %s not found domain: %v", c.Id, c))
+				f.log.Error("bad domain", wlog.Namespace("call"),
+					wlog.Int64("domain_id", c.DomainId),
+					wlog.String("call_id", c.Id),
+					wlog.String("event_name", c.Event),
+				)
 				continue
 			}
 
@@ -74,33 +78,40 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 func (f *FlowManager) handleCallAction(data model.CallActionData) {
 	action := data.GetEvent()
 
+	log := f.Log().With(
+		wlog.Namespace("context"),
+		wlog.String("call_id", data.Id),
+		wlog.String("scope", "call"),
+		wlog.String("event_name", data.Event),
+	)
+
 	switch call := action.(type) {
 	case *model.CallActionRinging:
 		if err := f.Store.Call().Save(call); err != nil {
-			wlog.Error(err.Error())
+			log.Error(err.Error())
 		}
 	case *model.CallActionBridge:
 		if err := f.Store.Call().SetBridged(call); err != nil {
-			wlog.Error(err.Error())
+			log.Error(err.Error())
 		}
 
 	case *model.CallActionTranscript:
 		if err := f.Store.Call().SaveTranscript(call); err != nil {
-			wlog.Error(err.Error())
+			log.Error(err.Error())
 		}
 
 	case *model.CallActionHeartbeat:
 		if err := f.Store.Call().SetHeartbeat(call.Id); err != nil {
-			wlog.Error(err.Error())
+			log.Error(err.Error())
 		}
 	case *model.CallActionHangup:
 		if call.CDR != nil && !*call.CDR {
 			if err := f.Store.Call().Delete(call.Id); err != nil {
-				wlog.Error(err.Error())
+				log.Error(err.Error())
 			}
 		} else {
 			if err := f.Store.Call().SetHangup(call); err != nil {
-				wlog.Error(err.Error())
+				log.Error(err.Error())
 			}
 		}
 
@@ -110,7 +121,7 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 			return
 		}
 		if err := f.Store.Call().SetState(&data.CallAction); err != nil {
-			wlog.Error(err.Error())
+			log.Error(err.Error())
 		}
 	}
 }

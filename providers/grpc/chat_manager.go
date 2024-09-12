@@ -22,6 +22,7 @@ type ChatManager struct {
 	startOnce sync.Once
 	stop      chan struct{}
 	stopped   chan struct{}
+	log       *wlog.Logger
 }
 
 func NewChatManager() *ChatManager {
@@ -29,11 +30,15 @@ func NewChatManager() *ChatManager {
 		stop:            make(chan struct{}),
 		stopped:         make(chan struct{}),
 		poolConnections: discovery.NewPoolConnections(),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "chat manager"),
+		),
 	}
 }
 
 func (cm *ChatManager) Start(sd discovery.ServiceDiscovery) error {
-	wlog.Debug("starting chat client")
+	cm.log.Debug("starting chat client")
 	cm.serviceDiscovery = sd
 
 	if services, err := cm.serviceDiscovery.GetByName(ChatClientService); err != nil {
@@ -49,14 +54,14 @@ func (cm *ChatManager) Start(sd discovery.ServiceDiscovery) error {
 		go cm.watcher.Start()
 		go func() {
 			defer func() {
-				wlog.Debug("stopper chat client")
+				cm.log.Debug("stopped")
 				close(cm.stopped)
 			}()
 
 			for {
 				select {
 				case <-cm.stop:
-					wlog.Debug("chat client received stop signal")
+					cm.log.Debug("received stop signal")
 					return
 				}
 			}
@@ -82,11 +87,18 @@ func (cm *ChatManager) registerConnection(v *discovery.ServiceConnection) {
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
 	c, err := NewChatClientConnection(v.Id, addr)
 	if err != nil {
-		wlog.Error(fmt.Sprintf("connection %s [%s] error: %s", v.Id, addr, err.Error()))
+		cm.log.Error(err.Error(),
+			wlog.String("connection_id", v.Id),
+			wlog.String("connection_addr", addr),
+		)
 		return
 	}
 	cm.poolConnections.Append(c)
-	wlog.Debug(fmt.Sprintf("register connection %s [%s]", c.Name(), addr))
+	cm.log.Debug("register",
+		wlog.String("connection_id", v.Id),
+		wlog.String("connection_name", c.Name()),
+		wlog.String("connection_addr", addr),
+	)
 }
 
 func (cm *ChatManager) getClient(name string) (*ChatClientConnection, error) {
@@ -108,7 +120,7 @@ func (cm *ChatManager) getRandCli() (*ChatClientConnection, error) {
 func (cm *ChatManager) wakeUp() {
 	list, err := cm.serviceDiscovery.GetByName(ChatClientService)
 	if err != nil {
-		wlog.Error(err.Error())
+		cm.log.Err(err)
 		return
 	}
 
