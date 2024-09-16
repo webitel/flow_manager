@@ -20,13 +20,9 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(ctx, vars, 0)
+	conn := newConnection(model.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
 
 	var result *workflow.DistributeAttemptResponse
-
-	conn.schemaId = int(in.SchemaId)
-	conn.domainId = in.DomainId
-	conn.id = model.NewId()
 
 	s.consume <- conn
 
@@ -58,13 +54,9 @@ func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(ctx, vars, 0)
+	conn := newConnection(model.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
 
 	var result *workflow.ResultAttemptResponse
-
-	conn.schemaId = int(in.SchemaId)
-	conn.domainId = in.DomainId
-	conn.id = model.NewId()
 	sc := in.GetScope()
 	if sc != nil {
 		conn.scope.Id = sc.Id
@@ -102,9 +94,10 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	if vars == nil {
 		vars = make(map[string]string)
 	}
-
-	conn := newConnection(context.Background(), vars, 0)
 	id := model.NewId()
+
+	conn := newConnection(id, in.DomainId, int(in.SchemaId), context.Background(), vars, 0)
+
 	conn.id = id
 
 	sc := in.GetScope()
@@ -112,9 +105,6 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 		conn.scope.Id = sc.Id
 		conn.scope.Channel = sc.Channel
 	}
-
-	conn.schemaId = int(in.SchemaId)
-	conn.domainId = in.DomainId
 
 	s.consume <- conn
 	return &workflow.StartFlowResponse{
@@ -129,12 +119,8 @@ func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(ctx, vars, time.Duration(in.TimeoutSec)*time.Second)
 	id := model.NewId()
-	conn.id = id
-
-	conn.schemaId = int(in.SchemaId)
-	conn.domainId = in.DomainId
+	conn := newConnection(id, in.DomainId, int(in.SchemaId), ctx, vars, time.Duration(in.TimeoutSec)*time.Second)
 
 	s.consume <- conn
 

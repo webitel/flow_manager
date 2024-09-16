@@ -41,6 +41,8 @@ type conversation struct {
 	messages        []*proto.Message
 
 	chat *chatApi
+
+	log *wlog.Logger
 }
 
 func NewConversation(cli *ChatClientConnection, id string, domainId, profileId int64, schemaId int32, userId int64) *conversation {
@@ -60,7 +62,18 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		storeMessages: make(map[string][]byte),
 		confirmation:  make(map[string]chan []*proto.Message),
 		nodeId:        cli.Name(),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("conversation_id", id),
+			wlog.Int64("domain_id", domainId),
+			wlog.Int64("bot_id", profileId),
+			wlog.Int("schema_id", int(schemaId)),
+		),
 	}
+}
+
+func (c *conversation) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *conversation) UserId() int64 {
@@ -417,17 +430,17 @@ func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Messa
 
 	t := time.After(time.Second * time.Duration(timeout))
 
-	wlog.Debug(fmt.Sprintf("conversation %s wait message %s", c.id, time.Second*time.Duration(timeout)))
+	c.log.Debug("wait message", wlog.Duration("wait_sec", time.Second*time.Duration(timeout)))
 
 	select {
 	case <-c.Context().Done():
-		wlog.Debug(fmt.Sprintf("conversation %s wait message: cancel", c.id))
+		c.log.Debug("cancel")
 		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Cancel", http.StatusInternalServerError)
 	case <-t:
-		wlog.Debug(fmt.Sprintf("conversation %s wait message: timeout", c.id))
+		c.log.Debug("timeout")
 		return nil, ErrWaitMessageTimeout
 	case msgsProto := <-ch:
-		wlog.Debug(fmt.Sprintf("conversation %s receive message: %v", c.id, msgsProto))
+		c.log.Debug(fmt.Sprintf("receive message: %v", msgsProto))
 		return msgsProto, nil
 	}
 }
@@ -438,7 +451,7 @@ func (c *conversation) NodeName() string {
 
 func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCause) {
 	if err != nil {
-		wlog.Error(fmt.Sprintf("conversation %s stop with error: %s", c.id, err.Error()))
+		c.log.Err(err)
 		cause = proto.CloseConversationCause_flow_err
 	}
 
@@ -448,11 +461,11 @@ func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCa
 	})
 
 	if e != nil {
-		wlog.Error(e.Error())
+		c.log.Err(e)
 	}
 
 	c.chat.conversations.Remove(c.id)
-	wlog.Debug(fmt.Sprintf("close conversation %s [%d]", c.id, c.chat.conversations.Len()))
+	c.log.Debug("close")
 }
 
 // TODO transferVars
@@ -473,7 +486,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 			})
 
 			if err != nil {
-				wlog.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
+				c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
 			}
 		}
 		return c.Set(ctx, exp)
@@ -498,7 +511,7 @@ func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Respo
 	_, err := c.client.api.SetVariables(ctx, req)
 
 	if err != nil {
-		wlog.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
+		c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
 	}
 
 	return c.Set(ctx, vars)
@@ -584,7 +597,7 @@ func (c *conversation) GetQueueKey() *model.InQueueKey {
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {
 	if cli.Name() != c.client.Name() {
 		c.mx.Lock()
-		wlog.Debug(fmt.Sprintf("conversation [%s] changed client from \"%s\" to \"%s\"", c.id, c.client.Name(), cli.Name()))
+		c.log.Debug(fmt.Sprintf("changed client from \"%s\" to \"%s\"", c.client.Name(), cli.Name()))
 		c.client = cli
 		c.mx.Unlock()
 	}

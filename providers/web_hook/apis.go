@@ -3,6 +3,7 @@ package web_hook
 import (
 	"context"
 	"encoding/json"
+	"github.com/webitel/wlog"
 	"io"
 	"net/http"
 	"sync"
@@ -41,9 +42,10 @@ func startHook(c *Context, w http.ResponseWriter, r *http.Request) {
 	}
 
 	stopC, stopF := context.WithTimeout(context.TODO(), time.Second*60) // TODO maxTimeout
+	id := model.NewId()
 
 	conn := &Connection{
-		id:        model.NewId(),
+		id:        id,
 		ctx:       stopC,
 		stop:      stopF,
 		domainId:  h.DomainId,
@@ -51,6 +53,11 @@ func startHook(c *Context, w http.ResponseWriter, r *http.Request) {
 		variables: nil,
 		RWMutex:   sync.RWMutex{},
 		response:  w,
+		log: c.s.log.With(
+			wlog.String("http_id", id),
+			wlog.Int64("domain_id", h.DomainId),
+			wlog.Int("schema_id", h.SchemaId),
+		),
 	}
 
 	if r.Method != http.MethodGet {

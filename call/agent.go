@@ -106,7 +106,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 	res, err := r.fm.JoinToAgent(ctx, req)
 
 	if err != nil {
-		wlog.Error(err.Error())
+		call.Log().Err(err)
 		return model.CallResponseOK, nil
 	}
 

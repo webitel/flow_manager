@@ -84,6 +84,8 @@ type Connection struct {
 	cancelQueue      context.CancelFunc
 	speechMessages   []model.SpeechMessage
 	sync.RWMutex
+
+	log *wlog.Logger
 }
 
 func (c *Connection) Type() model.ConnectionType {
@@ -118,11 +120,23 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		//disconnected:     make(chan struct{}),
 		variables: model.NewThreadSafeStringMap(),
 	}
+	connection.log = wlog.GlobalLogger().With(
+		wlog.Namespace("context"),
+		wlog.String("scope", "call"),
+		wlog.String("call_id", connection.id),
+		wlog.Int("user_id", connection.userId),
+		wlog.Int("gateway_id", connection.gatewayId),
+		wlog.Int64("domain_id", connection.domainId),
+	)
 	connection.initIvrQueue(dump)
 	connection.initTransferSchema(dump)
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
+}
+
+func (c *Connection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *Connection) initIvrQueue(event *eventsocket.Event) {
@@ -503,20 +517,23 @@ func (c *Connection) setEvent(event *eventsocket.Event) {
 				s <- event
 				close(s)
 			}
-			wlog.Debug(fmt.Sprintf("call %s executed app: %s %s %s", c.Id(), event.Get(HEADER_APPLICATION_NAME),
-				event.Get(HEADER_APPLICATION_DATA_NAME), event.Get(HEADER_APPLICATION_RESPONSE_NAME)))
+			c.log.Debug("executed "+event.Get(HEADER_APPLICATION_NAME),
+				wlog.String("method", event.Get(HEADER_APPLICATION_NAME)),
+				wlog.String("data", event.Get(HEADER_APPLICATION_DATA_NAME)),
+				wlog.String("response", event.Get(HEADER_APPLICATION_RESPONSE_NAME)),
+			)
 		case EVENT_HANGUP_COMPLETE:
 			c.hangupCause = event.Get(HEADER_HANGUP_CAUSE_NAME)
-			wlog.Debug(fmt.Sprintf("call %s hangup %s", c.Id(), c.hangupCause))
+			c.log.Debug("hangup", wlog.String("cause", c.hangupCause))
 			c.cancelFn()
 			//TODO SET DISCONNECT ROUTE
 			c.connection.Send("exit")
 			c.stopped = true
 		case EVENT_BRIDGE:
-			wlog.Debug(fmt.Sprintf("call %s receive event %s", c.Id(), EVENT_BRIDGE))
+			c.log.Debug("receive bridge", wlog.String("event_name", EVENT_BRIDGE))
 			c.sendHookBridged()
 		default:
-			wlog.Debug(fmt.Sprintf("call %s receive event %s", c.Id(), event.Get(HEADER_EVENT_NAME)))
+			c.log.Debug("receive event", wlog.String("event_name", event.Get(HEADER_EVENT_NAME)))
 		}
 	} else if event.Get(HEADER_CONTENT_TYPE_NAME) == "text/disconnect-notice" && event.Get(HEADER_CONTENT_DISPOSITION_NAME) == "Disconnected" {
 
@@ -575,7 +592,10 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args in
 		return nil, errExecuteAfterHangup
 	}
 
-	wlog.Debug(fmt.Sprintf("call %s try execute %s %v", c.Id(), app, args))
+	//c.log.Debug("try execute",
+	//	wlog.String("method", app),
+	//	wlog.Any("args", args),
+	//)
 
 	guid, err := uuid.NewV4()
 	if err != nil {

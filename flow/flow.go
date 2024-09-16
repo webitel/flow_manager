@@ -43,6 +43,7 @@ type Flow struct {
 	logs        []*model.StepLog
 	vm          *otto.Otto
 	sync.RWMutex
+	log *wlog.Logger
 }
 
 type Config struct {
@@ -62,6 +63,15 @@ func New(r model.Router, conf Config) *Flow {
 	i.name = conf.Name
 	if conf.Conn != nil {
 		i.name += fmt.Sprintf(" [%s]", conf.Conn.Id())
+		i.log = conf.Conn.Log().With(
+			wlog.Int("schema_id", i.schemaId),
+			wlog.String("schema_name", conf.Name),
+		)
+	} else {
+		i.log = wlog.GlobalLogger().With(
+			wlog.Int("schema_id", i.schemaId),
+			wlog.String("schema_name", conf.Name),
+		)
 	}
 	i.Connection = conf.Conn
 	i.currentNode = NewNode(nil)
@@ -129,6 +139,17 @@ func (f *Flow) Fork(name string, schema model.Applications) *Flow {
 	i.triggers = f.triggers // nil ?
 	i.Tags = make(map[string]*Tag)
 	i.timezone = f.timezone
+	i.log = f.log
+	if i.log == nil {
+		i.log = wlog.GlobalLogger().With(
+			wlog.Int("schema_id", i.schemaId),
+			wlog.String("schema_name", name),
+		)
+	} else {
+		i.log = i.log.With(
+			wlog.String("schema_name", name),
+		)
+	}
 
 	parseFlowArray(i, i.currentNode, schema)
 	return i

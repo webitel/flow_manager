@@ -105,7 +105,18 @@ func (p *EmailProfile) Tls() bool {
 
 func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
 	if strings.Index(host, MailGmail+".com") > -1 {
-
+		return oauth2.Config{
+			ClientID:     config.ClientId,
+			ClientSecret: config.ClientSecret,
+			Endpoint: oauth2.Endpoint{
+				AuthURL:  "https://accounts.google.com/o/oauth2/v2/auth",
+				TokenURL: "https://www.googleapis.com/oauth2/v4/token",
+			},
+			RedirectURL: config.RedirectURL, //"https://dev.webitel.com/endpoint/oauth2/outlook/callback",
+			Scopes: []string{
+				"https://mail.google.com/",
+			},
+		}
 	} else if strings.Index(host, "office365") > -1 && config != nil {
 		return oauth2.Config{
 			ClientID:     config.ClientId,

@@ -1,10 +1,8 @@
 package call
 
 import (
-	"fmt"
 	"github.com/webitel/engine/pkg/webitel_client"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"strconv"
 )
 
@@ -32,7 +30,7 @@ func (r *Router) linkContact(call model.Call) {
 	})
 
 	if err != nil {
-		wlog.Error(fmt.Sprintf("call %s, listContact error: %s", call.Id(), err.Error()))
+		call.Log().Error("listContact error:" + err.Error())
 		return
 	}
 

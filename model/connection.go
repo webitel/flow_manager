@@ -3,6 +3,7 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/engine/discovery"
 )
@@ -45,6 +46,7 @@ type Connection interface {
 
 	Close() *AppError
 	Variables() map[string]string
+	Log() *wlog.Logger
 }
 
 type Result struct {

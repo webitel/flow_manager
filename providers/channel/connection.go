@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/wlog"
 	"regexp"
 	"strings"
 	"sync"
@@ -26,16 +27,25 @@ type Connection struct {
 	schemaId  int
 	variables map[string]string
 	sync.RWMutex
+	log *wlog.Logger
 }
 
 func newConnection(c model.ChannelExec) model.Connection {
+	id := model.NewId()
 	conn := &Connection{
-		id:        model.NewId(),
+		id:        id,
 		ctx:       context.Background(),
 		domainId:  c.DomainId,
 		variables: toVariables(c.Variables),
 		schemaId:  c.SchemaId,
 		RWMutex:   sync.RWMutex{},
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "channel"),
+			wlog.String("channel_id", id),
+			wlog.Int64("domain_id", c.DomainId),
+			wlog.Int("schema_id", c.SchemaId),
+		),
 	}
 	if conn.variables == nil {
 		conn.variables = make(map[string]string)
@@ -43,8 +53,12 @@ func newConnection(c model.ChannelExec) model.Connection {
 	return conn
 }
 
-func (c Connection) Type() model.ConnectionType {
+func (c *Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeChannel
+}
+
+func (c *Connection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *Connection) Id() string {

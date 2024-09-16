@@ -19,11 +19,16 @@ type listWatcher struct {
 	fm        *FlowManager
 	startOnce sync.Once
 	watcher   *discovery.Watcher
+	log       *wlog.Logger
 }
 
 func NewListWatcher(fm *FlowManager) *listWatcher {
 	return &listWatcher{
 		fm: fm,
+		log: fm.Log().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "list watcher"),
+		),
 	}
 }
 
@@ -45,12 +50,12 @@ func (c *listWatcher) Stop() {
 func (c *listWatcher) cleanExpiredNumbers() {
 	count, err := c.fm.Store.List().CleanExpired()
 	if err != nil {
-		wlog.Error(err.Error())
+		c.log.Error(err.Error())
 		time.Sleep(time.Second * 5)
 	}
 
 	if count > 0 {
-		wlog.Debug(fmt.Sprintf("removed %d expired numbers", count))
+		c.log.Debug(fmt.Sprintf("removed %d expired numbers", count))
 	}
 }
 
