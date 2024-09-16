@@ -28,10 +28,11 @@ type Config struct {
 }
 
 type LogSettings struct {
-	Lvl  string `json:"lvl" flag:"log_lvl|debug|Log level"`
-	Json bool   `json:"json" flag:"log_json|false|Log format JSON"`
-	Otel bool   `json:"otel" flag:"log_otel|false|Log OTEL"`
-	File string `json:"file" flag:"log_file||Log file directory"`
+	Lvl     string `json:"lvl" flag:"log_lvl|debug|Log level"`
+	Json    bool   `json:"json" flag:"log_json|false|Log format JSON"`
+	Otel    bool   `json:"otel" flag:"log_otel|false|Log OTEL"`
+	File    string `json:"file" flag:"log_file||Log file directory"`
+	Console bool   `json:"console" flag:"log_console|true|Log console" env:"LOG_CONSOLE"`
 }
 
 type EslSettings struct {

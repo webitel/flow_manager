@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
-	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"time"
 
@@ -106,7 +105,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	logConfig := &wlog.LoggerConfiguration{
-		EnableConsole: true,
+		EnableConsole: config.Log.Console,
 		ConsoleJson:   false,
 		ConsoleLevel:  config.Log.Lvl,
 	}
@@ -121,7 +120,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if config.Log.Otel {
 		// TODO
 		logConfig.EnableExport = true
-		fm.otelShutdownFunc, err = otelsdk.Setup(
+		fm.otelShutdownFunc, err = otelsdk.Configure(
 			fm.ctx,
 			otelsdk.WithResource(resource.NewSchemaless(
 				semconv.ServiceName(model.AppServiceName),
@@ -129,7 +128,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 				semconv.ServiceInstanceID(fm.id),
 				semconv.ServiceNamespace("webitel"),
 			)),
-			otelsdk.WithLogLevel(log.SeverityDebug),
 		)
 		if err != nil {
 			return nil, err
