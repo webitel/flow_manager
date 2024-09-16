@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
 type App interface {
@@ -27,7 +26,7 @@ type Handler struct {
 }
 
 func (h Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	wlog.Debug(fmt.Sprintf("%v - %v", r.Method, r.URL.Path))
+	h.s.log.Debug(fmt.Sprintf("%v - %v", r.Method, r.URL.Path))
 	c := &Context{
 		app:       h.app,
 		Params:    ParamsFromRequest(r),

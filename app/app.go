@@ -1,7 +1,10 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/resource"
 	"time"
 
 	"github.com/webitel/flow_manager/providers/web_hook"
@@ -27,10 +30,19 @@ import (
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 	"github.com/webitel/wlog"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+
+	// -------------------- plugin(s) -------------------- //
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/otlp"
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/stdout"
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/otlp"
+	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/stdout"
 )
 
 type FlowManager struct {
-	Log           *wlog.Logger
+	log           *wlog.Logger
 	id            string
 	config        *model.Config
 	cluster       *cluster
@@ -66,8 +78,10 @@ type FlowManager struct {
 	cert        presign.PreSign
 	listWatcher *listWatcher
 
-	cacheStore map[CacheType]cachelayer.CacheStore
-	wbtCli     *webitel_client.Client
+	cacheStore       map[CacheType]cachelayer.CacheStore
+	wbtCli           *webitel_client.Client
+	ctx              context.Context
+	otelShutdownFunc otelsdk.ShutdownFunc
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -83,22 +97,50 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
 		stop:        make(chan struct{}),
 		stopped:     make(chan struct{}),
+		ctx:         context.Background(),
 	}
 
 	if config.ExternalSql {
 		fm.ExternalStore = cachelayer.NewExternalStoreManager()
 	}
 
-	fm.Log = wlog.NewLogger(&wlog.LoggerConfiguration{
-		EnableConsole: true,
-		ConsoleLevel:  wlog.LevelDebug,
-	})
+	logConfig := &wlog.LoggerConfiguration{
+		EnableConsole: config.Log.Console,
+		ConsoleJson:   false,
+		ConsoleLevel:  config.Log.Lvl,
+	}
+
+	if config.Log.File != "" {
+		logConfig.FileLocation = config.Log.File
+		logConfig.EnableFile = true
+		logConfig.FileJson = true
+		logConfig.FileLevel = config.Log.Lvl
+	}
+
+	if config.Log.Otel {
+		// TODO
+		logConfig.EnableExport = true
+		fm.otelShutdownFunc, err = otelsdk.Configure(
+			fm.ctx,
+			otelsdk.WithResource(resource.NewSchemaless(
+				semconv.ServiceName(model.AppServiceName),
+				semconv.ServiceVersion(model.CurrentVersion),
+				semconv.ServiceInstanceID(fm.id),
+				semconv.ServiceNamespace("webitel"),
+			)),
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	fm.log = wlog.NewLogger(logConfig)
 
 	fm.callWatcher = NewCallWatcher(fm)
 	fm.listWatcher = NewListWatcher(fm)
 
-	wlog.RedirectStdLog(fm.Log)
-	wlog.InitGlobalLogger(fm.Log)
+	wlog.RedirectStdLog(fm.log)
+	wlog.InitGlobalLogger(fm.log)
 
 	wlog.Info("server is initializing...")
 
@@ -209,4 +251,12 @@ func (f *FlowManager) Shutdown() {
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()
+
+	if f.otelShutdownFunc != nil {
+		f.otelShutdownFunc(f.ctx)
+	}
+}
+
+func (f *FlowManager) Log() *wlog.Logger {
+	return f.log
 }

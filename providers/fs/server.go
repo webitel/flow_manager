@@ -33,6 +33,8 @@ type server struct {
 	listener        net.Listener
 	stopped         bool
 	sync.RWMutex
+
+	log *wlog.Logger
 }
 
 func NewServer(cfg *Config) model.Server {
@@ -40,6 +42,10 @@ func NewServer(cfg *Config) model.Server {
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan model.Connection),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "fs server"),
+		),
 	}
 }
 
@@ -64,7 +70,7 @@ func (s *server) Start() *model.AppError {
 
 	// todo validate ?
 	if s.cfg.RecordResample != 0 {
-		wlog.Info(fmt.Sprintf("recordings resample to %d Hz", s.cfg.RecordResample))
+		s.log.Info(fmt.Sprintf("recordings resample to %d Hz", s.cfg.RecordResample))
 	}
 
 	s.listener = lis
@@ -73,8 +79,8 @@ func (s *server) Start() *model.AppError {
 }
 
 func (s *server) listen(lis net.Listener) {
-	defer wlog.Debug(fmt.Sprintf("[%s] close server listening", s.Name()))
-	wlog.Debug(fmt.Sprintf("[%s] server listening %s", s.Name(), lis.Addr().String()))
+	defer s.log.Debug("close listening")
+	s.log.Info(fmt.Sprintf("server listening %s", lis.Addr().String()))
 
 	err := eventsocket.Listen(lis, s.handleConnection)
 	s.RLock()
@@ -82,7 +88,10 @@ func (s *server) listen(lis net.Listener) {
 	s.RUnlock()
 
 	if err != nil && !stopped {
-		wlog.Error(fmt.Sprintf("[%s] server listening %s, error: %s", s.Name(), lis.Addr().String(), err.Error()))
+		s.log.With(
+			wlog.String("address", lis.Addr().String()),
+		).Err(err)
+
 		panic(err.Error())
 	}
 	close(s.didFinishListen)
@@ -127,19 +136,19 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 
 	_, err = c.Send("linger 30")
 	if err != nil {
-		wlog.Error(fmt.Sprintf("set linger call %s error: %s", uuid, err.Error()))
+		s.log.Error("linger error: "+err.Error(), wlog.String("call_id", uuid))
 		return
 	}
 
 	_, err = c.Send("filter unique-id " + uuid)
 	if err != nil {
-		wlog.Error(fmt.Sprintf("call %s filter events error: %s", uuid, err.Error()))
+		s.log.Error("filter error: "+err.Error(), wlog.String("call_id", uuid))
 		return
 	}
 
 	_, err = c.Send(fmt.Sprintf("events plain %s %s %s %s", EVENT_HANGUP_COMPLETE, EVENT_EXECUTE_COMPLETE, EVENT_ANSWER, EVENT_BRIDGE))
 	if err != nil {
-		wlog.Error(fmt.Sprintf("call %s events error: %s", uuid, err.Error()))
+		s.log.Error("events error: "+err.Error(), wlog.String("call_id", uuid))
 		return
 	}
 
@@ -149,9 +158,9 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 	defer func() {
 
 		if connection.Stopped() {
-			wlog.Debug(fmt.Sprintf("call %s stopped connect %v", uuid, c.RemoteAddr()))
+			connection.log.Debug("stopped connection")
 		} else {
-			wlog.Warn(fmt.Sprintf("call %s bad close connection %v", uuid, c.RemoteAddr()))
+			connection.log.Warn("bad close connection")
 		}
 
 		connection.Lock()
@@ -166,14 +175,14 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 		connection.Unlock()
 
 		if connection.lastEvent.Get(HEADER_EVENT_NAME) != EVENT_HANGUP_COMPLETE {
-			wlog.Warn(fmt.Sprintf("call %s no found event hangup", connection.Id()))
+			connection.log.Warn("no found event hangup")
 		}
 
 		connection.connection.Close()
 		connection.cancelFn()
 	}()
 
-	wlog.Debug(fmt.Sprintf("receive new call %s connect %v", uuid, c.RemoteAddr()))
+	connection.log.Debug("start call")
 	s.consume <- connection
 
 	for {
@@ -185,7 +194,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 		if err == io.EOF {
 			return
 		} else if err != nil {
-			wlog.Error(fmt.Sprintf("call %s socket error: %s", uuid, err.Error()))
+			connection.log.Error("socket error: " + err.Error())
 			continue
 		}
 

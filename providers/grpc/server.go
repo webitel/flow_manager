@@ -36,6 +36,8 @@ type server struct {
 	chatManager     *ChatManager
 	nodeName        string
 	gogrpc.UnsafeFlowServiceServer
+
+	log *wlog.Logger
 }
 
 func NewServer(cfg *Config, cm *ChatManager) *server {
@@ -45,6 +47,10 @@ func NewServer(cfg *Config, cm *ChatManager) *server {
 		consume:         make(chan model.Connection),
 		nodeName:        cfg.NodeName,
 		chatManager:     cm,
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "grpc server"),
+		),
 	}
 	srv.chatApi = NewChatApi(srv)
 	srv.processingApi = NewProcessingApi(srv)
@@ -89,8 +95,8 @@ func (s *server) Start() *model.AppError {
 }
 
 func (s *server) listen(lis net.Listener) {
-	defer wlog.Debug(fmt.Sprintf("[grpc] close server listening"))
-	wlog.Debug(fmt.Sprintf("[grpc] server listening %s", lis.Addr().String()))
+	defer s.log.Debug(fmt.Sprintf("close server listening"))
+	s.log.Debug(fmt.Sprintf("server listening %s", lis.Addr().String()))
 	err := s.server.Serve(lis)
 	if err != nil {
 		//FIXME
@@ -145,8 +151,13 @@ func unaryInterceptor(ctx context.Context,
 
 	h, err := handler(ctx, req)
 
+	log := wlog.GlobalLogger().With(wlog.Namespace("context"),
+		wlog.Duration("duration", time.Since(start)),
+		wlog.String("method", info.FullMethod),
+	)
+
 	if err != nil {
-		wlog.Error(fmt.Sprintf("method %s duration %s, error: %v", info.FullMethod, time.Since(start), err.Error()))
+		log.Err(err)
 
 		switch err.(type) {
 		case *model.AppError:
@@ -156,7 +167,7 @@ func unaryInterceptor(ctx context.Context,
 			return h, err
 		}
 	} else {
-		wlog.Debug(fmt.Sprintf("method %s duration %s", info.FullMethod, time.Since(start)))
+		log.Debug(info.FullMethod + " - OK")
 	}
 
 	return h, err

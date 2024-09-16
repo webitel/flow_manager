@@ -3,7 +3,9 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/wlog"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -28,18 +30,23 @@ type processingConnection struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	sync.RWMutex
+
+	log *wlog.Logger
 }
 
 func NewProcessingConnection(domainId int64, schemaId int, vars map[string]string) *processingConnection {
 	if vars == nil {
 		vars = make(map[string]string)
 	}
-
-	att, _ := vars["attempt_id"]
+	var attemptId int
+	if tmp, ok := vars["attempt_id"]; ok {
+		attemptId, _ = strconv.Atoi(tmp)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+	id := fmt.Sprintf("%d-%s", attemptId, model.NewId())
 	return &processingConnection{
-		id:         fmt.Sprintf("%s-%s", att, model.NewId()),
+		id:         id,
 		domainId:   domainId,
 		schemaId:   schemaId,
 		variables:  vars,
@@ -48,7 +55,16 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		finished:   make(chan struct{}),
 		forms:      make(chan model.FormElem, 5),
 		components: make(map[string]interface{}),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "processing"),
+			wlog.Int("attempt_id", attemptId),
+		),
 	}
+}
+
+func (c *processingConnection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *processingConnection) Context() context.Context {
@@ -150,7 +166,7 @@ func (c *processingConnection) DomainId() int64 {
 	return c.domainId
 }
 
-func (c processingConnection) Type() model.ConnectionType {
+func (c *processingConnection) Type() model.ConnectionType {
 	return model.ConnectionTypeForm
 }
 

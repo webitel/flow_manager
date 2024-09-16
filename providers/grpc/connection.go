@@ -3,6 +3,7 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/wlog"
 	"regexp"
 	"strings"
 	"sync"
@@ -32,6 +33,8 @@ type Connection struct {
 	event chan interface{}
 
 	sync.RWMutex
+
+	log *wlog.Logger
 }
 
 var compileVar *regexp.Regexp
@@ -40,11 +43,21 @@ func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 }
 
-func newConnection(ctx context.Context, variables map[string]string, timeout time.Duration) *Connection {
+func newConnection(id string, domainId int64, flowId int, ctx context.Context, variables map[string]string, timeout time.Duration) *Connection {
 	c := &Connection{
+		id:        id,
+		domainId:  domainId,
+		schemaId:  flowId,
 		variables: variables,
 		stop:      make(chan struct{}),
 		result:    make(chan interface{}),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "grpc"),
+			wlog.String("id", id),
+			wlog.Int64("domain_d", domainId),
+			wlog.Int("schema_id", flowId),
+		),
 	}
 
 	if timeout == 0 {
@@ -53,6 +66,10 @@ func newConnection(ctx context.Context, variables map[string]string, timeout tim
 	c.ctx, c.cancel = context.WithTimeout(ctx, timeout)
 
 	return c
+}
+
+func (c *Connection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *Connection) Context() context.Context {

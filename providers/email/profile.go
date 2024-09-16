@@ -59,6 +59,7 @@ type Profile struct {
 	oauthConfig oauth2.Config
 	token       *oauth2.Token
 	Tls         bool
+	log         *wlog.Logger
 }
 
 func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
@@ -80,6 +81,11 @@ func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 		token:       params.Token,
 		authMethod:  params.AuthType,
 		Tls:         params.Tls(),
+		log: srv.log.With(
+			wlog.String("scope", "email profile"),
+			wlog.Int("profile_id", params.Id),
+			wlog.Int("schema_id", params.FlowId),
+		),
 	}
 }
 
@@ -173,7 +179,7 @@ func (p *Profile) clientLogin() *model.AppError {
 			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
 		}
 	}
-	wlog.Debug(fmt.Sprintf("profile %s logged in", p.name))
+	p.log.Debug("logged in")
 	p.logged = true
 	return nil
 }
@@ -193,7 +199,7 @@ func (p *Profile) Logout() *model.AppError {
 	p.logged = false
 	p.client.Close()
 	p.client = nil
-	wlog.Debug(fmt.Sprintf("profile %s logged out", p.name))
+	p.log.Debug("logged out")
 	return nil
 }
 
@@ -268,11 +274,11 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	for msg := range messages {
 		e, err := p.parseMessage(msg, section)
 		if err != nil {
-			wlog.Error(fmt.Sprintf("%s, error: %s", p, err.Error()))
+			p.log.Err(err)
 			continue
 		}
 
-		wlog.Debug(fmt.Sprintf("receive new email from %v", e.From))
+		p.log.Debug("receive new email", wlog.Any("from", e.From))
 		res = append(res, e)
 	}
 
@@ -408,7 +414,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 			var fileName string
 			fileName, err = h.Filename()
 			if err != nil {
-				wlog.Error(fmt.Sprintf("email [%s] error: %s", m.From, err.Error()))
+				p.log.With(wlog.Any("from", m.From)).Err(err)
 				continue
 			}
 			if fileName == "" {
@@ -421,7 +427,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				MimeType: h.Get("Content-Type"),
 			})
 			if err != nil {
-				wlog.Error(fmt.Sprintf("email [%s] error: %s", m.From, err.Error()))
+				p.log.With(wlog.Any("from", m.From)).Err(err)
 				continue
 			}
 			m.Attachments = append(m.Attachments, file)

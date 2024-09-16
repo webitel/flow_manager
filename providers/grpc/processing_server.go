@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -40,7 +39,10 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 			select {
 			case <-c.ctx.Done():
 				s.connections.Remove(c.id)
-				wlog.Debug(fmt.Sprintf("remove connection %s [%d]", c.id, s.connections.Len()))
+				s.log.With(
+					wlog.String("connection_id", c.id),
+					wlog.Int("alternative_count", s.connections.Len()),
+				).Debug("remove connection")
 				return
 
 			}
@@ -75,7 +77,10 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 		return nil, err
 	}
 
-	wlog.Debug(fmt.Sprintf("[%s] receive action \"%s\" fields: %v", c.id, in.Action, in.Variables))
+	c.log.With(
+		wlog.String("method", in.Action),
+		wlog.Any("variables", in.Variables),
+	).Debug("receive action - " + in.Action)
 
 	err = c.FormAction(model.FormAction{
 		Name:   in.Action,

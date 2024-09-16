@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/wlog"
 	"net/http"
 	"regexp"
 	"strings"
@@ -29,6 +30,11 @@ type Connection struct {
 	responseCode int
 	response     http.ResponseWriter
 	sync.RWMutex
+	log *wlog.Logger
+}
+
+func (c *Connection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c Connection) Type() model.ConnectionType {

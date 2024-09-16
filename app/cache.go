@@ -7,7 +7,6 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store/cachelayer"
-	"github.com/webitel/wlog"
 	"golang.org/x/sync/singleflight"
 )
 
@@ -98,7 +97,7 @@ func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType CacheType
 func (fm *FlowManager) GetCacheStoreByType(cacheType CacheType) (cachelayer.CacheStore, *model.AppError) {
 	v, ok := fm.cacheStore[cacheType]
 	if !ok {
-		wlog.Debug(fmt.Sprintf("unable to find given cache storage (%s), setting memory storage..", cacheType))
+		fm.log.Debug(fmt.Sprintf("unable to find given cache storage (%s), setting memory storage..", cacheType))
 		return fm.cacheStore["memory"], nil
 	}
 

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tidwall/gjson"
+	"github.com/webitel/wlog"
 	"strings"
 	"sync"
 
@@ -26,6 +27,7 @@ type connection struct {
 	ctx       context.Context
 	pkey      PKey
 	sync.RWMutex
+	log *wlog.Logger
 }
 
 func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
@@ -36,6 +38,12 @@ func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 		email:     email,
 		variables: make(map[string]interface{}),
 		ctx:       context.Background(),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("message_id", email.MessageId),
+			wlog.Int64("email_id", email.Id),
+			wlog.Any("from", email.From),
+		),
 	}
 
 	c.variables["message_id"] = email.MessageId
@@ -62,6 +70,10 @@ func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 
 func (c *connection) Email() *model.Email {
 	return c.email
+}
+
+func (c *connection) Log() *wlog.Logger {
+	return c.log
 }
 
 func (c *connection) Type() model.ConnectionType {
