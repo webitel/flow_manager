@@ -319,7 +319,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 		//  Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
 		auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
 	} else {
-		auth = smtp.PlainAuth("", p.login, p.password, p.smtpHost)
+		auth = LoginAuth(p.login, p.password)
 	}
 	if p.Tls {
 		tlsConfig := &tls.Config{
