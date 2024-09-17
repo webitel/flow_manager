@@ -41,7 +41,6 @@ require (
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/wlog v0.0.0-20240815102009-b8f74bd674e2
 	go.opentelemetry.io/otel v1.29.0
-	go.opentelemetry.io/otel/log v0.5.0
 	go.opentelemetry.io/otel/sdk v1.29.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.7.0
@@ -93,6 +92,7 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.28.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.28.0 // indirect
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.28.0 // indirect
+	go.opentelemetry.io/otel/log v0.5.0 // indirect
 	go.opentelemetry.io/otel/metric v1.29.0 // indirect
 	go.opentelemetry.io/otel/sdk/log v0.5.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.28.0 // indirect
