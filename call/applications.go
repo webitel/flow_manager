@@ -149,6 +149,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.speechAi),
 	}
+	apps["speechAiV2"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.speechAiV2),
+	}
 
 	return apps
 }
