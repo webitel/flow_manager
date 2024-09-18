@@ -254,9 +254,10 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, err.Error(), http.StatusInternalServerError)
 	}
-	defer res.Body.Close()
 
 	data, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+
 	if res.StatusCode != http.StatusOK {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, string(data), http.StatusInternalServerError)
 	}
