@@ -2,9 +2,11 @@ package fs
 
 import (
 	"context"
+	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/h2non/filetype"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -186,6 +188,97 @@ func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec
 	return c.executeWithContext(ctx, "record",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s %d %d %d", c.domainId, c.Id(), name, format, format,
 			maxSec, silenceThresh, silenceHits))
+}
+
+type SpeechAiMessage struct {
+	Message string `json:"message"`
+	Sender  string `json:"sender"`
+}
+
+func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+
+	if c.resample != 0 && !c.IsSetResample() {
+		c.Set(ctx, model.Variables{
+			"record_sample_rate": c.resample,
+		})
+	}
+	s := ""
+	for k, v := range m {
+		s += "&" + k + "=" + b64.URLEncoding.EncodeToString([]byte(v))
+	}
+
+	s += "&url=" + url
+
+	msg := c.SpeechMessages(20)
+
+	history := make([]SpeechAiMessage, 0, len(msg))
+	for _, ms := range msg {
+		if ms.Question != "" {
+			history = append(history, SpeechAiMessage{
+				Message: ms.Question,
+				Sender:  "human",
+			})
+		}
+		if ms.Answer != "" {
+			history = append(history, SpeechAiMessage{
+				Message: ms.Answer,
+				Sender:  "ai",
+			})
+		}
+	}
+
+	historyJson, _ := json.Marshal(history)
+	s += "&chat_history=" + b64.URLEncoding.EncodeToString(historyJson)
+
+	id := model.NewId()
+
+	recUrl := fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings/ai/%s?domain=%d%s&id=%s&.%s %d %d %d", id, c.domainId, s, id, format,
+		maxSec, silenceThresh, silenceHits)
+
+	r, e := c.executeWithContext(ctx, "record", recUrl)
+
+	if e != nil {
+		return r, e
+	}
+
+	cdrUrl, _ := c.Get("Application-Data")
+	if len(cdrUrl) < 15 {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.cdr_url", nil, "not found Application-Data url", http.StatusInternalServerError)
+	}
+	i := strings.Index(cdrUrl[13:], "/sys/recordings/ai")
+	if i > 1 {
+		cdrUrl = cdrUrl[13 : i+13]
+	}
+
+	res, err := http.DefaultClient.Get(cdrUrl + "/sys/recordings/ai/" + id + "/metadata")
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, err.Error(), http.StatusInternalServerError)
+	}
+	defer res.Body.Close()
+
+	data, _ := io.ReadAll(res.Body)
+	if res.StatusCode != http.StatusOK {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, string(data), http.StatusInternalServerError)
+	}
+
+	var vars model.Variables
+	err = json.Unmarshal(data, &vars)
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.parse", nil, err.Error(), http.StatusInternalServerError)
+	}
+	r, e = c.Set(ctx, vars)
+	if e != nil {
+		return r, e
+	}
+	sp := model.SpeechMessage{}
+	var tmp any
+	tmp, _ = vars["ai_human"]
+	sp.Question = fmt.Sprintf("%v", tmp)
+	tmp, _ = vars["ai_answer"]
+	sp.Answer = fmt.Sprintf("%v", tmp)
+	c.PushSpeechMessage(sp)
+
+	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
 }
 
 func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {

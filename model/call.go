@@ -419,6 +419,7 @@ type Call interface {
 	//Voice(ctx context.Context, delay int) (Response, *AppError)
 	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
+	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
 	RecordSessionStop(ctx context.Context, name, format string) (Response, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
