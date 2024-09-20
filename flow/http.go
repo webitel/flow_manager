@@ -212,13 +212,15 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 			switch pd := props["data"].(type) {
 			case string:
 				body = []byte(c.ParseText(pd))
-			case map[string]interface{}:
-				var b model.JsonView
-				if appErr := scope.Decode(props["data"], &b); appErr == nil {
-					body, err = json.Marshal(b)
-				} else {
-					err = appErr
-				}
+				// TODO WTEL-4905 bug parse nested object
+				/*
+					case map[string]interface{}:
+						var b model.JsonView
+						if appErr := scope.Decode(props["data"], &b); appErr == nil {
+							body, err = json.Marshal(b)
+						} else {
+							err = appErr
+						}*/
 			default:
 				body, err = json.Marshal(props["data"])
 				if err == nil {
