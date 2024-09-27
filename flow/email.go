@@ -63,11 +63,10 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	if argv.Profile != nil && (argv.Profile.Id != nil || argv.Profile.Name != nil) {
 		var settings *model.SmtSettings
 		settings, err = r.fm.SmtpSettings(conn.DomainId(), argv.Profile)
-		if err != nil {
-			return nil, err
+		// TODO WTEL-5146
+		if err == nil {
+			argv.Smtp = *settings
 		}
-
-		argv.Smtp = *settings
 	}
 
 	if argv.Async {
