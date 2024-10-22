@@ -7,11 +7,9 @@ import (
 	"regexp"
 )
 
-var compileVar *regexp.Regexp
 var compileOutPattern *regexp.Regexp
 
 func init() {
-	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 	compileOutPattern = regexp.MustCompile(`\$(\d+)`)
 }
 
@@ -35,15 +33,8 @@ func getOutboundReg(pattern, destination string) (map[string]string, *model.AppE
 	return out, nil
 }
 
-func (call *callParser) ParseText(text string) string {
-	txt := compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
-		if len(r) > 0 {
-			out, _ = call.Get(r[1])
-		}
-
-		return
-	})
+func (call *callParser) ParseText(text string, ops ...model.ParseOption) string {
+	txt := model.ParseText(call, text, ops...)
 
 	if call.outboundVars != nil {
 		txt = compileOutPattern.ReplaceAllStringFunc(txt, func(s string) string {

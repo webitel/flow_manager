@@ -31,8 +31,6 @@ type Server interface {
 	Cluster(discovery discovery.ServiceDiscovery) *AppError
 }
 
-type Variables map[string]interface{}
-
 type Connection interface {
 	Type() ConnectionType
 	Id() string
@@ -42,7 +40,7 @@ type Connection interface {
 	Context() context.Context
 	Get(key string) (string, bool)
 	Set(ctx context.Context, vars Variables) (Response, *AppError)
-	ParseText(text string) string
+	ParseText(text string, ops ...ParseOption) string
 
 	Close() *AppError
 	Variables() map[string]string

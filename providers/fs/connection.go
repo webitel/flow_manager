@@ -295,7 +295,7 @@ func (c *Connection) UserId() int {
 	return c.userId
 }
 
-func (c *Connection) ParseText(text string) string {
+func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
 	return text
 }
 
