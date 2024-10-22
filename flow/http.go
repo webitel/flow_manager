@@ -224,7 +224,7 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 			default:
 				body, err = json.Marshal(props["data"])
 				if err == nil {
-					body = []byte(c.ParseText(string(body)))
+					body = []byte(model.ParseJsonText(c, string(body)))
 				}
 			}
 
