@@ -16,7 +16,7 @@ type emailParser struct {
 	model.EmailConnection
 }
 
-func (e *emailParser) ParseText(text string) string {
+func (e *emailParser) ParseText(text string, ops ...model.ParseOption) string {
 	txt := compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
 		r := compileVar.FindStringSubmatch(varName)
 		if len(r) > 0 {

@@ -2,7 +2,7 @@ package model
 
 import "time"
 
-var AppServiceName = "workflow"
+var AppServiceName = "11workflow"
 
 const HeaderFromServiceName = "From-Service"
 

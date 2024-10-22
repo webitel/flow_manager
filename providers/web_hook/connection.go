@@ -6,19 +6,12 @@ import (
 	"fmt"
 	"github.com/webitel/wlog"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 
 	"github.com/tidwall/gjson"
 	"github.com/webitel/flow_manager/model"
 )
-
-var compileVar *regexp.Regexp
-
-func init() {
-	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
-}
 
 type Connection struct {
 	id           string
@@ -37,7 +30,7 @@ func (c *Connection) Log() *wlog.Logger {
 	return c.log
 }
 
-func (c Connection) Type() model.ConnectionType {
+func (c *Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeWebHook
 }
 
@@ -88,17 +81,8 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) ParseText(text string) string {
-	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
-		if len(r) > 0 {
-			out, _ = c.Get(r[1])
-		}
-
-		return
-	})
-
-	return text
+func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
+	return model.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Close() *model.AppError {

@@ -3,13 +3,11 @@ package grpc
 import (
 	"context"
 	"fmt"
+	"github.com/tidwall/gjson"
 	"github.com/webitel/wlog"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -35,12 +33,6 @@ type Connection struct {
 	sync.RWMutex
 
 	log *wlog.Logger
-}
-
-var compileVar *regexp.Regexp
-
-func init() {
-	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 }
 
 func newConnection(id string, domainId int64, flowId int, ctx context.Context, variables map[string]string, timeout time.Duration) *Connection {
@@ -76,17 +68,8 @@ func (c *Connection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *Connection) ParseText(text string) string {
-	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
-		if len(r) > 0 {
-			out, _ = c.Get(r[1])
-		}
-
-		return
-	})
-
-	return text
+func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
+	return model.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Result(result interface{}) {
@@ -114,7 +97,7 @@ func (c *Connection) DomainId() int64 {
 	return c.domainId
 }
 
-func (c Connection) Type() model.ConnectionType {
+func (c *Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeGrpc
 }
 

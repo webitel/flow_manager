@@ -131,17 +131,8 @@ func (c *processingConnection) NodeId() string {
 	return "TODO"
 }
 
-func (c *processingConnection) ParseText(text string) string {
-	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
-		if len(r) > 0 {
-			out, _ = c.Get(r[1])
-		}
-
-		return
-	})
-
-	return text
+func (c *processingConnection) ParseText(text string, ops ...model.ParseOption) string {
+	return model.ParseText(c, text, ops...)
 }
 
 func (c *processingConnection) Id() string {

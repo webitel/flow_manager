@@ -119,9 +119,8 @@ func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil //TODO
 }
 
-func (c *connection) ParseText(text string) string {
-	//TODO
-	return text
+func (c *connection) ParseText(text string, ops ...model.ParseOption) string {
+	return model.ParseText(c, text, ops...)
 }
 
 func (c *connection) SchemaId() int {

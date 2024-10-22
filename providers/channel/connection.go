@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/webitel/wlog"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -13,12 +12,6 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 )
-
-var compileVar *regexp.Regexp
-
-func init() {
-	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
-}
 
 type Connection struct {
 	id        string
@@ -108,17 +101,8 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) ParseText(text string) string {
-	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
-		r := compileVar.FindStringSubmatch(varName)
-		if len(r) > 0 {
-			out, _ = c.Get(r[1])
-		}
-
-		return
-	})
-
-	return text
+func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
+	return model.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Close() *model.AppError {
