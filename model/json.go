@@ -25,7 +25,13 @@ func JsonString[Bytes []byte | string](dst []byte, src Bytes, escapeHTML bool) [
 			}
 			dst = append(dst, src[start:i]...)
 			switch b {
-			case '\\', '"':
+			case '\\':
+				dst = append(dst, '\\')
+			case '"':
+				if i > 0 && src[i-1] == '\\' {
+					i++
+					continue
+				}
 				dst = append(dst, '\\', b)
 			case '\b':
 				dst = append(dst, '\\', 'b')
