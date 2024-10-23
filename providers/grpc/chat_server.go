@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -82,6 +83,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 		conv.Set(ctx, model.Variables{
 			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
 		})
+		conv.storeMessages[model.ConversationStartMessageVariable], _ = json.Marshal(req.Message)
 		conv.saveMessages(req.Message)
 	}
 	conv.Set(ctx, map[string]interface{}{
