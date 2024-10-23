@@ -425,6 +425,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
 				Name:     fileName,
 				MimeType: h.Get("Content-Type"),
+				Channel:  model.FileChannelMail,
 			})
 			if err != nil {
 				p.log.With(wlog.Any("from", m.From)).Err(err)

@@ -49,6 +49,7 @@ func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile i
 				Name:     metadata.Name,
 				MimeType: metadata.MimeType,
 				Uuid:     uuid,
+				Channel:  fileChannel(metadata.Channel),
 			},
 		},
 	})
@@ -160,4 +161,17 @@ func (api *Api) GetFileTranscription(ctx context.Context, fileId, domainId int64
 	}
 	return resp.Transcript, nil
 
+}
+
+func fileChannel(s string) storage.UploadFileChannel {
+	switch s {
+	case model.FileChannelCall:
+		return storage.UploadFileChannel_CallChannel
+	case model.FileChannelMail:
+		return storage.UploadFileChannel_MailChannel
+	case model.FileChannelChat:
+		return storage.UploadFileChannel_ChatChannel
+	default:
+		return storage.UploadFileChannel_UnknownChannel
+	}
 }
