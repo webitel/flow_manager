@@ -49,6 +49,13 @@ func (r *Router) recvMessage(ctx context.Context, scope *flow.Flow, conv Convers
 				if err != nil {
 					wlog.Error(err.Error())
 				}
+				// TODO
+				_, err = conv.Set(ctx, model.Variables{
+					argv.Set: m,
+				})
+				if err != nil {
+					wlog.Error(err.Error())
+				}
 
 				return r.recvMessage(ctx, scope, conv, args)
 			}
