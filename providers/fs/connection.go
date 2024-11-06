@@ -385,7 +385,7 @@ func escapeFsMultiset(src string) string {
 	for i := 0; i < l; i++ {
 		if s[i] == '~' && i > 0 && s[i-1] != '\\' {
 			res += `\` + string(s[i])
-		} else if s[i] == '\'' && s[i-1] != '\\' {
+		} else if s[i] == '\'' && i > 0 && s[i-1] != '\\' {
 			res += `\\` + string(s[i])
 		} else {
 			res += string(s[i])
