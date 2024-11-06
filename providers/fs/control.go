@@ -53,6 +53,15 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *m
 	return c.executeWithContext(ctx, "sleep", fmt.Sprintf("%d", timeout))
 }
 
+func (c *Connection) BackgroundPlayback(data string) (model.Response, *model.AppError) {
+	//return c.executeWithContext(context.Background(), "wbt_background", data)
+	_, err := c.Api("uuid_wbt_noice " + c.id)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	return model.CallResponseOK, nil
+}
+
 // FIXME GLOBAL VARS
 func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string,
 	endpoints []*model.Endpoint, codecs []string, hook chan struct{}, pickup string) (model.Response, *model.AppError) {

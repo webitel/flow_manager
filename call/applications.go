@@ -153,6 +153,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.speechAiV2),
 	}
+	apps["backgroundPlayback"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.backgroundPlayback),
+	}
 
 	return apps
 }

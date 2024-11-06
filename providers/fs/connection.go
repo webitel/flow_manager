@@ -628,6 +628,23 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args in
 	}
 }
 
+func (c *Connection) executeLoop(app, args string) *model.AppError {
+	_, err := c.connection.SendMsg(eventsocket.MSG{
+		"call-command":     "execute",
+		"execute-app-name": app,
+		"execute-app-arg":  fmt.Sprintf("%v", args),
+		"event-lock":       "true",
+		"loop":             "-1",
+	}, "", "")
+
+	if err != nil {
+		return model.NewAppError("FreeSWITCH", "provider.fs.execute_loop.app_error", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return nil
+
+}
+
 func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {
 	m := make(map[string]string)
 	for k, _ := range event.Header {
