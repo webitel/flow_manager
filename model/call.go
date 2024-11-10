@@ -469,7 +469,7 @@ type Call interface {
 	HangupCause() string
 
 	GetContactId() int
-	BackgroundPlayback(data string) (Response, *AppError)
+	BackgroundPlayback(ctx context.Context, file *PlaybackFile, volumeReduction int) (Response, *AppError)
 }
 
 type PlaybackFile struct {

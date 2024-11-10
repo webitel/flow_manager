@@ -53,13 +53,12 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *m
 	return c.executeWithContext(ctx, "sleep", fmt.Sprintf("%d", timeout))
 }
 
-func (c *Connection) BackgroundPlayback(data string) (model.Response, *model.AppError) {
-	//return c.executeWithContext(context.Background(), "wbt_background", data)
-	_, err := c.Api("uuid_wbt_noice " + c.id)
-	if err != nil {
-		fmt.Println(err.Error())
+func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, volumeReduction int) (model.Response, *model.AppError) {
+	s, ok := c.buildFileLink(file)
+	if !ok {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
 	}
-	return model.CallResponseOK, nil
+	return c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("%s %d", s, volumeReduction))
 }
 
 // FIXME GLOBAL VARS
