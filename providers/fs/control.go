@@ -519,6 +519,14 @@ func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString str
 		*params.Tries, *params.Timeout, params.Terminators, fileString, *params.SetVar, *params.Regexp, dgTimeout))
 }
 
+func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, volumeReduction int) (model.Response, *model.AppError) {
+	s, ok := c.buildFileLink(file)
+	if !ok {
+		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
+	}
+	return c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("%s %d", s, volumeReduction))
+}
+
 func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, *model.AppError) {
 	lang = strings.ToLower(lang)
 	s := strings.Split(lang, "_")
