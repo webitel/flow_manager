@@ -3,6 +3,8 @@ package flow
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+	"github.com/dchest/htmlmin"
 	"io"
 	"mime"
 	"net/http"
@@ -233,6 +235,22 @@ func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connectio
 	res, err := r.fm.GetEmailProperties(conn.DomainId(), argv.Email.Id, argv.Email.MessageId, argv.Set)
 	if err != nil {
 		return nil, err
+	}
+
+	if dis, _ := conn.Get("wbt_disable_htmlmin"); dis != "true" {
+		for k, v := range argv.Set {
+			if v == "html" {
+				if tmp, ok := res[k]; ok {
+					m, e := htmlmin.Minify([]byte(fmt.Sprintf("%v", tmp)), nil)
+					if e != nil {
+						scope.log.Err(e)
+					} else {
+						res[k] = string(m)
+					}
+				}
+				break
+			}
+		}
 	}
 
 	return conn.Set(ctx, res)
