@@ -14,11 +14,12 @@ require (
 	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240703121916-db3266bbfcd3.2
 	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240703121916-db3266bbfcd3.2
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.35.1-20240402125447-cb375844242f.1
-	buf.build/gen/go/webitel/storage/grpc/go v1.3.0-20240402131908-59ee244702ce.2
-	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241001075334-99db0a72402e.1
+	buf.build/gen/go/webitel/storage/grpc/go v1.5.1-20241112142745-95d51eefa581.1
+	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240411120545-24ef43af6db3.2
 	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.33.0-20240411132047-cd3c8f61d791.1
 	github.com/BoRuDar/configuration/v4 v4.5.0
+	github.com/dchest/htmlmin v1.2.0
 	github.com/emersion/go-message v0.18.1
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
@@ -62,7 +63,6 @@ require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dchest/cssmin v0.0.0-20151210170030-fb8d9b44afdc // indirect
-	github.com/dchest/htmlmin v1.2.0 // indirect
 	github.com/dchest/jsmin v0.0.0-20220218165748-59f39799265f // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fatih/color v1.16.0 // indirect

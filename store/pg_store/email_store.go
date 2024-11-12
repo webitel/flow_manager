@@ -30,7 +30,7 @@ set last_activity_at = now(),
     state            = 'active'
 where id in (select id
              from call_center.cc_email_profile
-             where ((enabled and "listen" ))
+             where ((enabled and "listen"))
                and last_activity_at < now() - (fetch_interval || ' sec')::interval
              order by last_activity_at nulls first
              limit 100 for update skip locked )
@@ -46,11 +46,11 @@ returning id, (extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 
 func (s *SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
 	id, err := s.GetMaster().SelectInt(`insert into call_center.cc_email ("from", "to", profile_id, subject, cc, body, direction, message_id, sender, reply_to,
-                      in_reply_to, parent_id, html, attachment_ids, contact_ids, owner_id)
+                      in_reply_to, parent_id, html, attachment_ids, contact_ids, owner_id, cid)
 values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
                                                                                                        from call_center.cc_email m
                                                                                                        where m.in_reply_to = :MessageId limit 1), 
-		:Html::text, :AttachmentIds::int8[], :ContactIds::int8[], :OwnerId::int8)
+		:Html::text, :AttachmentIds::int8[], :ContactIds::int8[], :OwnerId::int8, :Cid::jsonb)
 	   returning id
 `, map[string]interface{}{
 		"From":          pq.Array(m.From),
@@ -68,6 +68,7 @@ values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :Message
 		"AttachmentIds": pq.Array(m.AttachmentIds()),
 		"ContactIds":    pq.Array(m.ContactIds),
 		"OwnerId":       m.OwnerId,
+		"Cid":           m.CIDJson(),
 	})
 
 	if err != nil {
@@ -165,8 +166,14 @@ func (s *SqlEmailStore) GerProperties(domainId int64, id *int64, messageId *stri
 	for k, v := range mapRes {
 		var val = ""
 		switch v {
+		case "html":
+			val = "cid as " + model.MailCidKey
+			f = append(f, val)
+			val = fmt.Sprintf("coalesce(\"%s\"::text, '') as %s", v, pq.QuoteIdentifier(k))
+			f = append(f, val)
+
 		case "from", "to", "subject", "contact_ids", "owner_id",
-			"cc", "sender", "reply_to", "in_reply_to", "body", "html", "attachments", "message_id", "id":
+			"cc", "sender", "reply_to", "in_reply_to", "body", "attachments", "message_id", "id":
 			val = fmt.Sprintf("coalesce(\"%s\"::text, '') as %s", v, pq.QuoteIdentifier(k))
 			f = append(f, val)
 		}
@@ -199,7 +206,8 @@ from (
                 limit 40
 			) t)::text as attachments,
 			coalesce(array_to_json(contact_ids)::text, '') as contact_ids,
-			coalesce(e.owner_id::text, '') as owner_id
+			coalesce(e.owner_id::text, '') as owner_id,
+			e.cid
         from call_center.cc_email e
         where (id = :Id or message_id = :MessageId)
             and exists(select 1 from call_center.cc_email_profile p where p.domain_id = :DomainId and p.id = e.profile_id)

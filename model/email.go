@@ -2,6 +2,7 @@ package model
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math"
 	"math/big"
@@ -15,6 +16,8 @@ import (
 const (
 	MailGmail   = "gmail"
 	MailOutlook = "outlook"
+
+	MailCidKey = "__cid"
 )
 
 type OAuth2Config struct {
@@ -31,6 +34,8 @@ type MailParams struct {
 const (
 	MailAuthTypeOAuth2 = "oauth2"
 )
+
+type EmailCid int64
 
 type Email struct {
 	Id          int64    `json:"id" db:"id"`
@@ -50,6 +55,7 @@ type Email struct {
 	ContactIds  []int64  `json:"contactIds" db:"contact_ids"`
 	OwnerId     *int64   `json:"ownerId" db:"owner_id"`
 	Attachments []File
+	Cid         map[string]EmailCid
 }
 
 type EmailAction struct {
@@ -88,6 +94,14 @@ type EmailProfile struct {
 	Params    *MailParams   `json:"params" db:"params"`
 	Token     *oauth2.Token `json:"token" db:"token"`
 	AuthType  string        `json:"auth_type" db:"auth_type"`
+}
+
+func (e *Email) CIDJson() *[]byte {
+	if len(e.Cid) == 0 {
+		return nil
+	}
+	j, _ := json.Marshal(e.Cid)
+	return &j
 }
 
 func (p *EmailProfile) OAuthConfig() oauth2.Config {
