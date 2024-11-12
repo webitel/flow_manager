@@ -390,6 +390,8 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	var text []byte
 	var html []byte
 
+	m.Cid = make(map[string]model.EmailCid)
+
 	// Process each message's part
 	var part *mail.Part
 	for {
@@ -402,6 +404,21 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 
 		switch h := part.Header.(type) {
 		case *mail.InlineHeader:
+			cid := h.Get("Content-ID")
+			if cid != "" {
+				var file model.File
+				cid = strings.Trim(cid, "<>")
+				file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
+					Name:     cid,
+					MimeType: h.Get("Content-Type"),
+					Channel:  model.FileChannelMail,
+				})
+				if err != nil {
+					p.log.With(wlog.Any("from", m.From)).Err(err)
+					continue
+				}
+				m.Cid[cid] = model.EmailCid(file.Id)
+			}
 			ct := h.Get("Content-Type")
 			// This is the message's text (can be plain-text or HTML)
 			b, _ := ioutil.ReadAll(part.Body)

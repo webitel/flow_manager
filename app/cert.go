@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/storage"
 	"net/http"
 	"strconv"
 )
@@ -48,6 +49,17 @@ func (fm *FlowManager) GeneratePreSignedResourceSignature(ctx context.Context, a
 
 	if err != nil {
 		return "", model.NewAppError("GenerateTTSLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return resp, nil
+
+}
+
+func (fm *FlowManager) BulkGenerateFileLink(ctx context.Context, domainId int64, files []storage.FileLinkRequest) ([]string, *model.AppError) {
+
+	resp, err := fm.storage.BulkGenerateFileLink(ctx, domainId, files)
+
+	if err != nil {
+		return nil, model.NewAppError("BulkGenerateFileLink", "app.cert.generate_file_link.bulk_link.error", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return resp, nil
 

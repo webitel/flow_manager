@@ -5,11 +5,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"github.com/dchest/htmlmin"
+	"github.com/webitel/flow_manager/providers/email"
+	"github.com/webitel/flow_manager/storage"
 	"io"
 	"mime"
 	"net/http"
-
-	"github.com/webitel/flow_manager/providers/email"
+	"strings"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -232,6 +233,13 @@ func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connectio
 		return nil, ErrorRequiredParameter("GetEmailInfo", "set")
 	}
 
+	var htmlTag string
+	for k, v := range argv.Set {
+		if v == "html" {
+			htmlTag = k
+		}
+	}
+
 	res, err := r.fm.GetEmailProperties(conn.DomainId(), argv.Email.Id, argv.Email.MessageId, argv.Set)
 	if err != nil {
 		return nil, err
@@ -250,6 +258,35 @@ func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connectio
 				}
 				break
 			}
+		}
+	}
+	cid, _ := res[model.MailCidKey]
+	if cid != nil {
+		delete(res, model.MailCidKey)
+		html, _ := res[htmlTag].(string)
+		mcid, _ := cid.(map[string]interface{})
+		l := len(mcid)
+		cids := make([]string, 0, l)
+		req := make([]storage.FileLinkRequest, 0, l)
+		var i float64
+		for k, v := range mcid {
+			i, _ = v.(float64)
+			cids = append(cids, k)
+			req = append(req, storage.FileLinkRequest{
+				FileId: int64(i),
+				Action: "download",
+				Source: "file",
+			})
+		}
+		links, err := r.fm.BulkGenerateFileLink(ctx, conn.DomainId(), req)
+		// TODO
+		if err != nil {
+			scope.log.Err(err)
+		} else if len(cids) == len(links) {
+			for k, v := range cids {
+				html = strings.Replace(html, "cid:"+v, links[k], -1)
+			}
+			res[htmlTag] = html
 		}
 	}
 

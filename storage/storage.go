@@ -19,6 +19,12 @@ type Api struct {
 	transcript gogrpc.FileTranscriptServiceClient
 }
 
+type FileLinkRequest struct {
+	FileId int64
+	Action string
+	Source string
+}
+
 func NewClient(consulTarget string) (*Api, error) {
 	conn, err := grpc.Dial(fmt.Sprintf("consul://%s/storage?wait=14s", consulTarget),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
@@ -146,6 +152,32 @@ func (api *Api) GenerateFileLink(ctx context.Context, fileId, domainId int64, so
 	}
 	return uri.Url, nil
 
+}
+
+func (api *Api) BulkGenerateFileLink(ctx context.Context, domainId int64, files []FileLinkRequest) ([]string, error) {
+	var data []*storage.GenerateFileLinkRequest
+	for _, v := range files {
+		data = append(data, &storage.GenerateFileLinkRequest{
+			DomainId: domainId,
+			FileId:   v.FileId,
+			Source:   v.Source,
+			Action:   v.Action,
+		})
+	}
+	res, err := api.file.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
+		Files: data,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	l := len(res.Links)
+	links := make([]string, l, l)
+	for k, v := range res.Links {
+		links[k] = v.Url
+	}
+
+	return links, nil
 }
 
 func (api *Api) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
