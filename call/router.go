@@ -89,7 +89,10 @@ func (r *Router) handle(conn model.Connection) {
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
 			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
 		}
-		call.SetTransferFromId()
+		if call.Direction() == model.CallDirectionInbound {
+			call.SetTransferFromId()
+		}
+
 		r.fm.SetBlindTransferNumber(call.DomainId(), call.Id(), call.Destination())
 	} else if queueId != nil {
 		call.Log().Info("ivr from: " + call.From().String() + " to destination " + call.Destination())
