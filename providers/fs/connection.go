@@ -53,6 +53,7 @@ type Connection struct {
 	nodeId           string
 	nodeName         string
 	transfer         bool
+	transferFromId   string
 	originateRequest bool
 	webCall          string
 	dialPlan         string
@@ -165,6 +166,12 @@ func (c *Connection) TransferSchemaId() *int {
 
 func (c *Connection) IVRQueueId() *int {
 	return c.schemaId
+}
+
+func (c *Connection) SetTransferFromId() {
+	if c.lastEvent != nil {
+		c.transferFromId = c.lastEvent.Get("variable_last_bridge_to")
+	}
 }
 
 // TODO

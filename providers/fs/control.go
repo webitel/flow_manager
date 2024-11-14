@@ -89,6 +89,10 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 		dialString += fmt.Sprintf(",'%s'='%s'", key, val)
 	}
 
+	if c.transferFromId != "" {
+		dialString += ",wbt_transfer_from=" + c.transferFromId
+	}
+
 	if codecs != nil {
 		dialString += ",absolute_codec_string='" + strings.Join(codecs, ",") + "'"
 	}

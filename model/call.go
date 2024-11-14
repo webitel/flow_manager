@@ -241,6 +241,7 @@ type CallActionHangup struct {
 	CDR            *bool          `json:"cdr"`
 	SchemaIds      []int          `json:"schema_ids"`
 	HangupPhrase   *string        `json:"hangup_phrase,omitempty"`
+	TransferFrom   *string        `json:"transfer_from,omitempty"`
 }
 
 type CallActionSTT struct {
@@ -400,6 +401,7 @@ type Call interface {
 	Dump()
 	IVRQueueId() *int
 	TransferSchemaId() *int
+	SetTransferFromId()
 
 	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, *AppError)
 

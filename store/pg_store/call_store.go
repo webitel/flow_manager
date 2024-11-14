@@ -116,10 +116,11 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, 
-			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, schema_ids, hangup_phrase)
+			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, 
+		    schema_ids, hangup_phrase, transfer_from)
 values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, 
 	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult, 
-	:AmdAiResultLog, :AmdAiPositive, :SchemaIds::int[], :HangupPhrase::varchar)
+	:AmdAiResultLog, :AmdAiPositive, :SchemaIds::int[], :HangupPhrase::varchar, :TransferFrom::uuid)
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
@@ -136,7 +137,8 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       amd_ai_logs = EXCLUDED.amd_ai_logs,
       amd_ai_positive = EXCLUDED.amd_ai_positive,
       schema_ids = EXCLUDED.schema_ids,
-      hangup_phrase = EXCLUDED.hangup_phrase
+      hangup_phrase = EXCLUDED.hangup_phrase,
+      transfer_from = coalesce(call_center.cc_calls.transfer_from, EXCLUDED.transfer_from)
      `, map[string]interface{}{
 		"Id":             call.Id,
 		"State":          call.Event,
@@ -156,6 +158,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"AmdAiPositive":  call.AmdAiPositive,
 		"SchemaIds":      pq.Array(call.SchemaIds),
 		"HangupPhrase":   call.HangupPhrase,
+		"TransferFrom":   call.TransferFrom,
 	})
 
 	if err != nil {
