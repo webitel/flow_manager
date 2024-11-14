@@ -610,6 +610,8 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 		}
 		if config.DisableBreakFinal {
 			vars["GOOGLE_DISABLE_BREAK"] = "true"
+		} else {
+			vars["GOOGLE_DISABLE_BREAK"] = "false"
 		}
 
 		if config.BreakFinalOnTimeout {
