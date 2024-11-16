@@ -569,6 +569,7 @@ from uh`, map[string]interface{}{
 }
 
 func (s SqlCallStore) SetVariables(id string, vars *model.CallVariables) *model.AppError {
+	return nil // TODO for 1 client..
 	_, err := s.GetMaster().Exec(`with a as (
     update call_center.cc_calls c
         set payload = coalesce(payload, '{}') || :Vars
