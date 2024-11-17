@@ -620,6 +620,8 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 			vars["GOOGLE_BREAK_ON_TIMEOUT"] = "false"
 		}
 
+		vars["GOOGLE_BREAK_STABILITY"] = fmt.Sprintf("%v", config.BreakStability)
+
 		if len(config.AlternativeLang) != 0 {
 			vars["GOOGLE_SPEECH_ALTERNATIVE_LANGUAGE_CODES"] = strings.Join(config.AlternativeLang, ",")
 		}
