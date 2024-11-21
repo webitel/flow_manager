@@ -50,7 +50,7 @@ from call_center.cc_list l
 where l.domain_id = :DomainId
     and (l.id = :Id::int8 or l.name = :Name)
 order by l.id
-limit 1`, map[string]interface{}{
+limit 1 on conflict do nothing`, map[string]interface{}{
 		"DomainId":    domainId,
 		"Id":          entry.Id,
 		"Name":        entry.Name,
