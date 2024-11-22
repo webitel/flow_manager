@@ -8,7 +8,6 @@ import (
 	cc "buf.build/gen/go/webitel/cc/protocolbuffers/go"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
 /*
@@ -145,7 +144,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 	})
 
 	if err != nil {
-		wlog.Error(err.Error())
+		conv.Log().Error(err.Error())
 		return model.CallResponseOK, nil
 	}
 
@@ -158,7 +157,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			wlog.Error(err.Error())
+			conv.Log().Error(err.Error())
 			return model.CallResponseError, nil
 		}
 
