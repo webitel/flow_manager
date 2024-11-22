@@ -473,8 +473,10 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 	exp := make(map[string]interface{})
 	transferVars := make(map[string]string)
 	for _, v := range vars {
-		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
-		transferVars[v], _ = c.Get(v)
+		tmp, _ := c.Get(v)
+		tmp = strings.ToValidUTF8(tmp, "")
+		exp[fmt.Sprintf("usr_%s", v)] = tmp
+		transferVars[v] = tmp
 		c.exportVariables = append(c.exportVariables, v)
 	}
 
