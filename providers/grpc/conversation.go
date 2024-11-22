@@ -567,7 +567,8 @@ func (c *conversation) DumpExportVariables() map[string]string {
 	if len(c.exportVariables) > 0 {
 		res = make(map[string]string)
 		for _, v := range c.exportVariables {
-			res[v], _ = c.Get(v)
+			tmp, _ := c.Get(v)
+			res[v] = strings.ToValidUTF8(tmp, "")
 		}
 	}
 	return res
