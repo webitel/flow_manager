@@ -80,11 +80,12 @@ func (r *Router) handle(conn model.Connection) {
 	isTransfer := call.IsTransfer()
 
 	// TODO WTEL-4370
-	blXfer := strings.HasSuffix(call.GetVariable("variable_transfer_history"), fmt.Sprintf(":bl_xfer:%s/default/XML", call.Destination()))
+	ccXfer := strings.HasSuffix(call.GetVariable("variable_transfer_history"),
+		fmt.Sprintf(":bl_xfer:%s/default/XML", call.Destination())) && call.GetVariable("variable_cc_app_id") != ""
 
 	if transferSchemaId != nil && isTransfer {
 		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
-	} else if isTransfer && queueId == nil && (blXfer || !call.IsOriginateRequest()) {
+	} else if isTransfer && queueId == nil && (ccXfer || !call.IsOriginateRequest()) {
 		wlog.Info(fmt.Sprintf("call %s [%d %s] is transfer from: [%s] to destination %s", call.Id(), call.DomainId(), call.Direction(),
 			call.From().String(), call.Destination()))
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
