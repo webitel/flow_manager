@@ -84,6 +84,7 @@ type Connection struct {
 	hookBridged      chan struct{} //todo
 	cancelQueue      context.CancelFunc
 	speechMessages   []model.SpeechMessage
+	playBackground   bool
 	sync.RWMutex
 
 	log *wlog.Logger
