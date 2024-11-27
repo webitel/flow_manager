@@ -58,6 +58,10 @@ func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.Playbac
 	if !ok {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
 	}
+	c.Lock()
+	c.playBackground = true
+	c.Unlock()
+
 	return c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("%s %d", s, volumeReduction))
 }
 
@@ -387,13 +391,13 @@ func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (
 	})
 }
 
-func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
+func ttsGetCodecSettings(writeRateVar string, bg bool) (rate string, format string) {
 	rate = "8000"
 	format = "mp3"
 
 	if writeRateVar != "" {
 		if i, err := strconv.Atoi(writeRateVar); err == nil {
-			if i == 8000 || i == 16000 {
+			if !bg && (i == 8000 || i == 16000) {
 				format = "wav"
 				return
 			} else if i >= 22050 {
@@ -433,7 +437,8 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 
 func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	var tmp string
-	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
+	bg := c.IsSetResample()
+	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
 	if format == "mp3" {
 		tmp = "shout://$${cdr_url}/sys/tts"
 	} else {
@@ -442,6 +447,10 @@ func (c *Connection) TTS(ctx context.Context, path string, digits *model.Playbac
 	path += "&format=" + format
 	if rate != "" {
 		path += "&rate=" + rate
+	}
+
+	if bg {
+		path += "&bg=true"
 	}
 
 	var url string
@@ -720,6 +729,13 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 	}
 }
 
+func (c *Connection) IsPlayBackground() bool {
+	c.RLock()
+	bg := c.playBackground
+	c.RUnlock()
+	return bg
+}
+
 func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 
 	if file == nil || file.Type == nil {
@@ -808,8 +824,9 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 
 		var protocol string
 		var q = fmt.Sprintf("/?%s", tts.QueryParams(c.domainId))
+		bg := c.IsPlayBackground()
 
-		rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
+		rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
 		if format == "mp3" {
 			protocol = "shout://$${cdr_url}/sys/tts"
 		} else {
@@ -819,6 +836,11 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		if rate != "" {
 			q += "&rate=" + rate
 		}
+
+		if bg {
+			q += "&bg=true"
+		}
+
 		return protocol + q + "&." + format, true
 	default:
 		return "", false
