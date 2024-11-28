@@ -421,7 +421,7 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 
 func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	var tmp string
-	bg := c.IsPlayBackground()
+	bg := false //c.IsPlayBackground()
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
 	if format == "mp3" {
 		tmp = "shout://$${cdr_url}/sys/tts"
@@ -822,7 +822,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 
 		var protocol string
 		var q = fmt.Sprintf("/?%s", tts.QueryParams(c.domainId))
-		bg := c.IsPlayBackground()
+		bg := false //c.IsPlayBackground()
 
 		rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
 		if format == "mp3" {
