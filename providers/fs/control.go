@@ -437,7 +437,7 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 
 func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	var tmp string
-	bg := c.IsSetResample()
+	bg := c.IsPlayBackground()
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
 	if format == "mp3" {
 		tmp = "shout://$${cdr_url}/sys/tts"
@@ -452,6 +452,8 @@ func (c *Connection) TTS(ctx context.Context, path string, digits *model.Playbac
 	if bg {
 		path += "&bg=true"
 	}
+
+	path += "&id=" + c.id
 
 	var url string
 
@@ -840,6 +842,8 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		if bg {
 			q += "&bg=true"
 		}
+
+		q += "&id=" + c.id
 
 		return protocol + q + "&." + format, true
 	default:
