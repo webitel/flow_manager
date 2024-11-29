@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -33,6 +34,11 @@ type TTSSettings struct {
 func (tts *TTSSettings) QueryParams(domainId int64) string {
 	var q = fmt.Sprintf("domain_id=%d&profile_id=%d&text=%s", domainId, tts.Profile.Id,
 		UrlEncoded(strings.ReplaceAll(tts.Text, "!", ".")))
+
+	concatenedMaps, keys := getSortedKeys(tts.VoiceSettings)
+	for _, k := range keys {
+		q += fmt.Sprintf("&%s=%v", k, concatenedMaps[k])
+	}
 
 	for k, v := range tts.VoiceSettings {
 		q += fmt.Sprintf("&%s=%v", k, v)
@@ -81,4 +87,19 @@ func (tts *TTSSettings) QueryParams(domainId int64) string {
 	}
 
 	return q
+}
+
+func getSortedKeys(maps ...map[string]interface{}) (map[string]interface{}, []string) {
+	var keys []string
+	resultMap := map[string]interface{}{}
+
+	for _, currMap := range maps {
+		for k, v := range currMap {
+			resultMap[k] = v
+			keys = append(keys, k)
+		}
+	}
+	sort.Strings(keys)
+	return resultMap, keys
+
 }
