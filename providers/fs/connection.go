@@ -85,6 +85,7 @@ type Connection struct {
 	speechMessages   []model.SpeechMessage
 	playBackground   bool
 	sync.RWMutex
+	useTTSPrepare bool
 
 	log *wlog.Logger
 }

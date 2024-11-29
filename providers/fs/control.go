@@ -830,8 +830,6 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 		q += "&rate=" + rate
 	}
 
-	q += "&id=" + c.id
-
 	return protocol + q + "&." + format, true
 }
 
