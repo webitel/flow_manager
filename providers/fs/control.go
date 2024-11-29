@@ -375,13 +375,13 @@ func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (
 	})
 }
 
-func ttsGetCodecSettings(writeRateVar string, bg bool) (rate string, format string) {
+func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
 	rate = "8000"
 	format = "mp3"
 
 	if writeRateVar != "" {
 		if i, err := strconv.Atoi(writeRateVar); err == nil {
-			if !bg && (i == 8000 || i == 16000) {
+			if i == 8000 || i == 16000 {
 				format = "wav"
 				return
 			} else if i >= 22050 {
@@ -419,35 +419,19 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 	return res
 }
 
-func (c *Connection) TTS(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+	var fs []string
 	var tmp string
-	bg := false //c.IsPlayBackground()
-	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
-	if format == "mp3" {
-		tmp = "shout://$${cdr_url}/sys/tts"
-	} else {
-		tmp = "http_cache://http://$${cdr_url}/sys/tts"
-	}
-	path += "&format=" + format
-	if rate != "" {
-		path += "&rate=" + rate
-	}
 
-	if bg {
-		path += "&bg=true"
-	}
-
-	path += "&id=" + c.id
-
-	var url string
-
+	tmp, _ = c.ttsUri(&tts, path, true)
+	fs = append(fs, tmp)
+	tmp, _ = c.ttsUri(&tts, path, false)
+	fs = append(fs, tmp)
 	if timeout > 0 {
-		// TODO file_string don't supported separated
-		path = strings.ReplaceAll(path, "!", ".")
-		url = fmt.Sprintf("file_string://%s!silence_stream://%d", tmp+path+"."+format, timeout)
-	} else {
-		url = tmp + path + "&." + format
+		fs = append(fs, fmt.Sprintf("silence_stream://%d", timeout))
 	}
+
+	url := "file_string://" + strings.Join(fs, "!")
 
 	if digits != nil {
 		return c.PlaybackUrlAndGetDigits(ctx, url, digits)
@@ -713,6 +697,10 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 	fileString := make([]string, 0, len(files))
 
 	for _, v := range files {
+		if v.Type != nil && *v.Type == "tts" && v.TTS != nil {
+			str, _ := c.ttsUri(v.TTS, "?", true)
+			fileString = append(fileString, str)
+		}
 		if str, ok := c.buildFileLink(v); ok {
 			fileString = append(fileString, str)
 		}
@@ -815,36 +803,36 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		return *file.Name, true
 
 	case "tts":
-		if file.TTS == nil {
+		s, ok := c.ttsUri(file.TTS, "?", false)
+		if !ok {
 			return "", false
 		}
-		tts := file.TTS
-
-		var protocol string
-		var q = fmt.Sprintf("/?%s", tts.QueryParams(c.domainId))
-		bg := false //c.IsPlayBackground()
-
-		rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"), bg)
-		if format == "mp3" {
-			protocol = "shout://$${cdr_url}/sys/tts"
-		} else {
-			protocol = "http_cache://http://$${cdr_url}/sys/tts"
-		}
-		q += "&format=" + format
-		if rate != "" {
-			q += "&rate=" + rate
-		}
-
-		if bg {
-			q += "&bg=true"
-		}
-
-		q += "&id=" + c.id
-
-		return protocol + q + "&." + format, true
+		return s, true
 	default:
 		return "", false
 	}
+}
+
+func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool) (string, bool) {
+	var protocol string
+	var q = fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
+
+	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
+	if prepare {
+		protocol = "wbt_prepare://http://$${cdr_url}/sys/tts"
+	} else if format == "mp3" {
+		protocol = "shout://$${cdr_url}/sys/tts"
+	} else {
+		protocol = "http_cache://http://$${cdr_url}/sys/tts"
+	}
+	q += "&format=" + format
+	if rate != "" {
+		q += "&rate=" + rate
+	}
+
+	q += "&id=" + c.id
+
+	return protocol + q + "&." + format, true
 }
 
 func fixName(n string) string {

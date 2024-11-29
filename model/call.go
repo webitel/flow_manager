@@ -434,7 +434,7 @@ type Call interface {
 	PushSpeechMessage(msg SpeechMessage)
 	SpeechMessages(limit int) []SpeechMessage
 
-	TTS(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
+	TTS(ctx context.Context, path string, tts TTSSettings, digits *PlaybackDigits, timeout int) (Response, *AppError)
 	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
 
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
