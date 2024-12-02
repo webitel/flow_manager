@@ -40,10 +40,6 @@ func (tts *TTSSettings) QueryParams(domainId int64) string {
 		q += fmt.Sprintf("&%s=%v", k, concatenedMaps[k])
 	}
 
-	for k, v := range tts.VoiceSettings {
-		q += fmt.Sprintf("&%s=%v", k, v)
-	}
-
 	if tts.TextType != "" {
 		q += "&text_type=" + tts.TextType
 	}
