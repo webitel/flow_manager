@@ -827,7 +827,7 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 		protocol = "shout://$${cdr_url}/sys/tts"
 	} else {
 		if c.IsPlayBackground() {
-			//protocol = "{refresh=true}"
+			protocol = "{refresh=true}"
 		}
 		protocol += "http_cache://http://$${cdr_url}/sys/tts"
 	}
