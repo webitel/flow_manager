@@ -18,9 +18,6 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 		return nil, err
 	}
 
-	// todo add search file
-	argv.File = nil
-
 	if len(argv.Peer) == 0 {
 		return nil, ErrorRequiredParameter("broadcastChatMessage", "peer")
 	}

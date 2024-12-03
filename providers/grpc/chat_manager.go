@@ -142,13 +142,11 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		Type:      req.Type,
 		Text:      req.Text,
 		File:      getFile(req.File),
+		Buttons:   getChatButtons(req.Buttons),
+		Inline:    getChatButtons(req.Inline),
 		Variables: req.Variables,
 	}
 
-	if req.Menu != nil {
-		msg.Buttons = getChatButtons(req.Menu.Buttons)
-		msg.Inline = getChatButtons(req.Menu.Inline)
-	}
 	var newContext context.Context
 	if req.Timeout != 0 {
 		newContext, _ = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Millisecond)
