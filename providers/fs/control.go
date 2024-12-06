@@ -602,6 +602,7 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 			"GOOGLE_SPEECH_CLOUD_SERVICES_VERSION": "v2",
 			"GOOGLE_SPEECH_RECOGNIZER_PARENT":      config.Recognizer,
 			"GOOGLE_SPEECH_TO_TEXT_URI":            config.Uri,
+			"RECOGNIZING_VAD_TIMEOUT":              fmt.Sprintf("%d", config.VadTimeout),
 		}
 		if config.DisableBreakFinal {
 			vars["GOOGLE_DISABLE_BREAK"] = "true"

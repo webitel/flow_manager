@@ -518,6 +518,7 @@ type SpeechMessage struct {
 
 type GetSpeech struct {
 	Timeout             int      `json:"timeout"`
+	VadTimeout          int      `json:"vadTimeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`
 	BreakFinalOnTimeout bool     `json:"breakFinalOnTimeout"`
 	BreakStability      float32  `json:"breakStability"`
