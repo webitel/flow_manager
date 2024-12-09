@@ -63,7 +63,6 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		confirmation:  make(map[string]chan []*proto.Message),
 		nodeId:        cli.Name(),
 		log: wlog.GlobalLogger().With(
-			wlog.Namespace("context"),
 			wlog.String("conversation_id", id),
 			wlog.Int64("domain_id", domainId),
 			wlog.Int64("bot_id", profileId),
