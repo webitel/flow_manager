@@ -82,6 +82,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	i := flow.New(r, flow.Config{
+		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
 		Schema:   routing.Schema.Schema,
 		Handler:  r,
