@@ -65,6 +65,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	i := flow.New(r, flow.Config{
+		SchemaId: s.Id,
 		Name:     s.Name,
 		Schema:   s.Schema,
 		Handler:  r,
