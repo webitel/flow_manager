@@ -122,7 +122,11 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 				end = append(end, "error/GATEWAY_DOWN")
 			} else {
 				e.Id = nil
-				if e.Name == nil {
+
+				tmp := c.GetVariable("variable_sip_to_display")
+				if tmp != "" && c.direction == model.CallDirectionOutbound {
+					e.Name = model.NewString(tmp)
+				} else if e.Name == nil {
 					e.Name = e.Number
 				}
 
