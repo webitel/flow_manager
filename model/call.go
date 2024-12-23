@@ -471,7 +471,8 @@ type Call interface {
 	HangupCause() string
 
 	GetContactId() int
-	BackgroundPlayback(ctx context.Context, file *PlaybackFile, volumeReduction int) (Response, *AppError)
+	BackgroundPlayback(ctx context.Context, file *PlaybackFile, name string, volumeReduction int) (Response, *AppError)
+	BackgroundPlaybackStop(ctx context.Context, name string) (Response, *AppError)
 }
 
 type PlaybackFile struct {
@@ -519,6 +520,11 @@ type SpeechMessage struct {
 }
 
 type GetSpeech struct {
+	Background *struct {
+		Name            string
+		File            *PlaybackFile `json:"file" json:"file,omitempty"`
+		VolumeReduction int           `json:"volumeReduction" json:"volume_reduction,omitempty"`
+	}
 	Timeout             int      `json:"timeout"`
 	VadTimeout          int      `json:"vadTimeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`

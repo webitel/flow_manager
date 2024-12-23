@@ -107,3 +107,30 @@ from (
 
 	return *req, nil
 }
+
+func (s SqlMediaStore) GetPlaybackFile(domainId int64, req *model.PlaybackFile) (*model.PlaybackFile, *model.AppError) {
+	var res playbackResponse
+	err := s.GetReplica().SelectOne(&res, `select 0 idx, m.id, m.mime_type as type 
+from storage.media_files m
+where m.domain_id = :DomainId
+    and ( m.id = :Id or
+          m.name = :Name )
+limit 1`, map[string]interface{}{
+		"Id":       req.Id,
+		"Name":     req.Name,
+		"DomainId": domainId,
+	},
+	)
+
+	if err != nil {
+		return nil, model.NewAppError("SqlMediaStore.GetPlaybackFile", "store.sql_media.get_pl_file.error", nil,
+			fmt.Sprintf("domainId=%v %v", domainId, err.Error()), http.StatusBadRequest)
+	}
+
+	if res.Id != nil {
+		req.Id = res.Id
+		req.Type = res.Type
+	}
+
+	return req, nil
+}

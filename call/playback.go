@@ -25,6 +25,13 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 	}
 
 	if argv.GetSpeech != nil {
+		background := argv.GetSpeech.Background
+		if background != nil && background.File != nil {
+			background.File, _ = r.fm.GetPlaybackFile(call.DomainId(), background.File)
+			background.Name = model.NewId()[:6]
+			call.BackgroundPlayback(ctx, background.File, background.Name, background.VolumeReduction)
+			defer call.BackgroundPlaybackStop(ctx, background.Name)
+		}
 		if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 			return nil, err
 		}
