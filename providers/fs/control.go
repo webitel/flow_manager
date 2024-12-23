@@ -510,16 +510,38 @@ func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString str
 		*params.Tries, *params.Timeout, params.Terminators, fileString, *params.SetVar, *params.Regexp, dgTimeout))
 }
 
-func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, volumeReduction int) (model.Response, *model.AppError) {
+func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, name string, volumeReduction int) (model.Response, *model.AppError) {
 	s, ok := c.buildFileLink(file)
 	if !ok {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
 	}
-	c.Lock()
-	c.playBackground = true
-	c.Unlock()
 
-	return c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("%s %d", s, volumeReduction))
+	if len(name) > 10 {
+		name = name[0:10]
+	}
+
+	res, err := c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("start %s %d %s", s, volumeReduction, name))
+	if err == nil {
+		c.Lock()
+		c.playBackground++
+		c.Unlock()
+	}
+	return res, err
+}
+
+func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (model.Response, *model.AppError) {
+
+	if len(name) > 10 {
+		name = name[0:10]
+	}
+
+	res, err := c.executeWithContext(ctx, "wbt_background", fmt.Sprintf("stop %s", name))
+	if err == nil {
+		c.Lock()
+		c.playBackground--
+		c.Unlock()
+	}
+	return res, err
 }
 
 func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, *model.AppError) {
@@ -718,7 +740,7 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 
 func (c *Connection) IsPlayBackground() bool {
 	c.RLock()
-	bg := c.playBackground
+	bg := c.playBackground > 0
 	c.RUnlock()
 	return bg
 }
@@ -815,6 +837,9 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 }
 
 func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool) (string, bool) {
+	if tts == nil {
+		return "", false
+	}
 	var protocol string
 	var q = fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
 

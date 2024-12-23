@@ -13,3 +13,7 @@ func (f *FlowManager) GetMediaFile(domainId int64, id int) (*model.File, *model.
 func (f *FlowManager) SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, *model.AppError) {
 	return f.Store.Media().SearchOne(domainId, search)
 }
+
+func (f *FlowManager) GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, *model.AppError) {
+	return f.Store.Media().GetPlaybackFile(domainId, search)
+}
