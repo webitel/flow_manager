@@ -19,7 +19,7 @@ type Router struct {
 type Connection interface {
 	model.Connection
 	SchemaId() int
-	PushForm(form model.FormElem) (*model.FormAction, *model.AppError)
+	PushForm(ctx context.Context, form model.FormElem) (*model.FormAction, *model.AppError)
 	SetComponent(name string, component interface{})
 	GetComponentByName(name string) interface{}
 }
