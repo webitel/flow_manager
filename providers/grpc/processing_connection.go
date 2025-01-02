@@ -85,7 +85,7 @@ func (c *processingConnection) GetComponentByName(name string) interface{} {
 	return v
 }
 
-func (c *processingConnection) PushForm(form model.FormElem) (*model.FormAction, *model.AppError) {
+func (c *processingConnection) PushForm(ctx context.Context, form model.FormElem) (*model.FormAction, *model.AppError) {
 	if c.formAction != nil {
 		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
 	}
@@ -94,8 +94,16 @@ func (c *processingConnection) PushForm(form model.FormElem) (*model.FormAction,
 
 	c.formAction = make(chan model.FormAction)
 
-	if action, ok := <-c.formAction; ok {
-		return &action, nil
+	select {
+	case action, ok := <-c.formAction:
+		if ok {
+			return &action, nil
+		}
+	case _, ok := <-ctx.Done():
+		if ok {
+			return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "context cancel", http.StatusInternalServerError)
+		}
+
 	}
 
 	return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "Form no send action", http.StatusInternalServerError)
