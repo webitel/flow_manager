@@ -261,7 +261,19 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 
 			vars := model.Variables{}
 			for k, _ := range exportVariables {
-				vars[k] = gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, "")).String()
+				// TODO DEV-4908
+				r := gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, ""))
+				if r.Type == gjson.JSON {
+					dst := &bytes.Buffer{}
+					err = json.Compact(dst, body)
+					if err != nil {
+						return model.CallResponseError, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.json.err",
+							nil, err.Error(), http.StatusBadRequest)
+					}
+					vars[k] = dst.String()
+				} else {
+					vars[k] = r.String()
+				}
 			}
 			if _, err := c.Set(context.Background(), vars); err != nil {
 				return model.CallResponseError, err
