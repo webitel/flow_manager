@@ -47,7 +47,7 @@ require (
 	go.opentelemetry.io/otel v1.29.0
 	go.opentelemetry.io/otel/sdk v1.29.0
 	golang.org/x/oauth2 v0.21.0
-	golang.org/x/sync v0.8.0
+	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.65.0
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
@@ -107,9 +107,9 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	golang.org/x/exp v0.0.0-20240404231335-c0f41cb1a7a0 // indirect
-	golang.org/x/net v0.27.0 // indirect
-	golang.org/x/sys v0.25.0 // indirect
-	golang.org/x/text v0.18.0 // indirect
+	golang.org/x/net v0.33.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240805194559-2c9e96a0b5d4 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
