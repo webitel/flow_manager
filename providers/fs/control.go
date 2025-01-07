@@ -853,18 +853,24 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
 	if prepare {
-		if c.IsPlayBackground() {
-			protocol = "{skip_cache=true}"
+		protocol = "{call_id=" + c.id + ",id=" + model.NewId()[:8]
+		if c.IsPlayBackground() && !tts.Static {
+			protocol += ",skip_cache=true"
 		}
+		protocol += "}"
 		protocol += "wbt_prepare://http://$${cdr_url}/sys/tts"
 	} else if format == "mp3" {
 		protocol = "shout://$${cdr_url}/sys/tts"
 	} else {
-		if c.IsPlayBackground() {
+		if c.IsPlayBackground() && !tts.Static {
 			protocol = "{refresh=true}"
 		}
 		protocol += "http_cache://http://$${cdr_url}/sys/tts"
 	}
+	if !tts.Static {
+		q += "&r=" + c.id[:5]
+	}
+
 	q += "&format=" + format
 	if rate != "" {
 		q += "&rate=" + rate

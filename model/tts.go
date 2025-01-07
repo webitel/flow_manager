@@ -16,6 +16,7 @@ type TTSSettings struct {
 	TextType      string                 `json:"textType"`
 	VoiceSettings map[string]interface{} `json:"voice_settings"`
 	Format        string                 `json:"format"` // mp3 or wav
+	Static        bool                   `json:"static"`
 
 	//google
 	SpeakingRate     string `json:"speakingRate"`
