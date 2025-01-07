@@ -90,6 +90,12 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			// todo err
 		}
 		if argv.GetSpeech.Timeout > 0 && argv.GetSpeech.BreakFinalOnTimeout {
+			wbtError, _ := call.Get("wbt_stt_error")
+			if wbtError != "" {
+				return model.CallResponseError, model.NewAppError("Playback.Stt", "call.stt.error",
+					nil, wbtError, 500)
+			}
+
 			call.Set(ctx, map[string]interface{}{
 				"google_play_sleep_timeout": "true",
 			})
