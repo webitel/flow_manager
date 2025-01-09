@@ -852,6 +852,10 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 	var q = fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
 
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
+	if tts.Format == "ulaw" { // todo 11lab test
+		format = tts.Format
+	}
+
 	if prepare {
 		protocol = "{call_id=" + c.id + ",id=" + model.NewId()[:8]
 		if c.IsPlayBackground() && !tts.Static {
