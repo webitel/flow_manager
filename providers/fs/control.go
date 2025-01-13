@@ -710,6 +710,10 @@ func (c *Connection) PickupHash(name string) string {
 	return fmt.Sprintf("%s@%d", name, c.domainId)
 }
 
+func (c *Connection) Bot(ctx context.Context, conn string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "wbt_voice_bot", conn)
+}
+
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
