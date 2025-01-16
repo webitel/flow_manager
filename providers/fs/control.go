@@ -710,8 +710,17 @@ func (c *Connection) PickupHash(name string) string {
 	return fmt.Sprintf("%s@%d", name, c.domainId)
 }
 
-func (c *Connection) Bot(ctx context.Context, conn string) (model.Response, *model.AppError) {
-	return c.executeWithContext(ctx, "wbt_voice_bot", conn)
+func (c *Connection) Bot(ctx context.Context, conn string, rate int, startMessage string, vars map[string]string) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("%s %d", conn, rate)
+	if startMessage != "" {
+		args += " " + model.UrlEncoded(startMessage)
+	}
+
+	if vars != nil {
+		// TODO JSON ?
+	}
+
+	return c.executeWithContext(ctx, "wbt_voice_bot", args)
 }
 
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
