@@ -612,7 +612,9 @@ func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
 
 func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, *model.AppError) {
 	if config.Lang == "" {
-		config.Lang = "en-US"
+		if config.Lang, _ = c.get("GOOGLE_SPEECH_LANG"); config.Lang == "" {
+			config.Lang = "en-US"
+		}
 	}
 
 	if config.SampleRate == 0 {
