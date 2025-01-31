@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -10,9 +11,8 @@ import (
 
 func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var err *model.AppError
-	var argv = model.BroadcastChat{
-		Type: "text",
-	}
+	var argv = model.BroadcastChat{}
+	var typeProfile string
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err
@@ -21,6 +21,27 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 	if len(argv.Peer) == 0 {
 		return nil, ErrorRequiredParameter("broadcastChatMessage", "peer")
 	}
+
+	if argv.Profile.Id > 0 {
+		typeProfile, err = r.fm.ChatProfileType(conn.DomainId(), argv.Profile.Id)
+	}
+
+	// TODO
+	peer := make([]model.BroadcastPeer, 0, len(argv.Peer))
+	for _, v := range argv.Peer {
+		switch p := v.(type) {
+		case string:
+			peer = append(peer, model.BroadcastPeer{
+				Id:   p,
+				Type: typeProfile,
+				Via:  fmt.Sprintf("%d", argv.Profile.Id),
+			})
+		case map[string]any:
+
+		}
+	}
+
+	fmt.Println(peer)
 
 	resp, err := r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv)
 	if err != nil {
@@ -49,13 +70,12 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 	}
 
 	// if the chat_manager service wants to set new variables let him do this
-	for key, value := range resp.Variables {
-		status, err := conn.Set(ctx, model.Variables{
-			key: value,
-		})
-		if err != nil {
-			return status, err
+	if len(resp.Variables) != 0 {
+		vars := make(model.Variables)
+		for key, value := range resp.Variables {
+			vars[key] = value
 		}
+		return conn.Set(ctx, vars)
 	}
 
 	return model.CallResponseOK, nil

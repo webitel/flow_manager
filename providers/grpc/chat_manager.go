@@ -132,19 +132,86 @@ func (cm *ChatManager) wakeUp() {
 	cm.poolConnections.RecheckConnections(list.Ids())
 }
 
+func inputFile(f *model.File) *messages.InputFile {
+	if f == nil {
+		return nil
+	}
+
+	if len(f.Url) != 0 {
+		return &messages.InputFile{
+			FileSource: &messages.InputFile_Url{
+				Url: f.Url,
+			},
+		}
+	} else {
+		return &messages.InputFile{
+			FileSource: &messages.InputFile_Id{
+				Id: fmt.Sprintf("%d", f.Id),
+			},
+		}
+	}
+}
+
+func inputKeyboard(btns [][]model.ChatButton) *messages.InputKeyboard {
+	l := len(btns)
+	if l == 0 {
+		return nil
+	}
+
+	keyboard := &messages.InputKeyboard{
+		Rows: make([]*messages.InputButtonRow, 0, l),
+	}
+
+	for _, row := range btns {
+		l = len(row)
+		if l == 0 {
+			continue
+		}
+
+		buttons := make([]*messages.InputButton, 0, l)
+
+		for _, btn := range row {
+			buttons = append(buttons, &messages.InputButton{
+				Caption: btn.Caption,
+				Text:    btn.Text,
+				Type:    btn.Type,
+				Url:     btn.Url,
+				Code:    btn.Code,
+			})
+		}
+
+		keyboard.Rows = append(keyboard.Rows, &messages.InputButtonRow{
+			Buttons: buttons,
+		})
+	}
+
+	return keyboard
+}
+
+func inputPeers(ps []model.BroadcastPeer) []*messages.InputPeer {
+	peers := make([]*messages.InputPeer, 0, len(ps))
+
+	for _, v := range ps {
+		peers = append(peers, &messages.InputPeer{
+			Id:   v.Id,
+			Type: v.Type,
+			Via:  v.Via,
+		})
+	}
+
+	return peers
+}
+
 func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat) (*model.BroadcastChatResponse, error) {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return nil, e
 	}
 
-	msg := &proto.Message{
-		Type:      req.Type,
-		Text:      req.Text,
-		File:      getFile(req.File),
-		Buttons:   getChatButtons(req.Buttons),
-		Inline:    getChatButtons(req.Inline),
-		Variables: req.Variables,
+	msg := &messages.InputMessage{
+		Text:     req.Text,
+		File:     inputFile(req.File),
+		Keyboard: inputKeyboard(req.Buttons),
 	}
 
 	var newContext context.Context
@@ -153,10 +220,9 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	} else {
 		newContext = ctx
 	}
-	broadcastResponse, e := c.messages.BroadcastMessage(newContext, &proto.BroadcastMessageRequest{
+	broadcastResponse, e := c.messages.BroadcastMessage(newContext, &messages.BroadcastMessageRequest{
 		Message: msg,
-		From:    req.Profile.Id,
-		Peer:    req.Peer,
+		//Peers:   inputPeers(req.Peer),
 		Timeout: req.Timeout,
 	})
 
@@ -169,7 +235,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	}
 
 	for _, peer := range broadcastResponse.GetFailure() {
-		res.Failed = append(res.Failed, &model.FailedReceiver{Id: peer.Peer, Error: peer.Error.Message})
+		res.Failed = append(res.Failed, &model.FailedReceiver{Id: peer.PeerId, Error: peer.Error.Message})
 	}
 	res.Variables = broadcastResponse.Variables
 	return &res, nil

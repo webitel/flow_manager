@@ -22,10 +22,11 @@ const (
 )
 
 type ChatButton struct {
-	Text string `json:"text"`
-	Type string `json:"type"`
-	Url  string `json:"url"`
-	Code string `json:"code"`
+	Caption string `json:"caption"`
+	Text    string `json:"text"`
+	Type    string `json:"type"`
+	Url     string `json:"url"`
+	Code    string `json:"code"`
 }
 
 type ChatMenuArgs struct {
@@ -46,16 +47,21 @@ type ChatMessageOutbound struct {
 	NoInput bool           `json:"noInput"`
 }
 
+type BroadcastPeer struct {
+	Id   string `json:"id,omitempty"`
+	Type string `json:"type,omitempty"`
+	Via  string `json:"via,omitempty"`
+}
+
 type BroadcastChat struct {
-	Type    string
+	Type    any
 	Profile struct {
-		Id int64
+		Id int
 	}
-	Peer    []string
+	Peer    []any
 	Text    string
 	File    *File
 	Buttons [][]ChatButton `json:"buttons"`
-	Inline  [][]ChatButton `json:"inline"`
 
 	Variables    map[string]string
 	DomainId     int64

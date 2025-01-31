@@ -113,6 +113,7 @@ type ChatStore interface {
 	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
 	GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError)
 	LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
+	ProfileType(domainId int64, profileId int) (string, *model.AppError)
 }
 
 type QueueStore interface {

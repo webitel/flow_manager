@@ -24,7 +24,7 @@ type ChatClientConnection struct {
 	client   *grpc.ClientConn
 	api      gogrpc.ChatServiceClient
 	contacts chgrpc.ContactLinkingServiceClient
-	messages gogrpc.MessagesClient
+	messages gogrpc.MessagesServiceClient
 }
 
 func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
@@ -47,7 +47,7 @@ func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 	}
 
 	connection.api = gogrpc.NewChatServiceClient(connection.client)
-	connection.messages = gogrpc.NewMessagesClient(connection.client)
+	connection.messages = gogrpc.NewMessagesServiceClient(connection.client)
 	connection.contacts = chgrpc.NewContactLinkingServiceClient(connection.client)
 
 	return connection, nil
