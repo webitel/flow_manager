@@ -45,6 +45,12 @@ func (s SqlUserStore) GetProperties(domainId int64, search *model.SearchUser, ma
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
 		case "team_name":
 			val = `(select tm.name::text from call_center.cc_agent a left join call_center.cc_team tm on tm.id = a.team_id where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+		case "bridged_calls":
+			val = `(select count(*) from call_center.cc_calls c
+where c.user_id = u.id and c.bridged_at notnull and c.hangup_at isnull)` + pq.QuoteIdentifier(k)
+		case "active_calls":
+			val = `(select count(*) from call_center.cc_calls c
+where c.user_id = u.id)` + pq.QuoteIdentifier(k)
 		case "agent_status":
 			val = `(select a.status::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
