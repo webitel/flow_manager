@@ -134,8 +134,8 @@ func (fm *FlowManager) GetChatRouteFromUserId(domainId int64, userId int64) (*mo
 	return routing, nil
 }
 
-func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat) (*model.BroadcastChatResponse, *model.AppError) {
-	resp, err := fm.chatManager.BroadcastMessage(ctx, domainId, req)
+func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, *model.AppError) {
+	resp, err := fm.chatManager.BroadcastMessage(ctx, domainId, req, peers)
 	if err != nil {
 		return nil, model.NewAppError("Chat", "chat.broadcast.error", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -145,6 +145,10 @@ func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64,
 
 func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
 	return c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
+}
+
+func (c *FlowManager) ChatProfileType(domainId int64, profileId int) (string, *model.AppError) {
+	return c.Store.Chat().ProfileType(domainId, profileId)
 }
 
 func (fm *FlowManager) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError {

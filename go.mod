@@ -11,8 +11,8 @@ require github.com/emersion/go-imap v1.2.1
 require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.4.0-20240527133229-8d9250d78122.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.34.2-20240527133229-8d9250d78122.2
-	buf.build/gen/go/webitel/chat/grpc/go v1.4.0-20240703121916-db3266bbfcd3.2
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.34.2-20240703121916-db3266bbfcd3.2
+	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250205144922-f80b8cb6a2bd.1
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.35.1-20240402125447-cb375844242f.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.5.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241112142745-95d51eefa581.1
@@ -49,13 +49,13 @@ require (
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.65.0
-	google.golang.org/protobuf v1.35.1
+	google.golang.org/protobuf v1.36.4
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
 
 require (
-	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.35.1-20231027202514-3f42134f4c56.1 // indirect
+	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.4-20231027202514-3f42134f4c56.1 // indirect
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.4.0-20240725111140-8ade8003e454.2 // indirect
 	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.34.2-20240725111140-8ade8003e454.2 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect

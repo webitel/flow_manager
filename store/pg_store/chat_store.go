@@ -201,3 +201,18 @@ from (select `+strings.Join(f, ", ")+`
 
 	return t.Variables, nil
 }
+
+func (s SqlChatStore) ProfileType(domainId int64, profileId int) (string, *model.AppError) {
+	v, err := s.GetReplica().SelectNullStr(`select provider
+from chat.bot
+where dc = :DomainId and id = :Id`, map[string]any{
+		"DomainId": domainId,
+		"Id":       profileId,
+	})
+
+	if err != nil {
+		return "", model.NewAppError("SqlChatStore.ProfileType", "store.sql_chat.profile_type.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return v.String, nil
+}
