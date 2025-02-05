@@ -221,7 +221,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		newContext = ctx
 	}
 
-	broadcastResponse, e := c.messages.BroadcastMessage(newContext, &messages.BroadcastMessageRequest{
+	broadcastResponse, e := c.messages.BroadcastMessageNA(newContext, &messages.BroadcastMessageRequest{
 		Message: msg,
 		Peers:   inputPeers(peers),
 		Timeout: req.Timeout,

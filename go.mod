@@ -11,8 +11,8 @@ require github.com/emersion/go-imap v1.2.1
 require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.4.0-20240527133229-8d9250d78122.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.34.2-20240527133229-8d9250d78122.2
-	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250128183120-ccd06c5622c0.2
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250129094118-5f302b2fad6c.1
+	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250205144922-f80b8cb6a2bd.1
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.35.1-20240402125447-cb375844242f.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.5.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241112142745-95d51eefa581.1
