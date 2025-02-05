@@ -26,7 +26,6 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 		typeProfile, err = r.fm.ChatProfileType(conn.DomainId(), argv.Profile.Id)
 	}
 
-	// TODO
 	peer := make([]model.BroadcastPeer, 0, len(argv.Peer))
 	for _, v := range argv.Peer {
 		switch p := v.(type) {
@@ -37,13 +36,15 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 				Via:  fmt.Sprintf("%d", argv.Profile.Id),
 			})
 		case map[string]any:
-
+			peer = append(peer, model.BroadcastPeer{
+				Id:   scope.parseString(model.StringValueFromMap("id", p, "")),
+				Type: scope.parseString(model.StringValueFromMap("type", p, "")),
+				Via:  scope.parseString(model.StringValueFromMap("via", p, "")),
+			})
 		}
 	}
 
-	fmt.Println(peer)
-
-	resp, err := r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv)
+	resp, err := r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv, peer)
 	if err != nil {
 		return nil, err
 	}

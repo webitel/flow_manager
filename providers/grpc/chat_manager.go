@@ -202,7 +202,7 @@ func inputPeers(ps []model.BroadcastPeer) []*messages.InputPeer {
 	return peers
 }
 
-func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat) (*model.BroadcastChatResponse, error) {
+func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, error) {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return nil, e
@@ -220,9 +220,10 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	} else {
 		newContext = ctx
 	}
+
 	broadcastResponse, e := c.messages.BroadcastMessage(newContext, &messages.BroadcastMessageRequest{
 		Message: msg,
-		//Peers:   inputPeers(req.Peer),
+		Peers:   inputPeers(peers),
 		Timeout: req.Timeout,
 	})
 
