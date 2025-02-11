@@ -414,7 +414,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 					Channel:  model.FileChannelMail,
 				})
 				if err != nil {
-					p.log.With(wlog.Any("from", m.From)).Err(err)
+					p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
 					continue
 				}
 				m.Cid[cid] = model.EmailCid(file.Id)
@@ -445,7 +445,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				Channel:  model.FileChannelMail,
 			})
 			if err != nil {
-				p.log.With(wlog.Any("from", m.From)).Err(err)
+				p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
 				continue
 			}
 			m.Attachments = append(m.Attachments, file)
