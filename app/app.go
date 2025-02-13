@@ -61,8 +61,9 @@ type FlowManager struct {
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
-	stop         chan struct{}
-	stopped      chan struct{}
+
+	stop    chan struct{}
+	stopped chan struct{}
 
 	eventQueue mq.MQ
 
