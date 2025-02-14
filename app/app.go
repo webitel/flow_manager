@@ -3,10 +3,12 @@ package app
 import (
 	"context"
 	"fmt"
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
-	"go.opentelemetry.io/otel/sdk/resource"
 	"time"
 
+	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	"go.opentelemetry.io/otel/sdk/resource"
+
+	"github.com/webitel/flow_manager/cases"
 	"github.com/webitel/flow_manager/providers/web_hook"
 
 	_ "github.com/mbobakov/grpc-consul-resolver"
@@ -58,6 +60,7 @@ type FlowManager struct {
 	schemaCache utils.ObjectCache
 	chatManager *grpc.ChatManager
 	storage     *storage.Api
+	cases       *cases.Api
 
 	timezoneList map[int]*time.Location
 	cc           client.CCManager
@@ -86,7 +89,6 @@ type FlowManager struct {
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
-
 	config, err := loadConfig()
 	if err != nil {
 		return nil, err
@@ -172,6 +174,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, outErr
 	}
 
+	fm.cases, outErr = cases.NewClient(fm.Config().DiscoverySettings.Url)
+	if outErr != nil {
+		return nil, outErr
+	}
+
 	fm.grpcServer = grpcSrv
 	fm.eslServer = fs.NewServer(&fs.Config{
 		Host:           fm.Config().Esl.Host,
@@ -200,7 +207,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return
 	}
 
-	//todo fixme
+	// todo fixme
 	if err := grpcSrv.Cluster(fm.cluster.discovery); err != nil {
 		outErr = err
 		return
