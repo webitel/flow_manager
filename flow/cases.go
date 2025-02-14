@@ -120,11 +120,6 @@ func (r *router) getCases(
 		return nil, model.NewAppError("getCases", "json_encode_failed", nil, err.Error(), 500)
 	}
 
-	re, err := conn.Set(ctx, model.Variables{
-		argv.SetVar: string(casesJSON),
-	})
-	print(re)
-
 	// Set the result in the response variables
 	return conn.Set(ctx, model.Variables{
 		argv.SetVar: string(casesJSON),
