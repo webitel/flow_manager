@@ -200,6 +200,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.topicExtraction),
 	}
+	apps["getCases"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.getCases),
+	}
 
 	return apps
 }
