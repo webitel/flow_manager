@@ -11,11 +11,11 @@ require github.com/emersion/go-imap v1.2.1
 require (
 	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250213114526-84978a94b208.2
 	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.5-20250213114526-84978a94b208.1
-	buf.build/gen/go/webitel/cc/grpc/go v1.4.0-20240527133229-8d9250d78122.2
-	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.34.2-20240527133229-8d9250d78122.2
+	buf.build/gen/go/webitel/cc/grpc/go v1.5.1-20250204132723-b92fee1d7d12.2
+	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.36.4-20250204132723-b92fee1d7d12.1
 	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
 	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250205144922-f80b8cb6a2bd.1
-	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.35.1-20240402125447-cb375844242f.1
+	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.36.5-20250214074617-9f276b575b99.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.5.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240411120545-24ef43af6db3.2
@@ -42,10 +42,10 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/call_center v0.0.0-20240724125933-0749f15dcada
-	github.com/webitel/engine v0.0.0-20240725113537-577386ebe3e6
+	github.com/webitel/call_center v0.0.0-20250205144033-a355df2560de
+	github.com/webitel/engine v0.0.0-20250218105549-555f71cb7b0f
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
-	github.com/webitel/wlog v0.0.0-20240815102009-b8f74bd674e2
+	github.com/webitel/wlog v0.0.0-20240909100805-822697e17a45
 	go.opentelemetry.io/otel v1.29.0
 	go.opentelemetry.io/otel/sdk v1.29.0
 	golang.org/x/oauth2 v0.21.0
@@ -60,8 +60,8 @@ require (
 	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.5-20240617172850-a48fcebcf8f1.1 // indirect
 	buf.build/gen/go/webitel/general/protocolbuffers/go v1.36.5-20241218155954-cfa0c73ff252.1 // indirect
 	buf.build/gen/go/webitel/protoc-gen-go-webitel/protocolbuffers/go v1.36.5-20240830062629-411a5fb2aec7.1 // indirect
-	buf.build/gen/go/webitel/webitel-go/grpc/go v1.4.0-20240725111140-8ade8003e454.2 // indirect
-	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.34.2-20240725111140-8ade8003e454.2 // indirect
+	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20250218105124-2ee3869e4b3a.2 // indirect
+	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.5-20250218105124-2ee3869e4b3a.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
