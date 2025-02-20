@@ -12,15 +12,8 @@ import (
 )
 
 type Api struct {
-	cases gogrpc.CasesClient
-}
-
-type SearchCasesRequest struct {
-	Token   string
-	Limit   int64
-	Offset  int64
-	Fields  []string
-	Filters map[string]string
+	cases             gogrpc.CasesClient
+	caseCommunication gogrpc.CaseCommunicationsClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -31,36 +24,84 @@ func NewClient(consulTarget string) (*Api, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	cases := gogrpc.NewCasesClient(conn)
+	caseCommunication := gogrpc.NewCaseCommunicationsClient(conn)
 
 	return &Api{
-		cases: cases,
+		cases:             cases,
+		caseCommunication: caseCommunication,
 	}, nil
 }
 
-func (api *Api) SearchCases(ctx context.Context, req *SearchCasesRequest) (*cases.CaseList, error) {
-	// Extract existing metadata from context
-	existingMD, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		existingMD = metadata.New(nil)
-	}
-
-	// Add authorization token to metadata
-	md := metadata.Join(existingMD, metadata.Pairs("X-Webitel-Access", req.Token))
-
+func (api *Api) SearchCases(ctx context.Context, req *cases.SearchCasesRequest, token string) (*cases.CaseList, error) {
 	// Create a new outgoing context with the updated metadata
-	newCtx := metadata.NewOutgoingContext(ctx, md)
+	newCtx := attachToken(ctx, token)
 
 	// Make the gRPC request
-	cases, err := api.cases.SearchCases(newCtx, &cases.SearchCasesRequest{
-		Size:    int32(req.Limit),
-		Page:    int32(req.Offset),
-		Fields:  req.Fields,
-		Filters: req.Filters,
-	})
+	cases, err := api.cases.SearchCases(newCtx, req)
 	if err != nil {
 		return nil, err
 	}
 
 	return cases, nil
+}
+
+func (api *Api) LocateCase(ctx context.Context, req *cases.LocateCaseRequest, token string) (*cases.Case, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+
+	// Make the gRPC request
+	c, err := api.cases.LocateCase(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (api *Api) CreateCase(ctx context.Context, req *cases.CreateCaseRequest, token string) (*cases.Case, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+
+	// Make the gRPC request
+	c, err := api.cases.CreateCase(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (api *Api) UpdateCase(ctx context.Context, req *cases.UpdateCaseRequest, token string) (*cases.Case, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+
+	// Make the gRPC request
+	c, err := api.cases.UpdateCase(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+func (api *Api) LinkCommunication(ctx context.Context, req *cases.LinkCommunicationRequest, token string) (*cases.LinkCommunicationResponse, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+
+	// Make the gRPC request
+	c, err := api.caseCommunication.LinkCommunication(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+
+	return c, nil
+}
+
+// attachToken adds the authentication token to the gRPC metadata.
+func attachToken(ctx context.Context, token string) context.Context {
+	existingMD, _ := metadata.FromIncomingContext(ctx)
+	md := metadata.Join(existingMD, metadata.Pairs("X-Webitel-Access", token))
+	return metadata.NewOutgoingContext(ctx, md)
 }

@@ -1,7 +1,7 @@
 package flow
 
 func ApplicationsHandlers(r *router) ApplicationHandlers {
-	var apps = make(ApplicationHandlers)
+	apps := make(ApplicationHandlers)
 
 	apps["log"] = &Application{
 		AllowNoConnect: true,
@@ -204,6 +204,23 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.getCases),
 	}
-
+	apps["locateCase"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.locateCase),
+	}
+	apps["updateCase"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.updateCase),
+	}
+	apps["createCase"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.createCase),
+	}
+	apps["linkCommunication"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.linkCommunication),
+	}
 	return apps
 }
+
+
