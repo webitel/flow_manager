@@ -85,3 +85,16 @@ func (p *QueueProcessing) Fields() map[string]string {
 
 	return p.fields
 }
+
+func (p *QueueProcessing) Update(f []byte, fields map[string]string) error {
+	if p == nil {
+		return nil
+	}
+	p.Lock()
+	for k, v := range fields {
+		p.fields[k] = v
+	}
+	p.form.Form = f
+	p.Unlock()
+	return nil
+}
