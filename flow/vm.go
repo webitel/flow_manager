@@ -29,6 +29,22 @@ func (f *Flow) initVm() {
 		wlog.Error(fmt.Sprintf("connection init VM error: %s", err.Error()))
 	}
 
+	err = f.vm.Set("_getGlobalVar", func(call otto.FunctionCall) otto.Value {
+		if f.Connection == nil {
+			// error
+			return otto.Value{}
+		}
+		v := f.router.GlobalVariable(f.Connection.DomainId(), call.Argument(0).String())
+		res, err := f.vm.ToValue(v)
+		if err != nil {
+			return otto.Value{}
+		}
+		return res
+	})
+	if err != nil {
+		wlog.Error(fmt.Sprintf("connection init VM error: %s", err.Error()))
+	}
+
 	err = f.vm.Set("_LocalDateParameters", func(call otto.FunctionCall) otto.Value {
 		t := f.Now()
 		res, err := f.vm.ToValue([]int{t.Year(), int(t.Month()), t.Day(), t.Hour(), t.Minute(), t.Second()})
