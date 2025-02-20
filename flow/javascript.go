@@ -32,6 +32,14 @@ func (r *router) Js(ctx context.Context, scope *Flow, conn model.Connection, arg
 		return nil, err
 	}
 
+	argv.Data = compileVarsGlobal.ReplaceAllStringFunc(argv.Data, func(varName string) string {
+		l := compileVarsGlobal.FindStringSubmatch(varName)
+		if len(l) > 1 {
+			return fmt.Sprintf(`_getGlobalVar("%s")`, l[1])
+		}
+		return ""
+	})
+
 	argv.Data = compileVars.ReplaceAllStringFunc(argv.Data, func(varName string) string {
 		l := compileVars.FindStringSubmatch(varName)
 		return fmt.Sprintf(`_getChannelVar("%s")`, l[1])
