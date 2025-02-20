@@ -1,6 +1,7 @@
 package app
 
 import (
+	engcl "buf.build/gen/go/webitel/engine/grpc/go/_gogrpc"
 	"context"
 	"fmt"
 	"time"
@@ -84,6 +85,7 @@ type FlowManager struct {
 
 	cacheStore       map[CacheType]cachelayer.CacheStore
 	wbtCli           *webitel_client.Client
+	engineCallCli    engcl.CallServiceClient
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
 }
@@ -230,6 +232,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if fm.wbtCli, err = webitel_client.New(0, 0, config.DiscoverySettings.Url); err != nil {
 		return nil, err
 	}
+
+	engCon, err := NewEngineConnection(config.DiscoverySettings.Url)
+	if err != nil {
+		return nil, err
+	}
+	fm.engineCallCli = engcl.NewCallServiceClient(engCon)
 
 	return fm, outErr
 }
