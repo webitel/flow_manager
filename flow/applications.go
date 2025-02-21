@@ -163,7 +163,6 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.chatHistory),
 	}
-
 	apps["getContact"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.getContact),
@@ -220,7 +219,9 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.linkCommunication),
 	}
+	apps["makeCall"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.makeCall),
+	}
 	return apps
 }
-
-
