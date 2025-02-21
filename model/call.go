@@ -1,6 +1,7 @@
 package model
 
 import (
+	eng "buf.build/gen/go/webitel/engine/protocolbuffers/go"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -55,6 +56,8 @@ const (
 	CallActionHeartbeatName  = "heartbeat"
 	CallActionTranscriptName = "transcript"
 )
+
+type OutboundCallRequest *eng.CreateCallRequest
 
 type MissedCall struct {
 	DomainId int64  `json:"domain_id" db:"domain_id"`

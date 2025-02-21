@@ -7,11 +7,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"net/http"
-
-	eng "buf.build/gen/go/webitel/engine/protocolbuffers/go"
 )
 
-func (fm *FlowManager) MakeCall(ctx context.Context, req *eng.CreateCallRequest) *model.AppError {
+func (fm *FlowManager) MakeCall(ctx context.Context, req model.OutboundCallRequest) *model.AppError {
 	if fm.engineCallCli == nil {
 		return model.NewAppError("App", "MakeCall", nil, "engine client not initialized to make a call", http.StatusInternalServerError)
 	}
