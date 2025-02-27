@@ -12,6 +12,8 @@ type GlobalVar struct {
 
 type GlobalArgs map[string]GlobalVar
 
+type UnSetArg []string
+
 func (r *router) set(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var vars model.Variables
 	if err := scope.Decode(args, &vars); err != nil {
@@ -43,4 +45,25 @@ func (r *router) global(ctx context.Context, scope *Flow, conn model.Connection,
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (r *router) unSet(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv UnSetArg
+
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+
+	if len(argv) == 0 {
+		return nil, ErrorRequiredParameter("UnSet", "unSet")
+	}
+
+	vars := make(model.Variables)
+	for _, v := range argv {
+		if _, ok := conn.Get(v); ok {
+			vars[v] = ""
+		}
+	}
+
+	return conn.Set(ctx, vars)
 }

@@ -2,13 +2,13 @@ package chat_route
 
 import (
 	"context"
-	"net/http"
-
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
 type UnSetArg []string
+
+// replace base unSet
 
 func (r *Router) UnSet(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
 	var argv UnSetArg
@@ -18,7 +18,7 @@ func (r *Router) UnSet(ctx context.Context, scope *flow.Flow, conv Conversation,
 	}
 
 	if len(argv) == 0 {
-		return nil, model.NewAppError("UnSet", "chat.unset.valid", nil, "bad arguments", http.StatusBadRequest)
+		return nil, flow.ErrorRequiredParameter("UnSet", "unSet")
 	}
 
 	return conv.UnSet(ctx, argv)
