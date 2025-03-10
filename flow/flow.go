@@ -279,7 +279,9 @@ func (i *Flow) Goto(tag string) bool {
 		i.currentNode.position = gotoApp.idx
 		if i.currentNode.parent != nil {
 			i.currentNode.parent.position = i.currentNode.idx + 1
+			i.currentNode.parent.parent.CompleteTreeTraversal()
 		}
+
 		i.gotoCounter++
 		return true
 	}

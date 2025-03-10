@@ -12,6 +12,13 @@ type Node struct {
 	children []*ApplicationRequest
 }
 
+func (n *Node) CompleteTreeTraversal() {
+	if n != nil && n.parent != nil && n.position == 0 {
+		n.position = len(n.children)
+		n.parent.CompleteTreeTraversal()
+	}
+}
+
 func (n *BaseNode) getDepth() int16 {
 	return n._depth
 }
