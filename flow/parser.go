@@ -14,6 +14,7 @@ import (
 )
 
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
+var JsonViewT = reflect.TypeOf(&model.JsonView{})
 
 /*
 \d := map[string]interface{}{
@@ -104,6 +105,11 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				if to.AssignableTo(jsonValueT) {
 					d := f.parseString(data.(string))
 					o := model.JsonValue(d)
+					return &o, nil
+				} else if to.AssignableTo(JsonViewT) { // TODO
+					d := f.parseString(data.(string))
+					o := model.JsonView{}
+					json.Unmarshal([]byte(d), &o)
 					return &o, nil
 				}
 			case reflect.Slice:
