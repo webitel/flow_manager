@@ -4,25 +4,27 @@ import (
 	"context"
 	"encoding/json"
 
-	cases_pb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
+	pb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
 
 // ---------------------//
-// ** protobuf types ** //
+// ** protobuf types ** //ß
 // ---------------------//
 type (
-	SearchCasesRequest       = cases_pb.SearchCasesRequest
-	LocateCaseRequest        = cases_pb.LocateCaseRequest
-	CreateCaseRequest        = cases_pb.CreateCaseRequest
-	UpdateCaseRequest        = cases_pb.UpdateCaseRequest
-	LinkCommunicationRequest = cases_pb.LinkCommunicationRequest
+	SearchCasesRequest       = pb.SearchCasesRequest
+	LocateCaseRequest        = pb.LocateCaseRequest
+	CreateCaseRequest        = pb.CreateCaseRequest
+	UpdateCaseRequest        = pb.UpdateCaseRequest
+	LinkCommunicationRequest = pb.LinkCommunicationRequest
+	GetServiceCatalogRequest = pb.ListCatalogRequest
 )
 
 // ----------------//
 // ** Arguments ** //
 // ----------------//
+
 type GetCasesArgs struct {
 	SearchCasesRequest
 	Token  string
@@ -53,15 +55,22 @@ type LinkCommunicationArgs struct {
 	SetVar string
 }
 
+type GetServiceCatalogsArgs struct {
+	GetServiceCatalogRequest
+	Token  string
+	SetVar string
+}
+
 // --------------------//
 // ** Function names **//
 // --------------------//
 const (
-	funcGetCases          = "getCases"
-	funcLocateCase        = "locateCase"
-	funcCreateCase        = "createCase"
-	funcUpdateCase        = "updateCase"
-	funcLinkCommunication = "linkCommunication"
+	funcGetCases           = "getCases"
+	funcLocateCase         = "locateCase"
+	funcCreateCase         = "createCase"
+	funcUpdateCase         = "updateCase"
+	funcLinkCommunication  = "linkCommunication"
+	funcGetServiceCatalogs = "getServiceCatalogs"
 )
 
 // ** Get Cases **
@@ -70,7 +79,6 @@ func (r *router) getCases(ctx context.Context, scope *Flow, conn model.Connectio
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetCases); err != nil {
 		return nil, err
 	}
@@ -90,7 +98,6 @@ func (r *router) locateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLocateCase); err != nil {
 		return nil, err
 	}
@@ -110,7 +117,6 @@ func (r *router) createCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcCreateCase); err != nil {
 		return nil, err
 	}
@@ -130,7 +136,6 @@ func (r *router) updateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcUpdateCase); err != nil {
 		return nil, err
 	}
@@ -150,7 +155,6 @@ func (r *router) linkCommunication(ctx context.Context, scope *Flow, conn model.
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLinkCommunication); err != nil {
 		return nil, err
 	}
@@ -162,6 +166,24 @@ func (r *router) linkCommunication(ctx context.Context, scope *Flow, conn model.
 	}
 
 	return setResponse(ctx, conn, argv.SetVar, res)
+}
+
+func (r *router) getServiceCatalogs(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv GetServiceCatalogsArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetServiceCatalogs); err != nil {
+		return nil, err
+	}
+
+	res, err := r.fm.GetServiceCatalogs(ctx, &argv.GetServiceCatalogRequest, argv.Token)
+	if err != nil {
+		logError(scope, conn, err)
+		return nil, model.NewAppError(funcGetServiceCatalogs, "get_service_catalogs_failed", nil, err.Error(), 500)
+	}
+	return setResponse(ctx, conn, argv.SetVar, res)
+
 }
 
 // -------------------//

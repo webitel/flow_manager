@@ -219,6 +219,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.linkCommunication),
 	}
+	apps["getServiceCatalogs"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.getServiceCatalogs),
+	}
 	apps["makeCall"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.makeCall),

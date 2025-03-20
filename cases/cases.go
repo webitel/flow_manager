@@ -14,10 +14,11 @@ import (
 type Api struct {
 	cases             gogrpc.CasesClient
 	caseCommunication gogrpc.CaseCommunicationsClient
+	serviceCatalogs   gogrpc.CatalogsClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("consul://%s/webitel.cases?wait=14s", consulTarget),
+	conn, err := grpc.NewClient(fmt.Sprintf("consul://%s/webitel.casesClient?wait=14s", consulTarget),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -25,12 +26,14 @@ func NewClient(consulTarget string) (*Api, error) {
 		return nil, err
 	}
 
-	cases := gogrpc.NewCasesClient(conn)
+	casesClient := gogrpc.NewCasesClient(conn)
 	caseCommunication := gogrpc.NewCaseCommunicationsClient(conn)
+	serviceCatalogs := gogrpc.NewCatalogsClient(conn)
 
 	return &Api{
-		cases:             cases,
+		cases:             casesClient,
 		caseCommunication: caseCommunication,
+		serviceCatalogs:   serviceCatalogs,
 	}, nil
 }
 
@@ -39,12 +42,12 @@ func (api *Api) SearchCases(ctx context.Context, req *cases.SearchCasesRequest, 
 	newCtx := attachToken(ctx, token)
 
 	// Make the gRPC request
-	cases, err := api.cases.SearchCases(newCtx, req)
+	c, err := api.cases.SearchCases(newCtx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	return cases, nil
+	return c, nil
 }
 
 func (api *Api) LocateCase(ctx context.Context, req *cases.LocateCaseRequest, token string) (*cases.Case, error) {
@@ -97,6 +100,17 @@ func (api *Api) LinkCommunication(ctx context.Context, req *cases.LinkCommunicat
 	}
 
 	return c, nil
+}
+
+func (api *Api) GetServiceCatalogs(ctx context.Context, req *cases.ListCatalogRequest, token string) (*cases.CatalogList, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+	// Make the gRPC request
+	s, err := api.serviceCatalogs.ListCatalogs(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // attachToken adds the authentication token to the gRPC metadata.
