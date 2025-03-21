@@ -313,7 +313,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			return model.CallResponseError, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err", nil, err.Error(), http.StatusBadRequest)
 		}
 
-		fmt.Println(string(body))
+		c.Log().Error(string(body))
 		return model.CallResponseError, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err",
 			nil, "no support parse content-type "+contentType, http.StatusBadRequest)
 	}
