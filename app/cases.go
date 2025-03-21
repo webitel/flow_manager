@@ -3,45 +3,53 @@ package app
 import (
 	"context"
 
-	cases_pb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
+	casespb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
 )
 
 func (fm *FlowManager) SearchCases(
 	ctx context.Context,
-	req *cases_pb.SearchCasesRequest,
+	req *casespb.SearchCasesRequest,
 	token string,
-) (*cases_pb.CaseList, error) {
+) (*casespb.CaseList, error) {
 	return fm.cases.SearchCases(ctx, req, token)
 }
 
 func (fm *FlowManager) LocateCase(
 	ctx context.Context,
-	req *cases_pb.LocateCaseRequest,
+	req *casespb.LocateCaseRequest,
 	token string,
-) (*cases_pb.Case, error) {
+) (*casespb.Case, error) {
 	return fm.cases.LocateCase(ctx, req, token)
 }
 
 func (fm *FlowManager) CreateCase(
 	ctx context.Context,
-	req *cases_pb.CreateCaseRequest,
+	req *casespb.CreateCaseRequest,
 	token string,
-) (*cases_pb.Case, error) {
+) (*casespb.Case, error) {
 	return fm.cases.CreateCase(ctx, req, token)
 }
 
 func (fm *FlowManager) UpdateCase(
 	ctx context.Context,
-	req *cases_pb.UpdateCaseRequest,
+	req *casespb.UpdateCaseRequest,
 	token string,
-) (*cases_pb.Case, error) {
+) (*casespb.Case, error) {
 	return fm.cases.UpdateCase(ctx, req, token)
 }
 
 func (fm *FlowManager) LinkCommunication(
 	ctx context.Context,
-	req *cases_pb.LinkCommunicationRequest,
+	req *casespb.LinkCommunicationRequest,
 	token string,
-) (*cases_pb.LinkCommunicationResponse, error) {
+) (*casespb.LinkCommunicationResponse, error) {
 	return fm.cases.LinkCommunication(ctx, req, token)
+}
+
+func (fm *FlowManager) GetServiceCatalogs(
+	ctx context.Context,
+	req *casespb.ListCatalogRequest,
+	token string,
+) (*casespb.CatalogList, error) {
+	return fm.cases.GetServiceCatalogs(ctx, req, token)
 }
