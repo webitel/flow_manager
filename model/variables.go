@@ -1,6 +1,9 @@
 package model
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 var compileVar *regexp.Regexp
 
@@ -18,11 +21,20 @@ func init() {
 
 func ParseText(c Connection, text string, ops ...ParseOption) string {
 	jsonString := hasOption(ParseOptionJson, ops...)
+	uri := false
 
 	text = compileVar.ReplaceAllStringFunc(text, func(varName string) (out string) {
 		r := compileVar.FindStringSubmatch(varName)
 		if len(r) > 0 {
+			if strings.HasSuffix(r[1], ".uri()") {
+				r[1] = r[1][:len(r[1])-6]
+				uri = true
+			}
 			out, _ = c.Get(r[1])
+
+			if uri && out != "" {
+				out = UrlEncoded(out)
+			}
 		}
 
 		if jsonString && len(out) > 0 {
