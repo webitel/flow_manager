@@ -78,9 +78,6 @@ func (r *router) getCases(ctx context.Context, scope *Flow, conn model.Connectio
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-	if err := scope.Decode(args, &argv.SearchCasesRequest); err != nil {
-		return nil, err
-	}
 
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetCases); err != nil {
 		return nil, err
@@ -100,9 +97,7 @@ func (r *router) locateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-	if err := scope.Decode(args, &argv.LocateCaseRequest); err != nil {
-		return nil, err
-	}
+
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLocateCase); err != nil {
 		return nil, err
 	}
@@ -121,9 +116,7 @@ func (r *router) createCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-	if err := scope.Decode(args, &argv.CreateCaseRequest); err != nil {
-		return nil, err
-	}
+
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcCreateCase); err != nil {
 		return nil, err
 	}
@@ -142,9 +135,7 @@ func (r *router) updateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-	if err := scope.Decode(args, &argv.UpdateCaseRequest); err != nil {
-		return nil, err
-	}
+
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcUpdateCase); err != nil {
 		return nil, err
 	}
@@ -161,9 +152,6 @@ func (r *router) updateCase(ctx context.Context, scope *Flow, conn model.Connect
 func (r *router) linkCommunication(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv LinkCommunicationArgs
 	if err := scope.Decode(args, &argv); err != nil {
-		return nil, err
-	}
-	if err := scope.Decode(args, &argv.LinkCommunicationRequest); err != nil {
 		return nil, err
 	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLinkCommunication); err != nil {
@@ -183,9 +171,7 @@ func (r *router) getServiceCatalogs(ctx context.Context, scope *Flow, conn model
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
-	if err := scope.Decode(args, &argv.GetServiceCatalogRequest); err != nil {
-		return nil, err
-	}
+
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetServiceCatalogs); err != nil {
 		return nil, err
 	}
