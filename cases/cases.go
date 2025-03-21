@@ -18,7 +18,7 @@ type Api struct {
 }
 
 func NewClient(consulTarget string) (*Api, error) {
-	conn, err := grpc.NewClient(fmt.Sprintf("consul://%s/webitel.casesClient?wait=14s", consulTarget),
+	conn, err := grpc.NewClient(fmt.Sprintf("consul://%s/webitel.cases?wait=14s", consulTarget),
 		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
