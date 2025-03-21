@@ -6,11 +6,10 @@ import (
 
 	pb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
 // ---------------------//
-// ** protobuf types ** //ß
+// ** protobuf types ** //
 // ---------------------//
 type (
 	SearchCasesRequest       = pb.SearchCasesRequest
@@ -79,13 +78,16 @@ func (r *router) getCases(ctx context.Context, scope *Flow, conn model.Connectio
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.SearchCasesRequest); err != nil {
+		return nil, err
+	}
+
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetCases); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.SearchCases(ctx, &argv.SearchCasesRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcGetCases, "get_cases_failed", nil, err.Error(), 500)
 	}
 
@@ -98,13 +100,15 @@ func (r *router) locateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.LocateCaseRequest); err != nil {
+		return nil, err
+	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLocateCase); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.LocateCase(ctx, &argv.LocateCaseRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcLocateCase, "locate_case_failed", nil, err.Error(), 500)
 	}
 
@@ -117,13 +121,15 @@ func (r *router) createCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.CreateCaseRequest); err != nil {
+		return nil, err
+	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcCreateCase); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.CreateCase(ctx, &argv.CreateCaseRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcCreateCase, "create_case_failed", nil, err.Error(), 500)
 	}
 
@@ -136,13 +142,15 @@ func (r *router) updateCase(ctx context.Context, scope *Flow, conn model.Connect
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.UpdateCaseRequest); err != nil {
+		return nil, err
+	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcUpdateCase); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.UpdateCase(ctx, &argv.UpdateCaseRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcUpdateCase, "update_case_failed", nil, err.Error(), 500)
 	}
 
@@ -155,13 +163,15 @@ func (r *router) linkCommunication(ctx context.Context, scope *Flow, conn model.
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.LinkCommunicationRequest); err != nil {
+		return nil, err
+	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLinkCommunication); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.LinkCommunication(ctx, &argv.LinkCommunicationRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcLinkCommunication, "link_communication_failed", nil, err.Error(), 500)
 	}
 
@@ -173,13 +183,15 @@ func (r *router) getServiceCatalogs(ctx context.Context, scope *Flow, conn model
 	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
+	if err := scope.Decode(args, &argv.GetServiceCatalogRequest); err != nil {
+		return nil, err
+	}
 	if err := checkRequiredFields(argv.Token, argv.SetVar, funcGetServiceCatalogs); err != nil {
 		return nil, err
 	}
 
 	res, err := r.fm.GetServiceCatalogs(ctx, &argv.GetServiceCatalogRequest, argv.Token)
 	if err != nil {
-		logError(scope, conn, err)
 		return nil, model.NewAppError(funcGetServiceCatalogs, "get_service_catalogs_failed", nil, err.Error(), 500)
 	}
 	return setResponse(ctx, conn, argv.SetVar, res)
@@ -193,11 +205,11 @@ func (r *router) getServiceCatalogs(ctx context.Context, scope *Flow, conn model
 // ** Helper function to check required fields and log errors **
 func checkRequiredFields(token, setVar, funcName string) *model.AppError {
 	if token == "" {
-		return model.NewAppError(funcName, "missing_token", nil, "Token is required", 400)
+		return model.ErrorRequiredParameter(funcName, "token")
 	}
 
 	if setVar == "" {
-		return model.NewAppError(funcName, "missing_set_var", nil, "SetVar is required", 400)
+		return model.ErrorRequiredParameter(funcName, "setVar")
 	}
 	return nil
 }
@@ -213,12 +225,4 @@ func setResponse(ctx context.Context, conn model.Connection, setVar string, res 
 	return conn.Set(ctx, model.Variables{
 		setVar: string(jsonData),
 	})
-}
-
-// ** Logging Helper Function **
-func logError(scope *Flow, conn model.Connection, err error) {
-	conn.Log().With(
-		wlog.Int("schema_id", scope.schemaId),
-		wlog.String("schema_name", scope.name),
-	).Error(err.Error())
 }
