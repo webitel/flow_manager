@@ -15,6 +15,7 @@ type Api struct {
 	cases             gogrpc.CasesClient
 	caseCommunication gogrpc.CaseCommunicationsClient
 	serviceCatalogs   gogrpc.CatalogsClient
+	comments          gogrpc.CaseCommentsClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -29,11 +30,13 @@ func NewClient(consulTarget string) (*Api, error) {
 	casesClient := gogrpc.NewCasesClient(conn)
 	caseCommunication := gogrpc.NewCaseCommunicationsClient(conn)
 	serviceCatalogs := gogrpc.NewCatalogsClient(conn)
+	comments := gogrpc.NewCaseCommentsClient(conn)
 
 	return &Api{
 		cases:             casesClient,
 		caseCommunication: caseCommunication,
 		serviceCatalogs:   serviceCatalogs,
+		comments:          comments,
 	}, nil
 }
 
@@ -111,6 +114,17 @@ func (api *Api) GetServiceCatalogs(ctx context.Context, req *cases.ListCatalogRe
 		return nil, err
 	}
 	return s, nil
+}
+
+func (api *Api) PublishComment(ctx context.Context, req *cases.PublishCommentRequest, token string) (*cases.CaseComment, error) {
+	// Create a new outgoing context with the updated metadata
+	newCtx := attachToken(ctx, token)
+	// Make the gRPC request
+	c, err := api.comments.PublishComment(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
 }
 
 // attachToken adds the authentication token to the gRPC metadata.
