@@ -9,8 +9,8 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 require github.com/emersion/go-imap v1.2.1
 
 require (
-	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250213114526-84978a94b208.2
-	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.5-20250317123025-8c43d740b4a2.1
+	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250317123025-8c43d740b4a2.2
+	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.6-20250317123025-8c43d740b4a2.1
 	buf.build/gen/go/webitel/cc/grpc/go v1.5.1-20250204132723-b92fee1d7d12.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.36.4-20250204132723-b92fee1d7d12.1
 	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
@@ -55,15 +55,15 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240805194559-2c9e96a0b5d4
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240805194559-2c9e96a0b5d4
 	google.golang.org/grpc v1.65.0
-	google.golang.org/protobuf v1.36.5
+	google.golang.org/protobuf v1.36.6
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )
 
 require (
-	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.5-20240617172850-a48fcebcf8f1.1 // indirect
-	buf.build/gen/go/webitel/general/protocolbuffers/go v1.36.5-20241218155954-cfa0c73ff252.1 // indirect
-	buf.build/gen/go/webitel/protoc-gen-go-webitel/protocolbuffers/go v1.36.5-20240830062629-411a5fb2aec7.1 // indirect
+	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.6-20240617172850-a48fcebcf8f1.1 // indirect
+	buf.build/gen/go/webitel/general/protocolbuffers/go v1.36.6-20241218155954-cfa0c73ff252.1 // indirect
+	buf.build/gen/go/webitel/protoc-gen-go-webitel/protocolbuffers/go v1.36.6-20240830062629-411a5fb2aec7.1 // indirect
 	buf.build/gen/go/webitel/webitel-go/grpc/go v1.5.1-20250218105124-2ee3869e4b3a.2 // indirect
 	buf.build/gen/go/webitel/webitel-go/protocolbuffers/go v1.36.5-20250218105124-2ee3869e4b3a.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
