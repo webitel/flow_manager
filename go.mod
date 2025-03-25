@@ -30,6 +30,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0
 	github.com/h2non/filetype v1.1.3
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/k3a/html2text v1.2.1
