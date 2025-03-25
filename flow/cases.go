@@ -18,6 +18,7 @@ type (
 	UpdateCaseRequest        = pb.UpdateCaseRequest
 	LinkCommunicationRequest = pb.LinkCommunicationRequest
 	GetServiceCatalogRequest = pb.ListCatalogRequest
+	PublishCommentRequest    = pb.PublishCommentRequest
 )
 
 // ----------------//
@@ -60,6 +61,12 @@ type GetServiceCatalogsArgs struct {
 	SetVar string
 }
 
+type PublishCommentArgs struct {
+	PublishCommentRequest
+	Token  string
+	SetVar string
+}
+
 // --------------------//
 // ** Function names **//
 // --------------------//
@@ -70,6 +77,7 @@ const (
 	funcUpdateCase         = "updateCase"
 	funcLinkCommunication  = "linkCommunication"
 	funcGetServiceCatalogs = "getServiceCatalogs"
+	funcPublishComment     = "publishComment"
 )
 
 // ** Get Cases **
@@ -181,7 +189,21 @@ func (r *router) getServiceCatalogs(ctx context.Context, scope *Flow, conn model
 		return nil, model.NewAppError(funcGetServiceCatalogs, "get_service_catalogs_failed", nil, err.Error(), 500)
 	}
 	return setResponse(ctx, conn, argv.SetVar, res)
+}
 
+func (r *router) publishComment(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv PublishCommentArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcPublishComment); err != nil {
+		return nil, err
+	}
+	res, err := r.fm.PublishComment(ctx, &argv.PublishCommentRequest, argv.Token)
+	if err != nil {
+		return nil, model.NewAppError(funcPublishComment, "publish_comment_failed", nil, err.Error(), 500)
+	}
+	return setResponse(ctx, conn, argv.SetVar, res)
 }
 
 // -------------------//
