@@ -9,8 +9,8 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 require github.com/emersion/go-imap v1.2.1
 
 require (
-	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250221032102-3cdcaee96736.2
-	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.5-20250221032102-3cdcaee96736.1
+	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250213114526-84978a94b208.2
+	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.5-20250317123025-8c43d740b4a2.1
 	buf.build/gen/go/webitel/cc/grpc/go v1.5.1-20250204132723-b92fee1d7d12.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.36.4-20250204132723-b92fee1d7d12.1
 	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
@@ -30,7 +30,6 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0
 	github.com/h2non/filetype v1.1.3
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/k3a/html2text v1.2.1
