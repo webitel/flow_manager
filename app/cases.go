@@ -53,3 +53,11 @@ func (fm *FlowManager) GetServiceCatalogs(
 ) (*casespb.CatalogList, error) {
 	return fm.cases.GetServiceCatalogs(ctx, req, token)
 }
+
+func (fm *FlowManager) PublishComment(
+	ctx context.Context,
+	req *casespb.PublishCommentRequest,
+	token string,
+) (*casespb.CaseComment, error) {
+	return fm.cases.PublishComment(ctx, req, token)
+}
