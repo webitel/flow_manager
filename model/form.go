@@ -39,7 +39,7 @@ type FormView struct {
 	Output        string `json:"output,omitempty"`        // "rich-text-editor"
 	Height        int    `json:"height,omitempty"`        //form-i-frame
 	Variable      string `json:"variable,omitempty"`      //form-select-from-object
-	Object        struct {
+	Object        *struct {
 		Source struct {
 			Path string `json:"path"`
 			Name string `json:"name"`
