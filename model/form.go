@@ -1,13 +1,11 @@
 package model
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+)
 
 type FormAction struct {
-	Name   string
-	Fields Variables
-}
-
-type ComponentAction struct {
 	Name   string
 	Fields Variables
 }
@@ -24,11 +22,13 @@ type FormFile struct {
 	} `json:"view"`
 	Value interface{} `json:"value"`
 }
+type FormTableActionFn func(context.Context, bool, Variables) *AppError
 
 type FormTable struct {
-	Id        string                  `json:"id"`
-	Outputs   map[string]Applications `json:"-,omitempty"`
-	Component string                  `json:"component"`
+	Id        string                       `json:"id"`
+	OutputsFn map[string]FormTableActionFn `json:"-"`
+
+	Component string `json:"component"`
 
 	View *struct {
 		Table struct {
