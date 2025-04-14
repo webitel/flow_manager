@@ -21,6 +21,7 @@ type processingConnection struct {
 	domainId   int64
 	schemaId   int
 	parentId   string
+	formId     string
 	forms      chan model.FormElem
 	formAction chan model.FormAction
 	finished   chan struct{}
@@ -90,6 +91,8 @@ func (c *processingConnection) PushForm(ctx context.Context, form model.FormElem
 		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
 	}
 
+	c.setActiveFormId(form.Id)
+
 	c.forms <- form
 
 	c.formAction = make(chan model.FormAction)
@@ -115,28 +118,50 @@ func (c *processingConnection) FormAction(action model.FormAction) *model.AppErr
 	}
 	c.formAction <- action
 	close(c.formAction)
+
 	c.formAction = nil
+	c.setActiveFormId("")
 	return nil
 }
 
-func (c *processingConnection) ComponentAction(a model.ComponentAction) *model.AppError {
+func (c *processingConnection) activeFormId() string {
+	c.RLock()
+	f := c.formId
+	c.RUnlock()
+	return f
+}
+
+func (c *processingConnection) setActiveFormId(id string) {
+	c.Lock()
+	c.formId = id
+	c.Unlock()
+}
+
+func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId string, action string, vars map[string]string, sync bool) *model.AppError {
 	if c.formAction == nil {
-		return model.NewAppError("Processing.ComponentAction", "processing.form.app_err", nil, "Not found active form", http.StatusInternalServerError)
+		return model.NewInternalError("processing.form.app_err", "not found active form")
 	}
 
-	component := c.GetComponentByName(a.Name)
-	if component == nil {
-		return model.NewAppError("Processing.ComponentAction", "processing.form.component.app_err", nil, "Not found component", http.StatusInternalServerError)
+	if c.activeFormId() != formId {
+		return model.NewInternalError("processing.form.app_err", "invalid form id")
 	}
 
-	action, ok := component.(model.FormTable)
+	cm := c.GetComponentByName(componentId)
+	if cm == nil {
+		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s not found", componentId))
+	}
+
+	cmp, ok := cm.(model.FormTable)
 	if !ok {
-		return model.NewAppError("Processing.ComponentAction", "processing.form.component.app_err", nil, "No action defined", http.StatusInternalServerError)
+		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have outputs", componentId))
 	}
 
-	fmt.Println(action.Outputs)
+	fn, ok := cmp.OutputsFn[action]
+	if !ok {
+		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have output %s", componentId, action))
+	}
 
-	return nil
+	return fn(ctx, sync, model.VariablesFromStringMap(vars))
 }
 
 func (c *processingConnection) waitForm(timeSec int) (*model.FormElem, *model.AppError) {

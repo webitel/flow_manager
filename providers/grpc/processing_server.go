@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -15,7 +14,7 @@ import (
 
 var (
 	activeProcessingCacheSize = 10000
-	waitSecSchemaForm         = 10
+	waitSecSchemaForm         = 20
 )
 
 type processingApi struct {
@@ -123,9 +122,9 @@ func (s *processingApi) ComponentAction(ctx context.Context, in *workflow.Compon
 		wlog.Any("variables", in.Variables),
 	).Debug("receive component action - " + in.Action)
 
-	c := p.GetComponentByName(in.ComponentId)
-	if c == nil {
-		fmt.Println(c)
+	err = p.ComponentAction(ctx, in.FormId, in.ComponentId, in.Action, in.Variables, in.Sync)
+	if err != nil {
+		return nil, err
 	}
 
 	return &workflow.ComponentActionResponse{}, nil
