@@ -80,7 +80,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 	c.log.With(
 		wlog.String("method", in.Action),
 		wlog.Any("variables", in.Variables),
-	).Debug("receive action - " + in.Action)
+	).Debug("receive form action - " + in.Action)
 
 	err = c.FormAction(model.FormAction{
 		Name:   in.Action,
@@ -108,6 +108,21 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 		Stop:    false,
 		Error:   nil,
 	}, nil
+}
+
+func (s *processingApi) ComponentAction(ctx context.Context, in *workflow.ComponentActionRequest) (*workflow.ComponentActionResponse, error) {
+	c, err := s.getProcessingById(in.GetFormId()) // TODO
+	if err != nil {
+		return nil, err
+	}
+
+	c.log.With(
+		wlog.String("component_id", in.GetComponentId()),
+		wlog.String("method", in.Action),
+		wlog.Any("variables", in.Variables),
+	).Debug("receive component action - " + in.Action)
+
+	return &workflow.ComponentActionResponse{}, nil
 }
 
 func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.CancelProcessingRequest) (*workflow.CancelProcessingResponse, error) {

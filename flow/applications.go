@@ -1,11 +1,20 @@
 package flow
 
+import (
+	"context"
+	"github.com/webitel/flow_manager/model"
+)
+
 func ApplicationsHandlers(r *router) ApplicationHandlers {
 	apps := make(ApplicationHandlers)
 
 	apps["log"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.Log),
+	}
+	apps["start"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.start),
 	}
 	apps["if"] = &Application{
 		AllowNoConnect: true,
@@ -236,4 +245,8 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		Handler:        r.doExecute(r.unSet),
 	}
 	return apps
+}
+
+func (r *router) start(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	return model.CallResponseOK, nil
 }

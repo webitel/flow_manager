@@ -7,6 +7,11 @@ type FormAction struct {
 	Fields Variables
 }
 
+type ComponentAction struct {
+	Name   string
+	Fields Variables
+}
+
 type FormFile struct {
 	Id   string `json:"id"`
 	View struct {
@@ -18,6 +23,36 @@ type FormFile struct {
 		Component    string `json:"component"`
 	} `json:"view"`
 	Value interface{} `json:"value"`
+}
+
+type FormTable struct {
+	Id        string                  `json:"id"`
+	Outputs   map[string]Applications `json:"-,omitempty"`
+	Component string                  `json:"component"`
+
+	View *struct {
+		Table struct {
+			Source         string `json:"source"`
+			IsSystemSource bool   `json:"isSystemSource"`
+			SystemSource   struct {
+				Path string `json:"path"`
+				Name string `json:"name"`
+			} `json:"systemSource"`
+			DisplayColumns []struct {
+				Name  string `json:"name"`
+				Field string `json:"field"`
+				Width string `json:"width"`
+			} `json:"displayColumns"`
+		} `json:"table"`
+
+		Filters []string `json:"filters"`
+		Actions []struct {
+			Field      string `json:"field"`
+			Action     string `json:"action"`
+			ButtonName string `json:"buttonName"`
+			Color      string `json:"color"`
+		} `json:"actions"`
+	} `json:"view"`
 }
 
 type FormView struct {
