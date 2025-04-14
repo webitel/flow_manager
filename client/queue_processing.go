@@ -71,6 +71,23 @@ func (p *QueueProcessing) ActionForm(ctx context.Context, action string, vars ma
 	return p.form.Form, nil
 }
 
+func (p *QueueProcessing) ActionComponent(ctx context.Context, formId, componentId, action string, vars map[string]string) error {
+	_, err := p.cli.processing.ComponentAction(ctx, &workflow.ComponentActionRequest{
+		Id:          p.Id(),
+		FormId:      formId,
+		ComponentId: componentId,
+		Action:      action,
+		Variables:   vars,
+		Sync:        false,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (p *QueueProcessing) Close() error {
 	_, err := p.cli.processing.CancelProcessing(context.Background(), &workflow.CancelProcessingRequest{
 		Id: p.Id(),
