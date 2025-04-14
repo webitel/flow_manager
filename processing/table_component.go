@@ -26,7 +26,8 @@ func (r *Router) formTable(ctx context.Context, scope *flow.Flow, conn Connectio
 
 	argv.OutputsFn = make(map[string]model.FormTableActionFn, len(outputs))
 	for k, v := range outputs {
-		argv.OutputsFn[k] = func(c context.Context, sync bool, vars model.Variables) *model.AppError {
+		// todo group context
+		argv.OutputsFn[k] = func(_ context.Context, sync bool, vars model.Variables) *model.AppError {
 			_, err := conn.Set(ctx, vars)
 			if err != nil {
 				return err
