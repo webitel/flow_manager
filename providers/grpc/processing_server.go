@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -111,16 +112,21 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 }
 
 func (s *processingApi) ComponentAction(ctx context.Context, in *workflow.ComponentActionRequest) (*workflow.ComponentActionResponse, error) {
-	c, err := s.getProcessingById(in.GetFormId()) // TODO
+	p, err := s.getProcessingById(in.GetId())
 	if err != nil {
 		return nil, err
 	}
 
-	c.log.With(
+	p.log.With(
 		wlog.String("component_id", in.GetComponentId()),
 		wlog.String("method", in.Action),
 		wlog.Any("variables", in.Variables),
 	).Debug("receive component action - " + in.Action)
+
+	c := p.GetComponentByName(in.ComponentId)
+	if c == nil {
+		fmt.Println(c)
+	}
 
 	return &workflow.ComponentActionResponse{}, nil
 }
