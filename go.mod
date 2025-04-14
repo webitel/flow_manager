@@ -6,6 +6,8 @@ toolchain go1.22.6
 
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
+replace buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.6-20240402124150-079f64c1d382.1 => buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250205144922-f80b8cb6a2bd.1
+
 require github.com/emersion/go-imap v1.2.1
 
 require (
@@ -14,13 +16,13 @@ require (
 	buf.build/gen/go/webitel/cc/grpc/go v1.5.1-20250204132723-b92fee1d7d12.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.36.4-20250204132723-b92fee1d7d12.1
 	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250205144922-f80b8cb6a2bd.2
-	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.4-20250205144922-f80b8cb6a2bd.1
+	buf.build/gen/go/webitel/chat/protocolbuffers/go v1.36.6-20240402124150-079f64c1d382.1
 	buf.build/gen/go/webitel/engine/grpc/go v1.5.1-20250220123754-4f4595344295.2
 	buf.build/gen/go/webitel/engine/protocolbuffers/go v1.36.5-20250214074617-9f276b575b99.1
 	buf.build/gen/go/webitel/storage/grpc/go v1.5.1-20241112142745-95d51eefa581.1
 	buf.build/gen/go/webitel/storage/protocolbuffers/go v1.35.1-20241112142745-95d51eefa581.1
-	buf.build/gen/go/webitel/workflow/grpc/go v1.3.0-20240411120545-24ef43af6db3.2
-	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.33.0-20240411132047-cd3c8f61d791.1
+	buf.build/gen/go/webitel/workflow/grpc/go v1.5.1-20250411105327-f753e968bbb8.2
+	buf.build/gen/go/webitel/workflow/protocolbuffers/go v1.36.6-20250411105327-f753e968bbb8.1
 	github.com/BoRuDar/configuration/v4 v4.5.0
 	github.com/dchest/htmlmin v1.2.0
 	github.com/emersion/go-message v0.18.1

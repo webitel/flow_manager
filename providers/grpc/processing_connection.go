@@ -119,6 +119,26 @@ func (c *processingConnection) FormAction(action model.FormAction) *model.AppErr
 	return nil
 }
 
+func (c *processingConnection) ComponentAction(a model.ComponentAction) *model.AppError {
+	if c.formAction == nil {
+		return model.NewAppError("Processing.ComponentAction", "processing.form.app_err", nil, "Not found active form", http.StatusInternalServerError)
+	}
+
+	component := c.GetComponentByName(a.Name)
+	if component == nil {
+		return model.NewAppError("Processing.ComponentAction", "processing.form.component.app_err", nil, "Not found component", http.StatusInternalServerError)
+	}
+
+	action, ok := component.(model.FormTable)
+	if !ok {
+		return model.NewAppError("Processing.ComponentAction", "processing.form.component.app_err", nil, "No action defined", http.StatusInternalServerError)
+	}
+
+	fmt.Println(action.Outputs)
+
+	return nil
+}
+
 func (c *processingConnection) waitForm(timeSec int) (*model.FormElem, *model.AppError) {
 	select {
 	case <-time.After(time.Second * time.Duration(timeSec)):
