@@ -72,7 +72,7 @@ type FormView struct {
 	Collapsible   bool   `json:"collapsible,omitempty"`   //form-text
 	EnableCopying bool   `json:"enableCopying,omitempty"` //form-text
 	Output        string `json:"output,omitempty"`        // "rich-text-editor"
-	Height        int    `json:"height,omitempty"`        //form-i-frame
+	Height        any    `json:"height,omitempty"`        //form-i-frame
 	Variable      string `json:"variable,omitempty"`      //form-select-from-object
 	Object        *struct {
 		Source struct {
