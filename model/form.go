@@ -28,10 +28,9 @@ type FormTable struct {
 	Id        string                       `json:"id"`
 	OutputsFn map[string]FormTableActionFn `json:"-"`
 
-	Component string `json:"component"`
-
 	View *struct {
-		Table struct {
+		Component string `json:"component"`
+		Table     struct {
 			Source         string `json:"source"`
 			IsSystemSource bool   `json:"isSystemSource"`
 			SystemSource   struct {
