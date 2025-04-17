@@ -19,7 +19,11 @@ func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Conne
 	}
 
 	val, _ := conn.Get(argv.Id)
-	argv.Value = setToJson(val)
+	if argv.View.Component == "wt-input" { // TODO DEV-5230
+		argv.Value = val
+	} else {
+		argv.Value = setToJson(val)
+	}
 
 	conn.SetComponent(argv.Id, argv)
 
