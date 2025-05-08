@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/storage"
 	"net/http"
 	"strconv"
 )
@@ -54,7 +53,7 @@ func (fm *FlowManager) GeneratePreSignedResourceSignature(ctx context.Context, a
 
 }
 
-func (fm *FlowManager) BulkGenerateFileLink(ctx context.Context, domainId int64, files []storage.FileLinkRequest) ([]string, *model.AppError) {
+func (fm *FlowManager) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, *model.AppError) {
 
 	resp, err := fm.storage.BulkGenerateFileLink(ctx, domainId, files)
 

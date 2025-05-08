@@ -1,18 +1,17 @@
 package email
 
 import (
+	"context"
 	"fmt"
 	"golang.org/x/sync/singleflight"
+	"io"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
 
-	"github.com/webitel/flow_manager/storage"
-
-	"github.com/webitel/engine/discovery"
-	"github.com/webitel/engine/utils"
+	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"
@@ -26,8 +25,8 @@ var (
 
 type MailServer struct {
 	store           store.EmailStore
-	storage         *storage.Api
-	profiles        *utils.Cache
+	storage         StorageApi
+	profiles        *model.Cache
 	didFinishListen chan struct{}
 	stopped         chan struct{}
 	startOnce       sync.Once
@@ -38,10 +37,14 @@ type MailServer struct {
 	log *wlog.Logger
 }
 
-func New(storageApi *storage.Api, s store.EmailStore, debug bool) model.Server {
+type StorageApi interface {
+	Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error)
+}
+
+func New(storageApi StorageApi, s store.EmailStore, debug bool) model.Server {
 	return &MailServer{
 		store:           s,
-		profiles:        utils.NewLru(SizeCache),
+		profiles:        model.NewLru(SizeCache),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
 		consume:         make(chan model.Connection),

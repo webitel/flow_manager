@@ -3,7 +3,7 @@ package flow
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/engine/pkg/webitel_client"
+	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/model"
 	"net/http"
 )
@@ -12,25 +12,25 @@ type GetContactRequest struct {
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 	Id     string `json:"id"`
-	webitel_client.LocateContactRequest
+	contacts.LocateContactRequest
 }
 
 type FindContactRequest struct {
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
-	webitel_client.SearchContactsRequest
+	contacts.SearchContactsRequest
 }
 
 type AddContactRequest struct {
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
-	webitel_client.InputContactRequest
+	contacts.InputContactRequest
 }
 
 type UpdateContactRequest struct {
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
-	webitel_client.InputContactRequest
+	contacts.InputContactRequest
 }
 
 type LinkContactArgv struct {
@@ -43,7 +43,7 @@ type LinkContactArgv struct {
 func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv *GetContactRequest
 	var err *model.AppError
-	var res *webitel_client.Contact
+	var res *contacts.Contact
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err
@@ -80,7 +80,7 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv *FindContactRequest
 	var err *model.AppError
-	var res *webitel_client.ContactList
+	var res *contacts.ContactList
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv *UpdateContactRequest
 	var err *model.AppError
-	var res *webitel_client.Contact
+	var res *contacts.Contact
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err
@@ -193,7 +193,7 @@ func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Conn
 func (r *router) addContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv *AddContactRequest
 	var err *model.AppError
-	var res *webitel_client.Contact
+	var res *contacts.Contact
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err

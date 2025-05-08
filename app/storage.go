@@ -1,49 +1,36 @@
-package storage
+package app
 
 import (
 	"context"
-	"fmt"
-	"io"
-
+	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/flow_manager/gen/storage"
 	"github.com/webitel/flow_manager/model"
-
-	gogrpc "buf.build/gen/go/webitel/storage/grpc/go/_gogrpc"
-	storage "buf.build/gen/go/webitel/storage/protocolbuffers/go"
-	"google.golang.org/grpc"
-
-	_ "github.com/mbobakov/grpc-consul-resolver"
+	"io"
 )
 
-type Api struct {
-	file       gogrpc.FileServiceClient
-	transcript gogrpc.FileTranscriptServiceClient
+type storageClient struct {
+	file       *wbt.Client[storage.FileServiceClient]
+	transcript *wbt.Client[storage.FileTranscriptServiceClient]
 }
 
-type FileLinkRequest struct {
-	FileId int64
-	Action string
-	Source string
-}
-
-func NewClient(consulTarget string) (*Api, error) {
-	conn, err := grpc.Dial(fmt.Sprintf("consul://%s/storage?wait=14s", consulTarget),
-		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "round_robin"}`),
-		grpc.WithInsecure(),
-	)
+func NewStorageClient(consulTarget string) (*storageClient, error) {
+	file, err := wbt.NewClient(consulTarget, wbt.StorageServiceName, storage.NewFileServiceClient)
+	if err != nil {
+		return nil, err
+	}
+	transcript, err := wbt.NewClient(consulTarget, wbt.StorageServiceName, storage.NewFileTranscriptServiceClient)
 	if err != nil {
 		return nil, err
 	}
 
-	fileService := gogrpc.NewFileServiceClient(conn)
-	fileTranscript := gogrpc.NewFileTranscriptServiceClient(conn)
-	return &Api{
-		file:       fileService,
-		transcript: fileTranscript,
+	return &storageClient{
+		file:       file,
+		transcript: transcript,
 	}, nil
 }
 
-func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error) {
-	stream, err := api.file.UploadFile(ctx)
+func (api *storageClient) Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error) {
+	stream, err := api.file.Api.UploadFile(ctx)
 	if err != nil {
 		return model.File{}, err
 	}
@@ -106,8 +93,8 @@ func (api *Api) Upload(ctx context.Context, domainId int64, uuid string, sFile i
 	return metadata, nil
 }
 
-func (api *Api) Download(ctx context.Context, domainId int64, id int64) (io.ReadCloser, error) {
-	stream, err := api.file.DownloadFile(ctx, &storage.DownloadFileRequest{
+func (api *storageClient) Download(ctx context.Context, domainId int64, id int64) (io.ReadCloser, error) {
+	stream, err := api.file.Api.DownloadFile(ctx, &storage.DownloadFileRequest{
 		Id:       id,
 		DomainId: domainId,
 		Metadata: false,
@@ -139,8 +126,8 @@ func (api *Api) Download(ctx context.Context, domainId int64, id int64) (io.Read
 	return reader, nil
 }
 
-func (api *Api) GenerateFileLink(ctx context.Context, fileId, domainId int64, source, action string, query map[string]string) (string, error) {
-	uri, err := api.file.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
+func (api *storageClient) GenerateFileLink(ctx context.Context, fileId, domainId int64, source, action string, query map[string]string) (string, error) {
+	uri, err := api.file.Api.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
 		DomainId: domainId,
 		FileId:   fileId,
 		Source:   source,
@@ -154,7 +141,7 @@ func (api *Api) GenerateFileLink(ctx context.Context, fileId, domainId int64, so
 
 }
 
-func (api *Api) BulkGenerateFileLink(ctx context.Context, domainId int64, files []FileLinkRequest) ([]string, error) {
+func (api *storageClient) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, error) {
 	var data []*storage.GenerateFileLinkRequest
 	for _, v := range files {
 		data = append(data, &storage.GenerateFileLinkRequest{
@@ -164,7 +151,7 @@ func (api *Api) BulkGenerateFileLink(ctx context.Context, domainId int64, files 
 			Action:   v.Action,
 		})
 	}
-	res, err := api.file.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
+	res, err := api.file.Api.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
 		Files: data,
 	})
 	if err != nil {
@@ -180,9 +167,9 @@ func (api *Api) BulkGenerateFileLink(ctx context.Context, domainId int64, files 
 	return links, nil
 }
 
-func (api *Api) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
+func (api *storageClient) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
 
-	resp, err := api.transcript.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
+	resp, err := api.transcript.Api.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
 		FileId:    fileId,
 		Locale:    language,
 		ProfileId: profileId,

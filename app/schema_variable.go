@@ -8,15 +8,14 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/engine/utils"
 	"golang.org/x/sync/singleflight"
 )
 
 var variableGroup singleflight.Group
-var variableCache utils.ObjectCache
+var variableCache model.ObjectCache
 
 func init() {
-	variableCache = utils.NewLruWithParams(10000, "variable", 10, "")
+	variableCache = model.NewLruWithParams(10000, "variable", 10, "")
 }
 
 func (f *FlowManager) SchemaVariable(ctx context.Context, domainId int64, name string) string {

@@ -4,17 +4,16 @@ import (
 	"context"
 	"net/http"
 
-	gogrpc "buf.build/gen/go/webitel/cc/grpc/go/_gogrpc"
-	cc "buf.build/gen/go/webitel/cc/protocolbuffers/go"
-	engine "buf.build/gen/go/webitel/engine/protocolbuffers/go"
+	"github.com/webitel/flow_manager/gen/cc"
+	"github.com/webitel/flow_manager/gen/engine"
 	"github.com/webitel/flow_manager/model"
 )
 
-func (fm *FlowManager) JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (gogrpc.MemberService_CallJoinToQueueClient, error) {
+func (fm *FlowManager) JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error) {
 	return fm.cc.Member().JoinCallToQueue(ctx, in)
 }
 
-func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (gogrpc.MemberService_ChatJoinToQueueClient, error) {
+func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error) {
 	return fm.cc.Member().JoinChatToQueue(ctx, in)
 }
 
@@ -22,11 +21,11 @@ func (fm *FlowManager) CreateMember(domainId int64, queueId int, holdSec int, me
 	return fm.Store.Member().CreateMember(domainId, queueId, holdSec, member)
 }
 
-func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (gogrpc.MemberService_CallJoinToAgentClient, error) {
+func (fm *FlowManager) JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error) {
 	return fm.cc.Member().CallJoinToAgent(ctx, in)
 }
 
-func (fm *FlowManager) TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (gogrpc.MemberService_TaskJoinToAgentClient, error) {
+func (fm *FlowManager) TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (cc.MemberService_TaskJoinToAgentClient, error) {
 	return fm.cc.Member().TaskJoinToAgent(ctx, in)
 }
 

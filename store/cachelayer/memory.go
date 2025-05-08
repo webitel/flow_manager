@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 )
 
 type MemoryCache struct {
-	lruCache utils.ObjectCache
+	lruCache model.ObjectCache
 }
 
 type MemoryCacheConfig struct {
@@ -19,7 +18,7 @@ type MemoryCacheConfig struct {
 }
 
 func NewMemoryCache(conf *MemoryCacheConfig) *MemoryCache {
-	return &MemoryCache{lruCache: utils.NewLruWithParams(conf.Size, "memoryCache", int64(conf.DefaultExpiry), "")}
+	return &MemoryCache{lruCache: model.NewLruWithParams(conf.Size, "memoryCache", int64(conf.DefaultExpiry), "")}
 }
 
 func (m *MemoryCache) Get(ctx context.Context, key string) (*CacheValue, *model.AppError) {

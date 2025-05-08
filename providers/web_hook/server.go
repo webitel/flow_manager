@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/engine/discovery"
+	"github.com/webitel/engine/pkg/discovery"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

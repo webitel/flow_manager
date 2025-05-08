@@ -1,9 +1,9 @@
 package chat_route
 
 import (
-	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"context"
 	"fmt"
+	proto "github.com/webitel/flow_manager/gen/chat"
 	"net/http"
 	"time"
 
