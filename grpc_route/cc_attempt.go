@@ -3,8 +3,8 @@ package grpc_route
 import (
 	"context"
 
-	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
 )
 

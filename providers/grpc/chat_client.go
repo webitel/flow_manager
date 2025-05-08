@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
 
-	gogrpc "buf.build/gen/go/webitel/chat/grpc/go/_gogrpc"
-	chgrpc "buf.build/gen/go/webitel/chat/grpc/go/messages/messagesgrpc"
+	gogrpc "github.com/webitel/flow_manager/gen/chat"
+	chgrpc "github.com/webitel/flow_manager/gen/chat/messages"
 )
 
 var (

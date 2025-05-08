@@ -9,7 +9,6 @@ import (
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
@@ -20,7 +19,7 @@ const (
 )
 
 type ExternalStoreManager struct {
-	cache utils.ObjectCache
+	cache model.ObjectCache
 }
 
 type ExternalDb struct {
@@ -29,7 +28,7 @@ type ExternalDb struct {
 
 func NewExternalStoreManager() *ExternalStoreManager {
 	return &ExternalStoreManager{
-		cache: utils.NewLruWithParams(CacheSize, "external", CacheExpire, ""),
+		cache: model.NewLruWithParams(CacheSize, "external", CacheExpire, ""),
 	}
 }
 

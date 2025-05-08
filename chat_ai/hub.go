@@ -1,7 +1,7 @@
 package chat_ai
 
 import (
-	"github.com/webitel/engine/utils"
+	"github.com/webitel/flow_manager/model"
 	"golang.org/x/sync/singleflight"
 	"google.golang.org/grpc"
 	"time"
@@ -10,12 +10,12 @@ import (
 var requestGroup singleflight.Group
 
 type Hub struct {
-	connections utils.ObjectCache
+	connections model.ObjectCache
 }
 
 func NewHub() *Hub {
 	return &Hub{
-		connections: utils.NewLru(100), // TODO add LRU hook delete
+		connections: model.NewLru(100), // TODO add LRU hook delete
 	}
 }
 

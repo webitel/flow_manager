@@ -4,13 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/webitel/engine/utils"
 	"github.com/webitel/flow_manager/model"
 	"golang.org/x/sync/singleflight"
 )
 
 var (
-	systemCache = utils.NewLruWithParams(300, "system_settings", 60, "")
+	systemCache = model.NewLruWithParams(300, "system_settings", 60, "")
 	systemGroup = singleflight.Group{}
 )
 

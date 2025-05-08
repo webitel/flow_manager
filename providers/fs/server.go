@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/webitel/engine/discovery"
+	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 	"github.com/webitel/wlog"

@@ -5,17 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/gen/chat"
+	"github.com/webitel/flow_manager/gen/workflow"
+	"github.com/webitel/flow_manager/model"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 	"strings"
 	"time"
-
-	chat "buf.build/gen/go/webitel/chat/protocolbuffers/go"
-	gogrpc "buf.build/gen/go/webitel/workflow/grpc/go/_gogrpc"
-	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
-	"github.com/webitel/engine/discovery"
-	"github.com/webitel/engine/utils"
-	"github.com/webitel/flow_manager/model"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -30,15 +27,15 @@ var (
 )
 
 type chatApi struct {
-	conversations utils.ObjectCache
+	conversations model.ObjectCache
 	*server
-	gogrpc.UnsafeFlowChatServerServiceServer
+	workflow.UnsafeFlowChatServerServiceServer
 }
 
 func NewChatApi(s *server) *chatApi {
 	return &chatApi{
 		server:        s,
-		conversations: utils.NewLru(activeConversationCacheSize),
+		conversations: model.NewLru(activeConversationCacheSize),
 	}
 }
 

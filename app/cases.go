@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	casespb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
+	casespb "github.com/webitel/flow_manager/gen/cases"
 )
 
 func (fm *FlowManager) SearchCases(

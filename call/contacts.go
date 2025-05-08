@@ -1,7 +1,7 @@
 package call
 
 import (
-	"github.com/webitel/engine/pkg/webitel_client"
+	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/model"
 	"strconv"
 )
@@ -21,7 +21,7 @@ func (r *Router) linkContact(call model.Call) {
 		return
 	}
 
-	list, err := r.fm.SearchContactsNA(call.Context(), &webitel_client.SearchContactsRequestNA{
+	list, err := r.fm.SearchContactsNA(call.Context(), &contacts.SearchContactsNARequest{
 		DomainId: call.DomainId(),
 		Qin:      []string{"phones"},
 		Q:        dest,

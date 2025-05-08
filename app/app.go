@@ -1,9 +1,12 @@
 package app
 
 import (
-	engcl "buf.build/gen/go/webitel/engine/grpc/go/_gogrpc"
 	"context"
 	"fmt"
+	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/flow_manager/app/cc"
+	"github.com/webitel/flow_manager/gen/contacts"
+	"github.com/webitel/flow_manager/gen/engine"
 	"time"
 
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
@@ -15,15 +18,9 @@ import (
 	_ "github.com/mbobakov/grpc-consul-resolver"
 	"github.com/webitel/flow_manager/providers/channel"
 
-	"github.com/webitel/engine/pkg/webitel_client"
-
-	"github.com/webitel/flow_manager/storage"
-
 	"github.com/webitel/flow_manager/providers/email"
 
-	"github.com/webitel/call_center/grpc_api/client"
-	presign "github.com/webitel/engine/presign"
-	"github.com/webitel/engine/utils"
+	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
@@ -58,13 +55,13 @@ type FlowManager struct {
 	channelServer model.Server
 	httpServer    model.Server
 
-	schemaCache utils.ObjectCache
+	schemaCache model.ObjectCache
 	chatManager *grpc.ChatManager
-	storage     *storage.Api
+	storage     *storageClient
 	cases       *cases.Api
 
 	timezoneList map[int]*time.Location
-	cc           client.CCManager
+	cc           cc.CCManager
 
 	stop    chan struct{}
 	stopped chan struct{}
@@ -83,9 +80,10 @@ type FlowManager struct {
 	cert        presign.PreSign
 	listWatcher *listWatcher
 
-	cacheStore       map[CacheType]cachelayer.CacheStore
-	wbtCli           *webitel_client.Client
-	engineCallCli    engcl.CallServiceClient
+	cacheStore map[CacheType]cachelayer.CacheStore
+
+	contacts         *wbt.Client[contacts.ContactsClient]
+	engineCallCli    *wbt.Client[engine.CallServiceClient]
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
 }
@@ -99,7 +97,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm := &FlowManager{
 		config:      config,
 		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
-		schemaCache: utils.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
+		schemaCache: model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
 		stop:        make(chan struct{}),
 		stopped:     make(chan struct{}),
 		ctx:         context.Background(),
@@ -147,6 +145,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	wlog.RedirectStdLog(fm.log)
 	wlog.InitGlobalLogger(fm.log)
 
+	wlog.Info(fmt.Sprintf("version: %s", Version()))
 	wlog.Info("server is initializing...")
 
 	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
@@ -171,7 +170,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		NodeName: fm.id,
 	}, fm.chatManager)
 
-	fm.storage, outErr = storage.NewClient(fm.Config().DiscoverySettings.Url)
+	fm.storage, outErr = NewStorageClient(fm.Config().DiscoverySettings.Url)
 	if outErr != nil {
 		return nil, outErr
 	}
@@ -221,7 +220,8 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		}
 	}
 
-	fm.cc = client.NewCCManager(fm.cluster.discovery)
+	fm.cc = cc.NewCCManager(config.DiscoverySettings.Url)
+
 	if err = fm.cc.Start(); err != nil {
 		return nil, err
 	}
@@ -229,15 +229,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
-	if fm.wbtCli, err = webitel_client.New(0, 0, config.DiscoverySettings.Url); err != nil {
+	if fm.contacts, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewContactsClient); err != nil {
 		return nil, err
 	}
 
-	engCon, err := NewEngineConnection(config.DiscoverySettings.Url)
-	if err != nil {
+	if fm.engineCallCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewCallServiceClient); err != nil {
 		return nil, err
 	}
-	fm.engineCallCli = engcl.NewCallServiceClient(engCon)
 
 	return fm, outErr
 }

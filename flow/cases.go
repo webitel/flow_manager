@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
-	pb "buf.build/gen/go/webitel/cases/protocolbuffers/go"
+	pb "github.com/webitel/flow_manager/gen/cases"
 	"github.com/webitel/flow_manager/model"
 )
 

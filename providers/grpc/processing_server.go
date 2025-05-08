@@ -6,9 +6,7 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 
-	gogrpc "buf.build/gen/go/webitel/workflow/grpc/go/_gogrpc"
-	workflow "buf.build/gen/go/webitel/workflow/protocolbuffers/go"
-	"github.com/webitel/engine/utils"
+	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/wlog"
 )
 
@@ -18,15 +16,15 @@ var (
 )
 
 type processingApi struct {
-	connections utils.ObjectCache
+	connections model.ObjectCache
 	*server
-	gogrpc.UnsafeFlowProcessingServiceServer
+	workflow.UnsafeFlowProcessingServiceServer
 }
 
 func NewProcessingApi(s *server) *processingApi {
 	return &processingApi{
 		server:      s,
-		connections: utils.NewLru(activeProcessingCacheSize),
+		connections: model.NewLru(activeProcessingCacheSize),
 	}
 }
 

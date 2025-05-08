@@ -1,16 +1,16 @@
 package grpc
 
 import (
-	"buf.build/gen/go/webitel/chat/protocolbuffers/go/messages"
 	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/gen/chat/messages"
 	"sync"
 	"time"
 
-	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
+	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
 
-	"github.com/webitel/engine/discovery"
+	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 )
 

@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"github.com/tidwall/gjson"
+	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )

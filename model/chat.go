@@ -1,8 +1,8 @@
 package model
 
 import (
-	proto "buf.build/gen/go/webitel/chat/protocolbuffers/go"
 	"context"
+	proto "github.com/webitel/flow_manager/gen/chat"
 )
 
 const (

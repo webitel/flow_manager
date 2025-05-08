@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -22,8 +21,17 @@ import (
 	"github.com/webitel/wlog"
 )
 
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.engine.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.cases.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.cc.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.chat.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.general.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.storage.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.wbt.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.yaml
+//go:generate go mod tidy
+
 func main() {
-	fmt.Println(app.Version())
 	interruptChan := make(chan os.Signal, 1)
 	fm, err := app.NewFlowManager()
 

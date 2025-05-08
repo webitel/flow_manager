@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/dchest/htmlmin"
 	"github.com/webitel/flow_manager/providers/email"
-	"github.com/webitel/flow_manager/storage"
 	"io"
 	"mime"
 	"net/http"
@@ -267,12 +266,12 @@ func (r *router) getEmail(ctx context.Context, scope *Flow, conn model.Connectio
 		mcid, _ := cid.(map[string]interface{})
 		l := len(mcid)
 		cids := make([]string, 0, l)
-		req := make([]storage.FileLinkRequest, 0, l)
+		req := make([]model.FileLinkRequest, 0, l)
 		var i float64
 		for k, v := range mcid {
 			i, _ = v.(float64)
 			cids = append(cids, k)
-			req = append(req, storage.FileLinkRequest{
+			req = append(req, model.FileLinkRequest{
 				FileId: int64(i),
 				Action: "download",
 				Source: "file",

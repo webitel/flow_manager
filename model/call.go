@@ -1,10 +1,10 @@
 package model
 
 import (
-	eng "buf.build/gen/go/webitel/engine/protocolbuffers/go"
 	"context"
 	"encoding/json"
 	"fmt"
+	eng "github.com/webitel/flow_manager/gen/engine"
 	"strconv"
 	"strings"
 

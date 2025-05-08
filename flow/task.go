@@ -1,8 +1,8 @@
 package flow
 
 import (
-	cc "buf.build/gen/go/webitel/cc/protocolbuffers/go"
 	"context"
+	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"io"

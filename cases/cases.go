@@ -4,18 +4,17 @@ import (
 	"context"
 	"fmt"
 
-	gogrpc "buf.build/gen/go/webitel/cases/grpc/go/_gogrpc"
-	cases "buf.build/gen/go/webitel/cases/protocolbuffers/go"
+	"github.com/webitel/flow_manager/gen/cases"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 )
 
 type Api struct {
-	cases             gogrpc.CasesClient
-	caseCommunication gogrpc.CaseCommunicationsClient
-	serviceCatalogs   gogrpc.CatalogsClient
-	comments          gogrpc.CaseCommentsClient
+	cases             cases.CasesClient
+	caseCommunication cases.CaseCommunicationsClient
+	serviceCatalogs   cases.CatalogsClient
+	comments          cases.CaseCommentsClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -27,10 +26,10 @@ func NewClient(consulTarget string) (*Api, error) {
 		return nil, err
 	}
 
-	casesClient := gogrpc.NewCasesClient(conn)
-	caseCommunication := gogrpc.NewCaseCommunicationsClient(conn)
-	serviceCatalogs := gogrpc.NewCatalogsClient(conn)
-	comments := gogrpc.NewCaseCommentsClient(conn)
+	casesClient := cases.NewCasesClient(conn)
+	caseCommunication := cases.NewCaseCommunicationsClient(conn)
+	serviceCatalogs := cases.NewCatalogsClient(conn)
+	comments := cases.NewCaseCommentsClient(conn)
 
 	return &Api{
 		cases:             casesClient,

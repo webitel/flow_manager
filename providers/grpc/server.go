@@ -9,9 +9,8 @@ import (
 	"sync"
 	"time"
 
-	gogrpc "buf.build/gen/go/webitel/workflow/grpc/go/_gogrpc"
-	"github.com/webitel/engine/discovery"
-	"github.com/webitel/engine/utils"
+	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
@@ -35,7 +34,7 @@ type server struct {
 	startOnce       sync.Once
 	chatManager     *ChatManager
 	nodeName        string
-	gogrpc.UnsafeFlowServiceServer
+	workflow.UnsafeFlowServiceServer
 
 	log *wlog.Logger
 }
@@ -61,7 +60,7 @@ func NewServer(cfg *Config, cm *ChatManager) *server {
 func publicAddr(lis net.Listener) (string, int) {
 	h, p, _ := net.SplitHostPort(lis.Addr().String())
 	if h == "::" {
-		h = utils.GetPublicAddr()
+		h = model.GetPublicAddr()
 	}
 	port, _ := strconv.Atoi(p)
 	return h, port
@@ -83,9 +82,9 @@ func (s *server) Start() *model.AppError {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	)
 
-	gogrpc.RegisterFlowServiceServer(s.server, s)
-	gogrpc.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
-	gogrpc.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
+	workflow.RegisterFlowServiceServer(s.server, s)
+	workflow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
+	workflow.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
