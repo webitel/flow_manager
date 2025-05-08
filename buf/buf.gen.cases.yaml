@@ -24,7 +24,7 @@ plugins:
     opt: paths=source_relative
 
 inputs:
-  - directory: "../protos/cases"
-#  - git_repo: "https://github.com/webitel/protos"
-#    branch: "main"
-#    subdir: cases
+#  - directory: "../protos/cases"
+  - git_repo: "https://github.com/webitel/protos"
+    branch: "main"
+    subdir: cases

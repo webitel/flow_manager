@@ -22,9 +22,9 @@ plugins:
     opt: paths=source_relative
 
 inputs:
-  - directory: "../protos/webitel-go"
-#  - git_repo: "https://github.com/webitel/protos"
-#    branch: "main"
-#    subdir: webitel-go
+#  - directory: "../protos/webitel-go"
+  - git_repo: "https://github.com/webitel/protos"
+    branch: "main"
+    subdir: webitel-go
     types:
       - webitel.contacts.Contacts
