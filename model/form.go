@@ -31,8 +31,8 @@ type FormTable struct {
 	View *struct {
 		Component string `json:"component"`
 		Table     struct {
-			Source         string `json:"source"`
-			IsSystemSource bool   `json:"isSystemSource"`
+			Source         *JsonView `json:"source"`
+			IsSystemSource bool      `json:"isSystemSource"`
 			SystemSource   struct {
 				Path string `json:"path"`
 				Name string `json:"name"`
