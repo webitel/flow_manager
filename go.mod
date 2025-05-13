@@ -50,11 +50,6 @@ require (
 )
 
 require (
-	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.6-20240617172850-a48fcebcf8f1.1 // indirect
-	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250512121905-7dc791c6da85.2 // indirect
-	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.6-20250512121905-7dc791c6da85.1 // indirect
-	buf.build/gen/go/webitel/general/protocolbuffers/go v1.36.6-20241218155954-cfa0c73ff252.1 // indirect
-	buf.build/gen/go/webitel/protoc-gen-go-webitel/protocolbuffers/go v1.36.6-20240830062629-411a5fb2aec7.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
