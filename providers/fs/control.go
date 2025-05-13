@@ -574,30 +574,37 @@ func buildFileLink(domainId int64, file *model.PlaybackFile) (string, bool) {
 		if file.Args == nil {
 			return "", false
 		}
+
 		bytes, err := json.Marshal(file.Args)
 		if err != nil {
 			return "", false
 		}
+
 		err = json.Unmarshal(bytes, &args)
 		if err != nil {
 			return "", false
 		}
+
 		url, err := url.Parse("(storage_var)/sys/redirect/playback")
 		if err != nil {
 			return "", false
 		}
+
 		params := url.Query()
 		params.Add("url", args.Url)
 		params.Add("method", args.Method)
+
 		for key, value := range args.Headers {
 			params.Add(key, value)
 		}
+
 		url.RawQuery = params.Encode()
 		stringUrl := strings.Replace(url.String(), "(storage_var)", "$${cdr_url}", 1)
 		tp := filetype.GetType(args.FileType)
+
 		switch tp.MIME.Value {
 		case "audio/wav":
-			return fmt.Sprintf("http_cache://https://%s", stringUrl), true
+			return fmt.Sprintf("http_cache://http://%s", stringUrl), true
 		case "audio/mp3", "audio/mpeg":
 			return fmt.Sprintf("shout://%s", stringUrl), true
 		default:
