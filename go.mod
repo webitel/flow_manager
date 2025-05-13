@@ -9,8 +9,8 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 require github.com/emersion/go-imap v1.2.1
 
 require (
-	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250328143046-f71839654770.2
-	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.6-20250328143046-f71839654770.1
+	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250512121905-7dc791c6da85.2
+	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.6-20250512121905-7dc791c6da85.1
 	buf.build/gen/go/webitel/cc/grpc/go v1.5.1-20250204132723-b92fee1d7d12.2
 	buf.build/gen/go/webitel/cc/protocolbuffers/go v1.36.4-20250204132723-b92fee1d7d12.1
 	buf.build/gen/go/webitel/chat/grpc/go v1.5.1-20250408125457-371160df8edc.2
