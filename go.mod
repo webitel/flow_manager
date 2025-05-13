@@ -2,6 +2,8 @@ module github.com/webitel/flow_manager
 
 go 1.24.1
 
+toolchain go1.24.3
+
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
 require github.com/emersion/go-imap v1.2.1
@@ -9,7 +11,7 @@ require github.com/emersion/go-imap v1.2.1
 require (
 	github.com/BoRuDar/configuration/v4 v4.5.0
 	github.com/dchest/htmlmin v1.2.0
-	github.com/emersion/go-message v0.18.2
+	github.com/emersion/go-message v0.18.1
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
@@ -30,9 +32,9 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/engine/pkg/discovery v0.0.0-20250507152554-89c6c6cacaf8
-	github.com/webitel/engine/pkg/presign v0.0.0-20250507152554-89c6c6cacaf8
-	github.com/webitel/engine/pkg/wbt v0.0.0-20250507203248-0897ff41b417
+	github.com/webitel/engine/pkg/discovery v0.0.0-20250512130121-81caadba224c
+	github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c
+	github.com/webitel/engine/pkg/wbt v0.0.0-20250512130121-81caadba224c
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7
 	go.opentelemetry.io/otel v1.34.0
@@ -48,6 +50,11 @@ require (
 )
 
 require (
+	buf.build/gen/go/grpc-ecosystem/grpc-gateway/protocolbuffers/go v1.36.6-20240617172850-a48fcebcf8f1.1 // indirect
+	buf.build/gen/go/webitel/cases/grpc/go v1.5.1-20250512121905-7dc791c6da85.2 // indirect
+	buf.build/gen/go/webitel/cases/protocolbuffers/go v1.36.6-20250512121905-7dc791c6da85.1 // indirect
+	buf.build/gen/go/webitel/general/protocolbuffers/go v1.36.6-20241218155954-cfa0c73ff252.1 // indirect
+	buf.build/gen/go/webitel/protoc-gen-go-webitel/protocolbuffers/go v1.36.6-20240830062629-411a5fb2aec7.1 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
@@ -76,6 +83,7 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/poy/onpar v1.1.2 // indirect
+	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
