@@ -123,11 +123,17 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 					return data, nil
 				}
 
-				txt := []byte(f.parseString(string(body[1 : len(body)-1])))
+				txt := f.parseString(string(body[1 : len(body)-1]))
 
-				err = json.Unmarshal(txt, &res)
+				err = json.Unmarshal([]byte(txt), &res)
 				if err != nil {
-					return []interface{}{}, nil
+					if txt, _ = data.(string); txt != "" {
+						_ = json.Unmarshal([]byte(txt), &res)
+					}
+
+					if res == nil {
+						res = []interface{}{}
+					}
 				}
 				return res, nil
 			case reflect.String:
