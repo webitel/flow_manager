@@ -13,6 +13,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/pkg/processing"
 )
 
 type processingConnection struct {
@@ -22,8 +23,8 @@ type processingConnection struct {
 	schemaId   int
 	parentId   string
 	formId     string
-	forms      chan model.FormElem
-	formAction chan model.FormAction
+	forms      chan processing.FormElem
+	formAction chan processing.FormAction
 	finished   chan struct{}
 
 	components map[string]interface{}
@@ -54,7 +55,7 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		ctx:        ctx,
 		cancel:     cancel,
 		finished:   make(chan struct{}),
-		forms:      make(chan model.FormElem, 5),
+		forms:      make(chan processing.FormElem, 5),
 		components: make(map[string]interface{}),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
@@ -86,7 +87,7 @@ func (c *processingConnection) GetComponentByName(name string) interface{} {
 	return v
 }
 
-func (c *processingConnection) PushForm(ctx context.Context, form model.FormElem) (*model.FormAction, *model.AppError) {
+func (c *processingConnection) PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, *model.AppError) {
 	if c.formAction != nil {
 		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
 	}
@@ -95,7 +96,7 @@ func (c *processingConnection) PushForm(ctx context.Context, form model.FormElem
 
 	c.forms <- form
 
-	c.formAction = make(chan model.FormAction)
+	c.formAction = make(chan processing.FormAction)
 
 	select {
 	case action, ok := <-c.formAction:
@@ -112,7 +113,7 @@ func (c *processingConnection) PushForm(ctx context.Context, form model.FormElem
 	return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "Form no send action", http.StatusInternalServerError)
 }
 
-func (c *processingConnection) FormAction(action model.FormAction) *model.AppError {
+func (c *processingConnection) FormAction(action processing.FormAction) *model.AppError {
 	if c.formAction == nil {
 		return model.NewAppError("Processing.FillForm", "processing.form.fill.app_err", nil, "Not found active form", http.StatusInternalServerError)
 	}
@@ -151,7 +152,7 @@ func (c *processingConnection) ComponentAction(ctx context.Context, formId, comp
 		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s not found", componentId))
 	}
 
-	cmp, ok := cm.(model.FormTable)
+	cmp, ok := cm.(processing.FormTable)
 	if !ok {
 		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have outputs", componentId))
 	}
@@ -161,10 +162,15 @@ func (c *processingConnection) ComponentAction(ctx context.Context, formId, comp
 		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have output %s", componentId, action))
 	}
 
-	return fn(ctx, sync, model.VariablesFromStringMap(vars))
+	err := fn(ctx, sync, model.VariablesFromStringMap(vars))
+	if err != nil {
+		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("error processing form: %s", err.Error()))
+	}
+
+	return nil
 }
 
-func (c *processingConnection) waitForm(timeSec int) (*model.FormElem, *model.AppError) {
+func (c *processingConnection) waitForm(timeSec int) (*processing.FormElem, *model.AppError) {
 	select {
 	case <-time.After(time.Second * time.Duration(timeSec)):
 		return nil, model.NewAppError("Processing", "processing.connection.form.timeout", nil, "Timeout", http.StatusBadRequest)

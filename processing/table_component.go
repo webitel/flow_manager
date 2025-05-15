@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 )
 
 func (r *Router) formTable(ctx context.Context, scope *flow.Flow, conn Connection, args any) (model.Response, *model.AppError) {
-	var argv model.FormTable
+	var argv processing.FormTable
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
@@ -24,10 +25,10 @@ func (r *Router) formTable(ctx context.Context, scope *flow.Flow, conn Connectio
 		return nil, err
 	}
 
-	argv.OutputsFn = make(map[string]model.FormTableActionFn, len(outputs))
+	argv.OutputsFn = make(map[string]processing.FormTableActionFn, len(outputs))
 	for k, v := range outputs {
 		// todo group context
-		argv.OutputsFn[k] = func(_ context.Context, sync bool, vars model.Variables) *model.AppError {
+		argv.OutputsFn[k] = func(_ context.Context, sync bool, vars map[string]any) error {
 			_, err := conn.Set(ctx, vars)
 			if err != nil {
 				return err

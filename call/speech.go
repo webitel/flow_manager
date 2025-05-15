@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 )
 
@@ -50,8 +51,8 @@ func (r *Router) speechAi(ctx context.Context, scope *flow.Flow, call model.Call
 
 type SpeechAiV2 struct {
 	File       RecordFileArg
-	Connection string `json:"connection"`
-	Context    model.JsonView
+	Connection string              `json:"connection"`
+	Context    processing.JsonView // todo
 	Addresses  []string
 }
 

@@ -2,16 +2,17 @@ package processing
 
 import (
 	"context"
+	"github.com/webitel/flow_manager/pkg/processing"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
 type GenerateFromArgs struct {
-	Id      string                  `json:"id"`
-	Title   string                  `json:"title"`
-	Actions []*model.FormActionElem `json:"actions"`
-	Body    []string                `json:"body"`
+	Id      string                       `json:"id"`
+	Title   string                       `json:"title"`
+	Actions []*processing.FormActionElem `json:"actions"`
+	Body    []string                     `json:"body"`
 }
 
 func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
@@ -23,7 +24,7 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 		return nil, err
 	}
 
-	f := model.FormElem{
+	f := processing.FormElem{
 		Id:      argv.Id,
 		Title:   argv.Title,
 		Actions: argv.Actions,
@@ -37,7 +38,7 @@ func (r *Router) generateForm(ctx context.Context, scope *flow.Flow, conn Connec
 		}
 	}
 
-	var action *model.FormAction
+	var action *processing.FormAction
 	action, err = conn.PushForm(ctx, f)
 	if err != nil {
 

@@ -1,8 +1,6 @@
 module github.com/webitel/flow_manager
 
-go 1.24.1
-
-toolchain go1.24.3
+go 1.24.3
 
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
@@ -35,6 +33,7 @@ require (
 	github.com/webitel/engine/pkg/discovery v0.0.0-20250512130121-81caadba224c
 	github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c
 	github.com/webitel/engine/pkg/wbt v0.0.0-20250512130121-81caadba224c
+	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7
 	go.opentelemetry.io/otel v1.34.0
