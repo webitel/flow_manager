@@ -4,17 +4,19 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mitchellh/mapstructure"
+	"github.com/webitel/flow_manager/model"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/structpb"
 	"net/http"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/mitchellh/mapstructure"
-	"github.com/webitel/flow_manager/model"
 )
 
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
 var JsonViewT = reflect.TypeOf(&model.JsonView{})
+var pbStruct = reflect.TypeOf(&structpb.Struct{})
 
 /*
 \d := map[string]interface{}{
@@ -152,18 +154,34 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 			case reflect.Bool:
 				return f.parseString(data.(string)), nil
 			}
-		} else if (kind == reflect.Map || kind == reflect.Slice) && to.AssignableTo(jsonValueT) {
-			body, err := json.Marshal(data)
-			if err != nil {
-				return nil, err
+		} else if kind == reflect.Map || kind == reflect.Slice {
+			if to.AssignableTo(jsonValueT) {
+				body, err := json.Marshal(data)
+				if err != nil {
+					return nil, err
+				}
+
+				if len(body) < 2 {
+					return data, nil
+				}
+
+				txt := []byte(f.parseValidJson(string(body)))
+				return txt, nil
+			} else if to.AssignableTo(pbStruct) {
+				body, err := json.Marshal(data)
+				if err != nil {
+					return nil, err
+				}
+
+				var pb structpb.Struct
+				err = protojson.Unmarshal([]byte(f.parseString(string(body))), &pb)
+				if err != nil {
+					return nil, err
+				}
+
+				return &pb, nil
 			}
 
-			if len(body) < 2 {
-				return data, nil
-			}
-
-			txt := []byte(f.parseValidJson(string(body)))
-			return txt, nil
 		}
 		return data, nil
 	}
