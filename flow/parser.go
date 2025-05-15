@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/flow_manager/pkg/processing"
 	"google.golang.org/protobuf/encoding/protojson"
 	"net/http"
 	"reflect"
@@ -16,7 +17,7 @@ import (
 )
 
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
-var JsonViewT = reflect.TypeOf(&model.JsonView{})
+var JsonViewT = reflect.TypeOf(&processing.JsonView{})
 var pbStruct = reflect.TypeOf(&structpb.Struct{})
 
 /*
@@ -111,7 +112,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 					return &o, nil
 				} else if to.AssignableTo(JsonViewT) { // TODO
 					d := f.parseString(data.(string))
-					o := model.JsonView{}
+					o := processing.JsonView{}
 					json.Unmarshal([]byte(d), &o)
 					return &o, nil
 				}

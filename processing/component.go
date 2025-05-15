@@ -2,13 +2,14 @@ package processing
 
 import (
 	"context"
+	"github.com/webitel/flow_manager/pkg/processing"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
 
 func (r *Router) formComponent(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
-	var argv model.FormComponent
+	var argv processing.FormComponent
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err

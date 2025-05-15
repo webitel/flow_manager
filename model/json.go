@@ -5,7 +5,7 @@ import (
 	"unicode/utf8"
 )
 
-type JsonView map[string]interface{}
+//type JsonView map[string]interface{}
 
 func ToJson(src interface{}) string {
 	data, _ := json.Marshal(src)

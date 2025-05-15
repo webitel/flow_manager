@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -80,7 +81,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 		wlog.Any("variables", in.Variables),
 	).Debug("receive form action - " + in.Action)
 
-	err = c.FormAction(model.FormAction{
+	err = c.FormAction(processing.FormAction{
 		Name:   in.Action,
 		Fields: model.VariablesFromStringMap(in.Variables),
 	})

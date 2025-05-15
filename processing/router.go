@@ -3,6 +3,7 @@ package processing
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 
 	"github.com/webitel/flow_manager/app"
@@ -19,7 +20,7 @@ type Router struct {
 type Connection interface {
 	model.Connection
 	SchemaId() int
-	PushForm(ctx context.Context, form model.FormElem) (*model.FormAction, *model.AppError)
+	PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, *model.AppError)
 	SetComponent(name string, component interface{})
 	GetComponentByName(name string) interface{}
 }
