@@ -162,24 +162,18 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				return f.parseString(data.(string)), nil
 			}
 		} else if kind == reflect.Map || kind == reflect.Slice {
+			body, err := json.Marshal(data)
+			if err != nil {
+				return nil, err
+			}
+
+			if len(body) < 2 {
+				return data, nil
+			}
 			if to.AssignableTo(jsonValueT) {
-				body, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
+				return []byte(f.parseValidJson(string(body))), nil
 
-				if len(body) < 2 {
-					return data, nil
-				}
-
-				txt := []byte(f.parseValidJson(string(body)))
-				return txt, nil
 			} else if to.AssignableTo(pbStruct) {
-				body, err := json.Marshal(data)
-				if err != nil {
-					return nil, err
-				}
-
 				var pb structpb.Struct
 				err = protojson.Unmarshal([]byte(f.parseString(string(body))), &pb)
 				if err != nil {
