@@ -1,0 +1,21 @@
+[Unit]
+Description=FlowManager Startup process
+After=network.target
+
+[Service]
+Type=simple
+Restart=always
+LimitNOFILE=64000
+TimeoutStartSec=0
+ExecStart=/usr/local/bin/flow_manager -id 20 \
+	-consul 127.0.0.1:8500 \
+	-grpc_addr 127.0.0.1 \
+	-esl_host 127.0.0.1 \
+	-presigned_cert /opt/storage/key.pem \
+	-amqp amqp://webitel:webitel@127.0.0.1:5672?heartbeat=10 \
+	-data_source postgres://opensips:webitel@127.0.0.1:5432/webitel?application_name=flow_manager&sslmode=disable&connect_timeout=10 \
+	-allow_use_mq 0 \
+	-external_sql 0
+
+[Install]
+WantedBy=default.target
