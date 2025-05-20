@@ -42,7 +42,7 @@ require (
 	golang.org/x/sync v0.12.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
