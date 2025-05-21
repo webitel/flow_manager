@@ -9,7 +9,7 @@ require github.com/emersion/go-imap v1.2.1
 require (
 	github.com/BoRuDar/configuration/v4 v4.5.0
 	github.com/dchest/htmlmin v1.2.0
-	github.com/emersion/go-message v0.18.1
+	github.com/emersion/go-message v0.18.2
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
