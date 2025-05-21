@@ -404,6 +404,8 @@ type Call interface {
 	Dump()
 	IVRQueueId() *int
 	TransferSchemaId() *int
+	TransferQueueId() int
+	TransferAgentId() int
 	SetTransferFromId()
 
 	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, *AppError)

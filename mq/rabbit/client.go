@@ -112,7 +112,7 @@ func (a *AMQP) initQueues() {
 	var execQueue amqp.Queue
 
 	callQueue, err = a.channel.QueueDeclare(model.CallEventQueueName, true, false, false,
-		true, amqp.Table{
+		false, amqp.Table{
 			"x-queue-type": "quorum",
 		})
 	if err != nil {
@@ -122,7 +122,7 @@ func (a *AMQP) initQueues() {
 	}
 
 	execQueue, err = a.channel.QueueDeclare(model.FlowExecQueueName, true, false, false,
-		true, amqp.Table{
+		false, amqp.Table{
 			"x-queue-type": "quorum",
 		})
 	if err != nil {
@@ -148,7 +148,7 @@ func (a *AMQP) subscribeCall() {
 
 	msgs, err := a.channel.Consume(
 		a.callName,
-		"",
+		a.nodeName,
 		false,
 		false,
 		false,

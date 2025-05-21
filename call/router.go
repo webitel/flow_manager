@@ -76,6 +76,8 @@ func (r *Router) handle(conn model.Connection) {
 
 	queueId := call.IVRQueueId()
 	transferSchemaId := call.TransferSchemaId()
+	transferQueueId := call.TransferQueueId()
+	transferAgentId := call.TransferAgentId()
 	isTransfer := call.IsTransfer()
 
 	// TODO WTEL-4370
@@ -84,6 +86,14 @@ func (r *Router) handle(conn model.Connection) {
 
 	if transferSchemaId != nil && isTransfer {
 		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
+	} else if transferQueueId != 0 && isTransfer {
+		call.Log().Info("transfer from: " + call.From().String() + " to queue_id ")
+		routing, _ = r.fm.TransferQueueRouting(call.DomainId(), transferQueueId)
+
+	} else if transferAgentId != 0 && isTransfer {
+		call.Log().Info("transfer from: " + call.From().String() + " to agent_id ")
+		routing, _ = r.fm.TransferAgentRouting(call.DomainId(), transferAgentId)
+
 	} else if isTransfer && queueId == nil && (ccXfer || !call.IsOriginateRequest()) {
 		call.Log().Info("transfer from: " + call.From().String() + " to destination " + call.Destination())
 		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
