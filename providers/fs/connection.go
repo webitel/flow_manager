@@ -70,6 +70,8 @@ type Connection struct {
 	schemaId        *int
 	resample        int
 	transferSchema  int
+	transferQueue   int
+	transferAgent   int
 
 	userId           int
 	disconnected     chan struct{}
@@ -133,6 +135,7 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 	)
 	connection.initIvrQueue(dump)
 	connection.initTransferSchema(dump)
+	connection.initTransferQueue(dump)
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
 	return connection
@@ -158,12 +161,32 @@ func (c *Connection) initTransferSchema(event *eventsocket.Event) {
 	}
 }
 
+func (c *Connection) initTransferQueue(event *eventsocket.Event) {
+	c.transferQueue, _ = strconv.Atoi(event.Get("variable_wbt_bt_queue_id"))
+	if c.transferQueue != 0 {
+		//c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
+	}
+
+	c.transferAgent, _ = strconv.Atoi(event.Get("variable_wbt_bt_agent_id"))
+	if c.transferAgent != 0 {
+		//c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
+	}
+}
+
 func (c *Connection) TransferSchemaId() *int {
 	if (c.dialPlan == "default" || c.webCall != "") && c.transferSchema != 0 {
 		return &c.transferSchema
 	}
 
 	return nil
+}
+
+func (c *Connection) TransferQueueId() int {
+	return c.transferQueue
+}
+
+func (c *Connection) TransferAgentId() int {
+	return c.transferAgent
 }
 
 func (c *Connection) IVRQueueId() *int {
