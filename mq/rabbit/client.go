@@ -112,7 +112,9 @@ func (a *AMQP) initQueues() {
 	var execQueue amqp.Queue
 
 	callQueue, err = a.channel.QueueDeclare(model.CallEventQueueName, true, false, false,
-		true, nil)
+		true, amqp.Table{
+			"x-queue-type": "quorum",
+		})
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", model.CallEventQueueName, err.Error()))
 		time.Sleep(time.Second)
@@ -120,7 +122,9 @@ func (a *AMQP) initQueues() {
 	}
 
 	execQueue, err = a.channel.QueueDeclare(model.FlowExecQueueName, true, false, false,
-		true, nil)
+		true, amqp.Table{
+			"x-queue-type": "quorum",
+		})
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", model.FlowExecQueueName, err.Error()))
 		time.Sleep(time.Second)
