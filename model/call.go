@@ -436,6 +436,7 @@ type Call interface {
 	StopDTMF(ctx context.Context) (Response, *AppError)
 	Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (Response, *AppError)
 	Playback(ctx context.Context, files []*PlaybackFile) (Response, *AppError)
+	Say(ctx context.Context, val string) (Response, *AppError)
 	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
 	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
 	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)

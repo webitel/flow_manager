@@ -97,6 +97,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.Playback),
 	}
+	apps["say"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.say),
+	}
 	apps["ringback"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.RingBack),
