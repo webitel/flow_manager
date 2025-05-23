@@ -405,6 +405,7 @@ type Call interface {
 	IVRQueueId() *int
 	TransferSchemaId() *int
 	TransferQueueId() int
+	IsBlindTransferQueue() bool
 	TransferAgentId() int
 	SetTransferFromId()
 
