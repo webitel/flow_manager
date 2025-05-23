@@ -161,6 +161,7 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		Variables:     vars,
 		DomainId:      call.DomainId(),
 		StickyAgentId: stickyAgentId,
+		IsTransfer:    call.TransferQueueId() > 0,
 	})
 
 	if err != nil {

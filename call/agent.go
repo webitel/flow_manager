@@ -87,6 +87,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 		Variables:        call.DumpExportVariables(),
 		QueueName:        argv.QueueName,
 		CancelDistribute: argv.CancelDistribute,
+		IsTransfer:       call.TransferAgentId() > 0,
 	}
 
 	if argv.Processing != nil && argv.Processing.Enabled {
