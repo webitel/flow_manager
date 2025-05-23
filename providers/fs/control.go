@@ -707,6 +707,11 @@ func (c *Connection) Pickup(ctx context.Context, name string) (model.Response, *
 	return c.executeWithContext(ctx, "pickup", fmt.Sprintf("%s@%d", name, c.domainId))
 }
 
+// TODO
+func (c *Connection) Say(ctx context.Context, val string) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "say", val)
+}
+
 // PickupHash todo
 func (c *Connection) PickupHash(name string) string {
 	return fmt.Sprintf("%s@%d", name, c.domainId)
