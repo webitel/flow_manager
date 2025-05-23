@@ -64,7 +64,7 @@ func (f *FlowManager) TransferQueueRouting(domainId int64, queueId int) (*model.
 					"sleep": 500,
 				},
 				{
-					"unSet": []any{"wbt_bt_queue_id"},
+					"unSet": []any{"wbt_bt_queue_id", "wbt_bt_queue"},
 				},
 				{
 					"joinQueue": map[string]any{

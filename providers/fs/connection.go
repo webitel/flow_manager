@@ -58,20 +58,21 @@ type Connection struct {
 	webCall          string
 	dialPlan         string
 	//context         string
-	destination     string
-	stopped         bool
-	direction       model.CallDirection
-	gatewayId       int
-	domainId        int64
-	domainName      string
-	from            *model.CallEndpoint
-	to              *model.CallEndpoint
-	systemDirection string
-	schemaId        *int
-	resample        int
-	transferSchema  int
-	transferQueue   int
-	transferAgent   int
+	destination          string
+	stopped              bool
+	direction            model.CallDirection
+	gatewayId            int
+	domainId             int64
+	domainName           string
+	from                 *model.CallEndpoint
+	to                   *model.CallEndpoint
+	systemDirection      string
+	schemaId             *int
+	resample             int
+	transferSchema       int
+	transferQueue        int
+	transferAgent        int
+	isBlindTransferQueue bool
 
 	userId           int
 	disconnected     chan struct{}
@@ -171,6 +172,12 @@ func (c *Connection) initTransferQueue(event *eventsocket.Event) {
 	if c.transferAgent != 0 {
 		//c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
 	}
+
+	c.isBlindTransferQueue = event.Get("variable_wbt_bt_queue") == "true"
+}
+
+func (c *Connection) IsBlindTransferQueue() bool {
+	return c.isBlindTransferQueue
 }
 
 func (c *Connection) TransferSchemaId() *int {
