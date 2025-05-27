@@ -529,6 +529,7 @@ type GetSpeech struct {
 		File            *PlaybackFile `json:"file" json:"file,omitempty"`
 		VolumeReduction int           `json:"volumeReduction" json:"volume_reduction,omitempty"`
 	}
+	SetVar              string   `json:"setVar"`
 	Timeout             int      `json:"timeout"`
 	VadTimeout          int      `json:"vadTimeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`

@@ -114,9 +114,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			return nil, err
 		}
 
-		call.Set(ctx, map[string]interface{}{
-			"google_refresh_vars": "todo",
-		}) // TODO refresh vars
+		setSttVar(ctx, argv.GetSpeech.SetVar, call)
 
 		answer := call.GetVariable("variable_google_transcript")
 		if argv.GetSpeech.Question != "" {
@@ -132,4 +130,13 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return call.TTSOpus(ctx, q, argv.GetDigits, 0)
 	}
 	return call.TTS(ctx, q, argv.TTSSettings, argv.GetDigits, 0)
+}
+
+func setSttVar(ctx context.Context, varName string, call model.Call) {
+	if varName == "" {
+		varName = "google_refresh_vars" // need execute event
+	}
+	call.Set(ctx, map[string]any{
+		varName: "${google_transcript}",
+	})
 }

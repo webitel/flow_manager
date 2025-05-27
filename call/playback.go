@@ -74,9 +74,7 @@ func (r *Router) Playback(ctx context.Context, scope *flow.Flow, call model.Call
 			return nil, err
 		}
 
-		call.Set(ctx, map[string]interface{}{
-			"google_refresh_vars": "todo",
-		}) // TODO refresh vars
+		setSttVar(ctx, argv.GetSpeech.SetVar, call)
 
 		return model.CallResponseOK, nil
 
