@@ -781,7 +781,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		}
 		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, c.domainId), true
 
-	case "audio/wav":
+	case "audio/wav", "audio/ogg", "audio/x-wav":
 		if file.Id == nil {
 			return "", false
 		}
@@ -834,7 +834,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		stringUrl := strings.Replace(url.String(), "(storage_var)", "$${cdr_url}", 1)
 		tp := filetype.GetType(args.FileType)
 		switch tp.MIME.Value {
-		case "audio/wav":
+		case "audio/wav", "audio/ogg", "audio/x-wav":
 			return fmt.Sprintf("http_cache://https://%s", stringUrl), true
 		case "audio/mp3", "audio/mpeg":
 			return fmt.Sprintf("shout://%s", stringUrl), true
