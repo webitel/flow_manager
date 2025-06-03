@@ -642,6 +642,9 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 			vars["GOOGLE_DISABLE_BREAK"] = "false"
 		}
 
+		vars["GOOGLE_MIN_RESPONSE_WORDS"] = fmt.Sprintf("%d", config.MinWords)
+		vars["GOOGLE_MAX_RESPONSE_WORDS"] = fmt.Sprintf("%d", config.MaxWords)
+
 		if config.BreakFinalOnTimeout {
 			vars["GOOGLE_BREAK_ON_TIMEOUT"] = "true"
 		} else {
