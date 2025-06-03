@@ -538,6 +538,8 @@ type GetSpeech struct {
 	VadTimeout          int      `json:"vadTimeout"`
 	DisableBreakFinal   bool     `json:"disableBreakFinal"`
 	BreakFinalOnTimeout bool     `json:"breakFinalOnTimeout"`
+	MinWords            int      `json:"minWords"`
+	MaxWords            int      `json:"maxWords"`
 	BreakStability      float32  `json:"breakStability"`
 	Version             string   `json:"version"`             // (v1, v2) V1 default
 	Model               string   `json:"model"`               //v2
