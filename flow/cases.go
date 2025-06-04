@@ -230,7 +230,15 @@ func setResponse(ctx context.Context, conn model.Connection, setVar string, res 
 		return nil, model.NewAppError("json_encode_failed", "json_encode_failed", nil, err.Error(), 500)
 	}
 
+	// If a result is empty JSON object or array, set variable to nil
+	str := string(jsonData)
+	if str == "{}" || str == "[]" || str == `""` {
+		return conn.Set(ctx, model.Variables{
+			setVar: "",
+		})
+	}
+
 	return conn.Set(ctx, model.Variables{
-		setVar: string(jsonData),
+		setVar: str,
 	})
 }
