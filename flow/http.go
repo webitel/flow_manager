@@ -265,7 +265,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 				r := gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, ""))
 				if r.Type == gjson.JSON {
 					dst := &bytes.Buffer{}
-					err = json.Compact(dst, body)
+					err = json.Compact(dst, []byte(r.Raw))
 					if err != nil {
 						return model.CallResponseError, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.json.err",
 							nil, err.Error(), http.StatusBadRequest)
