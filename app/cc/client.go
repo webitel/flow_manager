@@ -29,7 +29,7 @@ type MemberApi interface {
 	JoinCallToQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error)
 	JoinChatToQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error)
 	CallJoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error)
-	CallOutbound(ctx context.Context, in *cc.OutboundCallReqeust) (cc.MemberService_OutboundCallClient, error)
+	CallOutbound(ctx context.Context, in *cc.OutboundCallRequest) (*cc.OutboundCallResponse, error)
 	TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (cc.MemberService_TaskJoinToAgentClient, error)
 
 	DirectAgentToMember(domainId int64, memberId int64, communicationId int, agentId int64) (int64, error)
