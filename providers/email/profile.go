@@ -399,7 +399,17 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 		if err == io.EOF {
 			break
 		} else if err != nil {
+			p.log.Error(err.Error(), wlog.String("message-id", m.MessageId),
+				wlog.Any("from", m.From),
+			)
+			break
+		}
 
+		if part == nil {
+			p.log.Error("empty part", wlog.String("message-id", m.MessageId),
+				wlog.Any("from", m.From),
+			)
+			break
 		}
 
 		switch h := part.Header.(type) {
