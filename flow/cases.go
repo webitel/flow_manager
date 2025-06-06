@@ -19,6 +19,8 @@ type (
 	LinkCommunicationRequest = pb.LinkCommunicationRequest
 	GetServiceCatalogRequest = pb.ListCatalogRequest
 	PublishCommentRequest    = pb.PublishCommentRequest
+	CreateLinkRequest        = pb.CreateLinkRequest
+	DeleteLinkRequest        = pb.DeleteLinkRequest
 )
 
 // ----------------//
@@ -67,6 +69,18 @@ type PublishCommentArgs struct {
 	SetVar string
 }
 
+type CreateLinkArgs struct {
+	CreateLinkRequest
+	Token  string
+	SetVar string
+}
+
+type DeleteLinkArgs struct {
+	DeleteLinkRequest
+	Token  string
+	SetVar string
+}
+
 // --------------------//
 // ** Function names **//
 // --------------------//
@@ -78,6 +92,8 @@ const (
 	funcLinkCommunication  = "linkCommunication"
 	funcGetServiceCatalogs = "getServiceCatalogs"
 	funcPublishComment     = "publishComment"
+	funcCreateLink         = "createLink"
+	funcDeleteLink         = "deleteLink"
 )
 
 // ** Get Cases **
@@ -202,6 +218,36 @@ func (r *router) publishComment(ctx context.Context, scope *Flow, conn model.Con
 	res, err := r.fm.PublishComment(ctx, &argv.PublishCommentRequest, argv.Token)
 	if err != nil {
 		return nil, model.NewAppError(funcPublishComment, "publish_comment_failed", nil, err.Error(), 500)
+	}
+	return setResponse(ctx, conn, argv.SetVar, res)
+}
+
+func (r *router) createLink(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv CreateLinkArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcCreateLink); err != nil {
+		return nil, err
+	}
+	res, err := r.fm.CreateLink(ctx, &argv.CreateLinkRequest, argv.Token)
+	if err != nil {
+		return nil, model.NewAppError(funcCreateLink, "create_link_failed", nil, err.Error(), 500)
+	}
+	return setResponse(ctx, conn, argv.SetVar, res)
+}
+
+func (r *router) deleteLink(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv DeleteLinkArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcDeleteLink); err != nil {
+		return nil, err
+	}
+	res, err := r.fm.DeleteLink(ctx, &argv.DeleteLinkRequest, argv.Token)
+	if err != nil {
+		return nil, model.NewAppError(funcDeleteLink, "delete_link_failed", nil, err.Error(), 500)
 	}
 	return setResponse(ctx, conn, argv.SetVar, res)
 }

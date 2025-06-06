@@ -15,6 +15,7 @@ type Api struct {
 	caseCommunication cases.CaseCommunicationsClient
 	serviceCatalogs   cases.CatalogsClient
 	comments          cases.CaseCommentsClient
+	links             cases.CaseLinksClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -30,12 +31,14 @@ func NewClient(consulTarget string) (*Api, error) {
 	caseCommunication := cases.NewCaseCommunicationsClient(conn)
 	serviceCatalogs := cases.NewCatalogsClient(conn)
 	comments := cases.NewCaseCommentsClient(conn)
+	links := cases.NewCaseLinksClient(conn)
 
 	return &Api{
 		cases:             casesClient,
 		caseCommunication: caseCommunication,
 		serviceCatalogs:   serviceCatalogs,
 		comments:          comments,
+		links:             links,
 	}, nil
 }
 
@@ -120,6 +123,24 @@ func (api *Api) PublishComment(ctx context.Context, req *cases.PublishCommentReq
 	newCtx := attachToken(ctx, token)
 	// Make the gRPC request
 	c, err := api.comments.PublishComment(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (api *Api) CreateLink(ctx context.Context, req *cases.CreateLinkRequest, token string) (*cases.CaseLink, error) {
+	newCtx := attachToken(ctx, token)
+	c, err := api.links.CreateLink(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+func (api *Api) DeleteLink(ctx context.Context, req *cases.DeleteLinkRequest, token string) (*cases.CaseLink, error) {
+	newCtx := attachToken(ctx, token)
+	c, err := api.links.DeleteLink(newCtx, req)
 	if err != nil {
 		return nil, err
 	}

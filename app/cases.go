@@ -61,3 +61,19 @@ func (fm *FlowManager) PublishComment(
 ) (*casespb.CaseComment, error) {
 	return fm.cases.PublishComment(ctx, req, token)
 }
+
+func (fm *FlowManager) CreateLink(
+	ctx context.Context,
+	req *casespb.CreateLinkRequest,
+	token string,
+) (*casespb.CaseLink, error) {
+	return fm.cases.CreateLink(ctx, req, token)
+}
+
+func (fm *FlowManager) DeleteLink(
+	ctx context.Context,
+	req *casespb.DeleteLinkRequest,
+	token string,
+) (*casespb.CaseLink, error) {
+	return fm.cases.DeleteLink(ctx, req, token)
+}
