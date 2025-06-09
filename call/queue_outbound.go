@@ -10,9 +10,11 @@ import (
 )
 
 type QueueOutbound struct {
-	Name       string `json:"name"`
-	Number     string `json:"number"`
-	Processing struct {
+	Name             string `json:"name"`
+	Number           string `json:"number"`
+	QueueName        string `json:"queueName"`
+	CancelDistribute bool   `json:"cancelDistribute"`
+	Processing       struct {
 		Enabled    bool
 		RenewalSec uint32 `json:"renewal_sec"`
 		Sec        uint32 `json:"sec"`
@@ -61,8 +63,8 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 				Id: argv.Processing.Form.Id,
 			},
 		},
-		QueueName:        "bla bla",
-		CancelDistribute: false,
+		QueueName:        argv.QueueName,
+		CancelDistribute: argv.CancelDistribute,
 	})
 
 	if err != nil {
