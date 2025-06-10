@@ -19,6 +19,7 @@ import (
 var jsonValueT = reflect.TypeOf(&model.JsonValue{})
 var JsonViewT = reflect.TypeOf(&processing.JsonView{})
 var pbStruct = reflect.TypeOf(&structpb.Struct{})
+var pbValue = reflect.TypeOf((*structpb.Value)(nil))
 
 /*
 \d := map[string]interface{}{
@@ -104,6 +105,7 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 	var hook mapstructure.DecodeHookFuncType = func(from reflect.Type, to reflect.Type, data interface{}) (interface{}, error) {
 		kind := from.Kind()
 		if kind == reflect.String {
+			dataStr := f.parseString(data.(string))
 			switch to.Kind() {
 			case reflect.Ptr:
 				if to.AssignableTo(jsonValueT) {
@@ -115,6 +117,15 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 					o := processing.JsonView{}
 					json.Unmarshal([]byte(d), &o)
 					return &o, nil
+				} else if to.AssignableTo(pbValue) {
+					var pbVal structpb.Value
+					// First, try to unmarshal the string as if it's a JSON object/array
+					err := protojson.Unmarshal([]byte(dataStr), &pbVal)
+					if err != nil {
+						// If it's not valid JSON, treat it as a literal string value for pbVal
+						pbVal = structpb.Value{Kind: &structpb.Value_StringValue{StringValue: dataStr}}
+					}
+					return &pbVal, nil
 				}
 			case reflect.Slice:
 				var res interface{}
@@ -182,6 +193,13 @@ func (f *Flow) Decode(in interface{}, out interface{}) *model.AppError {
 				}
 
 				return &pb, nil
+			} else if to.AssignableTo(pbValue) {
+				var pbVal structpb.Value
+				err = protojson.Unmarshal([]byte(f.parseString(string(body))), &pbVal)
+				if err != nil {
+					return nil, err
+				}
+				return &pbVal, nil
 			}
 
 		}
