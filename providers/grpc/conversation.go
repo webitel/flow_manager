@@ -205,6 +205,7 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 			Inline:  getChatButtons(msg.Inline),
 			File:    getFile(msg.File),
 			NoInput: msg.NoInput,
+			Kind:    msg.Kind,
 		},
 	})
 
@@ -257,6 +258,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 		Text:    menu.Text,
 		Buttons: getChatButtons(menu.Buttons),
 		NoInput: menu.NoInput,
+		Kind:    menu.Kind,
 	}
 	//menu.Set // fixme
 
@@ -272,12 +274,13 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
+func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (model.Response, *model.AppError) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
 			Type: "file", // FIXME
 			Text: text,
+			Kind: kind,
 			File: &proto.File{
 				Url:  url,
 				Name: name,
@@ -292,12 +295,13 @@ func (c *conversation) SendImageMessage(ctx context.Context, url string, name st
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendFile(ctx context.Context, text string, f *model.File) (model.Response, *model.AppError) {
+func (c *conversation) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, *model.AppError) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
 			Type: "file", // FIXME
 			Text: text,
+			Kind: kind,
 			File: getFile(f),
 		},
 	})

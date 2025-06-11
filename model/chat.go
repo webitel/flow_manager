@@ -35,6 +35,7 @@ type ChatMenuArgs struct {
 	Inline  [][]ChatButton `json:"inline"`
 	Text    string         `json:"text"`
 	NoInput bool           `json:"noInput"`
+	Kind    string         `json:"kind"`
 }
 
 type ChatMessageOutbound struct {
@@ -45,6 +46,7 @@ type ChatMessageOutbound struct {
 	Buttons [][]ChatButton `json:"buttons"`
 	Inline  [][]ChatButton `json:"inline"`
 	NoInput bool           `json:"noInput"`
+	Kind    string         `json:"kind"`
 }
 
 type BroadcastPeer struct {
@@ -97,7 +99,7 @@ type Conversation interface {
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
-	SendImageMessage(ctx context.Context, url string, name string, text string) (Response, *AppError)
+	SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (Response, *AppError)
 	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *AppError)
 	Bridge(ctx context.Context, userId int64, timeout int) *AppError
 	Export(ctx context.Context, vars []string) (Response, *AppError)
@@ -107,7 +109,7 @@ type Conversation interface {
 	UserId() int64
 	BreakCause() string
 	IsTransfer() bool
-	SendFile(ctx context.Context, text string, f *File) (Response, *AppError)
+	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
 
 	SetQueue(*InQueueKey) bool
 	GetQueueKey() *InQueueKey
