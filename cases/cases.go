@@ -16,6 +16,7 @@ type Api struct {
 	serviceCatalogs   cases.CatalogsClient
 	comments          cases.CaseCommentsClient
 	links             cases.CaseLinksClient
+	services          cases.ServicesClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -32,6 +33,7 @@ func NewClient(consulTarget string) (*Api, error) {
 	serviceCatalogs := cases.NewCatalogsClient(conn)
 	comments := cases.NewCaseCommentsClient(conn)
 	links := cases.NewCaseLinksClient(conn)
+	services := cases.NewServicesClient(conn)
 
 	return &Api{
 		cases:             casesClient,
@@ -39,6 +41,7 @@ func NewClient(consulTarget string) (*Api, error) {
 		serviceCatalogs:   serviceCatalogs,
 		comments:          comments,
 		links:             links,
+		services:          services,
 	}, nil
 }
 
@@ -145,6 +148,15 @@ func (api *Api) DeleteLink(ctx context.Context, req *cases.DeleteLinkRequest, to
 		return nil, err
 	}
 	return c, nil
+}
+
+func (api *Api) LocateService(ctx context.Context, req *cases.LocateServiceRequest, token string) (*cases.LocateServiceResponse, error) {
+	newCtx := attachToken(ctx, token)
+	s, err := api.services.LocateService(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // attachToken adds the authentication token to the gRPC metadata.
