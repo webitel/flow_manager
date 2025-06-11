@@ -244,6 +244,14 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.unSet),
 	}
+	apps["createLink"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.createLink),
+	}
+	apps["deleteLink"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.deleteLink),
+	}
 	return apps
 }
 
