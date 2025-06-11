@@ -77,3 +77,11 @@ func (fm *FlowManager) DeleteLink(
 ) (*casespb.CaseLink, error) {
 	return fm.cases.DeleteLink(ctx, req, token)
 }
+
+func (fm *FlowManager) LocateService(
+	ctx context.Context,
+	req *casespb.LocateServiceRequest,
+	token string,
+) (*casespb.LocateServiceResponse, error) {
+	return fm.cases.LocateService(ctx, req, token)
+}

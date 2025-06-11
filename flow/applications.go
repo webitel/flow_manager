@@ -252,6 +252,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.deleteLink),
 	}
+	apps["locateService"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.locateService),
+	}
 	return apps
 }
 

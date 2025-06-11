@@ -21,6 +21,7 @@ type (
 	PublishCommentRequest    = pb.PublishCommentRequest
 	CreateLinkRequest        = pb.CreateLinkRequest
 	DeleteLinkRequest        = pb.DeleteLinkRequest
+	LocateServiceRequest     = pb.LocateServiceRequest
 )
 
 // ----------------//
@@ -81,6 +82,12 @@ type DeleteLinkArgs struct {
 	SetVar string
 }
 
+type LocateServiceArgs struct {
+	LocateServiceRequest
+	Token  string
+	SetVar string
+}
+
 // --------------------//
 // ** Function names **//
 // --------------------//
@@ -94,6 +101,7 @@ const (
 	funcPublishComment     = "publishComment"
 	funcCreateLink         = "createLink"
 	funcDeleteLink         = "deleteLink"
+	funcLocateService      = "locateService"
 )
 
 // ** Get Cases **
@@ -248,6 +256,21 @@ func (r *router) deleteLink(ctx context.Context, scope *Flow, conn model.Connect
 	res, err := r.fm.DeleteLink(ctx, &argv.DeleteLinkRequest, argv.Token)
 	if err != nil {
 		return nil, model.NewAppError(funcDeleteLink, "delete_link_failed", nil, err.Error(), 500)
+	}
+	return setResponse(ctx, conn, argv.SetVar, res)
+}
+
+func (r *router) locateService(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv LocateServiceArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcLocateService); err != nil {
+		return nil, err
+	}
+	res, err := r.fm.LocateService(ctx, &argv.LocateServiceRequest, argv.Token)
+	if err != nil {
+		return nil, model.NewAppError(funcLocateService, "locate_service_failed", nil, err.Error(), 500)
 	}
 	return setResponse(ctx, conn, argv.SetVar, res)
 }
