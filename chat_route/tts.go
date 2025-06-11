@@ -14,6 +14,7 @@ type TTSArgs struct {
 	TextType  string `json:"textType,omitempty"`
 	Server    string `json:"server,omitempty"`
 	FileName  string `json:"fileName,omitempty"`
+	Kind      string `json:"kind,omitempty"`
 }
 
 func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -29,5 +30,5 @@ func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Conversatio
 		return model.CallResponseError, err
 	}
 	// TODO: mime type
-	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri, MimeType: "audio/mpeg", Name: argv.FileName, Id: -1})
+	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri, MimeType: "audio/mpeg", Name: argv.FileName, Id: -1}, argv.Kind)
 }

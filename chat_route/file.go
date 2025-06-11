@@ -18,12 +18,14 @@ type FileMessage struct {
 	Expire int64            `json:"expire"`
 	Server string           `json:"server"`
 	Url    string
+	Kind   string `json:"kind"`
 }
 
 type ImageArgv struct {
 	Url  string
 	Name string
 	Text string
+	Kind string
 }
 
 func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -43,7 +45,7 @@ func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Conversat
 
 	u.RawQuery = u.Query().Encode()
 
-	return conv.SendImageMessage(ctx, u.String(), argv.Name, argv.Text)
+	return conv.SendImageMessage(ctx, u.String(), argv.Name, argv.Text, argv.Kind)
 }
 
 func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversation, args interface{}) (model.Response, *model.AppError) {
@@ -87,5 +89,5 @@ func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Conversati
 
 	file.MimeType += ";source=media"
 
-	return conv.SendFile(ctx, argv.Text, file)
+	return conv.SendFile(ctx, argv.Text, file, argv.Kind)
 }
