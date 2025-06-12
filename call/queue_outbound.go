@@ -29,7 +29,7 @@ type QueueOutbound struct {
 func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
 	var argv QueueOutbound
 	if call.Direction() != model.CallDirectionOutbound {
-		// error
+		return nil, model.NewRequestError("call.cc_outbound", "this call is not an outbound")
 	}
 
 	if err := r.Decode(scope, args, &argv); err != nil {
