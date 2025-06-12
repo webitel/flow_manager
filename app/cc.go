@@ -13,6 +13,10 @@ func (fm *FlowManager) JoinToInboundQueue(ctx context.Context, in *cc.CallJoinTo
 	return fm.cc.Member().JoinCallToQueue(ctx, in)
 }
 
+func (fm *FlowManager) CallOutboundQueue(ctx context.Context, in *cc.OutboundCallRequest) (*cc.OutboundCallResponse, error) {
+	return fm.cc.Member().CallOutbound(ctx, in)
+}
+
 func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error) {
 	return fm.cc.Member().JoinChatToQueue(ctx, in)
 }

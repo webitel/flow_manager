@@ -391,6 +391,7 @@ func (c CallEndpoint) IntId() *int {
 
 type Call interface {
 	Connection
+	UserId() int
 	//ParentType() *string //TODO transfer logic
 	From() *CallEndpoint
 	To() *CallEndpoint

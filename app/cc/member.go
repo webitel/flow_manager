@@ -65,6 +65,10 @@ func (api *memberApi) CallJoinToAgent(ctx context.Context, in *cc.CallJoinToAgen
 	return api.Api.CallJoinToAgent(ctx, in)
 }
 
+func (api *memberApi) CallOutbound(ctx context.Context, in *cc.OutboundCallRequest) (*cc.OutboundCallResponse, error) {
+	return api.Api.OutboundCall(ctx, in)
+}
+
 func (api *memberApi) TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (cc.MemberService_TaskJoinToAgentClient, error) {
 	return api.Api.TaskJoinToAgent(ctx, in)
 }

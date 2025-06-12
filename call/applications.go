@@ -133,6 +133,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.joinAgent),
 	}
+	apps["ccOutbound"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.ccOutbound),
+	}
 	apps["setGrantee"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.SetGrantee),
