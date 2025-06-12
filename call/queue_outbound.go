@@ -32,6 +32,10 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 		return nil, model.NewRequestError("call.cc_outbound", "this call is not an outbound")
 	}
 
+	if call.UserId() == 0 {
+		return nil, model.NewRequestError("call.cc_outbound", "call originated from a non-user source")
+	}
+
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
