@@ -16,12 +16,13 @@ type QueueOutbound struct {
 	CancelDistribute bool   `json:"cancelDistribute"`
 	Processing       struct {
 		Enabled    bool
-		RenewalSec uint32 `json:"renewal_sec"`
+		RenewalSec uint32 `json:"renewalSec"`
 		Sec        uint32 `json:"sec"`
 		Form       struct {
 			Id   int32
 			Name string
 		} `json:"form"`
+		WithoutAnswer bool `json:"withoutAnswer"`
 	}
 }
 
@@ -62,6 +63,7 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 			Form: &cc.QueueFormSchema{
 				Id: argv.Processing.Form.Id,
 			},
+			WithoutAnswer: argv.Processing.WithoutAnswer,
 		},
 		QueueName:        argv.QueueName,
 		CancelDistribute: argv.CancelDistribute,
