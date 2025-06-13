@@ -256,6 +256,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.locateService),
 	}
+	apps["createRelatedCase"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.createRelatedCase),
+	}
 	return apps
 }
 
