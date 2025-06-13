@@ -85,3 +85,11 @@ func (fm *FlowManager) LocateService(
 ) (*casespb.LocateServiceResponse, error) {
 	return fm.cases.LocateService(ctx, req, token)
 }
+
+func (fm *FlowManager) CreateRelatedCase(
+	ctx context.Context,
+	req *casespb.CreateRelatedCaseRequest,
+	token string,
+) (*casespb.RelatedCase, error) {
+	return fm.cases.CreateRelatedCase(ctx, req, token)
+}
