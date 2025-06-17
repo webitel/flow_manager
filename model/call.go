@@ -476,6 +476,7 @@ type Call interface {
 
 	SetQueueCancel(cancel context.CancelFunc) bool
 	CancelQueue() bool
+	InQueue() bool
 	HangupCause() string
 
 	GetContactId() int

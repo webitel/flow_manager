@@ -55,6 +55,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 	var q QueueJoinArg
 	var stickyAgentId int32
 
+	if call.InQueue() {
+		return nil, model.NewInternalError("call.queue.in_queue", "call is in queue")
+	}
+
 	if err := r.Decode(scope, args, &q); err != nil {
 		return nil, err
 	}
