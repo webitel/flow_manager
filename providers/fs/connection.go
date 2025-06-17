@@ -739,6 +739,14 @@ func (c *Connection) CancelQueue() bool {
 	return true
 }
 
+func (c *Connection) InQueue() bool {
+	c.Lock()
+	hasCancelQueue := c.cancelQueue != nil
+	c.Unlock()
+
+	return hasCancelQueue
+}
+
 func (c *Connection) Variables() map[string]string {
 	return c.variables.Data()
 }
