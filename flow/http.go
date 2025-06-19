@@ -7,19 +7,25 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/webitel/wlog"
-	"io"
-	"io/ioutil"
-	"net/http"
-	"net/url"
-	"strconv"
-	"strings"
-	"time"
-
 	"github.com/tidwall/gjson"
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 	"gopkg.in/xmlpath.v2"
+	"io"
+	"io/ioutil"
+	"maps"
+	"net/http"
+	"net/url"
+	"regexp"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+)
+
+var (
+	rePathVars = regexp.MustCompile(`\$\{([^}]+)\}`)
 )
 
 func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -149,7 +155,7 @@ func buildHttpClient(props map[string]interface{}) *http.Client {
 
 func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]interface{}) (*http.Request, *model.AppError) {
 	var ok bool
-	var uri string
+	var rawUrl string
 	var err error
 	var urlParam *url.URL
 	var str, k, method string
@@ -158,21 +164,37 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 	var req *http.Request
 	headers := make(map[string]string)
 
-	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
+	if rawUrl = model.StringValueFromMap("url", props, ""); rawUrl == "" {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, "url is required", http.StatusBadRequest)
 	}
-	if _, ok = props["path"]; ok {
-		if _, ok = props["path"].(map[string]interface{}); ok {
-			for k, v = range props["path"].(map[string]interface{}) {
-				str = r.parseMapValue(c, v)
-				uri = strings.Replace(uri, "${"+k+"}", encodeURIComponent(str), -1)
+
+	rawUrl = strings.Trim(rawUrl, " ")
+
+	if m, ok := props["path"].(map[string]any); ok {
+		vars := make(map[string]string, len(m))
+		for k, v = range m {
+			vars[k] = r.parseMapValue(c, v)
+		}
+		rawUrl = rawSubstitute(rawUrl, vars)
+		rawUrl = c.ParseText(rawUrl)
+		urlParam, err = url.Parse(rawUrl)
+
+		if err != nil {
+			return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse_path.args", nil, err.Error(), http.StatusBadRequest)
+		}
+
+		if len(urlParam.RawQuery) != 0 {
+			q, _ := url.ParseQuery(urlParam.RawQuery)
+			if q != nil {
+				urlParam.RawQuery = encode(q)
 			}
 		}
-	}
 
-	urlParam, err = url.Parse(c.ParseText(strings.Trim(uri, " ")))
-	if err != nil {
-		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.err.args", nil, err.Error(), http.StatusBadRequest)
+	} else {
+		urlParam, err = url.Parse(c.ParseText(rawUrl))
+		if err != nil {
+			return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.err.args", nil, err.Error(), http.StatusBadRequest)
+		}
 	}
 
 	if _, ok = props["headers"]; ok {
@@ -337,6 +359,36 @@ func encodeURIComponent(str string) string {
 	r := url.QueryEscape(str)
 	r = strings.Replace(r, "+", "%20", -1)
 	return r
+}
+
+func rawSubstitute(template string, vars map[string]string) string {
+	return rePathVars.ReplaceAllStringFunc(template, func(match string) string {
+		name := match[2 : len(match)-1]
+		if val, ok := vars[name]; ok {
+			return val
+		}
+		return match // parse global
+	})
+}
+
+func encode(v url.Values) string {
+	if len(v) == 0 {
+		return ""
+	}
+	var buf strings.Builder
+	for _, k := range slices.Sorted(maps.Keys(v)) {
+		vs := v[k]
+		keyEscaped := encodeURIComponent(k)
+		for _, v := range vs {
+			if buf.Len() > 0 {
+				buf.WriteByte('&')
+			}
+			buf.WriteString(keyEscaped)
+			buf.WriteByte('=')
+			buf.WriteString(encodeURIComponent(v))
+		}
+	}
+	return buf.String()
 }
 
 type CookieCacheOptions struct {
