@@ -152,7 +152,9 @@ func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications
 			var tmp string
 			tmp = call.GetVariable("variable_wbt_contact_id")
 			if tmp != "" {
-				e.Variables = append(e.Variables, fmt.Sprintf("wbt_contact_id=%s", tmp))
+				if !(call.UserId() > 0 && call.Direction() == model.CallDirectionOutbound) {
+					e.Variables = append(e.Variables, fmt.Sprintf("wbt_contact_id=%s", tmp))
+				}
 			}
 			tmp = call.GetVariable("variable_wbt_hide_contact")
 			if tmp != "" {
