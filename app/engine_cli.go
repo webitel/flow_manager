@@ -6,14 +6,14 @@ import (
 	"net/http"
 )
 
-func (fm *FlowManager) MakeCall(ctx context.Context, req model.OutboundCallRequest) *model.AppError {
+func (fm *FlowManager) MakeCall(ctx context.Context, req model.OutboundCallRequest) (string, *model.AppError) {
 	if fm.engineCallCli == nil {
-		return model.NewAppError("App", "MakeCall", nil, "engine client not initialized to make a call", http.StatusInternalServerError)
+		return "", model.NewAppError("App", "MakeCall", nil, "engine client not initialized to make a call", http.StatusInternalServerError)
 	}
-	_, err := fm.engineCallCli.Api.CreateCallNA(ctx, req)
+	res, err := fm.engineCallCli.Api.CreateCallNA(ctx, req)
 	if err != nil {
-		return model.NewAppError("App", "MakeCall", nil, err.Error(), http.StatusInternalServerError)
+		return "", model.NewAppError("App", "MakeCall", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return nil
+	return res.Id, nil
 }
