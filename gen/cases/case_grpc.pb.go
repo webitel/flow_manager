@@ -37,7 +37,7 @@ type CasesClient interface {
 	// RPC method for creating a new case.
 	CreateCase(ctx context.Context, in *CreateCaseRequest, opts ...grpc.CallOption) (*Case, error)
 	// RPC method for updating an existing case.
-	UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*Case, error)
+	UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*UpdateCaseResponse, error)
 	// RPC method for deleting an existing case by its etag.
 	DeleteCase(ctx context.Context, in *DeleteCaseRequest, opts ...grpc.CallOption) (*Case, error)
 }
@@ -77,8 +77,8 @@ func (c *casesClient) CreateCase(ctx context.Context, in *CreateCaseRequest, opt
 	return out, nil
 }
 
-func (c *casesClient) UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*Case, error) {
-	out := new(Case)
+func (c *casesClient) UpdateCase(ctx context.Context, in *UpdateCaseRequest, opts ...grpc.CallOption) (*UpdateCaseResponse, error) {
+	out := new(UpdateCaseResponse)
 	err := c.cc.Invoke(ctx, Cases_UpdateCase_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ type CasesServer interface {
 	// RPC method for creating a new case.
 	CreateCase(context.Context, *CreateCaseRequest) (*Case, error)
 	// RPC method for updating an existing case.
-	UpdateCase(context.Context, *UpdateCaseRequest) (*Case, error)
+	UpdateCase(context.Context, *UpdateCaseRequest) (*UpdateCaseResponse, error)
 	// RPC method for deleting an existing case by its etag.
 	DeleteCase(context.Context, *DeleteCaseRequest) (*Case, error)
 	mustEmbedUnimplementedCasesServer()
@@ -125,7 +125,7 @@ func (UnimplementedCasesServer) LocateCase(context.Context, *LocateCaseRequest) 
 func (UnimplementedCasesServer) CreateCase(context.Context, *CreateCaseRequest) (*Case, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCase not implemented")
 }
-func (UnimplementedCasesServer) UpdateCase(context.Context, *UpdateCaseRequest) (*Case, error) {
+func (UnimplementedCasesServer) UpdateCase(context.Context, *UpdateCaseRequest) (*UpdateCaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCase not implemented")
 }
 func (UnimplementedCasesServer) DeleteCase(context.Context, *DeleteCaseRequest) (*Case, error) {
