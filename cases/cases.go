@@ -87,7 +87,7 @@ func (api *Api) CreateCase(ctx context.Context, req *cases.CreateCaseRequest, to
 	return c, nil
 }
 
-func (api *Api) UpdateCase(ctx context.Context, req *cases.UpdateCaseRequest, token string) (*cases.Case, error) {
+func (api *Api) UpdateCase(ctx context.Context, req *cases.UpdateCaseRequest, token string) (*cases.UpdateCaseResponse, error) {
 	// Create a new outgoing context with the updated metadata
 	newCtx := attachToken(ctx, token)
 

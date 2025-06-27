@@ -34,7 +34,7 @@ func (fm *FlowManager) UpdateCase(
 	ctx context.Context,
 	req *casespb.UpdateCaseRequest,
 	token string,
-) (*casespb.Case, error) {
+) (*casespb.UpdateCaseResponse, error) {
 	return fm.cases.UpdateCase(ctx, req, token)
 }
 
