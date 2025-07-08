@@ -6,6 +6,8 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 
 require github.com/emersion/go-imap v1.2.1
 
+replace github.com/webitel/flow_manager/pkg/processing => ./pkg/processing
+
 require (
 	github.com/BoRuDar/configuration/v4 v4.5.0
 	github.com/dchest/htmlmin v1.2.0
