@@ -71,6 +71,11 @@ func (r *Router) handle(emailConnection model.Connection) {
 		return
 	}
 
+	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkMailToContact)
+	if autoLink.BoolValue {
+		r.linkContact(conn)
+	}
+
 	f := flow.New(r, flow.Config{
 		Timezone: "",
 		Name:     s.Name,
