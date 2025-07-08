@@ -34,6 +34,7 @@ type FormTable struct {
 			} `json:"displayColumns"`
 		} `json:"table"`
 
+		Fields  []string `json:"fields"`
 		Filters []string `json:"filters"`
 		Actions []struct {
 			Field      string `json:"field"`
@@ -64,6 +65,7 @@ type FormView struct {
 	Height        any    `json:"height,omitempty"`        //form-i-frame
 	Variable      string `json:"variable,omitempty"`      //form-select-from-object
 	Object        *struct {
+		Fields []string `json:"fields"`
 		Source struct {
 			Path string `json:"path"`
 			Name string `json:"name"`
