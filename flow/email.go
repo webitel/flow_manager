@@ -34,6 +34,7 @@ type EmailArgs struct {
 	} `json:"attachment"`
 	RetryCount int `json:"retryCount"`
 	Store      bool
+	Set        map[string]string `json:"set"`
 }
 
 type GetEmailInfo struct {
@@ -73,21 +74,25 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 
 	if argv.Async {
 		go func() {
-			_, err := r.sendEmailFn(conn.DomainId(), argv)
+			_, err := r.sendEmailFn(ctx, conn, argv)
 			if err != nil {
 				wlog.Error(err.Error())
 			}
 		}()
 		return ResponseOK, nil
 	} else {
-		return r.sendEmailFn(conn.DomainId(), argv)
+		return r.sendEmailFn(ctx, conn, argv)
 	}
 }
 
-func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *model.AppError) {
+func (r *router) sendEmailFn(ctx context.Context, conn model.Connection, argv EmailArgs) (model.Response, *model.AppError) {
 
 	var files []model.File
 	var err *model.AppError
+	var tmp string
+	var ok bool
+	var rr *model.Email
+	domainId := conn.DomainId()
 
 	mail := gomail.NewMessage()
 	mail.SetHeader("To", argv.To...)
@@ -151,19 +156,39 @@ func (r *router) sendEmailFn(domainId int64, argv EmailArgs) (model.Response, *m
 
 	mail.SetHeader("Message-Id", id)
 
+	defer func() {
+		if tmp, ok = argv.Set["message_id"]; ok {
+			_, _ = conn.Set(ctx, model.Variables{
+				tmp: id,
+			})
+		}
+		if tmp, ok = argv.Set["id"]; ok && rr != nil {
+			_, _ = conn.Set(ctx, model.Variables{
+				tmp: fmt.Sprintf("%d", rr.Id),
+			})
+		}
+		if tmp, ok = argv.Set["error"]; ok && err != nil {
+			_, _ = conn.Set(ctx, model.Variables{
+				tmp: err.Error(),
+			})
+		}
+
+	}()
+
 retry:
 
 	if sErr = dialer.DialAndSend(mail); sErr != nil {
 		if argv.RetryCount > 0 {
 			argv.RetryCount = argv.RetryCount - 1
 			wlog.Error(sErr.Error())
+			err = model.NewInternalError("Email", sErr.Error())
 			goto retry
 		}
 		return nil, model.NewAppError("Email", "flow.email.send.app_err", nil, sErr.Error(), http.StatusInternalServerError)
 	}
 
 	if argv.Store && argv.Smtp.Id > 0 { // TODO STORE DB
-		rr := &model.Email{
+		rr = &model.Email{
 			Direction: "outbound",
 			MessageId: id,
 			Subject:   argv.Subject,
@@ -191,7 +216,10 @@ retry:
 			rr.InReplyTo = argv.ReplyToId[1 : len(argv.ReplyToId)-1]
 		}
 
-		r.fm.Store.Email().Save(domainId, rr)
+		err = r.fm.Store.Email().Save(domainId, rr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return model.CallResponseOK, nil
