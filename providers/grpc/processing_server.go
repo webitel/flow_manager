@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 
@@ -33,6 +34,8 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 	c := NewProcessingConnection(in.DomainId, int(in.SchemaId), in.Variables)
 	s.connections.AddWithDefaultExpires(c.id, c)
 
+	c.appId = fmt.Sprintf("workflow-%s", s.server.nodeName)
+
 	go func() {
 		for {
 			select {
@@ -62,7 +65,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 
 	return &workflow.Form{
 		Id:      c.id,
-		AppId:   s.server.Host(), //TODO
+		AppId:   c.appId,
 		Form:    f.ToJson(),
 		Timeout: 0,
 		Stop:    false,
@@ -101,7 +104,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 
 	return &workflow.Form{
 		Id:      c.id,
-		AppId:   s.server.Host(), //TODO
+		AppId:   c.appId,
 		Form:    f.ToJson(),
 		Timeout: 0,
 		Stop:    false,

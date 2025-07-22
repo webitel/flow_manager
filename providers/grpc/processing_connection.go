@@ -34,6 +34,8 @@ type processingConnection struct {
 	sync.RWMutex
 
 	log *wlog.Logger
+
+	appId string
 }
 
 func NewProcessingConnection(domainId int64, schemaId int, vars map[string]string) *processingConnection {
