@@ -35,11 +35,16 @@ type server struct {
 	chatManager     *ChatManager
 	nodeName        string
 	workflow.UnsafeFlowServiceServer
+	cb CallbackResolver
 
 	log *wlog.Logger
 }
 
-func NewServer(cfg *Config, cm *ChatManager) *server {
+type CallbackResolver interface {
+	Callback(ctx context.Context, id string, data any) (any, error)
+}
+
+func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *server {
 	srv := &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
@@ -50,6 +55,7 @@ func NewServer(cfg *Config, cm *ChatManager) *server {
 			wlog.Namespace("context"),
 			wlog.String("scope", "grpc server"),
 		),
+		cb: cb,
 	}
 	srv.chatApi = NewChatApi(srv)
 	srv.processingApi = NewProcessingApi(srv)

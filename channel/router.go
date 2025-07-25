@@ -3,6 +3,7 @@ package channel
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 
 	"github.com/webitel/flow_manager/providers/channel"
@@ -53,6 +54,17 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 
 	go r.handle(conn)
 	return nil
+}
+
+func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
+	r2 := *r
+	r2.apps = maps.Clone(r.apps)
+
+	for k, v := range apps {
+		r2.apps[k] = v
+	}
+
+	return &r2
 }
 
 func (r *Router) handle(conn model.Connection) {

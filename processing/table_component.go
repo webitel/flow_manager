@@ -65,5 +65,4 @@ func parseOutputs(in any) (map[string]model.Applications, *model.AppError) {
 	}
 
 	return outputs, nil
-
 }

@@ -18,6 +18,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0
 	github.com/h2non/filetype v1.1.3
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/k3a/html2text v1.2.1
 	github.com/lib/pq v1.10.9

@@ -3,6 +3,7 @@ package call
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"strings"
 	"time"
@@ -31,6 +32,17 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 	)
 
 	fm.CallRouter = router
+}
+
+func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
+	r2 := *r
+	r2.apps = maps.Clone(r.apps)
+
+	for k, v := range apps {
+		r2.apps[k] = v
+	}
+
+	return &r2
 }
 
 func (r *Router) GlobalVariable(domainId int64, name string) string {
