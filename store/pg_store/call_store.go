@@ -22,10 +22,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
                       from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, 
-					  attempt_id, member_id, grantee_id, params, heartbeat)
+					  attempt_id, member_id, grantee_id, params, heartbeat, destination_name)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
         :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, 
-		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end)
+		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end, :DestinationName)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -50,7 +50,8 @@ on conflict (id)
 		member_id = EXCLUDED.member_id,
 		grantee_Id = EXCLUDED.grantee_Id,
 		params = EXCLUDED.params,
-        heartbeat = EXCLUDED.heartbeat
+        heartbeat = EXCLUDED.heartbeat,
+        destination_name = EXCLUDED.destination_name
 		`, map[string]interface{}{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
@@ -66,21 +67,22 @@ on conflict (id)
 		"FromNumber":  call.GetFrom().GetNumber(),
 		"FromId":      call.GetFrom().GetId(),
 
-		"ToType":    call.GetTo().GetType(),
-		"ToName":    call.GetTo().GetName(),
-		"ToNumber":  call.GetTo().GetNumber(),
-		"ToId":      call.GetTo().GetId(),
-		"GatewayId": call.GatewayId,
-		"UserId":    call.UserId,
-		"QueueId":   call.GetQueueId(),
-		"AgentId":   call.GetAgentId(),
-		"TeamId":    call.GetTeamId(),
-		"AttemptId": call.GetAttemptId(),
-		"MemberId":  call.GetMemberIdId(),
-		"GranteeId": call.GranteeId,
-		"Payload":   nil,
-		"Params":    call.GetParams(),
-		"Hb":        call.Heartbeat,
+		"ToType":          call.GetTo().GetType(),
+		"ToName":          call.GetTo().GetName(),
+		"ToNumber":        call.GetTo().GetNumber(),
+		"ToId":            call.GetTo().GetId(),
+		"GatewayId":       call.GatewayId,
+		"UserId":          call.UserId,
+		"QueueId":         call.GetQueueId(),
+		"AgentId":         call.GetAgentId(),
+		"TeamId":          call.GetTeamId(),
+		"AttemptId":       call.GetAttemptId(),
+		"MemberId":        call.GetMemberIdId(),
+		"GranteeId":       call.GranteeId,
+		"Payload":         nil,
+		"Params":          call.GetParams(),
+		"Hb":              call.Heartbeat,
+		"DestinationName": call.DestinationName,
 	})
 
 	if err != nil {
@@ -242,7 +244,7 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params,
 								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number, 
-  								   schema_ids, hangup_phrase, blind_transfers)
+  								   schema_ids, hangup_phrase, blind_transfers, destination_name)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -296,7 +298,8 @@ select c.created_at created_at,
 	   c.search_number,
        c.schema_ids,
 	   c.hangup_phrase,
-	   c.blind_transfers
+	   c.blind_transfers,
+	   c.destination_name
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,

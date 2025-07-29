@@ -127,18 +127,19 @@ type QueueInfo struct {
 }
 
 type CallActionInfo struct {
-	GatewayId   *int           `json:"gateway_id"`
-	UserId      *int           `json:"user_id"`
-	Direction   string         `json:"direction"`
-	Destination string         `json:"destination"`
-	From        *CallEndpoint  `json:"from"`
-	To          *CallEndpoint  `json:"to"`
-	ParentId    *string        `json:"parent_id"`
-	Payload     *CallVariables `json:"payload"`
-	Queue       *QueueInfo     `json:"queue"`
-	GranteeId   *int           `json:"grantee_id"`
-	SipId       *string        `json:"sip_id"`
-	Heartbeat   int            `json:"heartbeat,omitempty"`
+	GatewayId       *int           `json:"gateway_id"`
+	UserId          *int           `json:"user_id"`
+	Direction       string         `json:"direction"`
+	Destination     string         `json:"destination"`
+	DestinationName *string        `json:"destination_name"`
+	From            *CallEndpoint  `json:"from"`
+	To              *CallEndpoint  `json:"to"`
+	ParentId        *string        `json:"parent_id"`
+	Payload         *CallVariables `json:"payload"`
+	Queue           *QueueInfo     `json:"queue"`
+	GranteeId       *int           `json:"grantee_id"`
+	SipId           *string        `json:"sip_id"`
+	Heartbeat       int            `json:"heartbeat,omitempty"`
 }
 
 type CallActionRinging struct {
