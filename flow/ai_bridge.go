@@ -43,6 +43,14 @@ type BotParams struct {
 	Model        string            `json:"model"`
 }
 
+type GeminiVad struct {
+	Enabled                  bool   `json:"enabled"`
+	StartOfSpeechSensitivity string `json:"startOfSpeechSensitivity"`
+	EndOfSpeechSensitivity   string `json:"endOfSpeechSensitivity"`
+	PrefixPaddingMs          int32  `json:"prefixPaddingMs"`
+	SilenceDurationMs        int32  `json:"silenceDurationMs"`
+}
+
 type Gemini struct {
 	BotParams
 	Rate              string        `json:"rate"`
@@ -52,6 +60,7 @@ type Gemini struct {
 	MediaResolution   string        `json:"mediaResolution"`
 	Temperature       float32       `json:"temperature"`
 	Language          string        `json:"language"`
+	Vad               *GeminiVad    `json:"vad"`
 	SessionResumption *struct {
 		Handle      string `json:"handle"`
 		Transparent bool   `json:"transparent"`
@@ -83,6 +92,11 @@ type BotResult struct {
 	Response     map[string]any `json:"response"`
 	Scheduling   string         `json:"scheduling"`
 	Content      string         `json:"content"`
+	Tts          *struct {
+		Model    string `json:"model"`
+		Text     string `json:"text"`
+		StopTalk bool   `json:"stopTalk"`
+	} `json:"tts"`
 }
 
 type Embed struct {
@@ -162,6 +176,14 @@ func (r *router) botReturnResult(ctx context.Context, scope *Flow, conn model.Co
 	result.Response, err = structpb.NewStruct(argv.Response)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("botReturnResult", "bot.return.struct", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	if argv.Tts != nil {
+		result.Tts = &workflow.BotExecuteResponse_TTS{
+			Model:    argv.Tts.Model,
+			Text:     argv.Tts.Text,
+			StopTalk: argv.Tts.StopTalk,
+		}
 	}
 
 	go func() {
@@ -281,6 +303,15 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 			Thought: v.Through,
 			Text:    v.Text,
 		})
+	}
+
+	if argv.Vad != nil && argv.Vad.Enabled {
+		initial.Vad = &ai_bots.GeminiRequest_VAD{
+			StartOfSpeechSensitivity: argv.Vad.StartOfSpeechSensitivity,
+			EndOfSpeechSensitivity:   argv.Vad.EndOfSpeechSensitivity,
+			PrefixPaddingMs:          argv.Vad.PrefixPaddingMs,
+			SilenceDurationMs:        argv.Vad.SilenceDurationMs,
+		}
 	}
 
 	m := args.(map[string]any)
