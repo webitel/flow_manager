@@ -36,22 +36,23 @@ const (
 )
 
 type SqlSupplierOldStores struct {
-	call        store.CallStore
-	schema      store.SchemaStore
-	callRouting store.CallRoutingStore
-	endpoint    store.EndpointStore
-	email       store.EmailStore
-	media       store.MediaStore
-	calendar    store.CalendarStore
-	list        store.ListStore
-	chat        store.ChatStore
-	queue       store.QueueStore
-	member      store.MemberStore
-	user        store.UserStore
-	log         store.LogStore
-	file        store.FileStore
-	webHook     store.WebHookStore
-	sysSettings store.SystemcSettings
+	call          store.CallStore
+	schema        store.SchemaStore
+	callRouting   store.CallRoutingStore
+	endpoint      store.EndpointStore
+	email         store.EmailStore
+	media         store.MediaStore
+	calendar      store.CalendarStore
+	list          store.ListStore
+	chat          store.ChatStore
+	queue         store.QueueStore
+	member        store.MemberStore
+	user          store.UserStore
+	log           store.LogStore
+	file          store.FileStore
+	webHook       store.WebHookStore
+	sysSettings   store.SystemcSettings
+	socketSession store.SocketSessionStore
 }
 
 type SqlSupplier struct {
@@ -89,6 +90,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.file = NewSqlFileStore(supplier)
 	supplier.oldStores.webHook = NewSqlWebHookStore(supplier)
 	supplier.oldStores.sysSettings = NewSqlSysSettingsStore(supplier)
+	supplier.oldStores.socketSession = NewSQLSocketSessionStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {

@@ -29,6 +29,11 @@ type Store interface {
 	File() FileStore
 	WebHook() WebHookStore
 	SystemcSettings() SystemcSettings
+	SocketSession() SocketSessionStore
+}
+
+type SocketSessionStore interface {
+	Get(userID int64, domainID int64, appName string) (*model.SocketSession, *model.AppError)
 }
 
 type CacheStore interface {
