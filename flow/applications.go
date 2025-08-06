@@ -260,6 +260,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.createRelatedCase),
 	}
+	apps["openLink"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.openLink),
+	}
 	return apps
 }
 
