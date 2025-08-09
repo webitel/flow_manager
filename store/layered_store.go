@@ -83,3 +83,7 @@ func (s *LayeredStore) WebHook() WebHookStore {
 func (s *LayeredStore) SystemcSettings() SystemcSettings {
 	return s.DatabaseLayer.SystemcSettings()
 }
+
+func (s *LayeredStore) SocketSession() SocketSessionStore {
+	return s.DatabaseLayer.SocketSession()
+}

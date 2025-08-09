@@ -296,3 +296,7 @@ func (ss *SqlSupplier) WebHook() store.WebHookStore {
 func (ss *SqlSupplier) SystemcSettings() store.SystemcSettings {
 	return ss.oldStores.sysSettings
 }
+
+func (ss *SqlSupplier) SocketSession() store.SocketSessionStore {
+	return ss.oldStores.socketSession
+}
