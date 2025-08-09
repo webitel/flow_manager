@@ -206,8 +206,7 @@ where id = :Id;`, map[string]interface{}{
 
 func (s SqlCallStore) MoveToHistory() ([]model.MissedCall, *model.AppError) {
 	var missedCalls []model.MissedCall
-	_, err := s.GetMaster().Select(&missedCalls, `
-with hb as materialized (
+	_, err := s.GetMaster().Select(&missedCalls, `with hb as materialized (
 	update call_center.cc_calls
 	set state = 'hangup',
 		sip_code = 604,
@@ -243,8 +242,8 @@ into call_center.cc_calls_history (created_at, id, direction, destination, paren
                                    gateway_id, user_id, queue_id, team_id, agent_id, attempt_id, member_id, hangup_by,
                                    transfer_from, transfer_to, amd_result, amd_duration,
                                    tags, grantee_id, "hold", user_ids, agent_ids, gateway_ids, queue_ids, team_ids, params,
-								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number, 
-  								   schema_ids, hangup_phrase, blind_transfers, destination_name)
+								   blind_transfer, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, contact_id, search_number,
+  								   schema_ids, hangup_phrase, blind_transfers, attempt_ids)
 select c.created_at created_at,
        c.id::uuid,
        c.direction,
@@ -299,7 +298,7 @@ select c.created_at created_at,
        c.schema_ids,
 	   c.hangup_phrase,
 	   c.blind_transfers,
-	   c.destination_name
+	   c.rattempt_ids
 from (
          select (t.r).*,
                 case when (t.r).agent_id isnull then t.agent_ids else (t.r).agent_id || t.agent_ids end agent_ids,
@@ -309,6 +308,7 @@ from (
                     else (t.r).gateway_id || t.gateway_ids end                                          gateway_ids,
                 case when (t.r).queue_id isnull then t.queue_ids else (t.r).queue_id || t.queue_ids end queue_ids,
                 case when (t.r).team_id isnull then t.team_ids else (t.r).team_id || t.team_ids end team_ids,
+                case when (t.r).attempt_id isnull then t.attempt_ids else (t.r).attempt_id || t.attempt_ids end rattempt_ids,
 				coalesce(t.p_vars, '{}') || coalesce((t.r).payload, '{}')  as p_vars,
 				t.search_number
          from (
@@ -323,6 +323,8 @@ from (
                          filter ( where c.parent_id isnull and ch.gateway_id notnull ) gateway_ids,
                          array_agg(distinct ch.team_id)
                          filter ( where c.parent_id isnull and ch.team_id notnull ) team_ids,
+                         array_agg(distinct ch.attempt_id)
+                         filter ( where c.parent_id isnull and ch.attempt_id notnull ) attempt_ids,
 						 call_center.jsonb_concat_agg(ch.payload) p_vars,
 						 string_agg(distinct nums.from_number, '|') filter ( where  nums.from_number != '' and nums.from_number notnull ) search_number
                   from del_calls c
