@@ -12,8 +12,8 @@ type SQLSocketSessionStore struct {
 }
 
 func (S SQLSocketSessionStore) Get(userID int64, domainID int64, appName string) (*model.SocketSession, *model.AppError) {
-	var session model.SocketSession
-	_, err := S.GetReplica().Select(
+	var session *model.SocketSession
+	err := S.GetReplica().SelectOne(
 		&session,
 		`
 		SELECT id, created_at, updated_at, user_agent, user_id, app_id, application_name
@@ -39,7 +39,7 @@ func (S SQLSocketSessionStore) Get(userID int64, domainID int64, appName string)
 		)
 	}
 
-	return &session, nil
+	return session, nil
 }
 
 func NewSQLSocketSessionStore(sqlStore SqlStore) store.SocketSessionStore {
