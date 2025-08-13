@@ -21,15 +21,18 @@ type FormTable struct {
 	View *struct {
 		Component string `json:"component"`
 		Table     struct {
-			Source         []any `json:"source"`
-			IsSystemSource bool  `json:"isSystemSource"`
-			SystemSource   struct {
+			Source           []any  `json:"source"`
+			IsSystemSource   bool   `json:"isSystemSource"`
+			DefaultCollapsed bool   `json:"defaultCollapsed"`
+			HeaderTitle      string `json:"headerTitle"`
+			SystemSource     struct {
 				Path string `json:"path"`
 				Name string `json:"name"`
 			} `json:"systemSource"`
 			DisplayColumns []struct {
 				Name  string `json:"name"`
 				Field string `json:"field"`
+				Type  string `json:"type"`
 				Width string `json:"width"`
 			} `json:"displayColumns"`
 		} `json:"table"`
