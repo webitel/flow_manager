@@ -9,6 +9,8 @@ type FormFile struct {
 		Readonly     bool   `json:"readonly"`
 		Collapsible  bool   `json:"collapsible"`
 		Component    string `json:"component"`
+		Uuid         string `json:"uuid"`
+		Channel      string `json:"channel"`
 	} `json:"view"`
 	Value interface{} `json:"value"`
 }
