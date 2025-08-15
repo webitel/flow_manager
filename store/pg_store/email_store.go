@@ -9,6 +9,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/lib/pq"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -25,7 +26,7 @@ func NewSqlEmailStore(sqlStore SqlStore) store.EmailStore {
 func (s *SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
 	var tasks []*model.EmailProfileTask
 
-	_, err := s.GetReplica().Select(&tasks, `update call_center.cc_email_profile
+	_, err := s.GetMaster().Select(&tasks, `update call_center.cc_email_profile
 set last_activity_at = now(),
     state            = 'active'
 where id in (select id
