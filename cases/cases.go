@@ -18,6 +18,7 @@ type Api struct {
 	links             cases.CaseLinksClient
 	services          cases.ServicesClient
 	relatedCases      cases.RelatedCasesClient
+	caseFiles         cases.CaseFilesClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -36,6 +37,7 @@ func NewClient(consulTarget string) (*Api, error) {
 	links := cases.NewCaseLinksClient(conn)
 	services := cases.NewServicesClient(conn)
 	relatedCases := cases.NewRelatedCasesClient(conn)
+	caseFiles := cases.NewCaseFilesClient(conn)
 
 	return &Api{
 		cases:             casesClient,
@@ -45,6 +47,7 @@ func NewClient(consulTarget string) (*Api, error) {
 		links:             links,
 		services:          services,
 		relatedCases:      relatedCases,
+		caseFiles:         caseFiles,
 	}, nil
 }
 
@@ -169,6 +172,15 @@ func (api *Api) CreateRelatedCase(ctx context.Context, req *cases.CreateRelatedC
 		return nil, err
 	}
 	return c, nil
+}
+
+func (api *Api) ListCaseFiles(ctx context.Context, req *cases.ListFilesRequest, token string) (*cases.CaseFileList, error) {
+	newCtx := attachToken(ctx, token)
+	files, err := api.caseFiles.ListFiles(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return files, nil
 }
 
 // attachToken adds the authentication token to the gRPC metadata.

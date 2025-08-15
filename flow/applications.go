@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -259,6 +260,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 	apps["createRelatedCase"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.createRelatedCase),
+	}
+	apps["listCaseFiles"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.listCaseFiles),
 	}
 	apps["openLink"] = &Application{
 		AllowNoConnect: true,

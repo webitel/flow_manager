@@ -23,6 +23,7 @@ type (
 	DeleteLinkRequest        = pb.DeleteLinkRequest
 	LocateServiceRequest     = pb.LocateServiceRequest
 	CreateRelatedCaseRequest = pb.CreateRelatedCaseRequest
+	ListCaseFilesRequest     = pb.ListFilesRequest
 )
 
 // ----------------//
@@ -95,6 +96,12 @@ type CreateRelatedCaseArgs struct {
 	SetVar string
 }
 
+type ListCaseFilesArgs struct {
+	ListCaseFilesRequest
+	Token  string
+	SetVar string
+}
+
 // --------------------//
 // ** Function names **//
 // --------------------//
@@ -110,6 +117,7 @@ const (
 	funcDeleteLink         = "deleteLink"
 	funcLocateService      = "locateService"
 	funcCreateRelatedCase  = "createRelatedCase"
+	funcListCaseFiles      = "listCaseFiles"
 )
 
 // ** Get Cases **
@@ -295,6 +303,24 @@ func (r *router) createRelatedCase(ctx context.Context, scope *Flow, conn model.
 	if err != nil {
 		return nil, model.NewAppError(funcCreateRelatedCase, "create_related_case_failed", nil, err.Error(), 500)
 	}
+	return setResponse(ctx, conn, argv.SetVar, res)
+}
+
+func (r *router) listCaseFiles(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv ListCaseFilesArgs
+	if err := scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+
+	if err := checkRequiredFields(argv.Token, argv.SetVar, funcListCaseFiles); err != nil {
+		return nil, err
+	}
+
+	res, err := r.fm.ListCaseFiles(ctx, &argv.ListCaseFilesRequest, argv.Token)
+	if err != nil {
+		return nil, model.NewAppError(funcListCaseFiles, "list_case_files_failed", nil, err.Error(), 500)
+	}
+
 	return setResponse(ctx, conn, argv.SetVar, res)
 }
 

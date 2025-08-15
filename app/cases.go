@@ -93,3 +93,11 @@ func (fm *FlowManager) CreateRelatedCase(
 ) (*casespb.RelatedCase, error) {
 	return fm.cases.CreateRelatedCase(ctx, req, token)
 }
+
+func (fm *FlowManager) ListCaseFiles(
+	ctx context.Context,
+	req *casespb.ListFilesRequest,
+	token string,
+) (*casespb.CaseFileList, error) {
+	return fm.cases.ListCaseFiles(ctx, req, token)
+}
