@@ -328,7 +328,7 @@ from (
 						 call_center.jsonb_concat_agg(ch.payload) p_vars,
 						 string_agg(distinct nums.from_number, '|') filter ( where  nums.from_number != '' and nums.from_number notnull ) search_number
                   from del_calls c
-                           left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id))
+                           left join call_center.cc_calls ch on (ch.parent_id = c.id or (ch.id = c.bridged_id) or ch.transfer_to = c.id or ch.transfer_from = c.id)
 						   left join lateral (
 										select c.from_number
 										union distinct
