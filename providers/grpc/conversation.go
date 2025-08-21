@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/webitel/flow_manager/gen/ai_bots"
 	"net/http"
 	"strings"
 	"sync"
@@ -589,6 +590,73 @@ func (c *conversation) GetQueueKey() *model.InQueueKey {
 	defer c.mx.RUnlock()
 
 	return c.queueKey
+}
+
+func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (model.Response, *model.AppError) {
+	var res *ai_bots.ConverseResponse
+	stream, err := cli.Converse(ctx)
+	if err != nil {
+		return model.CallResponseError, nil
+	}
+
+	defer stream.CloseSend()
+
+	err = stream.Send(&ai_bots.ConverseRequest{
+		RequestType: &ai_bots.ConverseRequest_Config{
+			Config: &ai_bots.Config{
+				ConversationId: c.id,
+				DialogId:       id,
+				UserData:       nil,
+				Rate:           "",
+			},
+		},
+	})
+	if err != nil {
+		return model.CallResponseError, nil
+	}
+
+	go func() {
+		for {
+			msg, err := c.ReceiveMessage(ctx, "", 10000, 0)
+			if err != nil {
+				return
+			}
+
+			err2 := stream.Send(&ai_bots.ConverseRequest{
+				RequestType: &ai_bots.ConverseRequest_Input{
+					Input: &ai_bots.Input{
+						Data: &ai_bots.Input_TextData{
+							TextData: strings.Join(msg, "."),
+						},
+					},
+				},
+			})
+			if err2 != nil {
+				return
+			}
+		}
+	}()
+
+	for {
+		res, err = stream.Recv()
+		if err != nil {
+			return model.CallResponseError, nil
+		}
+
+		if res.TextData != "" {
+			res.TextData = strings.Replace(res.TextData, "**", "*", -1)
+			_, err2 := c.SendTextMessage(ctx, res.TextData)
+			if err2 != nil {
+				c.log.Error(err2.Error())
+			}
+		}
+
+		if res.StopTalk {
+			//break
+		}
+	}
+
+	return model.CallResponseOK, nil
 }
 
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {

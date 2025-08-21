@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/gen/engine"
@@ -82,10 +83,13 @@ type FlowManager struct {
 
 	cacheStore map[CacheType]cachelayer.CacheStore
 
-	contacts         *wbt.Client[contacts.ContactsClient]
-	engineCallCli    *wbt.Client[engine.CallServiceClient]
+	contacts      *wbt.Client[contacts.ContactsClient]
+	engineCallCli *wbt.Client[engine.CallServiceClient]
+	AiBots        *bots_client.Client
+
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
+	cbr              *CallbackResolver
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -101,6 +105,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		stop:        make(chan struct{}),
 		stopped:     make(chan struct{}),
 		ctx:         context.Background(),
+		cbr:         NewCallbackResolver(),
 	}
 
 	if config.ExternalSql {
@@ -168,7 +173,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		Host:     fm.Config().Grpc.Host,
 		Port:     fm.Config().Grpc.Port,
 		NodeName: fm.id,
-	}, fm.chatManager)
+	}, fm.chatManager, fm.Callback())
 
 	fm.storage, outErr = NewStorageClient(fm.Config().DiscoverySettings.Url)
 	if outErr != nil {
@@ -177,6 +182,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.cases, outErr = cases.NewClient(fm.Config().DiscoverySettings.Url)
 	if outErr != nil {
+		return nil, outErr
+	}
+
+	fm.AiBots = bots_client.New(fm.Config().DiscoverySettings.Url)
+	if outErr = fm.AiBots.Start(); outErr != nil {
 		return nil, outErr
 	}
 
@@ -261,6 +271,9 @@ func (f *FlowManager) Shutdown() {
 	if f.chatManager != nil {
 		f.chatManager.Stop()
 	}
+	if f.AiBots != nil {
+		f.AiBots.Stop()
+	}
 
 	close(f.stop)
 	<-f.stopped
@@ -273,4 +286,8 @@ func (f *FlowManager) Shutdown() {
 
 func (f *FlowManager) Log() *wlog.Logger {
 	return f.log
+}
+
+func (f *FlowManager) Callback() *CallbackResolver {
+	return f.cbr
 }

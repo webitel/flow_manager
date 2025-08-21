@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
 )
 
@@ -115,4 +116,5 @@ type Conversation interface {
 	GetQueueKey() *InQueueKey
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
 	LastMessages(limit int) []ChatMessage
+	Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (Response, *AppError)
 }

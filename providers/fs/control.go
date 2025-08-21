@@ -720,11 +720,8 @@ func (c *Connection) PickupHash(name string) string {
 	return fmt.Sprintf("%s@%d", name, c.domainId)
 }
 
-func (c *Connection) Bot(ctx context.Context, conn string, rate int, startMessage string, vars map[string]string) (model.Response, *model.AppError) {
-	args := fmt.Sprintf("%s %d", conn, rate)
-	if startMessage != "" {
-		args += " " + model.UrlEncoded(startMessage)
-	}
+func (c *Connection) Bot(ctx context.Context, conn string, rate int, id string, vars map[string]string) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("%s %d %s", conn, rate, id)
 
 	if vars != nil {
 		// TODO JSON ?

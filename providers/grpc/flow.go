@@ -130,3 +130,17 @@ func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 		Id: id,
 	}, nil
 }
+
+func (s *server) BotExecute(ctx context.Context, in *workflow.BotExecuteRequest) (*workflow.BotExecuteResponse, error) {
+	res, err := s.cb.Callback(ctx, in.DialogId, in)
+	if err != nil {
+		return nil, err
+	}
+
+	switch r := res.(type) {
+	case *workflow.BotExecuteResponse:
+		return r, nil
+	default:
+		return nil, errors.New("callback error")
+	}
+}

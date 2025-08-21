@@ -10,6 +10,7 @@ import (
 )
 
 type Handler interface {
+	AddApplications(apps ApplicationHandlers) Handler
 	Request(ctx context.Context, scope *Flow, req model.ApplicationRequest) <-chan model.Result
 }
 
