@@ -9,7 +9,7 @@ require github.com/emersion/go-imap v1.2.1
 replace github.com/webitel/flow_manager/pkg/processing => ./pkg/processing
 
 require (
-	github.com/BoRuDar/configuration/v4 v4.5.0
+	github.com/BoRuDar/configuration/v4 v4.5.1
 	github.com/dchest/htmlmin v1.2.0
 	github.com/emersion/go-message v0.18.2
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
