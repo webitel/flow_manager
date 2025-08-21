@@ -1,13 +1,15 @@
 package app
 
 import (
+	"fmt"
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 
 type cluster struct {
-	app       *FlowManager
-	discovery discovery.ServiceDiscovery
+	connection string
+	app        *FlowManager
+	discovery  discovery.ServiceDiscovery
 }
 
 func NewCluster(app *FlowManager) *cluster {
@@ -30,8 +32,13 @@ func (c *cluster) Start() error {
 	if err != nil {
 		return err
 	}
+	c.connection = fmt.Sprintf("%s-%s", model.AppServiceName, c.app.id)
 
 	return nil
+}
+
+func (f *FlowManager) ConnectionString() string {
+	return f.cluster.connection
 }
 
 func (f *FlowManager) GetPublicInterface() (string, int) {

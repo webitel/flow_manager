@@ -269,6 +269,14 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.openLink),
 	}
+	apps["gemini"] = &Application{
+		AllowNoConnect: false,
+		Handler:        r.doExecute(r.gemini),
+	}
+	apps["openai"] = &Application{
+		AllowNoConnect: false,
+		Handler:        r.doExecute(r.openai),
+	}
 	return apps
 }
 

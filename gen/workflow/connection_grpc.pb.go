@@ -23,6 +23,7 @@ const (
 	FlowService_ResultAttempt_FullMethodName     = "/workflow.FlowService/ResultAttempt"
 	FlowService_StartFlow_FullMethodName         = "/workflow.FlowService/StartFlow"
 	FlowService_StartSyncFlow_FullMethodName     = "/workflow.FlowService/StartSyncFlow"
+	FlowService_BotExecute_FullMethodName        = "/workflow.FlowService/BotExecute"
 )
 
 // FlowServiceClient is the client API for FlowService service.
@@ -33,6 +34,7 @@ type FlowServiceClient interface {
 	ResultAttempt(ctx context.Context, in *ResultAttemptRequest, opts ...grpc.CallOption) (*ResultAttemptResponse, error)
 	StartFlow(ctx context.Context, in *StartFlowRequest, opts ...grpc.CallOption) (*StartFlowResponse, error)
 	StartSyncFlow(ctx context.Context, in *StartSyncFlowRequest, opts ...grpc.CallOption) (*StartSyncFlowResponse, error)
+	BotExecute(ctx context.Context, in *BotExecuteRequest, opts ...grpc.CallOption) (*BotExecuteResponse, error)
 }
 
 type flowServiceClient struct {
@@ -79,6 +81,15 @@ func (c *flowServiceClient) StartSyncFlow(ctx context.Context, in *StartSyncFlow
 	return out, nil
 }
 
+func (c *flowServiceClient) BotExecute(ctx context.Context, in *BotExecuteRequest, opts ...grpc.CallOption) (*BotExecuteResponse, error) {
+	out := new(BotExecuteResponse)
+	err := c.cc.Invoke(ctx, FlowService_BotExecute_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // FlowServiceServer is the server API for FlowService service.
 // All implementations must embed UnimplementedFlowServiceServer
 // for forward compatibility
@@ -87,6 +98,7 @@ type FlowServiceServer interface {
 	ResultAttempt(context.Context, *ResultAttemptRequest) (*ResultAttemptResponse, error)
 	StartFlow(context.Context, *StartFlowRequest) (*StartFlowResponse, error)
 	StartSyncFlow(context.Context, *StartSyncFlowRequest) (*StartSyncFlowResponse, error)
+	BotExecute(context.Context, *BotExecuteRequest) (*BotExecuteResponse, error)
 	mustEmbedUnimplementedFlowServiceServer()
 }
 
@@ -105,6 +117,9 @@ func (UnimplementedFlowServiceServer) StartFlow(context.Context, *StartFlowReque
 }
 func (UnimplementedFlowServiceServer) StartSyncFlow(context.Context, *StartSyncFlowRequest) (*StartSyncFlowResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartSyncFlow not implemented")
+}
+func (UnimplementedFlowServiceServer) BotExecute(context.Context, *BotExecuteRequest) (*BotExecuteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BotExecute not implemented")
 }
 func (UnimplementedFlowServiceServer) mustEmbedUnimplementedFlowServiceServer() {}
 
@@ -191,6 +206,24 @@ func _FlowService_StartSyncFlow_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _FlowService_BotExecute_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BotExecuteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(FlowServiceServer).BotExecute(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: FlowService_BotExecute_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(FlowServiceServer).BotExecute(ctx, req.(*BotExecuteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // FlowService_ServiceDesc is the grpc.ServiceDesc for FlowService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -213,6 +246,10 @@ var FlowService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "StartSyncFlow",
 			Handler:    _FlowService_StartSyncFlow_Handler,
+		},
+		{
+			MethodName: "BotExecute",
+			Handler:    _FlowService_BotExecute_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
