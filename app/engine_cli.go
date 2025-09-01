@@ -25,7 +25,7 @@ func (fm *FlowManager) GenerateFeedback(ctx context.Context, domainId int64, sou
 		return "", model.NewAppError("App", "GenerateFeedback", nil, "engine client not initialized to generate feedback", http.StatusInternalServerError)
 	}
 
-	res, err := fm.engineFeedbackCli.Api.Generate(ctx, &engine.GenerateFeedbackRequest{
+	res, err := fm.engineFeedbackCli.Api.GenerateFeedback(ctx, &engine.GenerateFeedbackRequest{
 		DomainId: domainId,
 		SourceId: sourceId,
 		Source:   source,
