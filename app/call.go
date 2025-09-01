@@ -22,7 +22,6 @@ Nov 24 16:57:54 dev flow_manager[13448]: 2020-11-24T16:57:54.185+0200        deb
 type callWatcher struct {
 	fm                 *FlowManager
 	startOnce          sync.Once
-	callTasks          Pool
 	callHistoryWatcher *discovery.Watcher
 }
 
