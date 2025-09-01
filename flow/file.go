@@ -9,6 +9,14 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+type FeedbackArgs struct {
+	Source   string
+	SourceId string
+	Payload  map[string]string
+
+	SetVar string
+}
+
 type GenerateLinkArgs struct {
 	Server string `json:"server"`
 	Expire int64  `json:"expire"` // sec ?
@@ -23,6 +31,29 @@ type GenerateLinkArgs struct {
 
 type PrintFileArgs struct {
 	Files []model.File `json:"files"`
+}
+
+func (r *router) feedback(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv = FeedbackArgs{
+		Source: "email",
+	}
+	err := scope.Decode(args, &argv)
+	if err != nil {
+		return nil, err
+	}
+
+	if argv.SetVar == "" {
+		return model.CallResponseError, ErrorRequiredParameter("feedback", "setVar")
+	}
+
+	key, err := r.fm.GenerateFeedback(ctx, conn.DomainId(), argv.SourceId, argv.Source, argv.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.Set(ctx, model.Variables{
+		argv.SetVar: key,
+	})
 }
 
 func (r *router) printFile(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {

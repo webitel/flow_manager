@@ -83,9 +83,10 @@ type FlowManager struct {
 
 	cacheStore map[CacheType]cachelayer.CacheStore
 
-	contacts      *wbt.Client[contacts.ContactsClient]
-	engineCallCli *wbt.Client[engine.CallServiceClient]
-	AiBots        *bots_client.Client
+	contacts          *wbt.Client[contacts.ContactsClient]
+	engineCallCli     *wbt.Client[engine.CallServiceClient]
+	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
+	AiBots            *bots_client.Client
 
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
@@ -244,6 +245,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if fm.engineCallCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewCallServiceClient); err != nil {
+		return nil, err
+	}
+
+	if fm.engineFeedbackCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewFeedbackServiceClient); err != nil {
 		return nil, err
 	}
 
