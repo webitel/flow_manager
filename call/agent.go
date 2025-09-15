@@ -15,23 +15,15 @@ type JoinAgentArgs struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
-	Processing *struct {
-		Enabled    bool
-		RenewalSec uint32 `json:"renewal_sec"`
-		Sec        uint32 `json:"sec"`
-		Form       struct {
-			Id   int32
-			Name string
-		} `json:"form"`
-	}
+	Processing       *model.Processing  `json:"processing"`
 	Ringtone         model.PlaybackFile `json:"ringtone"`
-	Bridged          []interface{}      `json:"bridged"`
+	Bridged          []any              `json:"bridged"`
 	Timeout          int32              `json:"timeout"`
 	QueueName        string             `json:"queue_name"`
 	CancelDistribute bool               `json:"cancel_distribute"`
 }
 
-func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
 	var argv JoinAgentArgs
 	var agentId *int32
 
@@ -63,7 +55,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 	//FIXME
 	if argv.Ringtone.Name != nil || argv.Ringtone.Id != nil {
 		var err *model.AppError
-		req := make([]*model.PlaybackFile, 1, 1)
+		req := make([]*model.PlaybackFile, 1)
 		req[0] = &model.PlaybackFile{
 			Id:   argv.Ringtone.Id,
 			Name: argv.Ringtone.Name,
@@ -100,6 +92,15 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 		if argv.Processing.Form.Id > 0 {
 			req.Processing.Form = &cc.QueueFormSchema{
 				Id: argv.Processing.Form.Id,
+			}
+		}
+
+		if argv.Processing.Prolongation != nil && argv.Processing.Prolongation.Enabled {
+			req.Processing.ProcessingProlongation = &cc.ProcessingProlongation{
+				Enabled:             true,
+				RepeatsNumber:       argv.Processing.Prolongation.RepeatsNumber,
+				ProlongationTimeSec: argv.Processing.Prolongation.ProlongationTimeSec,
+				IsTimeoutRetry:      argv.Processing.Prolongation.IsTimeoutRetry,
 			}
 		}
 	}

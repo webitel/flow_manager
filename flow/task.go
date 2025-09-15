@@ -2,10 +2,11 @@ package flow
 
 import (
 	"context"
+	"io"
+
 	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"io"
 )
 
 type JoinAgentToTaskArgs struct {
@@ -13,20 +14,12 @@ type JoinAgentToTaskArgs struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
-	Communication model.CallbackCommunication
-	Processing    *struct {
-		Enabled    bool
-		RenewalSec uint32 `json:"renewal_sec"`
-		Sec        uint32 `json:"sec"`
-		Form       struct {
-			Id   int32
-			Name string
-		} `json:"form"`
-	}
-	Bridged          []interface{} `json:"bridged"`
-	Timeout          int32         `json:"timeout"`
-	QueueName        string        `json:"queue_name"`
-	CancelDistribute bool          `json:"cancelDistribute"`
+	Communication    model.CallbackCommunication
+	Processing       *model.Processing `json:"processing"`
+	Bridged          []interface{}     `json:"bridged"`
+	Timeout          int32             `json:"timeout"`
+	QueueName        string            `json:"queue_name"`
+	CancelDistribute bool              `json:"cancelDistribute"`
 }
 
 func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -87,6 +80,15 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 				Id: argv.Processing.Form.Id,
 			}
 		}
+
+		if argv.Processing.Prolongation != nil && argv.Processing.Prolongation.Enabled {
+			req.Processing.ProcessingProlongation = &cc.ProcessingProlongation{
+				Enabled:             true,
+				RepeatsNumber:       argv.Processing.Prolongation.RepeatsNumber,
+				ProlongationTimeSec: argv.Processing.Prolongation.ProlongationTimeSec,
+				IsTimeoutRetry:      argv.Processing.Prolongation.IsTimeoutRetry,
+			}
+		}
 	}
 
 	res, err := r.fm.TaskJoinToAgent(ctx, req)
@@ -112,20 +114,16 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 			c.Set(ctx, model.Variables{
 				"attempt_id": e.Joined.AttemptId,
 			})
-
 		case *cc.QueueEvent_Bridged:
 			if len(argv.Bridged) > 0 {
 				c.Set(ctx, model.Variables{
 					"agent_id": e.Bridged.AgentId,
 				})
-				//go Route(ctx, scope.Fork("agent-bridged", ArrInterfaceToArrayApplication(argv.Bridged)), r)
 			}
-
 		case *cc.QueueEvent_Leaving:
 			c.Set(ctx, model.Variables{
 				"cc_result": e.Leaving.Result,
 			})
-			break
 		}
 	}
 
