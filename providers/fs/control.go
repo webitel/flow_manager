@@ -548,6 +548,13 @@ func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString str
 		dgTimeout = " " + strconv.Itoa(*params.DigitTimeout)
 	}
 
+	if params.FlushDtmf {
+		_, err := c.executeWithContext(ctx, "flush_dtmf", "")
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return c.executeWithContext(ctx, "play_and_get_digits", fmt.Sprintf("%d %d %d %d %s %s silence_stream://250 %s %s%s", *params.Min, *params.Max,
 		*params.Tries, *params.Timeout, params.Terminators, fileString, *params.SetVar, *params.Regexp, dgTimeout))
 }
