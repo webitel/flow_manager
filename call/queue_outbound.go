@@ -3,6 +3,7 @@ package call
 import (
 	"context"
 	"fmt"
+
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
@@ -10,23 +11,14 @@ import (
 )
 
 type QueueOutbound struct {
-	Name             string `json:"name"`
-	Number           string `json:"number"`
-	QueueName        string `json:"queueName"`
-	CancelDistribute bool   `json:"cancelDistribute"`
-	Processing       struct {
-		Enabled    bool
-		RenewalSec uint32 `json:"renewalSec"`
-		Sec        uint32 `json:"sec"`
-		Form       struct {
-			Id   int32
-			Name string
-		} `json:"form"`
-		WithoutAnswer bool `json:"withoutAnswer"`
-	}
+	Name             string                        `json:"name"`
+	Number           string                        `json:"number"`
+	QueueName        string                        `json:"queueName"`
+	CancelDistribute bool                          `json:"cancelDistribute"`
+	Processing       model.ProcessingWithoutAnswer `json:"processing"`
 }
 
-func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
 	var argv QueueOutbound
 	if call.Direction() != model.CallDirectionOutbound {
 		return nil, model.NewRequestError("call.cc_outbound", "this call is not an outbound")
@@ -54,7 +46,7 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 		return nil, model.NewAppError("Call", "call.cc_put.join.hangup", nil, "Call is down", 500)
 	}
 
-	res, err := r.fm.CallOutboundQueue(ctx, &cc.OutboundCallRequest{
+	ocr := &cc.OutboundCallRequest{
 		CallId:    call.Id(),
 		Timeout:   10,
 		UserId:    int64(call.UserId()),
@@ -71,7 +63,18 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 		},
 		QueueName:        argv.QueueName,
 		CancelDistribute: argv.CancelDistribute,
-	})
+	}
+
+	if argv.Processing.Prolongation != nil && argv.Processing.Prolongation.Enabled {
+		ocr.Processing.ProcessingProlongation = &cc.ProcessingProlongation{
+			Enabled:             argv.Processing.Prolongation.Enabled,
+			RepeatsNumber:       argv.Processing.Prolongation.RepeatsNumber,
+			ProlongationTimeSec: argv.Processing.Prolongation.ProlongationTimeSec,
+			IsTimeoutRetry:      argv.Processing.Prolongation.IsTimeoutRetry,
+		}
+	}
+
+	res, err := r.fm.CallOutboundQueue(ctx, ocr)
 
 	if err != nil {
 		call.Log().Err(err)
