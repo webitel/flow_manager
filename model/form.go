@@ -10,6 +10,7 @@ type FormFile struct {
 		Collapsible  bool   `json:"collapsible"`
 		Component    string `json:"component"`
 		Uuid         string `json:"uuid"`
+		EntityId     string `json:"entityId"`
 		Channel      string `json:"channel"`
 	} `json:"view"`
 	Value interface{} `json:"value"`
