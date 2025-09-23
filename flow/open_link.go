@@ -3,6 +3,7 @@ package flow
 import (
 	"context"
 	"github.com/webitel/flow_manager/model"
+	"strconv"
 )
 
 const (
@@ -20,6 +21,13 @@ func (r *router) openLink(_ context.Context, scope *Flow, conn model.Connection,
 	err := scope.Decode(args, &argv)
 	if err != nil {
 		return nil, err
+	}
+
+	if argv.UserId == 0 {
+		if uid, ok := conn.Get("user_id"); ok {
+			i, _ := strconv.Atoi(uid)
+			argv.UserId = int64(i)
+		}
 	}
 
 	sockId, _ := conn.Get(variableWbtSockId)
