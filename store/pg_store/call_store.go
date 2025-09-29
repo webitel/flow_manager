@@ -358,14 +358,16 @@ where bridged_id isnull and parent_id notnull and user_id notnull`)
 	return missedCalls, nil
 }
 
-func (s SqlCallStore) UpdateFrom(id string, name, number *string) *model.AppError {
+func (s SqlCallStore) UpdateFrom(id string, name, number, destination *string) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set from_number = coalesce(:Number, from_number),
-    from_name = coalesce(:Name, from_name)
+    from_name = coalesce(:Name, from_name),
+    destination = coalesce(:Destination, destination)
 where id = :Id`, map[string]interface{}{
-		"Number": number,
-		"Name":   name,
-		"Id":     id,
+		"Number":      number,
+		"Name":        name,
+		"Destination": destination,
+		"Id":          id,
 	})
 
 	if err != nil {

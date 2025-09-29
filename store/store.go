@@ -65,7 +65,7 @@ type CallStore interface {
 	SetHangup(call *model.CallActionHangup) *model.AppError
 	MoveToHistory() ([]model.MissedCall, *model.AppError)
 	Delete(id string) *model.AppError
-	UpdateFrom(id string, name, number *string) *model.AppError
+	UpdateFrom(id string, name, number, destination *string) *model.AppError
 	SaveTranscript(transcribe *model.CallActionTranscript) *model.AppError
 	SetHeartbeat(id string) *model.AppError
 

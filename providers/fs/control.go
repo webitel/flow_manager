@@ -682,7 +682,7 @@ func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, 
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res model.Response, err *model.AppError) {
+func (c *Connection) UpdateCid(ctx context.Context, name, number, destination *string) (res model.Response, err *model.AppError) {
 	if name != nil {
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_name=%s", *name)); err != nil {
 			return nil, err
@@ -697,6 +697,14 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res m
 		}
 
 		c.from.Number = *number
+	}
+
+	if destination != nil {
+		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("destination=%s", *destination)); err != nil {
+			return nil, err
+		}
+
+		c.destination = *destination
 	}
 
 	return
