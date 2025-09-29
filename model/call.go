@@ -470,7 +470,7 @@ type Call interface {
 	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
 	RefreshVars(ctx context.Context) (Response, *AppError)
 
-	UpdateCid(ctx context.Context, name, number *string) (Response, *AppError)
+	UpdateCid(ctx context.Context, name, number, destination *string) (Response, *AppError)
 	Push(ctx context.Context, name, tag string) (Response, *AppError)
 	Cv(ctx context.Context) (Response, *AppError)
 	Stopped() bool
@@ -536,10 +536,40 @@ type GetSpeech struct {
 		File            *PlaybackFile `json:"file" json:"file,omitempty"`
 		VolumeReduction int           `json:"volumeReduction" json:"volume_reduction,omitempty"`
 	}
-	SetVar              string   `json:"setVar"`
-	Timeout             int      `json:"timeout"`
-	VadTimeout          int      `json:"vadTimeout"`
-	DisableBreakFinal   bool     `json:"disableBreakFinal"`
+	SetVar  string `json:"setVar"`
+	Timeout int    `json:"timeout"` // якщо не було відповіді від гугла isFinal
+	/*
+		vadTimeout, це час в мілісекундах, якщо протягом цього буде тишина то ми виходимо з
+		is_final=true, transcript=""
+					RECOGNIZER_VAD_SILENCE_MS - 400
+				RECOGNIZER_VAD_VOICE_MS - 150
+				RECOGNIZER_VAD_THRESH - 200
+			1. RECOGNIZER_VAD_SILENCE_MS - це параметр, який визначає тривалість тиші (у мілісекундах),
+				після якої система вважає, що голосова активність завершилася і почалася тиша. Простіше кажучи, це "таймер тиші",
+			який допомагає уникнути помилкових переходів між голосом і тишею через короткі паузи в розмові.
+			getSpeech.vadTimeout - це якщо протягом цього буде визначено як тиша, тоді виходимо з блоку СТТ
+
+			Як працює на прикладі:
+
+			Якщо значення RECOGNIZER_VAD_SILENCE_MS = 400:
+			Система чекатиме 400 мс тиші після завершення голосу, щоб зрозуміти, що голос дійсно закінчився.
+			Якщо пауза в розмові буде коротшою (наприклад, 300 мс), система продовжить вважати, що це частина голосової активності.
+
+
+			2. RECOGNIZER_VAD_THRESH — це параметр, який визначає поріг чутливості системи до енергії звукового сигналу.
+			Система використовує це значення, щоб вирішити, чи є звук голосом або фоновим шумом.
+			Параметр RECOGNIZER_VAD_THRESH задається у цифрових одиницях рівня амплітуди сигналу.
+	*/
+	VadTimeout int `json:"vadTimeout"`
+	/*
+		виключити переривання плейбеку якщо отримали isFinal
+	*/
+	DisableBreakFinal bool `json:"disableBreakFinal"`
+	/*
+		breakFinalOnTimeout, якщо true а також disableBreakFinal = true,
+		тоді ми очікуємо завершення програвання файлу і у час timeout очікуємо розпізнавання голосу,
+		якщо він буде, тоді тишина перерветься.
+	*/
 	BreakFinalOnTimeout bool     `json:"breakFinalOnTimeout"`
 	MinWords            int      `json:"minWords"`
 	MaxWords            int      `json:"maxWords"`
