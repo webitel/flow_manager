@@ -197,6 +197,14 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.addContact),
 	}
+	apps["mergeContactPhones"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.mergeContactPhones),
+	}
+	apps["mergeContactVariables"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.mergeContactVariables),
+	}
 	apps["notification"] = &Application{
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.notification),

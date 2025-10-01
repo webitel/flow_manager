@@ -3,12 +3,13 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/webitel/engine/pkg/wbt"
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/gen/engine"
-	"time"
 
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -83,7 +84,11 @@ type FlowManager struct {
 
 	cacheStore map[CacheType]cachelayer.CacheStore
 
-	contacts          *wbt.Client[contacts.ContactsClient]
+	//------------- Contacts GRPC Client -------------//
+	contacts            *wbt.Client[contacts.ContactsClient]
+	contactPhoneNumbers *wbt.Client[contacts.PhonesClient]
+	contactVariables    *wbt.Client[contacts.VariablesClient]
+
 	engineCallCli     *wbt.Client[engine.CallServiceClient]
 	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
 	AiBots            *bots_client.Client
@@ -241,6 +246,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if fm.contacts, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewContactsClient); err != nil {
+		return nil, err
+	}
+	if fm.contactPhoneNumbers, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewPhonesClient); err != nil {
+		return nil, err
+	}
+	if fm.contactVariables, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewVariablesClient); err != nil {
 		return nil, err
 	}
 
