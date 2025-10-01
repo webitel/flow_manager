@@ -2,9 +2,10 @@ package app
 
 import (
 	"context"
+	"net/http"
+
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 func (fm *FlowManager) CreateContact(token string, req *contacts.InputContactRequest) (*contacts.Contact, *model.AppError) {
@@ -53,5 +54,23 @@ func (fm *FlowManager) SearchContactsNA(ctx context.Context, req *contacts.Searc
 		return nil, model.NewAppError("App", "SearchContacts", nil, err.Error(), http.StatusInternalServerError)
 	}
 
+	return c, nil
+}
+
+func (fm *FlowManager) MergeContactPhones(token string, req *contacts.MergePhonesRequest) (*contacts.PhoneList, *model.AppError) {
+	ctx := fm.contacts.WithToken(context.Background(), token)
+	c, err := fm.contactPhoneNumbers.Api.MergePhones(ctx, req)
+	if err != nil {
+		return nil, model.NewAppError("App", "MergeContactPhones", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return c, nil
+}
+
+func (fm *FlowManager) MergeContactVariables(token string, req *contacts.MergeVariablesRequest) (*contacts.VariableList, *model.AppError) {
+	ctx := fm.contacts.WithToken(context.Background(), token)
+	c, err := fm.contactVariables.Api.MergeVariables(ctx, req)
+	if err != nil {
+		return nil, model.NewAppError("App", "MergeContactVariables", nil, err.Error(), http.StatusInternalServerError)
+	}
 	return c, nil
 }

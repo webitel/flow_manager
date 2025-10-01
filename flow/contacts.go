@@ -3,9 +3,10 @@ package flow
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/model"
-	"net/http"
 )
 
 type GetContactRequest struct {
@@ -38,6 +39,78 @@ type LinkContactArgv struct {
 	ContactId  int64   `json:"contactId"`
 	ContactIds []int64 `json:"contactIds"`
 	Channel    string  `json:"channel"`
+}
+
+type MergeContactPhonesRequest struct {
+	Token  string `json:"token"`
+	SetVar string `json:"setVar"`
+	contacts.MergePhonesRequest
+}
+
+type MergeContactVariablesRequest struct {
+	Token  string `json:"token"`
+	SetVar string `json:"setVar"`
+	contacts.MergeVariablesRequest
+}
+
+func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv *MergeContactPhonesRequest
+	var err *model.AppError
+	var res *contacts.PhoneList
+
+	if err = scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.SetVar == "" {
+		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "setVar")
+	}
+	if argv.Token == "" {
+		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "token")
+	}
+
+	if err = scope.Decode(args, &argv.MergePhonesRequest); err != nil {
+		return nil, err
+	}
+
+	res, err = r.fm.MergeContactPhones(argv.Token, &argv.MergePhonesRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.Set(ctx, model.Variables{
+		argv.SetVar: model.ToJson(res),
+	})
+}
+
+func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+	var argv *MergeContactVariablesRequest
+	var err *model.AppError
+	var res *contacts.VariableList
+
+	if err = scope.Decode(args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.SetVar == "" {
+		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "setVar")
+	}
+	if argv.Token == "" {
+		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "token")
+	}
+
+	if err = scope.Decode(args, &argv.MergeVariablesRequest); err != nil {
+		return nil, err
+	}
+
+	res, err = r.fm.MergeContactVariables(argv.Token, &argv.MergeVariablesRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.Set(ctx, model.Variables{
+		argv.SetVar: model.ToJson(res),
+	})
 }
 
 func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
