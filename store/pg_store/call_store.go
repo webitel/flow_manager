@@ -557,16 +557,22 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 func (s SqlCallStore) SetContactId(domainId int64, id string, contactId int64) *model.AppError {
 	_, err := s.GetMaster().Exec(`with ua as (
     update call_center.cc_calls
-        set contact_id  = :ContactId
-    where id = :Id and domain_id = :DomainId
-    returning id
-), uh as (
-    update call_center.cc_calls_history
-        set contact_id  = :ContactId
-    where id = :Id and domain_id = :DomainId
-        and not exists(select 1 from ua)
-    returning id
-)
+        set contact_id = :ContactId
+        where id = :Id and domain_id = :DomainId
+        returning id),
+     uh as (
+         update call_center.cc_calls_history h
+             set contact_id = :ContactId
+             from (select *
+                   from (select ua.id
+                         from ua
+                         union
+                         select null) x
+                   order by x.id nulls last
+                   limit 1) x
+             where h.id = :Id and h.domain_id = :DomainId
+                 and x.id isnull
+             returning h.id)
 select ua.id as id
 from ua
 union all
