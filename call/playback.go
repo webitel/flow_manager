@@ -68,6 +68,13 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 		return err
 	}
 
+	if gs.Timeout > 0 && gs.BreakFinalOnTimeout && gs.DisableBreakFinal {
+		r.fm.AiBots.Bot().STTUpdateSession(ctx, &ai_bots.STTUpdateSessionRequest{
+			DialogId:          con.DialogId,
+			DisableBreakFinal: false,
+		})
+	}
+
 	err = doStopStt(ctx, call, argv.GetSpeech, "wbt_play_sleep_timeout", "wbt_stt_status", "recognized")
 	if err != nil {
 		return err
