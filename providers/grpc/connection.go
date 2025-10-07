@@ -3,11 +3,13 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/wlog"
+	"maps"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -129,7 +131,10 @@ func (c *Connection) Get(name string) (string, bool) {
 }
 
 func (c *Connection) Variables() map[string]string {
-	return c.variables
+	c.RLock()
+	defer c.RUnlock()
+
+	return maps.Clone(c.variables)
 }
 
 func (c *Connection) Scope() model.Scope {

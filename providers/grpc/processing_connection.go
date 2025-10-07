@@ -3,12 +3,14 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/wlog"
+	"maps"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/webitel/wlog"
 
 	"github.com/tidwall/gjson"
 
@@ -253,7 +255,10 @@ func (c *processingConnection) Get(key string) (string, bool) {
 }
 
 func (c *processingConnection) Variables() map[string]string {
-	return c.variables
+	c.RLock()
+	defer c.RUnlock()
+
+	return maps.Clone(c.variables)
 }
 
 //fixme
