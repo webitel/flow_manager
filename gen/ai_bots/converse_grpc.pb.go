@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	ConverseService_Converse_FullMethodName = "/ai_bots.ConverseService/Converse"
+	ConverseService_Converse_FullMethodName  = "/ai_bots.ConverseService/Converse"
+	ConverseService_Recognize_FullMethodName = "/ai_bots.ConverseService/Recognize"
 )
 
 // ConverseServiceClient is the client API for ConverseService service.
@@ -30,6 +31,7 @@ type ConverseServiceClient interface {
 	// Перше повідомлення від клієнта ЗАВЖДИ має бути типу `Config`.
 	// Після цього клієнт надсилає потік повідомлень типу `Input`.
 	Converse(ctx context.Context, opts ...grpc.CallOption) (ConverseService_ConverseClient, error)
+	Recognize(ctx context.Context, opts ...grpc.CallOption) (ConverseService_RecognizeClient, error)
 }
 
 type converseServiceClient struct {
@@ -71,6 +73,37 @@ func (x *converseServiceConverseClient) Recv() (*ConverseResponse, error) {
 	return m, nil
 }
 
+func (c *converseServiceClient) Recognize(ctx context.Context, opts ...grpc.CallOption) (ConverseService_RecognizeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ConverseService_ServiceDesc.Streams[1], ConverseService_Recognize_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &converseServiceRecognizeClient{stream}
+	return x, nil
+}
+
+type ConverseService_RecognizeClient interface {
+	Send(*RecognizeRequest) error
+	Recv() (*RecognizeResponse, error)
+	grpc.ClientStream
+}
+
+type converseServiceRecognizeClient struct {
+	grpc.ClientStream
+}
+
+func (x *converseServiceRecognizeClient) Send(m *RecognizeRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *converseServiceRecognizeClient) Recv() (*RecognizeResponse, error) {
+	m := new(RecognizeResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ConverseServiceServer is the server API for ConverseService service.
 // All implementations must embed UnimplementedConverseServiceServer
 // for forward compatibility
@@ -79,6 +112,7 @@ type ConverseServiceServer interface {
 	// Перше повідомлення від клієнта ЗАВЖДИ має бути типу `Config`.
 	// Після цього клієнт надсилає потік повідомлень типу `Input`.
 	Converse(ConverseService_ConverseServer) error
+	Recognize(ConverseService_RecognizeServer) error
 	mustEmbedUnimplementedConverseServiceServer()
 }
 
@@ -88,6 +122,9 @@ type UnimplementedConverseServiceServer struct {
 
 func (UnimplementedConverseServiceServer) Converse(ConverseService_ConverseServer) error {
 	return status.Errorf(codes.Unimplemented, "method Converse not implemented")
+}
+func (UnimplementedConverseServiceServer) Recognize(ConverseService_RecognizeServer) error {
+	return status.Errorf(codes.Unimplemented, "method Recognize not implemented")
 }
 func (UnimplementedConverseServiceServer) mustEmbedUnimplementedConverseServiceServer() {}
 
@@ -128,6 +165,32 @@ func (x *converseServiceConverseServer) Recv() (*ConverseRequest, error) {
 	return m, nil
 }
 
+func _ConverseService_Recognize_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ConverseServiceServer).Recognize(&converseServiceRecognizeServer{stream})
+}
+
+type ConverseService_RecognizeServer interface {
+	Send(*RecognizeResponse) error
+	Recv() (*RecognizeRequest, error)
+	grpc.ServerStream
+}
+
+type converseServiceRecognizeServer struct {
+	grpc.ServerStream
+}
+
+func (x *converseServiceRecognizeServer) Send(m *RecognizeResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *converseServiceRecognizeServer) Recv() (*RecognizeRequest, error) {
+	m := new(RecognizeRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // ConverseService_ServiceDesc is the grpc.ServiceDesc for ConverseService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -139,6 +202,12 @@ var ConverseService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "Converse",
 			Handler:       _ConverseService_Converse_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+		{
+			StreamName:    "Recognize",
+			Handler:       _ConverseService_Recognize_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
 		},
