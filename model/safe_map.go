@@ -1,6 +1,9 @@
 package model
 
-import "sync"
+import (
+	"maps"
+	"sync"
+)
 
 type ThreadSafeStringMap struct {
 	sync.RWMutex
@@ -33,16 +36,14 @@ func (sm *ThreadSafeStringMap) Store(key, value string) {
 }
 
 func (sm *ThreadSafeStringMap) Data() map[string]string {
-	sm.Lock()
-	data := sm.internal
-	sm.Unlock()
-	return data
+	sm.RLock()
+	defer sm.RUnlock()
+
+	return maps.Clone(sm.internal)
 }
 
 func (sm *ThreadSafeStringMap) UnionMap(m map[string]string) {
 	sm.Lock()
-	for k, v := range m {
-		sm.internal[k] = v
-	}
+	maps.Copy(sm.internal, m)
 	sm.Unlock()
 }

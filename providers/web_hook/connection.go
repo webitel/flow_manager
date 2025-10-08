@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/webitel/wlog"
+	"maps"
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/webitel/wlog"
 
 	"github.com/tidwall/gjson"
 	"github.com/webitel/flow_manager/model"
@@ -91,7 +93,10 @@ func (c *Connection) Close() *model.AppError {
 }
 
 func (c *Connection) Variables() map[string]string {
-	return c.variables
+	c.RLock()
+	defer c.RUnlock()
+
+	return maps.Clone(c.variables)
 }
 
 func (c *Connection) SetHeader(k, v string) {

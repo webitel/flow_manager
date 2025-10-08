@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/wlog"
 	"strings"
 	"sync"
+
+	"github.com/tidwall/gjson"
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -140,11 +141,14 @@ func (c *connection) Context() context.Context {
 }
 
 func (c *connection) Variables() map[string]string {
-	vars := make(map[string]string)
+	c.RLock()
+	defer c.RUnlock()
+
+	vars := make(map[string]string, len(c.variables))
 	for k, v := range c.variables {
 		vars[k] = fmt.Sprintf("%v", v)
-
 	}
+
 	return vars
 }
 
