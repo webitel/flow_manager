@@ -51,6 +51,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 		SetVar:            gs.SetVar,
 		MinWords:          int32(gs.MinWords),
 		MaxWords:          int32(gs.MaxWords),
+		ExtraParams:       gs.ExtraParams,
 	})
 
 	if errGrpc != nil {

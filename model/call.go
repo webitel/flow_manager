@@ -568,6 +568,7 @@ type GetSpeech struct {
 	Profile struct {
 		Id int32 `json:"id"`
 	} `json:"profile"`
+	ExtraParams map[string]string `json:"extraParams"`
 }
 
 type PlaybackArgs struct {
