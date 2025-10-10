@@ -610,6 +610,32 @@ func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
 	//return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
 }
 
+/*
+StartRecognize(ctx context.Context, connection, dialogId string, rate int) error
+StopRecognize(ctx context.Context, dialogId string)
+*/
+func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate int) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s", c.id, connection, rate, dialogId)
+
+	_, err := c.Api(args)
+	if err != nil {
+		return nil, model.NewAppError("FS", "fs.control.stt.start", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) StopRecognize(ctx context.Context) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("uuid_wbt_stt %s stop", c.id)
+
+	_, err := c.Api(args)
+	if err != nil {
+		return nil, model.NewAppError("FS", "fs.control.stt.stop", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, *model.AppError) {
 	if config.Lang == "" {
 		if config.Lang, _ = c.get("GOOGLE_SPEECH_LANG"); config.Lang == "" {
