@@ -2,9 +2,12 @@ package model
 
 // ProcessingWithoutAnswer extends the base Processing configuration with answer-specific rules.
 type ProcessingWithoutAnswer struct {
-	Processing
-	RenewalSec    uint32 `json:"renewalSec"`
-	WithoutAnswer bool   `json:"withoutAnswer"`
+	Enabled       bool                    `json:"enabled"`
+	RenewalSec    uint32                  `json:"renewalSec"`
+	WithoutAnswer bool                    `json:"withoutAnswer"`
+	Sec           uint32                  `json:"sec"`
+	Form          ProcessingForm          `json:"form"`
+	Prolongation  *ProcessingProlongation `json:"processing_prolongation"`
 }
 
 // Processing describes the post-processing configuration for flow elements.
