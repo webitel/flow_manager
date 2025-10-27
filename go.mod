@@ -29,7 +29,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pborman/uuid v1.2.1
 	github.com/rabbitmq/amqp091-go v1.10.0
-	github.com/redis/go-redis/v9 v9.5.5
+	github.com/redis/go-redis/v9 v9.16.0
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
