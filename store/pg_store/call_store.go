@@ -219,7 +219,7 @@ del_calls as materialized (
     from call_center.cc_calls c
         where c.hangup_at < now() - '1 sec'::interval
             and c.direction notnull
-            and not exists(select 1 from call_center.cc_calls cc where case when c.parent_id notnull then cc.id = c.parent_id else cc.parent_id = c.id and cc.hangup_at isnull end )
+            and not exists(select 1 from call_center.cc_calls cc where case when c.parent_id notnull then cc.id = c.parent_id else cc.parent_id = c.id and cc.hangup_at isnull and c.direction notnull  end )
             and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id )
     order by c.hangup_at asc
     for update skip locked
