@@ -173,6 +173,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.voiceBot),
 	}
+	apps["update"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        callHandlerMiddleware(r.updateCall),
+	}
 
 	return apps
 }

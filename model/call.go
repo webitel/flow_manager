@@ -487,6 +487,7 @@ type Call interface {
 	BackgroundPlayback(ctx context.Context, file *PlaybackFile, name string, volumeReduction int) (Response, *AppError)
 	BackgroundPlaybackStop(ctx context.Context, name string) (Response, *AppError)
 	Bot(ctx context.Context, conn string, rate int, startMessage string, vars map[string]string) (Response, *AppError)
+	Update(ctx context.Context) (Response, *AppError)
 }
 
 type PlaybackFile struct {

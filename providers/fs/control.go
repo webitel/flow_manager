@@ -764,6 +764,10 @@ func (c *Connection) Bot(ctx context.Context, conn string, rate int, id string, 
 	return c.executeWithContext(ctx, "wbt_voice_bot", args)
 }
 
+func (c *Connection) Update(ctx context.Context) (model.Response, *model.AppError) {
+	return c.executeWithContext(ctx, "wbt_update_call", "")
+}
+
 func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	var err *model.AppError
 	for k, v := range vars {
