@@ -87,6 +87,6 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 
 	return call.Set(ctx, model.Variables{
 		"cc_attempt_id": res.AttemptId,
-		"cc_gent_id":    res.AttemptId,
+		"cc_agent_id":   res.AttemptId,
 	})
 }
