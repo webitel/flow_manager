@@ -21,10 +21,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id, 
+                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id,
 					  attempt_id, member_id, grantee_id, params, heartbeat, destination_name)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId, 
+        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId,
 		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end, :DestinationName)
 on conflict (id)
     do update set
@@ -40,8 +40,8 @@ on conflict (id)
 		to_name = EXCLUDED.to_name,
 		to_number = EXCLUDED.to_number,
 		to_id = EXCLUDED.to_id,
-		gateway_id = EXCLUDED.gateway_id,		
-		user_id = EXCLUDED.user_id,		
+		gateway_id = EXCLUDED.gateway_id,
+		user_id = EXCLUDED.user_id,
 		payload = EXCLUDED.payload,
 		queue_id = EXCLUDED.queue_id,
 		agent_id = EXCLUDED.agent_id,
@@ -98,7 +98,7 @@ func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls(id, state, timestamp, app_id, domain_id)
 values (:Id::uuid, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId)
 on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /1000) and cause isnull
-    do update set 
+    do update set
       state = EXCLUDED.state,
       timestamp = EXCLUDED.timestamp`, map[string]interface{}{
 		"Id":        call.Id,
@@ -117,11 +117,11 @@ on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /10
 }
 
 func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause, 
-			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive, 
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause,
+			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive,
 		    schema_ids, hangup_phrase, transfer_from)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause, 
-	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult, 
+values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause,
+	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult,
 	:AmdAiResultLog, :AmdAiPositive, :SchemaIds::int[], :HangupPhrase::varchar, :TransferFrom::uuid)
 on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
     do update set
@@ -219,7 +219,7 @@ del_calls as materialized (
     from call_center.cc_calls c
         where c.hangup_at < now() - '1 sec'::interval
             and c.direction notnull
-            and not exists(select 1 from call_center.cc_calls cc where case when c.parent_id notnull then cc.id = c.parent_id else cc.parent_id = c.id and cc.hangup_at isnull end )
+            and not exists(select 1 from call_center.cc_calls cc where case when c.parent_id notnull then cc.id = c.parent_id else cc.parent_id = c.id and cc.hangup_at isnull and c.direction notnull  end )
             and not exists(select 1 from call_center.cc_member_attempt att where att.id = c.attempt_id )
     order by c.hangup_at asc
     for update skip locked
