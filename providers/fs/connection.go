@@ -706,8 +706,12 @@ func (c *Connection) WaitForDisconnect1() {
 	<-c.disconnected
 }
 
-func (c *Connection) SendEvent(m map[string]string, name string) error {
-	return c.connection.SendEvent(m, name)
+func (c *Connection) SendEvent(m map[string]string, name string) *model.AppError {
+	err := c.connection.SendEvent(m, name)
+	if err != nil {
+		return model.NewInternalError("send_event", err.Error())
+	}
+	return nil
 }
 
 func (c *Connection) DumpVariables() map[string]string {

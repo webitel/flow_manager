@@ -115,7 +115,7 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 		}
 
 	default:
-		if data.Event == "eavesdrop" || data.Event == "dtmf" {
+		if data.Event == "eavesdrop" || data.Event == "dtmf" || data.Event == "update" || data.Event == "transcript" {
 			// skip that events
 			return
 		}
