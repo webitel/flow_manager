@@ -173,13 +173,14 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 
 func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 	_, err := s.GetMaster().Exec(`call call_center.cc_call_set_bridged(:Id::uuid, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
-    :DomainId::int8, :BridgedId::uuid)`, map[string]interface{}{
+    :DomainId::int8, :BridgedId::uuid, :ToName::varchar)`, map[string]interface{}{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
 		"AppId":     call.AppId,
 		"DomainId":  call.DomainId,
 		"BridgedId": call.BridgedId,
+		"ToName":    call.To.Name,
 	})
 
 	if err != nil {
