@@ -224,6 +224,7 @@ type CallActionHeartbeat struct {
 type CallActionBridge struct {
 	CallAction
 	BridgedId string `json:"bridged_id"`
+	To        CallEndpoint
 }
 
 type CallActionHangup struct {
