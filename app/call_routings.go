@@ -101,13 +101,12 @@ func (f *FlowManager) TransferAgentRouting(domainId int64, agentId int) (*model.
 			Name:      "transfer agent",
 			Schema: model.Applications{
 				{
-					"answer": "",
-				},
-				{
 					"unSet": []any{"wbt_bt_agent_id"},
 				},
 				{
-					"sleep": 1000,
+					"set": map[string]any{
+						"ignore_display_updates": true,
+					},
 				},
 				{
 					"joinAgent": map[string]any{
