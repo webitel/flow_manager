@@ -51,6 +51,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 		SetVar:            gs.SetVar,
 		MinWords:          int32(gs.MinWords),
 		MaxWords:          int32(gs.MaxWords),
+		ExtraParams:       gs.ExtraParams,
 	})
 
 	if errGrpc != nil {
@@ -66,6 +67,13 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 
 	if _, err = call.Playback(ctx, argv.Files); err != nil {
 		return err
+	}
+
+	if gs.Timeout > 0 && gs.BreakFinalOnTimeout && gs.DisableBreakFinal {
+		r.fm.AiBots.Bot().STTUpdateSession(ctx, &ai_bots.STTUpdateSessionRequest{
+			DialogId:          con.DialogId,
+			DisableBreakFinal: false,
+		})
 	}
 
 	err = doStopStt(ctx, call, argv.GetSpeech, "wbt_play_sleep_timeout", "wbt_stt_status", "recognized")
