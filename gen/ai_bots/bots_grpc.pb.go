@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	BotsService_Gemini_FullMethodName = "/ai_bots.BotsService/Gemini"
-	BotsService_OpenAI_FullMethodName = "/ai_bots.BotsService/OpenAI"
-	BotsService_STT_FullMethodName    = "/ai_bots.BotsService/STT"
+	BotsService_Gemini_FullMethodName           = "/ai_bots.BotsService/Gemini"
+	BotsService_OpenAI_FullMethodName           = "/ai_bots.BotsService/OpenAI"
+	BotsService_STT_FullMethodName              = "/ai_bots.BotsService/STT"
+	BotsService_STTUpdateSession_FullMethodName = "/ai_bots.BotsService/STTUpdateSession"
 )
 
 // BotsServiceClient is the client API for BotsService service.
@@ -31,6 +32,7 @@ type BotsServiceClient interface {
 	Gemini(ctx context.Context, in *GeminiRequest, opts ...grpc.CallOption) (*GeminiResponse, error)
 	OpenAI(ctx context.Context, in *OpenAIRequest, opts ...grpc.CallOption) (*OpenAIResponse, error)
 	STT(ctx context.Context, in *STTRequest, opts ...grpc.CallOption) (*STTResponse, error)
+	STTUpdateSession(ctx context.Context, in *STTUpdateSessionRequest, opts ...grpc.CallOption) (*STTUpdateSessionResponse, error)
 }
 
 type botsServiceClient struct {
@@ -68,6 +70,15 @@ func (c *botsServiceClient) STT(ctx context.Context, in *STTRequest, opts ...grp
 	return out, nil
 }
 
+func (c *botsServiceClient) STTUpdateSession(ctx context.Context, in *STTUpdateSessionRequest, opts ...grpc.CallOption) (*STTUpdateSessionResponse, error) {
+	out := new(STTUpdateSessionResponse)
+	err := c.cc.Invoke(ctx, BotsService_STTUpdateSession_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // BotsServiceServer is the server API for BotsService service.
 // All implementations must embed UnimplementedBotsServiceServer
 // for forward compatibility
@@ -75,6 +86,7 @@ type BotsServiceServer interface {
 	Gemini(context.Context, *GeminiRequest) (*GeminiResponse, error)
 	OpenAI(context.Context, *OpenAIRequest) (*OpenAIResponse, error)
 	STT(context.Context, *STTRequest) (*STTResponse, error)
+	STTUpdateSession(context.Context, *STTUpdateSessionRequest) (*STTUpdateSessionResponse, error)
 	mustEmbedUnimplementedBotsServiceServer()
 }
 
@@ -90,6 +102,9 @@ func (UnimplementedBotsServiceServer) OpenAI(context.Context, *OpenAIRequest) (*
 }
 func (UnimplementedBotsServiceServer) STT(context.Context, *STTRequest) (*STTResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method STT not implemented")
+}
+func (UnimplementedBotsServiceServer) STTUpdateSession(context.Context, *STTUpdateSessionRequest) (*STTUpdateSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method STTUpdateSession not implemented")
 }
 func (UnimplementedBotsServiceServer) mustEmbedUnimplementedBotsServiceServer() {}
 
@@ -158,6 +173,24 @@ func _BotsService_STT_Handler(srv interface{}, ctx context.Context, dec func(int
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BotsService_STTUpdateSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(STTUpdateSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotsServiceServer).STTUpdateSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotsService_STTUpdateSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotsServiceServer).STTUpdateSession(ctx, req.(*STTUpdateSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // BotsService_ServiceDesc is the grpc.ServiceDesc for BotsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -176,6 +209,10 @@ var BotsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "STT",
 			Handler:    _BotsService_STT_Handler,
+		},
+		{
+			MethodName: "STTUpdateSession",
+			Handler:    _BotsService_STTUpdateSession_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
