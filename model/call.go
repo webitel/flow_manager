@@ -140,6 +140,7 @@ type CallActionInfo struct {
 	GranteeId       *int           `json:"grantee_id"`
 	SipId           *string        `json:"sip_id"`
 	Heartbeat       int            `json:"heartbeat,omitempty"`
+	Video           string         `json:"video,omitempty"`
 }
 
 type CallActionRinging struct {
@@ -206,6 +207,10 @@ func (r *CallActionRinging) GetParams() []byte {
 	if r.Heartbeat > 0 {
 		arr = append(arr, fmt.Sprintf(`"heartbeat":%d`, r.Heartbeat))
 	}
+	if r.Video != "" {
+		arr = append(arr, fmt.Sprintf(`"video":"%s"`, r.Video))
+	}
+
 	return []byte(`{` + strings.Join(arr, ",") + `}`)
 }
 
