@@ -686,8 +686,8 @@ func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, 
 StartRecognize(ctx context.Context, connection, dialogId string, rate int) error
 StopRecognize(ctx context.Context, dialogId string)
 */
-func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate int) (model.Response, *model.AppError) {
-	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s", c.id, connection, rate, dialogId)
+func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s %d", c.id, connection, rate, dialogId, vadTimeout)
 
 	_, err := c.Api(args)
 	if err != nil {
