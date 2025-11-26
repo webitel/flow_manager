@@ -76,7 +76,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 		})
 	}
 
-	err = doStopStt(ctx, call, argv.GetSpeech, "wbt_play_sleep_timeout", "wbt_stt_status", "recognized")
+	err = doStopStt(ctx, call, argv.GetSpeech, "wbt_play_sleep_timeout", "wbt_stt_final", "true")
 	if err != nil {
 		return err
 	}
