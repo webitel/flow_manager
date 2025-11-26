@@ -472,7 +472,7 @@ type Call interface {
 	Pickup(ctx context.Context, name string) (Response, *AppError)
 	PickupHash(name string) string
 
-	StartRecognize(ctx context.Context, connection, dialogId string, rate int) (Response, *AppError)
+	StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (Response, *AppError)
 	StopRecognize(ctx context.Context) (Response, *AppError)
 
 	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)

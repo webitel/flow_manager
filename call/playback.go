@@ -60,7 +60,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 
 	con := res.GetConnected()
 
-	_, err := call.StartRecognize(ctx, con.Connection, con.DialogId, int(con.InputRate))
+	_, err := call.StartRecognize(ctx, con.Connection, con.DialogId, int(con.InputRate), gs.VadTimeout)
 	if err != nil {
 		return err
 	}
