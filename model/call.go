@@ -466,6 +466,9 @@ type Call interface {
 	Pickup(ctx context.Context, name string) (Response, *AppError)
 	PickupHash(name string) string
 
+	StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (Response, *AppError)
+	StopRecognize(ctx context.Context) (Response, *AppError)
+
 	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)
 	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
 	RefreshVars(ctx context.Context) (Response, *AppError)
@@ -561,6 +564,12 @@ type GetSpeech struct {
 	AlternativeLang     []string `json:"alternativeLang"`     //v2
 	SampleRate          int      `json:"sampleRate"`          //v2
 	Question            string   `json:"question"`
+
+	// v3
+	Profile struct {
+		Id int32 `json:"id"`
+	} `json:"profile"`
+	ExtraParams map[string]string `json:"extraParams"`
 }
 
 type PlaybackArgs struct {

@@ -682,6 +682,32 @@ func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, 
 	return model.CallResponseOK, nil
 }
 
+/*
+StartRecognize(ctx context.Context, connection, dialogId string, rate int) error
+StopRecognize(ctx context.Context, dialogId string)
+*/
+func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s %d", c.id, connection, rate, dialogId, vadTimeout)
+
+	_, err := c.Api(args)
+	if err != nil {
+		return nil, model.NewAppError("FS", "fs.control.stt.start", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) StopRecognize(ctx context.Context) (model.Response, *model.AppError) {
+	args := fmt.Sprintf("uuid_wbt_stt %s stop", c.id)
+
+	_, err := c.Api(args)
+	if err != nil {
+		return nil, model.NewAppError("FS", "fs.control.stt.stop", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *Connection) UpdateCid(ctx context.Context, name, number *string) (res model.Response, err *model.AppError) {
 	if name != nil {
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_name=%s", *name)); err != nil {
