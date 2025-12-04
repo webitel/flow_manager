@@ -3,6 +3,7 @@ package call
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/wlog"
 	"maps"
 	"net/http"
 	"strings"
@@ -204,6 +205,16 @@ func (r *Router) handle(conn model.Connection) {
 	})
 	if err = call.SetSchemaId(i.SchemaId()); err != nil {
 		call.Log().Err(err)
+	}
+
+	if meeting := call.MeetingId(); meeting != "" {
+		var vars map[string]string
+		vars, err = r.fm.Meeting().GetMeeting(call.Context(), meeting)
+		if err != nil {
+			call.Log().Error(err.Error(), wlog.Err(err))
+		} else {
+			call.Set(call.Context(), model.VariablesFromStringMap(vars))
+		}
 	}
 
 	flow.Route(conn.Context(), i, r)

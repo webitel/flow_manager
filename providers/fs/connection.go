@@ -755,6 +755,10 @@ func (c *Connection) Variables() map[string]string {
 	return c.variables.Data()
 }
 
+func (c *Connection) MeetingId() string {
+	return c.GetVariable("variable_sip_h_X-Webitel-Meeting")
+}
+
 // fixme
 func test() {
 	a := func(c model.Call) {}

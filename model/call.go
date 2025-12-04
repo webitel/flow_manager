@@ -416,6 +416,7 @@ type Call interface {
 	IsBlindTransferQueue() bool
 	TransferAgentId() int
 	SetTransferFromId()
+	MeetingId() string
 
 	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, *AppError)
 

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/webitel/flow_manager/app/meeting"
 	"time"
 
 	"github.com/webitel/engine/pkg/wbt"
@@ -61,6 +62,7 @@ type FlowManager struct {
 	chatManager *grpc.ChatManager
 	storage     *storageClient
 	cases       *cases.Api
+	meeting     *meeting.Client
 
 	timezoneList map[int]*time.Location
 	cc           cc.CCManager
@@ -196,6 +198,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, outErr
 	}
 
+	fm.meeting = meeting.New(fm.Config().DiscoverySettings.Url)
+	if outErr = fm.meeting.Start(); outErr != nil {
+		return nil, outErr
+	}
+
 	fm.grpcServer = grpcSrv
 	fm.eslServer = fs.NewServer(&fs.Config{
 		Host:           fm.Config().Esl.Host,
@@ -287,8 +294,13 @@ func (f *FlowManager) Shutdown() {
 	if f.chatManager != nil {
 		f.chatManager.Stop()
 	}
+
 	if f.AiBots != nil {
 		f.AiBots.Stop()
+	}
+
+	if f.meeting != nil {
+		f.meeting.Stop()
 	}
 
 	close(f.stop)
@@ -306,4 +318,8 @@ func (f *FlowManager) Log() *wlog.Logger {
 
 func (f *FlowManager) Callback() *CallbackResolver {
 	return f.cbr
+}
+
+func (f *FlowManager) Meeting() *meeting.Client {
+	return f.meeting
 }

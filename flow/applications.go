@@ -289,6 +289,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        r.doExecute(r.openai),
 	}
+	apps["createMeeting"] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.createMeeting),
+	}
 	return apps
 }
 
