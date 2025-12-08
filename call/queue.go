@@ -133,6 +133,10 @@ func (r *Router) queue(ctx context.Context, scope *flow.Flow, call model.Call, a
 		vars["wbt_contact_id"] = fmt.Sprintf("%d", cid)
 	}
 
+	if call.MeetingId() != "" {
+		vars["sip_h_X-Webitel-Meeting"] = call.MeetingId()
+	}
+
 	/*
 		l := scope.Logs()
 		if len(l) > 0 {
