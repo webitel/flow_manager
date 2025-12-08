@@ -141,6 +141,7 @@ type CallActionInfo struct {
 	SipId           *string        `json:"sip_id"`
 	Heartbeat       int            `json:"heartbeat,omitempty"`
 	Video           string         `json:"video,omitempty"`
+	MeetingId       string         `json:"meeting_id,omitempty"`
 }
 
 type CallActionRinging struct {
@@ -200,7 +201,7 @@ func (r *CallActionRinging) GetTo() *CallEndpoint {
 }
 
 func (r *CallActionRinging) GetParams() []byte {
-	arr := make([]string, 0, 0)
+	arr := make([]string, 0, 2)
 	if r.SipId != nil {
 		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, *r.SipId))
 	}
@@ -209,6 +210,9 @@ func (r *CallActionRinging) GetParams() []byte {
 	}
 	if r.Video != "" {
 		arr = append(arr, fmt.Sprintf(`"video":"%s"`, r.Video))
+	}
+	if r.MeetingId != "" {
+		arr = append(arr, fmt.Sprintf(`"meeting_id":"%s"`, r.MeetingId))
 	}
 
 	return []byte(`{` + strings.Join(arr, ",") + `}`)

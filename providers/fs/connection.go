@@ -75,6 +75,7 @@ type Connection struct {
 	isBlindTransferQueue bool
 
 	userId           int
+	meetingId        string
 	disconnected     chan struct{}
 	lastEvent        *eventsocket.Event
 	connection       *eventsocket.Connection
@@ -237,6 +238,7 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	isOriginate := dump.Get("variable_sip_h_X-Webitel-Display-Direction") != ""
 	c.transfer = dump.Get("variable_transfer_source") != ""
 	c.webCall = dump.Get("variable_wbt_web_call")
+	c.meetingId = c.GetVariable("variable_sip_h_X-Webitel-Meeting")
 
 	if dump.Get("variable_sip_h_X-Webitel-Origin") == "request" && dump.Get("variable_grpc_originate_success") == "true" {
 		c.originateRequest = true
@@ -756,7 +758,7 @@ func (c *Connection) Variables() map[string]string {
 }
 
 func (c *Connection) MeetingId() string {
-	return c.GetVariable("variable_sip_h_X-Webitel-Meeting")
+	return c.meetingId
 }
 
 // fixme

@@ -131,6 +131,10 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 		}
 	}
 
+	if c.meetingId != "" {
+		dialString += fmt.Sprintf(",sip_h_X-Webitel-Meeting='%s'", c.meetingId)
+	}
+
 	dialString += ">"
 
 	end := make([]string, 0, len(endpoints))
