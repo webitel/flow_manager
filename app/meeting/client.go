@@ -41,7 +41,7 @@ func (cm *Client) Stop() {
 	_ = cm.api.Close()
 }
 
-func (cm *Client) CreateMeeting(ctx context.Context, title string, expireSec int, basePath string, vars map[string]string) (string, *model.AppError) {
+func (cm *Client) CreateMeeting(ctx context.Context, domainId int64, title string, expireSec int, basePath string, vars map[string]string) (string, *model.AppError) {
 	if cm == nil {
 		return "", model.NewInternalError("meeting.client", "client is nil")
 	}
@@ -51,6 +51,7 @@ func (cm *Client) CreateMeeting(ctx context.Context, title string, expireSec int
 		ExpireSec: int64(expireSec),
 		BasePath:  basePath,
 		Variables: vars,
+		DomainId:  domainId,
 	})
 
 	if err != nil {
