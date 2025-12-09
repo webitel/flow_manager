@@ -26,7 +26,7 @@ func (r *router) createMeeting(ctx context.Context, scope *Flow, conn model.Conn
 		return model.CallResponseError, ErrorRequiredParameter("createMeeting", "setVar")
 	}
 
-	url, err := r.fm.Meeting().CreateMeeting(ctx, argv.Title, int(argv.ExpireSec), argv.BasePath, argv.Variables)
+	url, err := r.fm.Meeting().CreateMeeting(ctx, conn.DomainId(), argv.Title, int(argv.ExpireSec), argv.BasePath, argv.Variables)
 	if err != nil {
 		return model.CallResponseError, err
 	}
