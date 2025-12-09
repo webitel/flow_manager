@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	MeetingService_CreateMeeting_FullMethodName       = "/web_meeting_backend.MeetingService/CreateMeeting"
+	MeetingService_GetMeetingView_FullMethodName      = "/web_meeting_backend.MeetingService/GetMeetingView"
 	MeetingService_GetMeeting_FullMethodName          = "/web_meeting_backend.MeetingService/GetMeeting"
 	MeetingService_DeleteMeeting_FullMethodName       = "/web_meeting_backend.MeetingService/DeleteMeeting"
 	MeetingService_SatisfactionMeeting_FullMethodName = "/web_meeting_backend.MeetingService/SatisfactionMeeting"
@@ -30,6 +31,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MeetingServiceClient interface {
 	CreateMeeting(ctx context.Context, in *CreateMeetingRequest, opts ...grpc.CallOption) (*CreateMeetingResponse, error)
+	GetMeetingView(ctx context.Context, in *GetMeetingRequest, opts ...grpc.CallOption) (*MeetingView, error)
 	GetMeeting(ctx context.Context, in *GetMeetingRequest, opts ...grpc.CallOption) (*Meeting, error)
 	DeleteMeeting(ctx context.Context, in *DeleteMeetingRequest, opts ...grpc.CallOption) (*DeleteMeetingResponse, error)
 	SatisfactionMeeting(ctx context.Context, in *SatisfactionMeetingRequest, opts ...grpc.CallOption) (*SatisfactionMeetingResponse, error)
@@ -46,6 +48,15 @@ func NewMeetingServiceClient(cc grpc.ClientConnInterface) MeetingServiceClient {
 func (c *meetingServiceClient) CreateMeeting(ctx context.Context, in *CreateMeetingRequest, opts ...grpc.CallOption) (*CreateMeetingResponse, error) {
 	out := new(CreateMeetingResponse)
 	err := c.cc.Invoke(ctx, MeetingService_CreateMeeting_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *meetingServiceClient) GetMeetingView(ctx context.Context, in *GetMeetingRequest, opts ...grpc.CallOption) (*MeetingView, error) {
+	out := new(MeetingView)
+	err := c.cc.Invoke(ctx, MeetingService_GetMeetingView_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +95,7 @@ func (c *meetingServiceClient) SatisfactionMeeting(ctx context.Context, in *Sati
 // for forward compatibility
 type MeetingServiceServer interface {
 	CreateMeeting(context.Context, *CreateMeetingRequest) (*CreateMeetingResponse, error)
+	GetMeetingView(context.Context, *GetMeetingRequest) (*MeetingView, error)
 	GetMeeting(context.Context, *GetMeetingRequest) (*Meeting, error)
 	DeleteMeeting(context.Context, *DeleteMeetingRequest) (*DeleteMeetingResponse, error)
 	SatisfactionMeeting(context.Context, *SatisfactionMeetingRequest) (*SatisfactionMeetingResponse, error)
@@ -96,6 +108,9 @@ type UnimplementedMeetingServiceServer struct {
 
 func (UnimplementedMeetingServiceServer) CreateMeeting(context.Context, *CreateMeetingRequest) (*CreateMeetingResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateMeeting not implemented")
+}
+func (UnimplementedMeetingServiceServer) GetMeetingView(context.Context, *GetMeetingRequest) (*MeetingView, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetMeetingView not implemented")
 }
 func (UnimplementedMeetingServiceServer) GetMeeting(context.Context, *GetMeetingRequest) (*Meeting, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetMeeting not implemented")
@@ -133,6 +148,24 @@ func _MeetingService_CreateMeeting_Handler(srv interface{}, ctx context.Context,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(MeetingServiceServer).CreateMeeting(ctx, req.(*CreateMeetingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _MeetingService_GetMeetingView_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetMeetingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MeetingServiceServer).GetMeetingView(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: MeetingService_GetMeetingView_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MeetingServiceServer).GetMeetingView(ctx, req.(*GetMeetingRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -201,6 +234,10 @@ var MeetingService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateMeeting",
 			Handler:    _MeetingService_CreateMeeting_Handler,
+		},
+		{
+			MethodName: "GetMeetingView",
+			Handler:    _MeetingService_GetMeetingView_Handler,
 		},
 		{
 			MethodName: "GetMeeting",
