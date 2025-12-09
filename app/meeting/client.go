@@ -9,7 +9,7 @@ import (
 	"sync"
 )
 
-const ServiceName = "web-meeting-backend"
+const ServiceName = "web_meeting_backend"
 
 type Client struct {
 	consulAddr string
