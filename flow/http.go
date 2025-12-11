@@ -357,7 +357,7 @@ func (r *router) parseMapValue(c model.Connection, v interface{}) (str string) {
 
 func encodeURIComponent(str string) string {
 	r := url.QueryEscape(str)
-	r = strings.Replace(r, "+", "%20", -1)
+	r = strings.Replace(r, "+", "%2B", -1)
 	return r
 }
 
