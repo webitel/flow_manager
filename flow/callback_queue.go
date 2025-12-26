@@ -2,6 +2,8 @@ package flow
 
 import (
 	"context"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -33,6 +35,10 @@ func (r *router) callbackQueue(ctx context.Context, scope *Flow, c model.Connect
 
 	if member.StopCause != nil && *member.StopCause == "" {
 		member.StopCause = nil
+	}
+
+	if member.Name != "" && !utf8.ValidString(member.Name) {
+		member.Name = strings.ToValidUTF8(member.Name, "")
 	}
 
 	if err := r.fm.CreateMember(c.DomainId(), params.QueueId, params.HoldSec, &member); err != nil {
