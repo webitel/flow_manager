@@ -6,6 +6,8 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 
 require github.com/emersion/go-imap v1.2.1
 
+replace github.com/webitel/engine/pkg/wbt => ../engine/pkg/wbt
+
 replace github.com/webitel/flow_manager/pkg/processing => ./pkg/processing
 
 require (
@@ -18,7 +20,7 @@ require (
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/gorilla/handlers v1.5.2
 	github.com/gorilla/mux v1.8.1
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.21.0
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
@@ -43,8 +45,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.35.0
 	golang.org/x/oauth2 v0.32.0
 	golang.org/x/sync v0.14.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a
+	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df

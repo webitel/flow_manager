@@ -87,3 +87,7 @@ func (s *LayeredStore) SystemcSettings() SystemcSettings {
 func (s *LayeredStore) SocketSession() SocketSessionStore {
 	return s.DatabaseLayer.SocketSession()
 }
+
+func (s *LayeredStore) Session() SessionStore {
+	return s.DatabaseLayer.Session()
+}

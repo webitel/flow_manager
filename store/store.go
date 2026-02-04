@@ -30,10 +30,15 @@ type Store interface {
 	WebHook() WebHookStore
 	SystemcSettings() SystemcSettings
 	SocketSession() SocketSessionStore
+	Session() SessionStore
 }
 
 type SocketSessionStore interface {
 	Get(userID int64, domainID int64, appName string) (*model.SocketSession, *model.AppError)
+}
+
+type SessionStore interface {
+	TouchSession(id, appId string) (*int, error)
 }
 
 type CacheStore interface {

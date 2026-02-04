@@ -4,11 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	eng "github.com/webitel/flow_manager/gen/engine"
 	"strconv"
 	"strings"
 
 	"github.com/webitel/wlog"
+
+	eng "github.com/webitel/flow_manager/gen/engine"
 )
 
 const CallVariableSchemaIds = "wbt_schema_ids"
@@ -17,8 +18,10 @@ type CallResponse struct {
 	Status string
 }
 
-var CallResponseOK = &CallResponse{"SUCCESS"}
-var CallResponseError = &CallResponse{"ERROR"}
+var (
+	CallResponseOK    = &CallResponse{"SUCCESS"}
+	CallResponseError = &CallResponse{"ERROR"}
+)
 
 func (r CallResponse) String() string {
 	return r.Status
@@ -32,6 +35,8 @@ const (
 	FlowExchange       = "flow"
 	CallEventQueueName = "workflow-call"
 	FlowExecQueueName  = "workflow-exec"
+	IMQueueNamePrefix  = "im-delivery.workflow-processor.v1"
+	IMExchange         = "im_delivery.broadcast"
 )
 
 const (
@@ -75,8 +80,8 @@ type CallAction struct {
 
 type CallActionData struct {
 	CallAction
-	Data   *string     `json:"data,omitempty"`
-	parsed interface{} `json:"-"`
+	Data   *string `json:"data,omitempty"`
+	parsed any     `json:"-"`
 }
 
 type CallEndpoint struct {
@@ -179,7 +184,7 @@ func (r *CallActionRinging) GetAgentId() *int {
 
 func (r *CallActionRinging) GetMemberIdId() *int64 {
 	if r.Queue != nil && r.Queue.MemberId != nil {
-		if *r.Queue.MemberId != 0 { //FIXME
+		if *r.Queue.MemberId != 0 { // FIXME
 			return r.Queue.MemberId
 		}
 	}
@@ -265,12 +270,12 @@ type CallActionSTT struct {
 
 type CallActionTranscript struct {
 	CallAction
-	Transcript interface{} `json:"transcript"`
+	Transcript any `json:"transcript"`
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
 	if h.Payload == nil {
-		return []byte("{}") //FIXME
+		return []byte("{}") // FIXME
 	}
 	data, _ := json.Marshal(h.Payload)
 	return data
@@ -278,10 +283,10 @@ func (h *CallActionHangup) VariablesToJson() []byte {
 
 func (h *CallActionHangup) Parameters() []byte {
 	if h.RecordStart == nil && h.RecordStop == nil && h.AmdCause == nil {
-		return []byte("{}") //FIXME
+		return []byte("{}") // FIXME
 	}
 
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	if h.RecordStop != nil {
 		res["record_stop"] = *h.RecordStop
 	}
@@ -298,7 +303,7 @@ func (h *CallActionHangup) Parameters() []byte {
 }
 
 func (h *CallActionHangup) AmdJson() []byte {
-	res := make(map[string]interface{})
+	res := make(map[string]any)
 	if h.AmdResult != nil {
 		res["result"] = *h.AmdResult
 	}
@@ -325,7 +330,7 @@ func (h *CallActionHangup) AmdJson() []byte {
 	return b
 }
 
-type CallVariables map[string]interface{}
+type CallVariables map[string]any
 
 func (v *CallVariables) ToMapJson() []byte {
 	if v != nil {
@@ -338,7 +343,7 @@ func (v *CallVariables) ToMapJson() []byte {
 	return []byte("{}")
 }
 
-func (c *CallActionData) GetEvent() interface{} {
+func (c *CallActionData) GetEvent() any {
 	if c.parsed != nil {
 		return c.parsed
 	}
@@ -403,7 +408,7 @@ func (c CallEndpoint) IntId() *int {
 type Call interface {
 	Connection
 	UserId() int
-	//ParentType() *string //TODO transfer logic
+	// ParentType() *string //TODO transfer logic
 	From() *CallEndpoint
 	To() *CallEndpoint
 	IsTransfer() bool
@@ -437,7 +442,7 @@ type Call interface {
 	HangupAppErr(ctx context.Context) (Response, *AppError)
 	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string, hook chan struct{}, pickup string) (Response, *AppError)
 	Sleep(ctx context.Context, delay int) (Response, *AppError)
-	//Voice(ctx context.Context, delay int) (Response, *AppError)
+	// Voice(ctx context.Context, delay int) (Response, *AppError)
 	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
@@ -477,7 +482,7 @@ type Call interface {
 	Pickup(ctx context.Context, name string) (Response, *AppError)
 	PickupHash(name string) string
 
-	StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (Response, *AppError)
+	StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (Response, *AppError)
 	StopRecognize(ctx context.Context) (Response, *AppError)
 
 	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)
@@ -590,21 +595,21 @@ type GetSpeech struct {
 	MaxWords            int      `json:"maxWords"`
 	BreakStability      float32  `json:"breakStability"`
 	Version             string   `json:"version"`             // (v1, v2) V1 default
-	Model               string   `json:"model"`               //v2
-	Uri                 string   `json:"uri"`                 //v2
-	Recognizer          string   `json:"recognizer"`          //v2
-	Lang                string   `json:"lang"`                //V2
-	Interim             bool     `json:"interim"`             //V2
-	SingleUtterance     bool     `json:"singleUtterance"`     //V2
-	SeparateRecognition bool     `json:"separateRecognition"` //V2
-	MaxAlternatives     int      `json:"maxAlternatives"`     //V2
-	ProfanityFilter     bool     `json:"profanityFilter"`     //V2
-	WordTime            bool     `json:"wordTime"`            //V2
-	Punctuation         bool     `json:"punctuation"`         //V2
-	Enhanced            bool     `json:"enhanced"`            //V2
-	Hints               string   `json:"hints"`               //V2
-	AlternativeLang     []string `json:"alternativeLang"`     //v2
-	SampleRate          int      `json:"sampleRate"`          //v2
+	Model               string   `json:"model"`               // v2
+	Uri                 string   `json:"uri"`                 // v2
+	Recognizer          string   `json:"recognizer"`          // v2
+	Lang                string   `json:"lang"`                // V2
+	Interim             bool     `json:"interim"`             // V2
+	SingleUtterance     bool     `json:"singleUtterance"`     // V2
+	SeparateRecognition bool     `json:"separateRecognition"` // V2
+	MaxAlternatives     int      `json:"maxAlternatives"`     // V2
+	ProfanityFilter     bool     `json:"profanityFilter"`     // V2
+	WordTime            bool     `json:"wordTime"`            // V2
+	Punctuation         bool     `json:"punctuation"`         // V2
+	Enhanced            bool     `json:"enhanced"`            // V2
+	Hints               string   `json:"hints"`               // V2
+	AlternativeLang     []string `json:"alternativeLang"`     // v2
+	SampleRate          int      `json:"sampleRate"`          // v2
 	Question            string   `json:"question"`
 
 	// v3

@@ -8,36 +8,23 @@ import (
 )
 
 func (f *FlowManager) RegisterServers() *model.AppError {
-	err := startServer(f.grpcServer)
-	if err != nil {
-		return err
-	}
-	err = startServer(f.eslServer)
-	if err != nil {
-		return err
-	}
-	err = startServer(f.mailServer)
-	if err != nil {
-		return err
-	}
-	err = startServer(f.channelServer)
-	if err != nil {
-		return err
-	}
-	err = startServer(f.httpServer)
-	if err != nil {
-		return err
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+
+	for _, v := range servers {
+		if err := startServer(v); err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
 func (f *FlowManager) StopServers() {
-	stopServer(f.grpcServer)
-	stopServer(f.eslServer)
-	stopServer(f.mailServer)
-	stopServer(f.channelServer)
-	stopServer(f.httpServer)
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+
+	for _, v := range servers {
+		stopServer(v)
+	}
 }
 
 func startServer(s model.Server) *model.AppError {

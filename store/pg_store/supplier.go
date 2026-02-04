@@ -53,6 +53,7 @@ type SqlSupplierOldStores struct {
 	webHook       store.WebHookStore
 	sysSettings   store.SystemcSettings
 	socketSession store.SocketSessionStore
+	session       store.SessionStore
 }
 
 type SqlSupplier struct {
@@ -91,6 +92,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.webHook = NewSqlWebHookStore(supplier)
 	supplier.oldStores.sysSettings = NewSqlSysSettingsStore(supplier)
 	supplier.oldStores.socketSession = NewSQLSocketSessionStore(supplier)
+	supplier.oldStores.session = NewSQLSessionStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -299,4 +301,8 @@ func (ss *SqlSupplier) SystemcSettings() store.SystemcSettings {
 
 func (ss *SqlSupplier) SocketSession() store.SocketSessionStore {
 	return ss.oldStores.socketSession
+}
+
+func (ss *SqlSupplier) Session() store.SessionStore {
+	return ss.oldStores.session
 }

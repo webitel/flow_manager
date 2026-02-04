@@ -4,6 +4,7 @@
 package main
 
 import (
+	"github.com/webitel/flow_manager/im_route"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -50,6 +51,7 @@ func main() {
 	email.Init(fm, router)
 	channel.Init(fm, router)
 	webhook.Init(fm, router)
+	im_route.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()
