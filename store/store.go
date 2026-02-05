@@ -34,15 +34,17 @@ type Store interface {
 }
 
 type SocketSessionStore interface {
-	Get(userID int64, domainID int64, appName string) (*model.SocketSession, *model.AppError)
+	Get(userID, domainID int64, appName string) (*model.SocketSession, *model.AppError)
 }
 
 type SessionStore interface {
-	TouchSession(id, appId string) (*int, error)
+	Touch(id, appId string) (*int, error)
+	Remove(id, appId string) error
+	RemoveAll(appId string) error
 }
 
 type CacheStore interface {
-	Set(key interface{}, value interface{}) *model.AppError
+	Set(key, value any) *model.AppError
 }
 
 type UserStore interface {
@@ -77,7 +79,7 @@ type CallStore interface {
 	LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
 	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
 	SetUserId(domainId int64, id string, userId int64) *model.AppError
-	SetBlindTransfer(domainId int64, id string, destination string) *model.AppError
+	SetBlindTransfer(domainId int64, id, destination string) *model.AppError
 	SetContactId(domainId int64, id string, contactId int64) *model.AppError
 	SetVariables(id string, vars *model.CallVariables) *model.AppError
 }
@@ -134,15 +136,15 @@ type QueueStore interface {
 }
 
 type MemberStore interface {
-	CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError
+	CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) *model.AppError
 	CallPosition(callId string) (int64, *model.AppError)
-	EWTPuzzle(domainId int64, callId string, min int, queueIds []int, bucketIds []int) (float64, *model.AppError)
+	EWTPuzzle(domainId int64, callId string, min int, queueIds, bucketIds []int) (float64, *model.AppError)
 	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError)
 	PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError)
 }
 
 type LogStore interface {
-	Save(schemaId int, connId string, log interface{}) *model.AppError
+	Save(schemaId int, connId string, log any) *model.AppError
 }
 
 type FileStore interface {

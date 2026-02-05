@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 
 type SessionStore interface {
-	TouchSession(id, appId string) (*int, error)
+	Touch(id, appId string) (*int, error)
+	Remove(id, appId string) error
+	RemoveAll(appId string) error
 }
 
 type server struct {
@@ -52,6 +54,12 @@ func (s *server) Start() *model.AppError {
 		if err != nil {
 			panic(err)
 		}
+
+		err = s.sessionStore.RemoveAll(s.id)
+		if err != nil {
+			panic(err)
+		}
+
 		go s.listen()
 	})
 	return nil
@@ -60,6 +68,11 @@ func (s *server) Start() *model.AppError {
 func (s *server) Stop() {
 	close(s.didFinishListen)
 	s.client.Stop()
+
+	err := s.sessionStore.RemoveAll(s.id)
+	if err != nil {
+		s.log.Error("failed to remove session store", wlog.Err(err))
+	}
 	<-s.stopped
 }
 
@@ -109,8 +122,15 @@ func (s *server) listen() {
 	}
 }
 
-func (s *server) nodeMessage(msg model.MessageWrapper) error {
+func (s *server) stopConnection(c *Connection) {
+	c.srv.connectionStore.Delete(c)
+	err := s.sessionStore.Remove(c.id, s.id)
+	if err != nil {
+		s.log.Warn("failed to remove session store connection")
+	}
+}
 
+func (s *server) nodeMessage(msg model.MessageWrapper) error {
 	if msg.Message.From.Sub == "2522" {
 		println("todo: skip my message")
 		return nil
@@ -122,7 +142,7 @@ func (s *server) nodeMessage(msg model.MessageWrapper) error {
 		return nil
 	}
 
-	seq, err := s.sessionStore.TouchSession(msg.Message.ThreadID, s.id)
+	seq, err := s.sessionStore.Touch(msg.Message.ThreadID, s.id)
 	if err != nil {
 		return err
 	}
