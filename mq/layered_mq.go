@@ -38,6 +38,10 @@ func (l *LayeredMQ) ConsumeExec() <-chan model.ChannelExec {
 	return l.MQLayer.ConsumeExec()
 }
 
+func (l *LayeredMQ) ConsumeIM() <-chan model.MessageWrapper {
+	return l.MQLayer.ConsumeIM()
+}
+
 func (l *LayeredMQ) QueueEvent() QueueEvent {
 	return l.MQLayer.QueueEvent()
 }

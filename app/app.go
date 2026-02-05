@@ -3,38 +3,36 @@ package app
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/app/meeting"
 	"time"
 
-	"github.com/webitel/engine/pkg/wbt"
-	"github.com/webitel/flow_manager/app/bots_client"
-	"github.com/webitel/flow_manager/app/cc"
-	"github.com/webitel/flow_manager/gen/contacts"
-	"github.com/webitel/flow_manager/gen/engine"
-
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"github.com/webitel/flow_manager/cases"
-	"github.com/webitel/flow_manager/providers/web_hook"
-
-	_ "github.com/mbobakov/grpc-consul-resolver"
-	"github.com/webitel/flow_manager/providers/channel"
-
-	"github.com/webitel/flow_manager/providers/email"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/webitel/engine/pkg/presign"
+	"github.com/webitel/engine/pkg/wbt"
+	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/app/bots_client"
+	"github.com/webitel/flow_manager/app/cc"
+	"github.com/webitel/flow_manager/app/meeting"
+	"github.com/webitel/flow_manager/cases"
+	"github.com/webitel/flow_manager/gen/contacts"
+	"github.com/webitel/flow_manager/gen/engine"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
+	"github.com/webitel/flow_manager/providers/channel"
+	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
+	"github.com/webitel/flow_manager/providers/im"
+	"github.com/webitel/flow_manager/providers/web_hook"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
-	"github.com/webitel/wlog"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
+	_ "github.com/mbobakov/grpc-consul-resolver"
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
@@ -57,6 +55,7 @@ type FlowManager struct {
 	eslServer     model.Server
 	channelServer model.Server
 	httpServer    model.Server
+	imServer      model.Server
 
 	schemaCache model.ObjectCache
 	chatManager *grpc.ChatManager
@@ -79,6 +78,7 @@ type FlowManager struct {
 	FormRouter    model.Router
 	ChannelRouter model.Router
 	WebHookRouter model.Router
+	IMRouter      model.Router
 
 	callWatcher *callWatcher
 	cert        presign.PreSign
@@ -171,7 +171,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
 		if err != nil {
 			outErr = err
-			return
+			return outApp, outErr
 		}
 		fm.cacheStore[Redis] = storage
 	}
@@ -213,13 +213,20 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 
+	t, err := LoadTlsCreds(config.Tls)
+	if err != nil {
+		return nil, err
+	}
+	fm.imServer = im.NewServer(fm.id, fm.Config().DiscoverySettings.Url, fm.eventQueue.ConsumeIM(),
+		fm.log, t, fm.Store.Session())
+
 	if len(fm.Config().WebHook.Addr) > 1 {
 		fm.httpServer = web_hook.NewServer(fm, fm.Config().WebHook.Addr)
 	}
 
 	if err := fm.RegisterServers(); err != nil {
 		outErr = err
-		return
+		return outApp, outErr
 	}
 
 	if err = fm.cluster.Start(); err != nil {
@@ -228,13 +235,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	if err := fm.chatManager.Start(fm.cluster.discovery); err != nil {
 		outErr = err
-		return
+		return outApp, outErr
 	}
 
 	// todo fixme
 	if err := grpcSrv.Cluster(fm.cluster.discovery); err != nil {
 		outErr = err
-		return
+		return outApp, outErr
 	}
 
 	if config.PreSignedCertificateLocation != "" {

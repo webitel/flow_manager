@@ -44,7 +44,31 @@ func (f *FlowManager) Listen() {
 		go f.listenWebHookConnection(f.stop, &wg, f.httpServer)
 	}
 
+	if f.imServer != nil {
+		wg.Add(1)
+		go f.listenImConnection(f.stop, &wg, f.imServer)
+	}
+
 	wg.Wait()
+}
+
+func (f *FlowManager) listenImConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
+	defer wg.Done()
+	f.log.Info("listen im connections...")
+	for {
+		select {
+		case <-stop:
+			return
+		case c, ok := <-srv.Consume():
+			if !ok {
+				return
+			}
+			println("consume:", c)
+			if err := f.IMRouter.Handle(c); err != nil {
+				c.Log().Error(err.Error())
+			}
+		}
+	}
 }
 
 func (f *FlowManager) listenCallConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {

@@ -25,6 +25,7 @@ type Config struct {
 	//EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 	Log                   LogSettings           `json:"log"`
+	Tls                   TLSConfig             `json:"tls"`
 }
 
 type LogSettings struct {
@@ -33,6 +34,12 @@ type LogSettings struct {
 	Otel    bool   `json:"otel" flag:"log_otel|false|Log OTEL" env:"LOG_OTEL"`
 	File    string `json:"file" flag:"log_file||Log file directory" env:"LOG_FILE"`
 	Console bool   `json:"console" flag:"log_console|false|Log console" env:"LOG_CONSOLE"`
+}
+
+type TLSConfig struct {
+	CAPath   string `json:"ca" flag:"service.conn.client.ca||Client CA certificate path" env:"SERVICE_CONN_CLIENT_CA"`
+	KeyPath  string `json:"key" flag:"service.conn.client.key||Client certificate key path" env:"SERVICE_CONN_CLIENT_KEY"`
+	CertPath string `json:"cert" flag:"service.conn.client.cert||Client certificate path" env:"SERVICE_CONN_CLIENT_CERT"`
 }
 
 type EslSettings struct {

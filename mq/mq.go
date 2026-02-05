@@ -10,6 +10,7 @@ type MQ interface {
 
 	ConsumeCallEvent() <-chan model.CallActionData
 	ConsumeExec() <-chan model.ChannelExec
+	ConsumeIM() <-chan model.MessageWrapper
 
 	QueueEvent() QueueEvent
 }

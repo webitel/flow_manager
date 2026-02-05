@@ -18,6 +18,7 @@ const (
 	ConnectionTypeChat
 	ConnectionTypeForm
 	ConnectionTypeChannel
+	ConnectionTypeIM
 )
 
 type Server interface {
