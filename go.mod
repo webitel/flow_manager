@@ -6,8 +6,6 @@ replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2
 
 require github.com/emersion/go-imap v1.2.1
 
-replace github.com/webitel/engine/pkg/wbt => ../engine/pkg/wbt
-
 replace github.com/webitel/flow_manager/pkg/processing => ./pkg/processing
 
 require (
@@ -37,7 +35,7 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/webitel/engine/pkg/discovery v0.0.0-20250925090335-284caa978daa
 	github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c
-	github.com/webitel/engine/pkg/wbt v0.0.0-20250512130121-81caadba224c
+	github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0
 	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7
