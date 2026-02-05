@@ -14,7 +14,7 @@ func NewSQLSessionStore(sqlStore SqlStore) store.SessionStore {
 	return s
 }
 
-func (s *SQLSessionStore) TouchSession(id, appId string) (*int, error) {
+func (s *SQLSessionStore) Touch(id, appId string) (*int, error) {
 	i, err := s.GetMaster().SelectNullInt(`insert into flow.session(id, app_id)
 values (:Id, :AppId)
 on conflict (id)
@@ -25,9 +25,8 @@ returning session.seq`, map[string]any{
 		"Id":    id,
 		"AppId": appId,
 	})
-
 	if err != nil {
-		return nil, model.NewAppError("SQLSessionStore.TouchSession", "store.sql_session.app_error", nil, err.Error(), extractCodeFromErr(err))
+		return nil, model.NewAppError("SQLSessionStore.Touch", "store.sql_session.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
 
 	if i.Valid {
@@ -36,4 +35,30 @@ returning session.seq`, map[string]any{
 	}
 
 	return nil, nil
+}
+
+func (s *SQLSessionStore) Remove(id, appId string) error {
+	_, err := s.GetMaster().Exec(`delete from flow.session
+where id = :Id
+    and app_id = :AppId`, map[string]any{
+		"Id":    id,
+		"AppId": appId,
+	})
+	if err != nil {
+		return model.NewAppError("SQLSessionStore.Remove", "store.sql_session.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s *SQLSessionStore) RemoveAll(appId string) error {
+	_, err := s.GetMaster().Exec(`delete from flow.session
+where  app_id = :AppId`, map[string]any{
+		"AppId": appId,
+	})
+	if err != nil {
+		return model.NewAppError("SQLSessionStore.RemoveAll", "store.sql_session.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
 }

@@ -5,24 +5,22 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
-	"google.golang.org/grpc/metadata"
 	"maps"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/tidwall/gjson"
+	"google.golang.org/grpc/metadata"
+
 	"github.com/webitel/wlog"
 
-	"github.com/tidwall/gjson"
-
+	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
 	"github.com/webitel/flow_manager/model"
 )
 
-var (
-	ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
-)
+var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
 
 var _ model.IMDialog = (*Connection)(nil)
 
@@ -107,7 +105,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	if msg.File != nil {
 		f := msg.File
 		docs = append(docs, &p.ImageInput{
-			//Id:       strconv.Itoa(f.Id),
+			// Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
@@ -128,7 +126,6 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 			Body:   msg.Text,
 		},
 	})
-
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -137,7 +134,6 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
-
 	_, err := c.srv.client.Api.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendTextRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
@@ -150,14 +146,14 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 
 		Body: text,
 	})
-	//println(res)
+	// println(res)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendTextMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *model.AppError) {
+func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *model.AppError) {
 	msgs, err := c.receive(ctx, timeout)
 	if err != nil {
 		return nil, err
@@ -182,11 +178,10 @@ func (c *Connection) IsTransfer() bool {
 }
 
 func (c *Connection) Stop(err error) {
-	c.srv.connectionStore.Delete(c)
+	c.srv.stopConnection(c)
 }
 
 func (c *Connection) receive(ctx context.Context, timeout int) ([]model.MessageWrapper, *model.AppError) {
-
 	ch := make(chan model.MessageWrapper)
 	defer func() {
 		c.setStateWaitMessage(nil)
