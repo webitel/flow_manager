@@ -76,6 +76,6 @@ func LoadTlsCreds(cfg model.TLSConfig) (*tls.Config, error) {
 	return &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
 		RootCAs:      caCertPool,
-		// ServerName:   "im-gateway-service", // Common Name of the server cert
+		ServerName:   "im-gateway-service", // Common Name of the server cert
 	}, nil
 }
