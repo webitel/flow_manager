@@ -4,21 +4,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/webitel/flow_manager/gen/ai_bots"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/tidwall/gjson"
+
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
-var (
-	ErrWaitMessageTimeout = model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
-)
+var ErrWaitMessageTimeout = model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
 
 type conversation struct {
 	id            string
@@ -209,7 +209,6 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 			Kind:    msg.Kind,
 		},
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.SendMessage", "conv.send.any.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -225,7 +224,6 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 			Text: text,
 		},
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -261,7 +259,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 		NoInput: menu.NoInput,
 		Kind:    menu.Kind,
 	}
-	//menu.Set // fixme
+	// menu.Set // fixme
 
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		Message:        req,
@@ -272,10 +270,9 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 	}
 
 	return model.CallResponseOK, nil
-
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (model.Response, *model.AppError) {
+func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (model.Response, *model.AppError) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -288,7 +285,6 @@ func (c *conversation) SendImageMessage(ctx context.Context, url string, name st
 			},
 		},
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.SendImageMessage", "conv.send.image.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -306,7 +302,6 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 			File: getFile(f),
 		},
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.SendFile", "conv.send.file.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -314,20 +309,19 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) proto(ctx context.Context, url string, name string, text string) (model.Response, *model.AppError) {
+func (c *conversation) proto(ctx context.Context, url, name, text string) (model.Response, *model.AppError) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
 			Text: text,
 			Type: "file", // FIXME
 			File: &proto.File{
-				Id:   1, //TODO
+				Id:   1, // TODO
 				Url:  url,
 				Name: name,
 			},
 		},
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -378,7 +372,7 @@ func (c *conversation) LastMessages(limit int) []model.ChatMessage {
 	return res
 }
 
-func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *model.AppError) {
+func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *model.AppError) {
 	msgs, err := c.receive(ctx, timeout)
 	if err != nil {
 		return nil, err
@@ -410,7 +404,6 @@ func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Messa
 		ConversationId: c.id,
 		ConfirmationId: id,
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("Conversation.WaitMessage", "conv.wait.msg.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -450,22 +443,30 @@ func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCa
 		cause = proto.CloseConversationCause_flow_err
 	}
 
-	_, e := c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
-		ConversationId: c.id,
-		Cause:          cause,
-	})
+	// When breakCause != "" - messages-srv initiated close via Break,
+	// skip CloseConversation callback to avoid duplicate close.
+	// Flow-originated causes (flow_end, flow_err) should still close.
+	if c.breakCause == "" {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
 
-	if e != nil {
-		c.log.Err(e)
+		_, e := c.client.api.CloseConversation(ctx, &proto.CloseConversationRequest{
+			ConversationId: c.id,
+			Cause:          cause,
+		})
+
+		if e != nil {
+			c.log.Err(e)
+		}
 	}
 
 	c.chat.conversations.Remove(c.id)
-	c.log.Debug("close")
+	c.log.Debug("close", wlog.String("cause", cause.String()), wlog.String("breakCause", c.breakCause))
 }
 
 // TODO transferVars
 func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	exp := make(map[string]interface{})
+	exp := make(map[string]any)
 	transferVars := make(map[string]string)
 	for _, v := range vars {
 		tmp, _ := c.Get(v)
@@ -481,7 +482,6 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 				ChannelId: c.id,
 				Variables: transferVars,
 			})
-
 			if err != nil {
 				c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
 			}
@@ -506,7 +506,6 @@ func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Respo
 	}
 
 	_, err := c.client.api.SetVariables(ctx, req)
-
 	if err != nil {
 		c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
 	}
@@ -515,7 +514,6 @@ func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Respo
 }
 
 func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
-
 	if c.chBridge != nil {
 		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
 	}
@@ -542,7 +540,6 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *m
 		Variables:      vars,
 		ConversationId: c.id,
 	})
-
 	if err != nil {
 		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -652,7 +649,7 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClien
 		}
 
 		if res.StopTalk {
-			//break
+			// break
 		}
 	}
 
@@ -702,7 +699,7 @@ func getFile(f *model.File) *proto.File {
 	}
 
 	return &proto.File{
-		Id:   int64(f.Id), //TODO
+		Id:   int64(f.Id), // TODO
 		Url:  f.Url,
 		Mime: f.MimeType,
 		Name: f.Name,
