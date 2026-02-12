@@ -3,13 +3,13 @@ package chat_route
 import (
 	"context"
 	"fmt"
-	proto "github.com/webitel/flow_manager/gen/chat"
 	"maps"
 	"net/http"
 	"time"
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -21,7 +21,7 @@ type Router struct {
 type Conversation model.Conversation // TODO
 
 func Init(fm *app.FlowManager, fr flow.Router) {
-	var router = &Router{
+	router := &Router{
 		fm: fm,
 	}
 
@@ -38,7 +38,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 }
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
-
 	go r.handle(conn)
 	return nil
 }
@@ -58,7 +57,6 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
 			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-
 		} else {
 			return h.Handler(ctx, scope, req.Args())
 		}
@@ -82,7 +80,7 @@ func (r *Router) handle(conn model.Connection) {
 	} else if conv.ProfileId() > 0 {
 		routing, err = r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
 	} else {
-		//TODO ERROR
+		// TODO ERROR
 	}
 
 	if routing == nil {
@@ -102,7 +100,7 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 
-	conn.Set(conn.Context(), map[string]interface{}{
+	conn.Set(conn.Context(), map[string]any{
 		model.FlowSchemaNameVariable: routing.Schema.Name,
 	})
 
@@ -113,7 +111,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		//TODO config
+		// TODO config
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()
@@ -121,6 +119,6 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
+func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
 	return scope.Decode(in, out)
 }
