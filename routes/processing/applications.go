@@ -30,6 +30,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["resumeAttempt"] = &flow.Application{
 		Handler: processingHandlerMiddleware(r.resumeAttempt),
 	}
+	apps["formSelectCaseStatus"] = &flow.Application{
+		Handler: processingHandlerMiddleware(r.formSelectCaseStatus),
+	}
 
 	return apps
 }

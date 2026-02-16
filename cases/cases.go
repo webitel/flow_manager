@@ -19,6 +19,7 @@ type Api struct {
 	services          cases.ServicesClient
 	relatedCases      cases.RelatedCasesClient
 	caseFiles         cases.CaseFilesClient
+	statusConditions  cases.StatusConditionsClient
 }
 
 func NewClient(consulTarget string) (*Api, error) {
@@ -38,6 +39,7 @@ func NewClient(consulTarget string) (*Api, error) {
 	services := cases.NewServicesClient(conn)
 	relatedCases := cases.NewRelatedCasesClient(conn)
 	caseFiles := cases.NewCaseFilesClient(conn)
+	statusConditions := cases.NewStatusConditionsClient(conn)
 
 	return &Api{
 		cases:             casesClient,
@@ -48,6 +50,7 @@ func NewClient(consulTarget string) (*Api, error) {
 		services:          services,
 		relatedCases:      relatedCases,
 		caseFiles:         caseFiles,
+		statusConditions:  statusConditions,
 	}, nil
 }
 
@@ -181,6 +184,24 @@ func (api *Api) ListCaseFiles(ctx context.Context, req *cases.ListFilesRequest, 
 		return nil, err
 	}
 	return files, nil
+}
+
+func (api *Api) LocateCatalog(ctx context.Context, req *cases.LocateCatalogRequest, token string) (*cases.LocateCatalogResponse, error) {
+	newCtx := attachToken(ctx, token)
+	s, err := api.serviceCatalogs.LocateCatalog(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func (api *Api) ListStatusConditions(ctx context.Context, req *cases.ListStatusConditionRequest, token string) (*cases.StatusConditionList, error) {
+	newCtx := attachToken(ctx, token)
+	s, err := api.statusConditions.ListStatusConditions(newCtx, req)
+	if err != nil {
+		return nil, err
+	}
+	return s, nil
 }
 
 // attachToken adds the authentication token to the gRPC metadata.

@@ -101,3 +101,19 @@ func (fm *FlowManager) ListCaseFiles(
 ) (*casespb.CaseFileList, error) {
 	return fm.cases.ListCaseFiles(ctx, req, token)
 }
+
+func (fm *FlowManager) LocateCatalog(
+	ctx context.Context,
+	req *casespb.LocateCatalogRequest,
+	token string,
+) (*casespb.LocateCatalogResponse, error) {
+	return fm.cases.LocateCatalog(ctx, req, token)
+}
+
+func (fm *FlowManager) ListStatusConditions(
+	ctx context.Context,
+	req *casespb.ListStatusConditionRequest,
+	token string,
+) (*casespb.StatusConditionList, error) {
+	return fm.cases.ListStatusConditions(ctx, req, token)
+}
