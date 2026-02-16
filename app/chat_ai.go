@@ -2,17 +2,18 @@ package app
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/chat_ai"
-	"github.com/webitel/flow_manager/model"
 	"strings"
 	"time"
+
+	chat_ai2 "github.com/webitel/flow_manager/app/chat_ai"
+	"github.com/webitel/flow_manager/model"
 )
 
 const SysConnectionName = "chat_ai_connection"
 
-var aiConnections = chat_ai.NewHub()
+var aiConnections = chat_ai2.NewHub()
 
-func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model.ChatAiAnswer) (*chat_ai.MessageResponse, error) {
+func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model.ChatAiAnswer) (*chat_ai2.MessageResponse, error) {
 	if r.Connection == "" {
 		var appErr *model.AppError
 		r.Connection, appErr = fm.GetSystemSettingsString(ctx, domainId, SysConnectionName)
@@ -32,15 +33,15 @@ func (fm *FlowManager) ChatAnswerAi(ctx context.Context, domainId int64, r model
 
 	cat := strings.Split(r.Categories, ",")
 
-	request := &chat_ai.MessageRequest{
+	request := &chat_ai2.MessageRequest{
 		UserMetadata: r.Variables,
 		Categories:   cat,
-		Messages:     make([]*chat_ai.Message, 0, len(r.Messages)),
+		Messages:     make([]*chat_ai2.Message, 0, len(r.Messages)),
 		ModelName:    r.Model,
 	}
 
 	for _, v := range r.Messages {
-		request.Messages = append(request.Messages, &chat_ai.Message{
+		request.Messages = append(request.Messages, &chat_ai2.Message{
 			Message: v.Text,
 			Sender:  aiChatSender(v.User),
 		})

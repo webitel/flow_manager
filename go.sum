@@ -326,8 +326,6 @@ github.com/webitel/engine/pkg/discovery v0.0.0-20250925090335-284caa978daa h1:5s
 github.com/webitel/engine/pkg/discovery v0.0.0-20250925090335-284caa978daa/go.mod h1:SYOLV0TUj7A8ZfCLdNgI08twGMXAlPzqkQ68XL5ePzo=
 github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c h1:nehoX6Yq2YfLr9rmGSnXWYlzVeXWoIo+CKZuZE+4hcQ=
 github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c/go.mod h1:C5rpf4XfdQ6a5+MpL0Ix0SsH/RNcrerpzqSomDH3VQY=
-github.com/webitel/engine/pkg/wbt v0.0.0-20250512130121-81caadba224c h1:bSypH0QwRwdgoEPmaVYXFeINrg3BNdK1RpEhq0Y0l0E=
-github.com/webitel/engine/pkg/wbt v0.0.0-20250512130121-81caadba224c/go.mod h1:X0IamnomNaWvRaJihNIZSTiz3rcFuRm19qZq6uO8Tig=
 github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0 h1:kx4j8d17hGQeDv22WbvCKgT9wamOKqc50bJnsIwp778=
 github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0/go.mod h1:15PVfPhimD18i+1ARcWq5ZZ8P5ugjpriGIT1+5/bDEw=
 github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41 h1:vj6qE8RtTyz8B4syfUDCkZqULLJ/4I+LS0Rw5W7mao0=
