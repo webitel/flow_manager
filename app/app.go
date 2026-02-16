@@ -26,8 +26,8 @@ import (
 	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
+	"github.com/webitel/flow_manager/providers/http"
 	"github.com/webitel/flow_manager/providers/im"
-	"github.com/webitel/flow_manager/providers/web_hook"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
@@ -221,7 +221,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		fm.log, t, fm.Store.Session())
 
 	if len(fm.Config().WebHook.Addr) > 1 {
-		fm.httpServer = web_hook.NewServer(fm, fm.Config().WebHook.Addr)
+		fm.httpServer = http.NewServer(fm, fm.Config().WebHook.Addr)
 	}
 
 	if err := fm.RegisterServers(); err != nil {

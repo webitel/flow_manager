@@ -4,25 +4,25 @@
 package main
 
 import (
-	"github.com/webitel/flow_manager/im_route"
 	"net/http"
-	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/webitel/flow_manager/webhook"
-
-	"github.com/webitel/flow_manager/channel"
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
-	"github.com/webitel/flow_manager/call"
-	"github.com/webitel/flow_manager/chat_route"
-	"github.com/webitel/flow_manager/email"
 	"github.com/webitel/flow_manager/flow"
-	"github.com/webitel/flow_manager/grpc_route"
-	"github.com/webitel/flow_manager/processing"
-	"github.com/webitel/wlog"
+	"github.com/webitel/flow_manager/routes/call"
+	"github.com/webitel/flow_manager/routes/channel"
+	"github.com/webitel/flow_manager/routes/chat"
+	"github.com/webitel/flow_manager/routes/email"
+	"github.com/webitel/flow_manager/routes/grpc"
+	"github.com/webitel/flow_manager/routes/im"
+	"github.com/webitel/flow_manager/routes/processing"
+	"github.com/webitel/flow_manager/routes/webhook"
+
+	_ "net/http/pprof"
 )
 
 //go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.engine.yaml
@@ -38,20 +38,19 @@ import (
 func main() {
 	interruptChan := make(chan os.Signal, 1)
 	fm, err := app.NewFlowManager()
-
 	if err != nil {
 		panic(err.Error())
 	}
 
 	router := flow.NewRouter(fm)
 	call.Init(fm, router)
-	grpc_route.Init(fm, router)
-	chat_route.Init(fm, router)
+	grpc.Init(fm, router)
+	chat.Init(fm, router)
 	processing.Init(fm, router)
 	email.Init(fm, router)
 	channel.Init(fm, router)
 	webhook.Init(fm, router)
-	im_route.Init(fm, router)
+	im.Init(fm, router)
 
 	go fm.Listen()
 	setDebug()
@@ -62,7 +61,7 @@ func main() {
 }
 
 func setDebug() {
-	//debug.SetGCPercent(-1)
+	// debug.SetGCPercent(-1)
 
 	go func() {
 		wlog.Info("start debug server on http://localhost:8092/debug/pprof/")

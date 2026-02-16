@@ -3,13 +3,15 @@ package im
 import (
 	"context"
 	"crypto/tls"
-	"github.com/webitel/engine/pkg/wbt"
-	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
-	"github.com/webitel/wlog"
+	"sync"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/metadata"
-	"sync"
+
+	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/wlog"
+
+	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
 )
 
 const ServiceName = "im-gateway-service"
@@ -56,31 +58,4 @@ func (cm *Client) Start() error {
 func (cm *Client) Stop() {
 	cm.log.Debug("stopping " + ServiceName + " client")
 	_ = cm.Client.Close()
-}
-
-func (cm *Client) SendTestStart() error {
-	ctx := context.Background()
-	header := metadata.New(map[string]string{
-		"x-webitel-type":   "schema",
-		"x-webitel-schema": "1.2", // domain.schema_id ? rk mb . це від кого відправляю
-	})
-	ctx = metadata.NewOutgoingContext(ctx, header)
-	_, err := cm.Api.SendText(ctx, &p.SendTextRequest{
-		To: &p.Peer{
-			Kind: &p.Peer_Contact{
-				Contact: &p.PeerIdentity{
-					Sub: "2522", // from mb
-					Iss: "bot",  // from mb
-				},
-			},
-		},
-
-		Body: "body",
-	})
-
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return err
 }
