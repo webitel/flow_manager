@@ -31,6 +31,7 @@ type CallDirection string
 
 const (
 	CallExchange       = "call"
+	OpensipsExchange   = "opensips"
 	ChatExchange       = "chat"
 	FlowExchange       = "flow"
 	CallEventQueueName = "workflow-call"
@@ -123,6 +124,26 @@ func (e *CallEndpoint) GetName() *string {
 	return nil
 }
 
+type RTPStats struct {
+	Average float32 `json:"average"`
+	Min     float32 `json:"min"`
+	MinAt   float32 `json:"min_at"`
+	Max     float32 `json:"max"`
+	MaxAt   float32 `json:"max_at"`
+}
+
+type RtpStats struct {
+	Mos        RTPStats `json:"mos"`
+	Jitter     RTPStats `json:"jitter"`
+	RoundTrip  RTPStats `json:"roundtrip"`
+	PacketLoss RTPStats `json:"packetloss"`
+}
+
+type CallMediaStats struct {
+	SipId string   `json:"call_id"`
+	RTP   RtpStats `json:"rtp"`
+}
+
 type QueueInfo struct {
 	QueueId   *int   `json:"queue_id,string"`
 	AttemptId int64  `json:"attempt_id,string"`
@@ -206,10 +227,13 @@ func (r *CallActionRinging) GetTo() *CallEndpoint {
 }
 
 func (r *CallActionRinging) GetParams() []byte {
-	arr := make([]string, 0, 2)
+	arr := make([]string, 0, 3)
 	if r.SipId != nil {
 		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, *r.SipId))
+	} else {
+		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, r.Id))
 	}
+
 	if r.Heartbeat > 0 {
 		arr = append(arr, fmt.Sprintf(`"heartbeat":%d`, r.Heartbeat))
 	}
@@ -246,6 +270,7 @@ type CallActionHangup struct {
 	Cause          string         `json:"cause"`
 	Payload        *CallVariables `json:"payload"`
 	SipCode        *int           `json:"sip"`
+	SipId          *string        `json:"sip_id"`
 	OriginSuccess  *bool          `json:"originate_success"`
 	HangupBy       *string        `json:"hangup_by"`
 	Tags           []string       `json:"tags"`

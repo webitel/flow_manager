@@ -22,7 +22,7 @@ func NewMQ(mq LayeredMQLayer) MQ {
 	}
 }
 
-func (l *LayeredMQ) SendJSON(exchange string, key string, data []byte) *model.AppError {
+func (l *LayeredMQ) SendJSON(exchange, key string, data []byte) *model.AppError {
 	return l.MQLayer.SendJSON(exchange, key, data)
 }
 
@@ -44,4 +44,8 @@ func (l *LayeredMQ) ConsumeIM() <-chan model.MessageWrapper {
 
 func (l *LayeredMQ) QueueEvent() QueueEvent {
 	return l.MQLayer.QueueEvent()
+}
+
+func (l *LayeredMQ) ConsumeCallMediaStatsEvent() <-chan model.CallMediaStats {
+	return l.MQLayer.ConsumeCallMediaStatsEvent()
 }

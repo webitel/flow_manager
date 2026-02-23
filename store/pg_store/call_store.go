@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/lib/pq"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -52,7 +53,7 @@ on conflict (id)
 		params = EXCLUDED.params,
         heartbeat = EXCLUDED.heartbeat,
         destination_name = EXCLUDED.destination_name
-		`, map[string]interface{}{
+		`, map[string]any{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
 		"Direction":   call.Direction,
@@ -84,7 +85,6 @@ on conflict (id)
 		"Hb":              call.Heartbeat,
 		"DestinationName": call.DestinationName,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.Save", "store.sql_call.save.error", nil,
 			fmt.Sprintf("Id=%v %v", call.Id, err.Error()), extractCodeFromErr(err))
@@ -100,14 +100,13 @@ values (:Id::uuid, :State, to_timestamp(:Timestamp::double precision /1000), :Ap
 on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /1000) and cause isnull
     do update set
       state = EXCLUDED.state,
-      timestamp = EXCLUDED.timestamp`, map[string]interface{}{
+      timestamp = EXCLUDED.timestamp`, map[string]any{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
 		"AppId":     call.AppId,
 		"DomainId":  call.DomainId,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetState", "store.sql_call.set_state.error", nil,
 			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
@@ -132,7 +131,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       hangup_by = EXCLUDED.hangup_by,
 	  tags = EXCLUDED.tags,
 	  amd_result = EXCLUDED.amd_result,
-	  params = EXCLUDED.params || call_center.cc_calls.params,
+	  params = coalesce(call_center.cc_calls.params, '{}') || EXCLUDED.params,
 	  talk_sec = EXCLUDED.talk_sec::int,
       timestamp = EXCLUDED.timestamp,
       amd_ai_result = EXCLUDED.amd_ai_result,
@@ -141,7 +140,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       schema_ids = EXCLUDED.schema_ids,
       hangup_phrase = EXCLUDED.hangup_phrase,
       transfer_from = coalesce(call_center.cc_calls.transfer_from, EXCLUDED.transfer_from)
-     `, map[string]interface{}{
+     `, map[string]any{
 		"Id":             call.Id,
 		"State":          call.Event,
 		"Timestamp":      call.Timestamp,
@@ -162,7 +161,6 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"HangupPhrase":   call.HangupPhrase,
 		"TransferFrom":   call.TransferFrom,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetHangup", "store.sql_call.set_state.error", nil,
 			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
@@ -173,7 +171,7 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 
 func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 	_, err := s.GetMaster().Exec(`call call_center.cc_call_set_bridged(:Id::uuid, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
-    :DomainId::int8, :BridgedId::uuid, :ToName::varchar)`, map[string]interface{}{
+    :DomainId::int8, :BridgedId::uuid, :ToName::varchar)`, map[string]any{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
@@ -182,7 +180,6 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 		"BridgedId": call.BridgedId,
 		"ToName":    call.To.Name,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetBridged", "store.sql_call.set_bridged.error", nil,
 			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
@@ -193,10 +190,9 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 
 func (s SqlCallStore) Delete(id string) *model.AppError {
 	_, err := s.GetMaster().Exec(`delete from call_center.cc_calls
-where id = :Id;`, map[string]interface{}{
+where id = :Id;`, map[string]any{
 		"Id": id,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.Delete", "store.sql_call.delete.error", nil,
 			fmt.Sprintf("Id=%v, %v", id, err.Error()), extractCodeFromErr(err))
@@ -364,13 +360,12 @@ func (s SqlCallStore) UpdateFrom(id string, name, number, destination *string) *
 set from_number = coalesce(:Number, from_number),
     from_name = coalesce(:Name, from_name),
     destination = coalesce(:Destination, destination)
-where id = :Id`, map[string]interface{}{
+where id = :Id`, map[string]any{
 		"Number":      number,
 		"Name":        name,
 		"Destination": destination,
 		"Id":          id,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.UpdateFrom", "store.sql_call.update_from.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -387,11 +382,10 @@ select :CallId, (x.j->'alternatives'->0->'confidence')::text::numeric,
         x.j
 from (
     select :R::jsonb as j
-) x;`, map[string]interface{}{
+) x;`, map[string]any{
 		"CallId": transcribe.Id,
 		"R":      r,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SaveTranscribe", "store.sql_call.save_transcribe.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -403,7 +397,7 @@ func (s SqlCallStore) LastBridged(domainId int64, number, hours string, dialer, 
 	f := make([]string, 0)
 
 	for k, v := range mapRes {
-		var val = ""
+		val := ""
 		switch v {
 		case "extension":
 			val = "extension::varchar as " + pq.QuoteIdentifier(k)
@@ -491,7 +485,7 @@ from (select `+strings.Join(f, ", ")+`
                 )
             order by h.created_at desc) h
       order by h.created_at desc
-      limit 1) t`, map[string]interface{}{
+      limit 1) t`, map[string]any{
 		"DomainId": domainId,
 		"Hours":    hours,
 		"Number":   number,
@@ -500,7 +494,6 @@ from (select `+strings.Join(f, ", ")+`
 		"Outbound": outbound,
 		"QueueIds": pq.Array(queueIds),
 	})
-
 	if err != nil {
 		return nil, model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -511,12 +504,11 @@ from (select `+strings.Join(f, ", ")+`
 func (s SqlCallStore) SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set grantee_id = :GranteeId
-where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
+where domain_id = :DomainId and id = :Id;`, map[string]any{
 		"DomainId":  domainId,
 		"GranteeId": granteeId,
 		"Id":        id,
 	})
-
 	if err != nil {
 		model.NewAppError("SqlCallStore.SetGranteeId", "store.sql_call.set_grantee.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -527,12 +519,11 @@ where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
 func (s SqlCallStore) SetUserId(domainId int64, id string, userId int64) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set user_id = :UserId
-where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
+where domain_id = :DomainId and id = :Id;`, map[string]any{
 		"DomainId": domainId,
 		"UserId":   userId,
 		"Id":       id,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetUserId", "store.sql_call.set_user_id.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -540,16 +531,15 @@ where domain_id = :DomainId and id = :Id;`, map[string]interface{}{
 	return nil
 }
 
-func (s SqlCallStore) SetBlindTransfer(domainId int64, id string, destination string) *model.AppError {
+func (s SqlCallStore) SetBlindTransfer(domainId int64, id, destination string) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set blind_transfer = :Destination::varchar,
     blind_transfers = coalesce(blind_transfers, '[]')::jsonb || jsonb_build_object('number', :Destination::varchar, 'time', (extract(epoch from now())::numeric * 1000)::int8)
-where id = :Id and domain_id = :DomainId`, map[string]interface{}{
+where id = :Id and domain_id = :DomainId`, map[string]any{
 		"Id":          id,
 		"DomainId":    domainId,
 		"Destination": destination,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetBlindTransfer", "store.sql_call.set_blind_transfer.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -580,12 +570,11 @@ select ua.id as id
 from ua
 union all
 select uh.id as id
-from uh`, map[string]interface{}{
+from uh`, map[string]any{
 		"DomainId":  domainId,
 		"ContactId": contactId,
 		"Id":        id,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetContactId", "store.sql_call.set_contact.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -614,11 +603,10 @@ from (
     from h
  ) as t
 where t.id notnull
-limit 1`, map[string]interface{}{
+limit 1`, map[string]any{
 		"Id":   id,
 		"Vars": vars.ToMapJson(),
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetVariables", "store.sql_call.set_vars.app_error", nil, err.Error(), extractCodeFromErr(err))
 	}
@@ -629,13 +617,51 @@ limit 1`, map[string]interface{}{
 func (s SqlCallStore) SetHeartbeat(id string) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_calls
 set heartbeat = now() + (params->>'heartbeat' || ' sec')::interval
-where id = :Id`, map[string]interface{}{
+where id = :Id`, map[string]any{
 		"Id": id,
 	})
-
 	if err != nil {
 		return model.NewAppError("SqlCallStore.SetHeartbeat", "store.sql_call.heartbeat.error", nil,
 			fmt.Sprintf("Id=%v %v", id, err.Error()), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
+func (s SqlCallStore) SaveMediaStats(stats model.CallMediaStats) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, mos_avg, mos_min, mos_min_at, mos_max,
+                                              mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max, jitter_max_at,
+                                              packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max, packetloss_max_at,
+                                              roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min, roundtrip_min_at)
+values (now(), :SipId, :DomainId, :MosAvg, :MosMin, :MosMinAt, :MosMax, :MosMaxAt, :JitterAvg, :JitterMin,
+        :JitterMinAt, :JitterMax, :JitterMaxAt, :PacketlossAvg, :PacketlossMin, :PacketlossMinAt, :PacketlossMax, :PacketlossMaxAt,
+        :RoundtripAvg, :RoundtripMax, :RoundtripMaxAt, :RoundtripMin, :RoundtripMinAt)`, map[string]any{
+		"SipId":           stats.SipId,
+		"DomainId":        0,
+		"MosAvg":          stats.RTP.Mos.Average,
+		"MosMin":          stats.RTP.Mos.Min,
+		"MosMinAt":        stats.RTP.Mos.MinAt,
+		"MosMax":          stats.RTP.Mos.Max,
+		"MosMaxAt":        stats.RTP.Mos.MaxAt,
+		"JitterAvg":       stats.RTP.Mos.Average,
+		"JitterMin":       stats.RTP.Mos.Min,
+		"JitterMinAt":     stats.RTP.Mos.MinAt,
+		"JitterMax":       stats.RTP.Mos.Max,
+		"JitterMaxAt":     stats.RTP.Mos.MaxAt,
+		"PacketlossAvg":   stats.RTP.PacketLoss.Average,
+		"PacketlossMin":   stats.RTP.PacketLoss.Min,
+		"PacketlossMinAt": stats.RTP.PacketLoss.MinAt,
+		"PacketlossMax":   stats.RTP.PacketLoss.Max,
+		"PacketlossMaxAt": stats.RTP.PacketLoss.MaxAt,
+		"RoundtripAvg":    stats.RTP.RoundTrip.Average,
+		"RoundtripMax":    stats.RTP.RoundTrip.Max,
+		"RoundtripMaxAt":  stats.RTP.RoundTrip.MaxAt,
+		"RoundtripMin":    stats.RTP.RoundTrip.Min,
+		"RoundtripMinAt":  stats.RTP.RoundTrip.MinAt,
+	})
+	if err != nil {
+		return model.NewAppError("SqlCallStore.SaveMediaStats", "store.sql_call.media.error",
+			nil, err.Error(), extractCodeFromErr(err))
 	}
 
 	return nil

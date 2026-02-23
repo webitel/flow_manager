@@ -82,6 +82,7 @@ type CallStore interface {
 	SetBlindTransfer(domainId int64, id, destination string) *model.AppError
 	SetContactId(domainId int64, id string, contactId int64) *model.AppError
 	SetVariables(id string, vars *model.CallVariables) *model.AppError
+	SaveMediaStats(stats model.CallMediaStats) *model.AppError
 }
 
 type SchemaStore interface {
