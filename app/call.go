@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"github.com/webitel/engine/pkg/discovery"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 const (
@@ -28,7 +29,7 @@ type callWatcher struct {
 func NewCallWatcher(fm *FlowManager) *callWatcher {
 	return &callWatcher{
 		fm: fm,
-		//callTasks: NewPool(5, 10),
+		// callTasks: NewPool(5, 10),
 	}
 }
 
@@ -54,6 +55,15 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 		select {
 		case <-stop:
 			return
+		case e, ok := <-f.eventQueue.ConsumeCallMediaStatsEvent():
+			if !ok {
+				return
+			}
+			err := f.Store.Call().SaveMediaStats(e)
+			if err != nil {
+				f.log.Error(fmt.Sprintf("save call media stats: %v", err))
+			}
+
 		case c, ok := <-f.eventQueue.ConsumeCallEvent():
 			if !ok {
 				return
@@ -68,7 +78,7 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 				continue
 			}
 
-			//TODO POOL
+			// TODO POOL
 			go f.handleCallAction(c)
 		}
 	}
@@ -148,7 +158,7 @@ func (c *FlowManager) SetCallUserId(domainId int64, id string, userId int64) *mo
 	return c.Store.Call().SetUserId(domainId, id, userId)
 }
 
-func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId string, destination string) *model.AppError {
+func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId, destination string) *model.AppError {
 	return f.Store.Call().SetBlindTransfer(domainId, callId, destination)
 }
 

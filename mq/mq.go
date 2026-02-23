@@ -5,15 +5,15 @@ import (
 )
 
 type MQ interface {
-	SendJSON(exchange string, key string, data []byte) *model.AppError
+	SendJSON(exchange, key string, data []byte) *model.AppError
 	Close()
 
 	ConsumeCallEvent() <-chan model.CallActionData
+	ConsumeCallMediaStatsEvent() <-chan model.CallMediaStats
 	ConsumeExec() <-chan model.ChannelExec
 	ConsumeIM() <-chan model.MessageWrapper
 
 	QueueEvent() QueueEvent
 }
 
-type QueueEvent interface {
-}
+type QueueEvent any

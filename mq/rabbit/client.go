@@ -28,30 +28,40 @@ const (
 	EXIT_BIND          = 112
 )
 
+type JsonRPCCallStats struct {
+	Jsonrpc string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Params  struct {
+		Stats string `json:"stats"`
+	} `json:"params"`
+}
+
 type AMQP struct {
-	settings           *model.MQSettings
-	connection         *amqp.Connection
-	channel            *amqp.Channel
-	callName           string
-	execName           string
-	imQueueName        string
-	nodeName           string
-	connectionAttempts int
-	stopping           bool
-	callEvent          chan model.CallActionData
-	execEvent          chan model.ChannelExec
-	imEvents           chan model.MessageWrapper
-	queueEvent         mq.QueueEvent
+	settings            *model.MQSettings
+	connection          *amqp.Connection
+	channel             *amqp.Channel
+	callName            string
+	execName            string
+	imQueueName         string
+	nodeName            string
+	connectionAttempts  int
+	stopping            bool
+	callEvent           chan model.CallActionData
+	callMediaStatsEvent chan model.CallMediaStats
+	execEvent           chan model.ChannelExec
+	imEvents            chan model.MessageWrapper
+	queueEvent          mq.QueueEvent
 	sync.RWMutex
 }
 
 func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 	mq_ := &AMQP{
-		settings:  &settings,
-		callEvent: make(chan model.CallActionData, CallChanBufferCount),
-		execEvent: make(chan model.ChannelExec, CallChanBufferCount),
-		imEvents:  make(chan model.MessageWrapper, CallChanBufferCount),
-		nodeName:  nodeName,
+		settings:            &settings,
+		callEvent:           make(chan model.CallActionData, CallChanBufferCount),
+		callMediaStatsEvent: make(chan model.CallMediaStats, CallChanBufferCount),
+		execEvent:           make(chan model.ChannelExec, CallChanBufferCount),
+		imEvents:            make(chan model.MessageWrapper, CallChanBufferCount),
+		nodeName:            nodeName,
 	}
 	mq_.queueEvent = NewQueueMQ(mq_)
 	mq_.initConnection()
@@ -174,6 +184,13 @@ func (a *AMQP) subscribeCall() {
 		os.Exit(EXIT_BIND)
 	}
 
+	err = a.channel.QueueBind(a.callName, "sip.stats", model.OpensipsExchange, true, nil)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", a.callName, model.OpensipsExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
 	msgs, err := a.channel.Consume(
 		a.callName,
 		a.nodeName,
@@ -191,14 +208,13 @@ func (a *AMQP) subscribeCall() {
 
 	go func() {
 		for m := range msgs {
-			if m.ContentType != "text/json" {
-				wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
-				continue
-			}
+			wlog.Debug(fmt.Sprintf("received a message: %s", m.RoutingKey))
 
 			switch m.Exchange {
 			case model.CallExchange:
 				a.handleCallMessage(m.Body)
+			case model.OpensipsExchange:
+				a.handleCallMediaStats(m.Body)
 			default:
 				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
 			}
@@ -309,6 +325,23 @@ func (a *AMQP) subscribeIM() {
 	}()
 }
 
+func (a *AMQP) handleCallMediaStats(data []byte) {
+	var jsonrpc JsonRPCCallStats
+	err := json.Unmarshal([]byte(data), &jsonrpc)
+	if err != nil {
+		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
+		return
+	}
+	var callStats model.CallMediaStats
+	err = json.Unmarshal([]byte(jsonrpc.Params.Stats), &callStats)
+	if err != nil {
+		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
+		return
+	}
+
+	a.callMediaStatsEvent <- callStats
+}
+
 func (a *AMQP) handleCallMessage(data []byte) {
 	callAction := model.CallActionData{}
 	if err := json.Unmarshal(data, &callAction); err != nil {
@@ -366,4 +399,8 @@ func (a *AMQP) ConsumeExec() <-chan model.ChannelExec {
 
 func (a *AMQP) ConsumeIM() <-chan model.MessageWrapper {
 	return a.imEvents
+}
+
+func (a *AMQP) ConsumeCallMediaStatsEvent() <-chan model.CallMediaStats {
+	return a.callMediaStatsEvent
 }
