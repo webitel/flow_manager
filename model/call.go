@@ -86,6 +86,11 @@ type CallActionData struct {
 	parsed any     `json:"-"`
 }
 
+type CallActionDataWithUser struct {
+	CallActionData
+	UserId string `json:"user_id" db:"user_id,omitempty"`
+}
+
 type CallEndpoint struct {
 	Type   string
 	Id     string
@@ -141,10 +146,8 @@ type RtpStats struct {
 }
 
 type CallMediaStats struct {
-	SipId    string   `json:"call_id"`
-	UserId   *int64   `json:"user_id,string"`
-	DomainId *int64   `json:"domain_id,string"`
-	RTP      RtpStats `json:"rtp"`
+	SipId string   `json:"call_id"`
+	RTP   RtpStats `json:"rtp"`
 }
 
 type QueueInfo struct {
@@ -303,6 +306,7 @@ type CallActionTranscript struct {
 
 type CallActionMediaStats struct {
 	CallAction
+	UserId *int64 `json:"user_id,string"`
 	CallMediaStats
 }
 

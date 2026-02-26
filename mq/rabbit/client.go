@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strconv"
 	"sync"
 	"time"
 
@@ -330,32 +331,33 @@ func (a *AMQP) handleCallMediaStats(data []byte) {
 		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
 		return
 	}
-	var callStats model.CallMediaStats
+	var callStats model.CallActionMediaStats
 	err = json.Unmarshal([]byte(jsonrpc.Params.Stats), &callStats)
 	if err != nil {
 		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
 		return
 	}
 
-	domainId := 0
 	userId := 0
 
-	if callStats.DomainId != nil {
-		domainId = int(*callStats.DomainId)
-	}
 	if callStats.UserId != nil {
 		userId = int(*callStats.UserId)
 	}
 
-	ca := model.CallActionData{
-		CallAction: model.CallAction{
-			Id:        callStats.SipId,
-			AppId:     model.OpensipsExchange,
-			DomainId:  int64(domainId),
-			Timestamp: model.GetMillis(), // todo
-			Event:     model.CallActionStatsName,
+	callStats.Id = callStats.CallMediaStats.SipId
+	callStats.AppId = model.OpensipsExchange
+	callStats.Event = model.CallActionStatsName
+	callStats.Timestamp = model.GetMillis()
+	//
+	ca := model.CallActionDataWithUser{
+		CallActionData: model.CallActionData{
+			CallAction: callStats.CallAction,
+			Data:       &jsonrpc.Params.Stats,
 		},
-		Data: &jsonrpc.Params.Stats,
+	}
+
+	if userId != 0 {
+		ca.UserId = strconv.Itoa(userId)
 	}
 
 	body, err := json.Marshal(ca)
@@ -365,7 +367,7 @@ func (a *AMQP) handleCallMediaStats(data []byte) {
 	}
 
 	err = a.channel.Publish(model.CallExchange,
-		fmt.Sprintf("events.stats..%d.%d", domainId, userId),
+		fmt.Sprintf("events.stats..%d.%d", callStats.DomainId, userId),
 		false,
 		false,
 		amqp.Publishing{
