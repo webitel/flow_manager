@@ -55,21 +55,13 @@ func (f *FlowManager) listenCallEvents(stop chan struct{}) {
 		select {
 		case <-stop:
 			return
-		case e, ok := <-f.eventQueue.ConsumeCallMediaStatsEvent():
-			if !ok {
-				return
-			}
-			err := f.Store.Call().SaveMediaStats(e)
-			if err != nil {
-				f.log.Error(fmt.Sprintf("save call media stats: %v", err))
-			}
 
 		case c, ok := <-f.eventQueue.ConsumeCallEvent():
 			if !ok {
 				return
 			}
 
-			if c.DomainId == 0 {
+			if c.DomainId == 0 && c.CallAction.Event != model.CallActionStatsName {
 				f.log.Error("bad domain", wlog.Namespace("call"),
 					wlog.Int64("domain_id", c.DomainId),
 					wlog.String("call_id", c.Id),
@@ -122,6 +114,11 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 			if err := f.Store.Call().SetHangup(call); err != nil {
 				log.Error(err.Error())
 			}
+		}
+	case *model.CallActionMediaStats:
+		err := f.Store.Call().SaveMediaStats(call.CallAction.DomainId, call.CallMediaStats)
+		if err != nil {
+			log.Error(err.Error())
 		}
 
 	default:
