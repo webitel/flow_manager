@@ -9,7 +9,6 @@ type MQ interface {
 	Close()
 
 	ConsumeCallEvent() <-chan model.CallActionData
-	ConsumeCallMediaStatsEvent() <-chan model.CallMediaStats
 	ConsumeExec() <-chan model.ChannelExec
 	ConsumeIM() <-chan model.MessageWrapper
 

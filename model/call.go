@@ -61,6 +61,7 @@ const (
 	CallActionHangupName     = "hangup"
 	CallActionHeartbeatName  = "heartbeat"
 	CallActionTranscriptName = "transcript"
+	CallActionStatsName      = "stats"
 )
 
 type OutboundCallRequest *eng.CreateCallRequest
@@ -124,7 +125,7 @@ func (e *CallEndpoint) GetName() *string {
 	return nil
 }
 
-type RTPStats struct {
+type RTPAggregate struct {
 	Average float32 `json:"average"`
 	Min     float32 `json:"min"`
 	MinAt   float32 `json:"min_at"`
@@ -133,15 +134,17 @@ type RTPStats struct {
 }
 
 type RtpStats struct {
-	Mos        RTPStats `json:"mos"`
-	Jitter     RTPStats `json:"jitter"`
-	RoundTrip  RTPStats `json:"roundtrip"`
-	PacketLoss RTPStats `json:"packetloss"`
+	Mos        RTPAggregate `json:"mos"`
+	Jitter     RTPAggregate `json:"jitter"`
+	RoundTrip  RTPAggregate `json:"roundtrip"`
+	PacketLoss RTPAggregate `json:"packetloss"`
 }
 
 type CallMediaStats struct {
-	SipId string   `json:"call_id"`
-	RTP   RtpStats `json:"rtp"`
+	SipId    string   `json:"call_id"`
+	UserId   *int64   `json:"user_id,string"`
+	DomainId *int64   `json:"domain_id,string"`
+	RTP      RtpStats `json:"rtp"`
 }
 
 type QueueInfo struct {
@@ -298,6 +301,11 @@ type CallActionTranscript struct {
 	Transcript any `json:"transcript"`
 }
 
+type CallActionMediaStats struct {
+	CallAction
+	CallMediaStats
+}
+
 func (h *CallActionHangup) VariablesToJson() []byte {
 	if h.Payload == nil {
 		return []byte("{}") // FIXME
@@ -403,6 +411,11 @@ func (c *CallActionData) GetEvent() any {
 		}
 	case CallActionTranscriptName:
 		c.parsed = &CallActionTranscript{
+			CallAction: c.CallAction,
+		}
+
+	case CallActionStatsName:
+		c.parsed = &CallActionMediaStats{
 			CallAction: c.CallAction,
 		}
 	}

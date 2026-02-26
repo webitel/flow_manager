@@ -628,16 +628,17 @@ where id = :Id`, map[string]any{
 	return nil
 }
 
-func (s SqlCallStore) SaveMediaStats(stats model.CallMediaStats) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, mos_avg, mos_min, mos_min_at, mos_max,
+func (s SqlCallStore) SaveMediaStats(domainId int64, stats model.CallMediaStats) *model.AppError {
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, user_id, mos_avg, mos_min, mos_min_at, mos_max,
                                               mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max, jitter_max_at,
                                               packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max, packetloss_max_at,
                                               roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min, roundtrip_min_at)
-values (now(), :SipId, :DomainId, :MosAvg, :MosMin, :MosMinAt, :MosMax, :MosMaxAt, :JitterAvg, :JitterMin,
+values (now(), :SipId, :DomainId, :UserId, :MosAvg, :MosMin, :MosMinAt, :MosMax, :MosMaxAt, :JitterAvg, :JitterMin,
         :JitterMinAt, :JitterMax, :JitterMaxAt, :PacketlossAvg, :PacketlossMin, :PacketlossMinAt, :PacketlossMax, :PacketlossMaxAt,
         :RoundtripAvg, :RoundtripMax, :RoundtripMaxAt, :RoundtripMin, :RoundtripMinAt)`, map[string]any{
+		"DomainId":        domainId,
 		"SipId":           stats.SipId,
-		"DomainId":        0,
+		"UserId":          stats.UserId,
 		"MosAvg":          stats.RTP.Mos.Average,
 		"MosMin":          stats.RTP.Mos.Min,
 		"MosMinAt":        stats.RTP.Mos.MinAt,
