@@ -116,7 +116,7 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 			}
 		}
 	case *model.CallActionMediaStats:
-		err := f.Store.Call().SaveMediaStats(call.CallAction.DomainId, call.CallMediaStats)
+		err := f.Store.Call().SaveMediaStats(call)
 		if err != nil {
 			log.Error(err.Error())
 		}
