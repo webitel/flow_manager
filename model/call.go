@@ -146,8 +146,9 @@ type RtpStats struct {
 }
 
 type CallMediaStats struct {
-	SipId string   `json:"call_id"`
-	RTP   RtpStats `json:"rtp"`
+	SipId  string   `json:"call_id"`
+	UserId *int64   `json:"user_id,string"`
+	RTP    RtpStats `json:"rtp"`
 }
 
 type QueueInfo struct {
@@ -306,7 +307,6 @@ type CallActionTranscript struct {
 
 type CallActionMediaStats struct {
 	CallAction
-	UserId *int64 `json:"user_id,string"`
 	CallMediaStats
 }
 

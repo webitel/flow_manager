@@ -354,23 +354,24 @@ func (a *AMQP) handleCallMediaStats(data []byte) {
 		callStats.RTP.RoundTrip.Min /= 1000
 	}
 
-	bodyStats, err := json.Marshal(callStats.CallMediaStats)
-	if err != nil {
-		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
-		return
-	}
-	strStats := string(bodyStats)
 	//
 	ca := model.CallActionDataWithUser{
 		CallActionData: model.CallActionData{
 			CallAction: callStats.CallAction,
-			Data:       &strStats,
 		},
 	}
 
 	if userId != 0 {
 		ca.UserId = strconv.Itoa(userId)
 	}
+
+	bodyStats, err := json.Marshal(callStats.CallMediaStats)
+	if err != nil {
+		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
+		return
+	}
+	strStats := string(bodyStats)
+	ca.Data = &strStats
 
 	body, err := json.Marshal(ca)
 	if err != nil {
