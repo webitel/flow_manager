@@ -348,11 +348,23 @@ func (a *AMQP) handleCallMediaStats(data []byte) {
 	callStats.AppId = model.OpensipsExchange
 	callStats.Event = model.CallActionStatsName
 	callStats.Timestamp = model.GetMillis()
+	if callStats.RTP.RoundTrip.Average > 0 {
+		callStats.RTP.RoundTrip.Average /= 1000
+		callStats.RTP.RoundTrip.Max /= 1000
+		callStats.RTP.RoundTrip.Min /= 1000
+	}
+
+	bodyStats, err := json.Marshal(callStats.CallMediaStats)
+	if err != nil {
+		wlog.Error(fmt.Sprintf("Failed to parse call stats message %s: %s", string(data), err.Error()))
+		return
+	}
+	strStats := string(bodyStats)
 	//
 	ca := model.CallActionDataWithUser{
 		CallActionData: model.CallActionData{
 			CallAction: callStats.CallAction,
-			Data:       &jsonrpc.Params.Stats,
+			Data:       &strStats,
 		},
 	}
 
