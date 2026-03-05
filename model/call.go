@@ -64,7 +64,35 @@ const (
 	CallActionStatsName      = "stats"
 )
 
-type OutboundCallRequest *eng.CreateCallRequest
+type OutboundCallRequest struct {
+	From        *OutboundCallEndpoint `json:"from"`
+	To          *OutboundCallEndpoint `json:"to"`
+	Destination string                `json:"destination"`
+	Params      *OutboundCallParams           `json:"params"`
+	DomainID    int64                 `json:"domainId"`
+}
+
+type OutboundCallEndpoint struct {
+	AppId     string `json:"appId"`
+	Type      string `json:"type"`
+	Id        int64  `json:"id"`
+	Extension string `json:"extension"`
+}
+
+type OutboundCallParams struct {
+	Timeout           int32             `json:"timeout"`
+	Audio             bool              `json:"audio"`
+	Video             bool              `json:"video"`
+	Screen            bool              `json:"screen"`
+	Record            bool              `json:"record"`
+	Variables         map[string]string `json:"variables"`
+	Display           string            `json:"display"`
+	DisableStun       bool              `json:"disableStun"`
+	CancelDistribute  bool              `json:"cancelDistribute"`
+	IsOnline          bool              `json:"isOnline"`
+	DisableAutoAnswer bool              `json:"disableAutoAnswer"`
+	HideNumber        bool              `json:"hideNumber"`
+}
 
 type MissedCall struct {
 	DomainId int64  `json:"domain_id" db:"domain_id"`

@@ -22,7 +22,7 @@ func (r *router) makeCall(ctx context.Context, scope *Flow, conn model.Connectio
 		return nil, err
 	}
 
-	argv.DomainId = conn.DomainId()
+	argv.DomainID = conn.DomainId()
 
 	if argv.From == nil || (argv.From.Id == 0 && argv.From.Extension == "") {
 		return nil, ErrorRequiredParameter("makeCall", "from")
