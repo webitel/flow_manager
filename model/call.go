@@ -8,8 +8,6 @@ import (
 	"strings"
 
 	"github.com/webitel/wlog"
-
-	eng "github.com/webitel/flow_manager/gen/engine"
 )
 
 const CallVariableSchemaIds = "wbt_schema_ids"
