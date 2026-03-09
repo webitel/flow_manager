@@ -3,14 +3,15 @@ package processing
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/pkg/processing"
 	"maps"
 	"net/http"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
+	"github.com/webitel/flow_manager/pkg/processing"
 )
 
 type Router struct {
@@ -22,12 +23,14 @@ type Connection interface {
 	model.Connection
 	SchemaId() int
 	PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, *model.AppError)
-	SetComponent(name string, component interface{})
-	GetComponentByName(name string) interface{}
+	SetComponent(name string, component any)
+	GetComponentByName(name string) any
+	Export(ctx context.Context, vars []string)
+	DumpExportVariables() map[string]string
 }
 
 func Init(fm *app.FlowManager, fr flow.Router) {
-	var router = &Router{
+	router := &Router{
 		fm: fm,
 	}
 
@@ -47,7 +50,6 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
 			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-
 		} else {
 			return h.Handler(ctx, scope, req.Args())
 		}
@@ -59,7 +61,6 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 }
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
-
 	go r.handle(conn)
 	return nil
 }
@@ -97,6 +98,6 @@ func (r *Router) handle(conn model.Connection) {
 	conn.Close()
 }
 
-func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
+func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
 	return scope.Decode(in, out)
 }

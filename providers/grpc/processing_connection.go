@@ -10,26 +10,27 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/wlog"
-
 	"github.com/tidwall/gjson"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/pkg/processing"
 )
 
 type processingConnection struct {
-	id         string
-	variables  map[string]string
-	domainId   int64
-	schemaId   int
-	parentId   string
-	formId     string
-	forms      chan processing.FormElem
-	formAction chan processing.FormAction
-	finished   chan struct{}
+	id              string
+	variables       map[string]string
+	exportVariables []string
+	domainId        int64
+	schemaId        int
+	parentId        string
+	formId          string
+	forms           chan processing.FormElem
+	formAction      chan processing.FormAction
+	finished        chan struct{}
 
-	components map[string]interface{}
+	components map[string]any
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -60,7 +61,7 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 		cancel:     cancel,
 		finished:   make(chan struct{}),
 		forms:      make(chan processing.FormElem, 5),
-		components: make(map[string]interface{}),
+		components: make(map[string]any),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "processing"),
@@ -77,18 +78,42 @@ func (c *processingConnection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *processingConnection) SetComponent(name string, component interface{}) {
+func (c *processingConnection) SetComponent(name string, component any) {
 	c.Lock()
 	c.components[name] = component
 	c.Unlock()
 }
 
-func (c *processingConnection) GetComponentByName(name string) interface{} {
+func (c *processingConnection) GetComponentByName(name string) any {
 	c.RLock()
 	v, _ := c.components[name]
 	c.RUnlock()
 
 	return v
+}
+
+func (c *processingConnection) Export(ctx context.Context, vars []string) {
+	c.Lock()
+	c.exportVariables = append(c.exportVariables, vars...)
+	c.Unlock()
+}
+
+func (c *processingConnection) DumpExportVariables() map[string]string {
+	c.RLock()
+	vars := make([]string, len(c.exportVariables))
+	copy(vars, c.exportVariables)
+	c.RUnlock()
+
+	var res map[string]string
+	if len(c.exportVariables) > 0 {
+		res = make(map[string]string)
+		for _, v := range vars {
+			tmp, _ := c.Get(v)
+			res[v] = strings.ToValidUTF8(tmp, "")
+		}
+	}
+
+	return res
 }
 
 func (c *processingConnection) PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, *model.AppError) {
@@ -142,7 +167,7 @@ func (c *processingConnection) setActiveFormId(id string) {
 	c.Unlock()
 }
 
-func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId string, action string, vars map[string]string, sync bool) *model.AppError {
+func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId, action string, vars map[string]string, sync bool) *model.AppError {
 	if c.formAction == nil {
 		return model.NewInternalError("processing.form.app_err", "not found active form")
 	}
@@ -261,4 +286,4 @@ func (c *processingConnection) Variables() map[string]string {
 	return maps.Clone(c.variables)
 }
 
-//fixme
+// fixme
