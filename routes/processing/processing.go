@@ -2,8 +2,9 @@ package processing
 
 import (
 	"context"
-	"github.com/webitel/wlog"
 	"strconv"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
@@ -13,7 +14,7 @@ type ResumeAttemptArgs struct {
 	Id int `json:"id"`
 }
 
-func (r *Router) attemptResult(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) attemptResult(ctx context.Context, scope *flow.Flow, conn Connection, args any) (model.Response, *model.AppError) {
 	var argv model.AttemptResult
 	var attId int
 	tmp, _ := conn.Get("attempt_id")
@@ -24,6 +25,16 @@ func (r *Router) attemptResult(ctx context.Context, scope *flow.Flow, conn Conne
 	}
 	argv.Id = int64(attId)
 
+	exportVars := conn.DumpExportVariables()
+	if exportVars != nil {
+		if argv.Variables == nil {
+			argv.Variables = make(map[string]string)
+		}
+		for k, v := range exportVars {
+			argv.Variables[k] = v
+		}
+	}
+
 	if err := r.fm.AttemptResult(&argv); err != nil {
 		return nil, err
 	}
@@ -31,7 +42,7 @@ func (r *Router) attemptResult(ctx context.Context, scope *flow.Flow, conn Conne
 	return model.CallResponseOK, nil
 }
 
-func (r *Router) resumeAttempt(ctx context.Context, scope *flow.Flow, conn Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *Router) resumeAttempt(ctx context.Context, scope *flow.Flow, conn Connection, args any) (model.Response, *model.AppError) {
 	var argv ResumeAttemptArgs
 
 	if err := r.Decode(scope, args, &argv); err != nil {

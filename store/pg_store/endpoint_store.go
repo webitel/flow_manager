@@ -78,12 +78,14 @@ from endpoints e
                     E'sip_auth_username=' || g.username,
                     E'sip_auth_password=' || g.password,
                     E'sip_from_uri=' || g.account,
+					'sip_h_X-Webitel-Domain=' || g.dc,
 					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
             else
                 array[
 					'sip_invite_domain=' || regexp_replace(g.host, '([a-zA-Z+.\-\d]+):?.*', '\1'),
                     'sip_h_X-Webitel-Direction=outbound',
+					'sip_h_X-Webitel-Domain=' || g.dc,
 					'sip_h_X-Webitel-Gateway-Id=' || g.id
                 ]
             end vars, false
@@ -95,7 +97,7 @@ from endpoints e
 
      limit 1
  ) res on true
-order by e.idx`, map[string]interface{}{
+order by e.idx`, map[string]any{
 		"DomainId": domainId,
 		"Request":  request,
 		//"CallerName":   callerName,
