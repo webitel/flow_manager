@@ -66,7 +66,7 @@ type OutboundCallRequest struct {
 	From        *OutboundCallEndpoint `json:"from"`
 	To          *OutboundCallEndpoint `json:"to"`
 	Destination string                `json:"destination"`
-	Params      *OutboundCallParams           `json:"params"`
+	Params      *OutboundCallParams   `json:"params"`
 	DomainID    int64                 `json:"domainId"`
 }
 
@@ -90,6 +90,7 @@ type OutboundCallParams struct {
 	IsOnline          bool              `json:"isOnline"`
 	DisableAutoAnswer bool              `json:"disableAutoAnswer"`
 	HideNumber        bool              `json:"hideNumber"`
+	ContactId         int64             `json:"contactId"`
 }
 
 type MissedCall struct {
