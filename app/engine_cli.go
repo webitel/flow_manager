@@ -59,6 +59,7 @@ func parseOutboundCallRequest(req *model.OutboundCallRequest) (*engine.CreateCal
 			IsOnline:          req.Params.IsOnline,
 			DisableAutoAnswer: req.Params.DisableAutoAnswer,
 			HideNumber:        req.Params.HideNumber,
+			ContactId:         req.Params.ContactId,
 		}
 	}
 	return protoReq, nil
