@@ -8,6 +8,8 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+const recordSessionTemplate = "${caller_id_number}_${destination_number}_${strepoch()}"
+
 type RecordFileArg struct {
 	Name          string
 	Type          string
@@ -28,9 +30,9 @@ type RecordSessionArg struct {
 	FollowTransfer bool `json:"followTransfer"`
 }
 
-func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
-	var argv = RecordFileArg{
-		Name:          "recordFile",
+func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
+	argv := RecordFileArg{
+		Name:          "recordFile_${strepoch()}",
 		Type:          "mp3",
 		MaxSec:        60,
 		SilenceThresh: 200,
@@ -43,7 +45,7 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 	}
 
 	if argv.Terminators != "" {
-		if _, err := call.Set(ctx, map[string]interface{}{
+		if _, err := call.Set(ctx, map[string]any{
 			"playback_terminators": argv.Terminators,
 		}); err != nil {
 			return nil, err
@@ -60,16 +62,19 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 }
 
 // FIXME test record stop
-func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError) {
-
-	var argv = RecordSessionArg{
-		Name:   "${caller_id_number}_${destination_number}",
+func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
+	argv := RecordSessionArg{
+		Name:   "",
 		Type:   "mp3",
 		MinSec: 2,
 	}
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
+	}
+
+	if argv.Name == "" {
+		argv.Name = recordSessionTemplate
 	}
 
 	normalizeRecordName(&argv.Name)

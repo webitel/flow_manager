@@ -8,12 +8,13 @@ import (
 	"strings"
 	"sync"
 
+	uuid "github.com/satori/go.uuid"
 	"github.com/tidwall/gjson"
 
-	uuid "github.com/satori/go.uuid"
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
-	"github.com/webitel/wlog"
 )
 
 const (
@@ -57,7 +58,7 @@ type Connection struct {
 	originateRequest bool
 	webCall          string
 	dialPlan         string
-	//context         string
+	// context         string
 	destination          string
 	stopped              bool
 	direction            model.CallDirection
@@ -85,7 +86,7 @@ type Connection struct {
 	exportVariables  []string
 	ctx              context.Context
 	cancelFn         context.CancelFunc
-	hookBridged      chan struct{} //todo
+	hookBridged      chan struct{} // todo
 	cancelQueue      context.CancelFunc
 	speechMessages   []model.SpeechMessage
 	playBackground   int
@@ -124,7 +125,7 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		connection:       baseConnection,
 		lastEvent:        dump,
 		callbackMessages: make(map[string]chan *eventsocket.Event),
-		//disconnected:     make(chan struct{}),
+		// disconnected:     make(chan struct{}),
 		variables: model.NewThreadSafeStringMap(),
 	}
 	connection.log = wlog.GlobalLogger().With(
@@ -159,19 +160,19 @@ func (c *Connection) initIvrQueue(event *eventsocket.Event) {
 func (c *Connection) initTransferSchema(event *eventsocket.Event) {
 	c.transferSchema, _ = strconv.Atoi(event.Get("variable_transfer_to_schema_id"))
 	if c.transferSchema != 0 {
-		//c.executeWithContext(c.ctx, "unset", "transfer_to_schema_id")
+		// c.executeWithContext(c.ctx, "unset", "transfer_to_schema_id")
 	}
 }
 
 func (c *Connection) initTransferQueue(event *eventsocket.Event) {
 	c.transferQueue, _ = strconv.Atoi(event.Get("variable_wbt_bt_queue_id"))
 	if c.transferQueue != 0 {
-		//c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
+		// c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
 	}
 
 	c.transferAgent, _ = strconv.Atoi(event.Get("variable_wbt_bt_agent_id"))
 	if c.transferAgent != 0 {
-		//c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
+		// c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
 	}
 
 	c.isBlindTransferQueue = event.Get("variable_wbt_bt_queue") == "true"
@@ -258,7 +259,7 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 		c.initDestination(dump)
 	}
 	c.initDestination(dump)
-	//dump.PrettyPrint()
+	// dump.PrettyPrint()
 
 	c.from = &model.CallEndpoint{}
 
@@ -285,7 +286,7 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 			c.from.Name = dump.Get("Caller-Caller-ID-Name")
 			c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		}
-		//fmt.Println(direction)
+		// fmt.Println(direction)
 	} else if c.webCall != "" && c.transferSchema != 0 {
 		c.to = &model.CallEndpoint{
 			Type:   model.CallEndpointTypeDestination,
@@ -360,11 +361,15 @@ func (c *Connection) PrintLastEvent() {
 
 func (c *Connection) Close() *model.AppError {
 	c.connection.Close()
-	//FIXME
+	// FIXME
 	return nil
 }
 
 func (c *Connection) Get(key string) (string, bool) {
+	if key == "strepoch()" {
+		return "${" + key + "}", true
+	}
+
 	idx := strings.Index(key, ".")
 
 	if idx > 0 {
@@ -379,10 +384,9 @@ func (c *Connection) Get(key string) (string, bool) {
 }
 
 func (c *Connection) get(key string) (value string, ok bool) {
-
 	if c.Stopped() {
 		if value, ok = c.variables.Load(key); ok {
-			return
+			return value, ok
 		}
 	}
 
@@ -392,7 +396,7 @@ func (c *Connection) get(key string) (value string, ok bool) {
 			value = c.lastEvent.Get("variable_" + (key))
 		}
 		if value == "" {
-			var mapKey = ""
+			mapKey := ""
 			if mapKey, ok = mapVariables[key]; ok {
 				value = c.lastEvent.Get(mapKey)
 			}
@@ -406,7 +410,7 @@ func (c *Connection) get(key string) (value string, ok bool) {
 			ok = true
 		}
 	}
-	return
+	return value, ok
 }
 
 func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, *model.AppError) {
@@ -490,7 +494,7 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	c.RLock()
 	defer c.RUnlock()
 
-	var res = make(map[string]string)
+	res := make(map[string]string)
 	if len(c.exportVariables) > 0 {
 		for _, v := range c.exportVariables {
 			res[v], _ = c.Get(v)
@@ -525,7 +529,6 @@ func (c *Connection) initDestination(dump *eventsocket.Event) {
 	if c.destination != "" {
 		return
 	}
-
 }
 
 func (c *Connection) Destination() string {
@@ -567,7 +570,7 @@ func (c *Connection) setEvent(event *eventsocket.Event) {
 			c.hangupCause = event.Get(HEADER_HANGUP_CAUSE_NAME)
 			c.log.Debug("hangup", wlog.String("cause", c.hangupCause))
 			c.cancelFn()
-			//TODO SET DISCONNECT ROUTE
+			// TODO SET DISCONNECT ROUTE
 			c.connection.Send("exit")
 			c.stopped = true
 		case EVENT_BRIDGE:
@@ -577,7 +580,6 @@ func (c *Connection) setEvent(event *eventsocket.Event) {
 			c.log.Debug("receive event", wlog.String("event_name", event.Get(HEADER_EVENT_NAME)))
 		}
 	} else if event.Get(HEADER_CONTENT_TYPE_NAME) == "text/disconnect-notice" && event.Get(HEADER_CONTENT_DISPOSITION_NAME) == "Disconnected" {
-
 	}
 }
 
@@ -628,7 +630,7 @@ func (c *Connection) HangupCause() string {
 	return c.hangupCause
 }
 
-func (c *Connection) executeWithContext(ctx context.Context, app string, args interface{}) (model.Response, *model.AppError) {
+func (c *Connection) executeWithContext(ctx context.Context, app string, args any) (model.Response, *model.AppError) {
 	if c.Stopped() {
 		return nil, errExecuteAfterHangup
 	}
@@ -656,7 +658,6 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args in
 		"event-lock":       "false",
 		"Event-UUID":       guid.String(),
 	}, "", "")
-
 	if err != nil {
 		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -677,18 +678,16 @@ func (c *Connection) executeLoop(app, args string) *model.AppError {
 		"event-lock":       "true",
 		"loop":             "-1",
 	}, "", "")
-
 	if err != nil {
 		return model.NewAppError("FreeSWITCH", "provider.fs.execute_loop.app_error", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return nil
-
 }
 
 func (c *Connection) updateVariablesFromEvent(event *eventsocket.Event) {
 	m := make(map[string]string)
-	for k, _ := range event.Header {
+	for k := range event.Header {
 		m[k] = event.Get(k)
 	}
 	c.variables.UnionMap(m)
@@ -701,7 +700,7 @@ func (c *Connection) GetVariable(name string) (value string) {
 		value = c.lastEvent.Get(name)
 	}
 
-	return
+	return value
 }
 
 func (c *Connection) WaitForDisconnect1() {
