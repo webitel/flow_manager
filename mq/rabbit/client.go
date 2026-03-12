@@ -354,6 +354,12 @@ func (a *AMQP) handleCallMediaStats(data []byte) {
 		callStats.RTP.RoundTrip.Min /= 1000
 	}
 
+	if callStats.RTP.Mos.Average > 0 {
+		callStats.RTP.Mos.Average /= 10
+		callStats.RTP.Mos.Min /= 10
+		callStats.RTP.Mos.Max /= 10
+	}
+
 	//
 	ca := model.CallActionDataWithUser{
 		CallActionData: model.CallActionData{
