@@ -8,7 +8,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-const recordSessionTemplate = "${caller_id_number}_${destination_number}_${strepoch()}"
+const recordSessionTemplate = "${strepoch()}_${caller_id_number}_${destination_number}"
 
 type RecordFileArg struct {
 	Name          string
