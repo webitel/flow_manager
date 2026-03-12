@@ -9,7 +9,7 @@ import (
 
 type SleepArgs int
 
-func (r *router) sleep(ctx context.Context, scope *Flow, c model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) sleep(ctx context.Context, scope *Flow, c model.Connection, args any) (model.Response, *model.AppError) {
 	var timeout int
 	if err := scope.Decode(args, &timeout); err != nil {
 		return nil, err
@@ -17,7 +17,7 @@ func (r *router) sleep(ctx context.Context, scope *Flow, c model.Connection, arg
 
 	if timeout > 0 {
 		select {
-		case <-c.Context().Done():
+		case <-ctx.Done():
 			return ResponseErr, nil
 		case <-time.After(time.Millisecond * (time.Duration(timeout))):
 			return ResponseOK, nil
