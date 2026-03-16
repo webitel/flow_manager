@@ -23,10 +23,10 @@ func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
 func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
 	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
                       from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id,
-					  attempt_id, member_id, grantee_id, params, heartbeat, destination_name)
+					  attempt_id, member_id, grantee_id, params, heartbeat, destination_name, contact_id)
 values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
         :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId,
-		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end, :DestinationName)
+		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end, :DestinationName, :ContactId)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -52,7 +52,8 @@ on conflict (id)
 		grantee_Id = EXCLUDED.grantee_Id,
 		params = EXCLUDED.params,
         heartbeat = EXCLUDED.heartbeat,
-        destination_name = EXCLUDED.destination_name
+        destination_name = EXCLUDED.destination_name,
+        contact_id = EXCLUDED.contact_id
 		`, map[string]any{
 		"DomainId":    call.DomainId,
 		"Id":          call.Id,
@@ -84,6 +85,7 @@ on conflict (id)
 		"Params":          call.GetParams(),
 		"Hb":              call.Heartbeat,
 		"DestinationName": call.DestinationName,
+		"ContactId":       call.ContactId,
 	})
 	if err != nil {
 		return model.NewAppError("SqlCallStore.Save", "store.sql_call.save.error", nil,
