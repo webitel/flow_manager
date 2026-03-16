@@ -172,7 +172,7 @@ func (a *AMQP) initQueues() {
 
 	a.subscribeCall()
 	a.subscribeExec()
-	a.subscribeIM()
+	// a.subscribeIM()
 }
 
 func (a *AMQP) subscribeCall() {
