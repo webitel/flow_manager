@@ -202,6 +202,7 @@ type CallActionInfo struct {
 	Heartbeat       int            `json:"heartbeat,omitempty"`
 	Video           string         `json:"video,omitempty"`
 	MeetingId       string         `json:"meeting_id,omitempty"`
+	ContactId       *int64         `json:"contact_id"`
 }
 
 type CallActionRinging struct {
