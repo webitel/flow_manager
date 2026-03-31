@@ -5,30 +5,28 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"github.com/k3a/html2text"
 	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
 	"net/smtp"
-	"net/textproto"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/emersion/go-imap"
+	"github.com/emersion/go-imap/client"
+	"github.com/emersion/go-message/mail"
+	"github.com/k3a/html2text"
+	"golang.org/x/oauth2"
+	"gopkg.in/gomail.v2"
+
 	"github.com/webitel/wlog"
 
-	"github.com/emersion/go-imap"
-
-	"golang.org/x/oauth2"
-
-	"github.com/emersion/go-imap/client"
-	"github.com/jordan-wright/email"
 	"github.com/webitel/flow_manager/model"
 
 	_ "github.com/emersion/go-message/charset"
-	"github.com/emersion/go-message/mail"
 )
 
 type Profile struct {
@@ -233,7 +231,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 		if err := p.Login(); err != nil {
 			return nil, err
 		}
-		//return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
+		// return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
 	}
 	res := make([]*model.Email, 0)
 
@@ -266,7 +264,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 
 	go func() {
 		if err := p.client.UidFetch(seqSet, items, messages); err != nil {
-			//log.Fatal(err) //TODO
+			// log.Fatal(err) //TODO
 		}
 		close(done)
 	}()
@@ -293,7 +291,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	}
 
 	rr := &model.Email{
-		Direction: "outbound", //FIXME
+		Direction: "outbound", // FIXME
 		MessageId: id,
 		Subject:   parent.Subject,
 		ProfileId: parent.ProfileId,
@@ -307,35 +305,39 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 		HtmlBody:  data,
 	}
 
-	e := &email.Email{
-		From:    p.login,
-		To:      rr.To,
-		Cc:      rr.CC,
-		Subject: rr.Subject,
-		//Text:    []byte("Text Body is, of course, supported!"),
-		HTML: rr.Body,
-		Headers: textproto.MIMEHeader{
-			"In-Reply-To": []string{rr.InReplyTo},
-			"Message-Id":  []string{rr.MessageId},
-		},
+	mail := gomail.NewMessage()
+	mail.SetHeader("Message-Id", rr.MessageId)
+	mail.SetHeader("From", p.login)
+
+	if rr.Subject != "" {
+		mail.SetHeader("Subject", rr.Subject)
 	}
 
-	var auth smtp.Auth
+	if rr.InReplyTo != "" {
+		mail.SetHeader("In-Reply-To", rr.InReplyTo)
+	}
+
+	if len(rr.CC) != 0 {
+		mail.SetHeader("Cc", rr.CC...)
+	}
+
+	mail.SetBody("text/html", string(rr.HtmlBody))
+	var dialer *gomail.Dialer
+
 	if p.authMethod == model.MailAuthTypeOAuth2 {
-		//  Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant.
-		auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
-	} else {
-		auth = LoginAuth(p.login, p.password)
-	}
-	if p.Tls {
-		tlsConfig := &tls.Config{
-			//ServerName: "smtp.office365.com",
-			InsecureSkipVerify: true,
+		dialer = gomail.NewDialer(p.smtpHost, p.smtpPort, p.login, "")
+		if p.token != nil {
+			dialer.Auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
 		}
-		err = e.SendWithStartTLS(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth, tlsConfig)
 	} else {
-		err = e.Send(fmt.Sprintf("%s:%d", p.smtpHost, p.smtpPort), auth)
+		dialer = gomail.NewDialer(p.smtpHost, p.smtpPort, p.login, p.password)
 	}
+
+	if p.Tls {
+		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	err = dialer.DialAndSend(mail)
 
 	if err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
@@ -347,7 +349,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
 	m := &model.Email{
 		ProfileId: p.Id,
-		Direction: "inbound", //TODO
+		Direction: "inbound", // TODO
 	}
 
 	if msg == nil {
