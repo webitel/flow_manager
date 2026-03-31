@@ -325,9 +325,16 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	var dialer *gomail.Dialer
 
 	if p.authMethod == model.MailAuthTypeOAuth2 {
+		p.log.Debug("using OAuth2",
+			wlog.String("from", p.login),
+			wlog.String("smtpHost", p.smtpHost),
+			wlog.Int("smtpPort", p.smtpPort),
+		)
 		dialer = gomail.NewDialer(p.smtpHost, p.smtpPort, p.login, "")
-		if p.token != nil {
+		if p.token != nil && p.token.AccessToken != "" {
 			dialer.Auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
+		} else {
+			p.log.Error("no token provided")
 		}
 	} else {
 		dialer = gomail.NewDialer(p.smtpHost, p.smtpPort, p.login, p.password)
@@ -338,7 +345,6 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	}
 
 	err = dialer.DialAndSend(mail)
-
 	if err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
