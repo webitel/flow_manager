@@ -203,6 +203,7 @@ type CallActionInfo struct {
 	Video           string         `json:"video,omitempty"`
 	MeetingId       string         `json:"meeting_id,omitempty"`
 	ContactId       *int64         `json:"contact_id"`
+	HideNumber      *bool          `json:"hide_number,omitempty"`
 }
 
 type CallActionRinging struct {
@@ -277,6 +278,9 @@ func (r *CallActionRinging) GetParams() []byte {
 	}
 	if r.MeetingId != "" {
 		arr = append(arr, fmt.Sprintf(`"meeting_id":"%s"`, r.MeetingId))
+	}
+	if r.HideNumber != nil {
+		arr = append(arr, fmt.Sprintf(`"hide_number":%t`, *r.HideNumber))
 	}
 
 	return []byte(`{` + strings.Join(arr, ",") + `}`)
