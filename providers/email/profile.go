@@ -308,6 +308,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	mail := gomail.NewMessage()
 	mail.SetHeader("Message-Id", rr.MessageId)
 	mail.SetHeader("From", p.login)
+	mail.SetHeader("To", rr.To...)
 
 	if rr.Subject != "" {
 		mail.SetHeader("Subject", rr.Subject)
