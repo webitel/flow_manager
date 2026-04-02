@@ -21,12 +21,15 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// Request to submit meeting satisfaction feedback.
 type SatisfactionMeetingRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id           string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Unique identifier of the meeting.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// The satisfaction value or score.
 	Satisfaction string `protobuf:"bytes,2,opt,name=satisfaction,proto3" json:"satisfaction,omitempty"`
 }
 
@@ -76,6 +79,7 @@ func (x *SatisfactionMeetingRequest) GetSatisfaction() string {
 	return ""
 }
 
+// Empty response for satisfaction submission.
 type SatisfactionMeetingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -114,19 +118,28 @@ func (*SatisfactionMeetingResponse) Descriptor() ([]byte, []int) {
 	return file_web_meeting_proto_rawDescGZIP(), []int{1}
 }
 
+// Detailed meeting information.
 type Meeting struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id                string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title             string            `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	CreatedAt         int64             `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ExpiresAt         int64             `protobuf:"varint,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Variables         map[string]string `protobuf:"bytes,5,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	Url               string            `protobuf:"bytes,6,opt,name=url,proto3" json:"url,omitempty"`
-	Satisfaction      string            `protobuf:"bytes,7,opt,name=satisfaction,proto3" json:"satisfaction,omitempty"`
-	AllowSatisfaction bool              `protobuf:"varint,8,opt,name=allow_satisfaction,json=allowSatisfaction,proto3" json:"allow_satisfaction,omitempty"`
+	// Unique identifier of the meeting.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Title or topic of the meeting.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// Timestamp when the meeting was created (Unix).
+	CreatedAt int64 `protobuf:"varint,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Timestamp when the meeting link expires (Unix).
+	ExpiresAt int64 `protobuf:"varint,4,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Custom metadata or configuration variables.
+	Variables map[string]string `protobuf:"bytes,5,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	// Full URL to join the meeting.
+	Url string `protobuf:"bytes,6,opt,name=url,proto3" json:"url,omitempty"`
+	// Current satisfaction rating.
+	Satisfaction string `protobuf:"bytes,7,opt,name=satisfaction,proto3" json:"satisfaction,omitempty"`
+	// Flag indicating if satisfaction feedback is allowed.
+	AllowSatisfaction bool `protobuf:"varint,8,opt,name=allow_satisfaction,json=allowSatisfaction,proto3" json:"allow_satisfaction,omitempty"`
 }
 
 func (x *Meeting) Reset() {
@@ -217,16 +230,22 @@ func (x *Meeting) GetAllowSatisfaction() bool {
 	return false
 }
 
+// Public view of the meeting (limited fields).
 type MeetingView struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Title             string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	CreatedAt         int64  `protobuf:"varint,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	ExpiresAt         int64  `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
-	Satisfaction      string `protobuf:"bytes,4,opt,name=satisfaction,proto3" json:"satisfaction,omitempty"`
-	AllowSatisfaction bool   `protobuf:"varint,5,opt,name=allow_satisfaction,json=allowSatisfaction,proto3" json:"allow_satisfaction,omitempty"`
+	// Title or topic of the meeting.
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Timestamp when the meeting was created (Unix).
+	CreatedAt int64 `protobuf:"varint,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// Timestamp when the meeting link expires (Unix).
+	ExpiresAt int64 `protobuf:"varint,3,opt,name=expires_at,json=expiresAt,proto3" json:"expires_at,omitempty"`
+	// Current satisfaction rating.
+	Satisfaction string `protobuf:"bytes,4,opt,name=satisfaction,proto3" json:"satisfaction,omitempty"`
+	// Flag indicating if satisfaction feedback is allowed.
+	AllowSatisfaction bool `protobuf:"varint,5,opt,name=allow_satisfaction,json=allowSatisfaction,proto3" json:"allow_satisfaction,omitempty"`
 }
 
 func (x *MeetingView) Reset() {
@@ -296,16 +315,22 @@ func (x *MeetingView) GetAllowSatisfaction() bool {
 	return false
 }
 
+// Request to create a new meeting.
 type CreateMeetingRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Title     string            `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	ExpireSec int64             `protobuf:"varint,2,opt,name=expire_sec,json=expireSec,proto3" json:"expire_sec,omitempty"`
-	BasePath  string            `protobuf:"bytes,3,opt,name=base_path,json=basePath,proto3" json:"base_path,omitempty"`
+	// Title or topic of the meeting.
+	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
+	// Expiration time in seconds from the moment of creation.
+	ExpireSec int64 `protobuf:"varint,2,opt,name=expire_sec,json=expireSec,proto3" json:"expire_sec,omitempty"`
+	// Base path for the generated meeting URL.
+	BasePath string `protobuf:"bytes,3,opt,name=base_path,json=basePath,proto3" json:"base_path,omitempty"`
+	// Custom metadata or configuration variables.
 	Variables map[string]string `protobuf:"bytes,4,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
-	DomainId  int64             `protobuf:"varint,5,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
+	// Identifier of the domain owning the meeting.
+	DomainId int64 `protobuf:"varint,5,opt,name=domain_id,json=domainId,proto3" json:"domain_id,omitempty"`
 }
 
 func (x *CreateMeetingRequest) Reset() {
@@ -375,12 +400,15 @@ func (x *CreateMeetingRequest) GetDomainId() int64 {
 	return 0
 }
 
+// Response containing the created meeting details.
 type CreateMeetingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Id  string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Unique identifier of the created meeting.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Full URL to access the meeting.
 	Url string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 }
 
@@ -430,11 +458,13 @@ func (x *CreateMeetingResponse) GetUrl() string {
 	return ""
 }
 
+// Request to retrieve meeting details by ID.
 type GetMeetingRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Unique identifier of the meeting.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -477,13 +507,17 @@ func (x *GetMeetingRequest) GetId() string {
 	return ""
 }
 
+// Response containing technical meeting details.
 type GetMeetingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Expire    int64             `protobuf:"varint,1,opt,name=expire,proto3" json:"expire,omitempty"`
-	Host      string            `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	// Expiration duration or timestamp.
+	Expire int64 `protobuf:"varint,1,opt,name=expire,proto3" json:"expire,omitempty"`
+	// Host or server address for the meeting.
+	Host string `protobuf:"bytes,2,opt,name=host,proto3" json:"host,omitempty"`
+	// Custom metadata or configuration variables.
 	Variables map[string]string `protobuf:"bytes,3,rep,name=variables,proto3" json:"variables,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
 }
 
@@ -540,11 +574,13 @@ func (x *GetMeetingResponse) GetVariables() map[string]string {
 	return nil
 }
 
+// Request to delete a meeting.
 type DeleteMeetingRequest struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// Unique identifier of the meeting to be deleted.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 }
 
@@ -587,6 +623,7 @@ func (x *DeleteMeetingRequest) GetId() string {
 	return ""
 }
 
+// Empty response for meeting deletion.
 type DeleteMeetingResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -714,9 +751,17 @@ var file_web_meeting_proto_rawDesc = []byte{
 	0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x0e, 0x0a, 0x02, 0x69, 0x64, 0x18,
 	0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x69, 0x64, 0x22, 0x17, 0x0a, 0x15, 0x44, 0x65, 0x6c,
 	0x65, 0x74, 0x65, 0x4d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
-	0x73, 0x65, 0x32, 0xcb, 0x04, 0x0a, 0x0e, 0x4d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x53, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x66, 0x0a, 0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d,
+	0x73, 0x65, 0x32, 0xcb, 0x05, 0x0a, 0x0e, 0x4d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x7c, 0x0a, 0x0d, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d,
 	0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x12, 0x29, 0x2e, 0x77, 0x65, 0x62, 0x5f, 0x6d, 0x65, 0x65,
+	0x74, 0x69, 0x6e, 0x67, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2e, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x65, 0x4d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
+	0x74, 0x1a, 0x2a, 0x2e, 0x77, 0x65, 0x62, 0x5f, 0x6d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x5f,
+	0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65,
+	0x65, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0x14, 0x82,
+	0xd3, 0xe4, 0x93, 0x02, 0x0e, 0x3a, 0x01, 0x2a, 0x22, 0x09, 0x2f, 0x6d, 0x65, 0x65, 0x74, 0x69,
+	0x6e, 0x67, 0x73, 0x12, 0x68, 0x0a, 0x0f, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x4d, 0x65, 0x65,
+	0x74, 0x69, 0x6e, 0x67, 0x4e, 0x41, 0x12, 0x29, 0x2e, 0x77, 0x65, 0x62, 0x5f, 0x6d, 0x65, 0x65,
 	0x74, 0x69, 0x6e, 0x67, 0x5f, 0x62, 0x61, 0x63, 0x6b, 0x65, 0x6e, 0x64, 0x2e, 0x43, 0x72, 0x65,
 	0x61, 0x74, 0x65, 0x4d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73,
 	0x74, 0x1a, 0x2a, 0x2e, 0x77, 0x65, 0x62, 0x5f, 0x6d, 0x65, 0x65, 0x74, 0x69, 0x6e, 0x67, 0x5f,
@@ -790,17 +835,19 @@ var file_web_meeting_proto_depIdxs = []int32{
 	11, // 1: web_meeting_backend.CreateMeetingRequest.variables:type_name -> web_meeting_backend.CreateMeetingRequest.VariablesEntry
 	12, // 2: web_meeting_backend.GetMeetingResponse.variables:type_name -> web_meeting_backend.GetMeetingResponse.VariablesEntry
 	4,  // 3: web_meeting_backend.MeetingService.CreateMeeting:input_type -> web_meeting_backend.CreateMeetingRequest
-	6,  // 4: web_meeting_backend.MeetingService.GetMeetingView:input_type -> web_meeting_backend.GetMeetingRequest
-	6,  // 5: web_meeting_backend.MeetingService.GetMeeting:input_type -> web_meeting_backend.GetMeetingRequest
-	8,  // 6: web_meeting_backend.MeetingService.DeleteMeeting:input_type -> web_meeting_backend.DeleteMeetingRequest
-	0,  // 7: web_meeting_backend.MeetingService.SatisfactionMeeting:input_type -> web_meeting_backend.SatisfactionMeetingRequest
-	5,  // 8: web_meeting_backend.MeetingService.CreateMeeting:output_type -> web_meeting_backend.CreateMeetingResponse
-	3,  // 9: web_meeting_backend.MeetingService.GetMeetingView:output_type -> web_meeting_backend.MeetingView
-	2,  // 10: web_meeting_backend.MeetingService.GetMeeting:output_type -> web_meeting_backend.Meeting
-	9,  // 11: web_meeting_backend.MeetingService.DeleteMeeting:output_type -> web_meeting_backend.DeleteMeetingResponse
-	1,  // 12: web_meeting_backend.MeetingService.SatisfactionMeeting:output_type -> web_meeting_backend.SatisfactionMeetingResponse
-	8,  // [8:13] is the sub-list for method output_type
-	3,  // [3:8] is the sub-list for method input_type
+	4,  // 4: web_meeting_backend.MeetingService.CreateMeetingNA:input_type -> web_meeting_backend.CreateMeetingRequest
+	6,  // 5: web_meeting_backend.MeetingService.GetMeetingView:input_type -> web_meeting_backend.GetMeetingRequest
+	6,  // 6: web_meeting_backend.MeetingService.GetMeeting:input_type -> web_meeting_backend.GetMeetingRequest
+	8,  // 7: web_meeting_backend.MeetingService.DeleteMeeting:input_type -> web_meeting_backend.DeleteMeetingRequest
+	0,  // 8: web_meeting_backend.MeetingService.SatisfactionMeeting:input_type -> web_meeting_backend.SatisfactionMeetingRequest
+	5,  // 9: web_meeting_backend.MeetingService.CreateMeeting:output_type -> web_meeting_backend.CreateMeetingResponse
+	5,  // 10: web_meeting_backend.MeetingService.CreateMeetingNA:output_type -> web_meeting_backend.CreateMeetingResponse
+	3,  // 11: web_meeting_backend.MeetingService.GetMeetingView:output_type -> web_meeting_backend.MeetingView
+	2,  // 12: web_meeting_backend.MeetingService.GetMeeting:output_type -> web_meeting_backend.Meeting
+	9,  // 13: web_meeting_backend.MeetingService.DeleteMeeting:output_type -> web_meeting_backend.DeleteMeetingResponse
+	1,  // 14: web_meeting_backend.MeetingService.SatisfactionMeeting:output_type -> web_meeting_backend.SatisfactionMeetingResponse
+	9,  // [9:15] is the sub-list for method output_type
+	3,  // [3:9] is the sub-list for method input_type
 	3,  // [3:3] is the sub-list for extension type_name
 	3,  // [3:3] is the sub-list for extension extendee
 	0,  // [0:3] is the sub-list for field type_name
