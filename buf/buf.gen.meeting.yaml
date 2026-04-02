@@ -14,5 +14,5 @@ plugins:
 inputs:
 #  - directory: "../protos/meetings"
   - git_repo: "https://github.com/webitel/protos"
-    branch: "v26.02"
+    branch: "main"
     subdir: meetings

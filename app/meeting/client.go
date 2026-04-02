@@ -2,11 +2,13 @@ package meeting
 
 import (
 	"context"
+	"sync"
+
 	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/wlog"
+
 	wmb "github.com/webitel/flow_manager/gen/web-meeting-backend"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
-	"sync"
 )
 
 const ServiceName = "web_meeting_backend"
@@ -46,16 +48,15 @@ func (cm *Client) CreateMeeting(ctx context.Context, domainId int64, title strin
 		return "", model.NewInternalError("meeting.client", "client is nil")
 	}
 
-	res, err := cm.api.Api.CreateMeeting(ctx, &wmb.CreateMeetingRequest{
+	res, err := cm.api.Api.CreateMeetingNA(ctx, &wmb.CreateMeetingRequest{
 		Title:     title,
 		ExpireSec: int64(expireSec),
 		BasePath:  basePath,
 		Variables: vars,
 		DomainId:  domainId,
 	})
-
 	if err != nil {
-		return "", model.NewInternalError("meeting.CreateMeeting", err.Error())
+		return "", model.NewInternalError("meeting.CreateMeetingNA", err.Error())
 	}
 
 	return res.Url, nil
@@ -69,7 +70,6 @@ func (cm *Client) GetMeeting(ctx context.Context, id string) (map[string]string,
 	res, err := cm.api.Api.GetMeeting(ctx, &wmb.GetMeetingRequest{
 		Id: id,
 	})
-
 	if err != nil {
 		return nil, model.NewInternalError("meeting.GetMeeting", err.Error())
 	}
