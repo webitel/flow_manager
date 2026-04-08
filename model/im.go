@@ -14,21 +14,22 @@ type IMDialog interface {
 
 // MessageWrapper представляє кореневий об'єкт
 type MessageWrapper struct {
-	ID       string  `json:"ID"`
-	Message  Message `json:"message"`
+	ID       string  `json:"id"`
+	Message  Message `json:"payload"`
 	UserID   string  `json:"user_id"`
 	DomainID int64   `json:"domain_id"`
+	Echo     bool    `json:"echo"`
 }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
 	ID        string     `json:"ID"`
-	ThreadID  string     `json:"thread_id"`
-	DomainID  int        `json:"domain_id"`
-	From      ImEndpoint `json:"from"`
-	To        ImEndpoint `json:"to"`
-	Text      string     `json:"text"`
-	CreatedAt int64      `json:"created_at"` // Unix timestamp у мілісекундах
+	ThreadID  string     `json:"ThreadID"`
+	DomainID  int        `json:"DomainID"`
+	From      ImEndpoint `json:"From"`
+	To        ImEndpoint `json:"To"`
+	Text      string     `json:"Text"`
+	CreatedAt int64      `json:"CreatedAt"` // Unix timestamp у мілісекундах
 }
 
 // From описує відправника

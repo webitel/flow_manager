@@ -131,7 +131,7 @@ func (s *server) stopConnection(c *Connection) {
 }
 
 func (s *server) nodeMessage(msg model.MessageWrapper) error {
-	if msg.Message.From.Sub == "2522" {
+	if msg.Message.From.Issuer == "bot" {
 		println("todo: skip my message")
 		return nil
 	}

@@ -307,6 +307,10 @@ func (a *AMQP) subscribeIM() {
 			case model.IMExchange:
 				var data model.MessageWrapper
 				json.Unmarshal(m.Body, &data)
+				if data.Echo {
+					println("skip echo")
+					continue
+				}
 				println(m.RoutingKey)
 				println(string(m.Body))
 				a.imEvents <- data
