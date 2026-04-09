@@ -36,6 +36,8 @@ const (
 	FlowExecQueueName  = "workflow-exec"
 	IMQueueNamePrefix  = "im-delivery.workflow-processor.v1"
 	IMExchange         = "im_delivery.broadcast"
+	CallCenterExchange = "callcenter"
+	CallCenterPrefix   = "workflow-cc"
 )
 
 const (
