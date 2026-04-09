@@ -20,7 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	Message_SendText_FullMethodName  = "/webitel.im.api.gateway.v1.Message/SendText"
-	Message_SendFile_FullMethodName  = "/webitel.im.api.gateway.v1.Message/SendFile"
+	Message_SendFile_FullMethodName  = "/webitel.im.api.gateway.v1.Message/SendDocument"
 	Message_SendImage_FullMethodName = "/webitel.im.api.gateway.v1.Message/SendImage"
 )
 

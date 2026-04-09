@@ -9,20 +9,31 @@ type IMDialog interface {
 	IsTransfer() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
+	SendImageMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	SendDocumentMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
+	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
+	Bridge(ctx context.Context, userId int64, timeout int) *AppError
+	Export(ctx context.Context, vars []string) (Response, *AppError)
+	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	LastMessages(limit int) []ChatMessage
+	GetQueueKey() *InQueueKey
+	SetQueue(*InQueueKey) bool
+	DumpExportVariables() map[string]string
 }
 
 // MessageWrapper представляє кореневий об'єкт
 type MessageWrapper struct {
-	ID       string  `json:"ID"`
-	Message  Message `json:"message"`
+	ID       string  `json:"id"`
+	Message  Message `json:"payload"`
 	UserID   string  `json:"user_id"`
 	DomainID int64   `json:"domain_id"`
 }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string     `json:"ID"`
+	ID        string     `json:"id"`
 	ThreadID  string     `json:"thread_id"`
 	DomainID  int        `json:"domain_id"`
 	From      ImEndpoint `json:"from"`

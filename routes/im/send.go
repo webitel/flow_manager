@@ -81,3 +81,75 @@ func (r *Router) sendAction(ctx context.Context, scope *flow.Flow, conv Dialog, 
 
 	return model.CallResponseOK, nil
 }
+
+func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
+	var argv model.ChatMessageOutbound
+	var err *model.AppError
+
+	if err = r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.File != nil {
+		if argv.File.Url != "" && argv.File.Id == 0 {
+			argv.File.Id = 1
+		} else {
+			server := argv.File.Server
+			if server == "" {
+				server = argv.Server
+			}
+			if strings.HasSuffix(server, "/") {
+				server = server[:len(server)-1]
+			}
+			argv.File, err = r.fm.SearchMediaFile(conv.DomainId(), &model.SearchFile{
+				Id:   argv.File.Id,
+				Name: argv.File.Name,
+			})
+			if err != nil {
+				return nil, err
+			}
+			argv.File, err = r.fm.SetupPublicFileUrl(argv.File, conv.DomainId(), server, "media", 604800)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return conv.SendImageMessage(ctx, argv)
+}
+
+func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
+	var argv model.ChatMessageOutbound
+	var err *model.AppError
+
+	if err = r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	if argv.File != nil {
+		if argv.File.Url != "" && argv.File.Id == 0 {
+			argv.File.Id = 1
+		} else {
+			server := argv.File.Server
+			if server == "" {
+				server = argv.Server
+			}
+			if strings.HasSuffix(server, "/") {
+				server = server[:len(server)-1]
+			}
+			argv.File, err = r.fm.SearchMediaFile(conv.DomainId(), &model.SearchFile{
+				Id:   argv.File.Id,
+				Name: argv.File.Name,
+			})
+			if err != nil {
+				return nil, err
+			}
+			argv.File, err = r.fm.SetupPublicFileUrl(argv.File, conv.DomainId(), server, "media", 604800)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	return conv.SendDocumentMessage(ctx, argv)
+}

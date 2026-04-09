@@ -1,6 +1,7 @@
 package im
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"sync"
@@ -8,6 +9,7 @@ import (
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 
+	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -15,6 +17,10 @@ type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
 	RemoveAll(appId string) error
+}
+
+type ChatInviter interface {
+	InviteToConversation(ctx context.Context, req *proto.InviteToConversationRequest) (*proto.InviteToConversationResponse, error)
 }
 
 type server struct {
@@ -28,9 +34,10 @@ type server struct {
 	log             *wlog.Logger
 	connectionStore *ConnectionStore
 	sessionStore    SessionStore
+	chatInviter     ChatInviter
 }
 
-func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
+func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore, chatInviter ChatInviter) model.Server {
 	return &server{
 		id:              id,
 		receiver:        receiver,
@@ -41,6 +48,7 @@ func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log 
 		sessionStore:    store,
 		connectionStore: NewConnectionStore(log),
 		log:             log,
+		chatInviter:     chatInviter,
 	}
 }
 
@@ -131,11 +139,6 @@ func (s *server) stopConnection(c *Connection) {
 }
 
 func (s *server) nodeMessage(msg model.MessageWrapper) error {
-	if msg.Message.From.Sub == "2522" {
-		println("todo: skip my message")
-		return nil
-	}
-
 	conn, ok := s.connectionStore.Get(msg.Message.ThreadID)
 	if ok {
 		conn.OnMessage(msg)
