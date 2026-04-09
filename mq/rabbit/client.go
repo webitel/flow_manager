@@ -43,7 +43,6 @@ type AMQP struct {
 	channel            *amqp.Channel
 	callName           string
 	execName           string
-	imQueueName        string
 	nodeName           string
 	connectionAttempts int
 	stopping           bool
@@ -103,7 +102,7 @@ func (a *AMQP) initConnection() {
 }
 
 func (a *AMQP) initExchange() {
-	err := a.channel.ExchangeDeclare(
+	if err := a.channel.ExchangeDeclare(
 		model.FlowExchange,
 		"direct",
 		true,
@@ -111,9 +110,22 @@ func (a *AMQP) initExchange() {
 		false,
 		false,
 		nil,
-	)
-	if err != nil {
-		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange to err:%v", err.Error()))
+	); err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange %s to err:%v", model.FlowExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(1)
+	}
+
+	if err := a.channel.ExchangeDeclare(
+		model.CallCenterExchange,
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange %s to err:%v", model.CallCenterExchange, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(1)
 	}
@@ -123,25 +135,6 @@ func (a *AMQP) initQueues() {
 	var err error
 	var callQueue amqp.Queue
 	var execQueue amqp.Queue
-	var imQueue amqp.Queue
-
-	imQueueName := fmt.Sprintf("%s.%s.any", model.IMQueueNamePrefix, model.NewId()[0:8])
-	imQueue, err = a.channel.QueueDeclare(
-		imQueueName,
-		true,
-		false,
-		false,
-		true,
-		amqp.Table{
-			"x-queue-type": "quorum",
-			"x-expires":    10000, // delete after 10s
-		},
-	)
-	if err != nil {
-		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", imQueueName, err.Error()))
-		time.Sleep(time.Second)
-		os.Exit(EXIT_DECLARE_QUEUE)
-	}
 
 	callQueue, err = a.channel.QueueDeclare(model.CallEventQueueName, true, false, false,
 		false, amqp.Table{
@@ -165,14 +158,14 @@ func (a *AMQP) initQueues() {
 
 	a.callName = callQueue.Name
 	a.execName = execQueue.Name
-	a.imQueueName = imQueue.Name
 
-	wlog.Debug(fmt.Sprintf("Success declare queue %v, %v, %v connected consumers %v", callQueue.Name,
-		execQueue.Name, imQueue.Name, callQueue.Consumers))
+	wlog.Debug(fmt.Sprintf("Success declare queue %v, %v connected consumers %v", callQueue.Name,
+		execQueue.Name, callQueue.Consumers))
 
 	a.subscribeCall()
 	a.subscribeExec()
 	a.subscribeIM()
+	a.subscribeCC()
 }
 
 func (a *AMQP) subscribeCall() {
@@ -277,16 +270,35 @@ func (a *AMQP) subscribeExec() {
 }
 
 func (a *AMQP) subscribeIM() {
-	queueName := a.imQueueName
-	err := a.channel.QueueBind(queueName, "#", model.IMExchange, true, nil)
+	imQueueName := fmt.Sprintf("%s.%s.any", model.IMQueueNamePrefix, model.NewId()[0:8])
+
+	imQueue, err := a.channel.QueueDeclare(
+		imQueueName,
+		true,
+		false,
+		false,
+		true,
+		amqp.Table{
+			"x-queue-type": "quorum",
+			"x-expires":    10000, // delete after 10s
+		},
+	)
 	if err != nil {
-		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queueName, model.IMExchange, err.Error()))
+		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", imQueueName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_DECLARE_QUEUE)
+	} else {
+		wlog.Debug(fmt.Sprintf("Success declare queue %v connected consumers %v", imQueue.Name, imQueue.Consumers))
+	}
+
+	if err = a.channel.QueueBind(imQueue.Name, "#", model.IMExchange, true, nil); err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", imQueue.Name, model.IMExchange, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
 	}
 
 	msgs, err := a.channel.Consume(
-		queueName,
+		imQueue.Name,
 		"",
 		false,
 		false,
@@ -295,14 +307,14 @@ func (a *AMQP) subscribeIM() {
 		nil,
 	)
 	if err != nil {
-		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", queueName, err.Error()))
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", imQueue.Name, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
 	}
 
 	go func() {
 		for m := range msgs {
-
+			println(string(m.Body))
 			switch m.Exchange {
 			case model.IMExchange:
 				var data model.MessageWrapper
@@ -314,6 +326,69 @@ func (a *AMQP) subscribeIM() {
 				println(m.RoutingKey)
 				println(string(m.Body))
 				a.imEvents <- data
+
+			default:
+				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
+			}
+
+			m.Ack(false)
+		}
+
+		if !a.stopping {
+			a.initConnection()
+		}
+	}()
+}
+
+func (a *AMQP) subscribeCC() {
+	queueName := fmt.Sprintf("%s.%s", model.CallCenterPrefix, model.NewId()[0:8])
+
+	queue, err := a.channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		true,
+		amqp.Table{
+			"x-queue-type": "quorum",
+			"x-expires":    10000, // delete after 10s
+		},
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", queueName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_DECLARE_QUEUE)
+	} else {
+		wlog.Debug(fmt.Sprintf("Success declare queue %v connected consumers %v", queue.Name, queue.Consumers))
+	}
+
+	if err = a.channel.QueueBind(queue.Name, "queue.leaving", model.CallCenterExchange, true, nil); err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queue.Name, model.CallCenterExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	msgs, err := a.channel.Consume(
+		queue.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", queue.Name, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	go func() {
+		for m := range msgs {
+
+			switch m.Exchange {
+			case model.CallCenterExchange:
+				println(m.RoutingKey, string(m.Body))
 
 			default:
 				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
