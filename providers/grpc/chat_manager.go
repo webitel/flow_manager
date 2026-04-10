@@ -259,14 +259,6 @@ func (cc *ChatManager) LinkContact(ctx context.Context, contactId string, conver
 	return nil
 }
 
-func (cm *ChatManager) InviteToConversation(ctx context.Context, req *proto.InviteToConversationRequest) (*proto.InviteToConversationResponse, error) {
-	cli, err := cm.getRandCli()
-	if err != nil {
-		return nil, err
-	}
-	return cli.api.InviteToConversation(ctx, req)
-}
-
 func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action model.ChatAction) error {
 	c, e := cc.getRandCli()
 	if e != nil {
