@@ -34,10 +34,7 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		Handler: chatHandlerMiddleware(r.sendTTS),
 	}
 	apps["stt"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.STT),
-	}
-	apps["bridge"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.bridge),
+		Handler: chatHandlerMiddleware(r.sendSTT),
 	}
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
@@ -53,9 +50,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	}
 	apps["unSet"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.UnSet),
-	}
-	apps["chatAi"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.chatAI),
 	}
 
 	return apps

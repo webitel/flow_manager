@@ -44,7 +44,7 @@ type STTArgs struct {
 	SetVar    string `json:"setVar,omitempty"`
 }
 
-func (r *Router) STT(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
+func (r *Router) sendSTT(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
 	var argv STTArgs
 	var err *model.AppError
 

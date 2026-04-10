@@ -17,7 +17,6 @@ import (
 
 	"github.com/webitel/wlog"
 
-	proto "github.com/webitel/flow_manager/gen/chat"
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
 	"github.com/webitel/flow_manager/model"
 )
@@ -235,47 +234,6 @@ func (c *Connection) SendMenu(_ context.Context, _ *model.ChatMenuArgs) (model.R
 	return model.CallResponseError, nil
 }
 
-func (c *Connection) closeIfBridge() {
-	if c.chBridge != nil {
-		close(c.chBridge)
-		c.chBridge = nil
-	}
-}
-
-func (c *Connection) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
-	if c.chBridge != nil {
-		return model.NewAppError("Connection.Bridge", "im.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
-	}
-	c.chBridge = make(chan struct{})
-
-	vars := make(map[string]string)
-	for _, v := range c.exportVariables {
-		if val, ok := c.Get(v); ok {
-			vars[v] = val
-		}
-	}
-
-	res, err := c.srv.chatInviter.InviteToConversation(ctx, &proto.InviteToConversationRequest{
-		User: &proto.User{
-			UserId:   userId,
-			Type:     "webitel",
-			Internal: true,
-		},
-		DomainId:       c.domainId,
-		TimeoutSec:     int64(timeout),
-		Variables:      vars,
-		ConversationId: c.id,
-	})
-	if err != nil {
-		return model.NewAppError("Connection.Bridge", "im.bridge.app_err", nil, err.Error(), http.StatusInternalServerError)
-	}
-
-	_ = res.InviteId
-	<-c.chBridge
-
-	return nil
-}
-
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
 	exp := make(map[string]any)
 	for _, v := range vars {
@@ -320,12 +278,14 @@ func (c *Connection) LastMessages(limit int) []model.ChatMessage {
 }
 
 func (c *Connection) GetQueueKey() *model.InQueueKey {
+	c.log.Info("GetQueueKey")
 	c.RLock()
 	defer c.RUnlock()
 	return c.queueKey
 }
 
 func (c *Connection) SetQueue(key *model.InQueueKey) bool {
+	c.log.Info("SetQueue called")
 	c.Lock()
 	defer c.Unlock()
 
