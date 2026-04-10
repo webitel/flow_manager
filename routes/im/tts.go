@@ -33,7 +33,7 @@ func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Dialog, arg
 		return model.CallResponseError, err
 	}
 	fmt.Println(uri)
-	// TODO: mime type
+	// TODO: mime type, size
 	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri, MimeType: "audio/mpeg", Name: argv.FileName, Id: -1, Size: 1}, argv.Kind)
 }
 

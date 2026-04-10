@@ -3,9 +3,10 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/gen/chat/messages"
 	"sync"
 	"time"
+
+	"github.com/webitel/flow_manager/gen/chat/messages"
 
 	proto "github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/model"
