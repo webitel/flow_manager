@@ -47,9 +47,10 @@ func newConnection(s *server, msg model.MessageWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(msg.Message.To.Sub)
 
 	conn := &Connection{
-		id:   id,
-		srv:  s,
-		from: msg.Message.From,
+		id:      id,
+		srv:     s,
+		from:    msg.Message.From,
+		lastMsg: msg.Message,
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.DomainID, schemaId),
