@@ -19,9 +19,11 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Message_SendText_FullMethodName  = "/webitel.im.api.gateway.v1.Message/SendText"
-	Message_SendFile_FullMethodName  = "/webitel.im.api.gateway.v1.Message/SendDocument"
-	Message_SendImage_FullMethodName = "/webitel.im.api.gateway.v1.Message/SendImage"
+	Message_SendText_FullMethodName        = "/webitel.im.api.gateway.v1.Message/SendText"
+	Message_SendDocument_FullMethodName    = "/webitel.im.api.gateway.v1.Message/SendDocument"
+	Message_SendImage_FullMethodName       = "/webitel.im.api.gateway.v1.Message/SendImage"
+	Message_Read_FullMethodName            = "/webitel.im.api.gateway.v1.Message/Read"
+	Message_SendInteractive_FullMethodName = "/webitel.im.api.gateway.v1.Message/SendInteractive"
 )
 
 // MessageClient is the client API for Message service.
@@ -31,10 +33,14 @@ type MessageClient interface {
 	// SendText delivers a plain text message.
 	// We use the shared Request/Response types directly to avoid duplication.
 	SendText(ctx context.Context, in *SendTextRequest, opts ...grpc.CallOption) (*SendTextResponse, error)
-	// SendFile delivers documents or files.
-	SendFile(ctx context.Context, in *SendDocumentRequest, opts ...grpc.CallOption) (*SendDocumentResponse, error)
+	// SendDocument delivers a document message.
+	SendDocument(ctx context.Context, in *SendDocumentRequest, opts ...grpc.CallOption) (*SendDocumentResponse, error)
 	// SendImage delivers image-specific messages.
 	SendImage(ctx context.Context, in *SendImageRequest, opts ...grpc.CallOption) (*SendImageResponse, error)
+	// Mark message as read by id.
+	Read(ctx context.Context, in *ReadMessageRequest, opts ...grpc.CallOption) (*ReadMessageResponse, error)
+	// Sends an interactive message (buttons, lists, CTA).
+	SendInteractive(ctx context.Context, in *SendInteractiveMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error)
 }
 
 type messageClient struct {
@@ -54,9 +60,9 @@ func (c *messageClient) SendText(ctx context.Context, in *SendTextRequest, opts 
 	return out, nil
 }
 
-func (c *messageClient) SendFile(ctx context.Context, in *SendDocumentRequest, opts ...grpc.CallOption) (*SendDocumentResponse, error) {
+func (c *messageClient) SendDocument(ctx context.Context, in *SendDocumentRequest, opts ...grpc.CallOption) (*SendDocumentResponse, error) {
 	out := new(SendDocumentResponse)
-	err := c.cc.Invoke(ctx, Message_SendFile_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Message_SendDocument_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -72,6 +78,24 @@ func (c *messageClient) SendImage(ctx context.Context, in *SendImageRequest, opt
 	return out, nil
 }
 
+func (c *messageClient) Read(ctx context.Context, in *ReadMessageRequest, opts ...grpc.CallOption) (*ReadMessageResponse, error) {
+	out := new(ReadMessageResponse)
+	err := c.cc.Invoke(ctx, Message_Read_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *messageClient) SendInteractive(ctx context.Context, in *SendInteractiveMessageRequest, opts ...grpc.CallOption) (*SendMessageResponse, error) {
+	out := new(SendMessageResponse)
+	err := c.cc.Invoke(ctx, Message_SendInteractive_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // MessageServer is the server API for Message service.
 // All implementations must embed UnimplementedMessageServer
 // for forward compatibility
@@ -79,10 +103,14 @@ type MessageServer interface {
 	// SendText delivers a plain text message.
 	// We use the shared Request/Response types directly to avoid duplication.
 	SendText(context.Context, *SendTextRequest) (*SendTextResponse, error)
-	// SendFile delivers documents or files.
-	SendFile(context.Context, *SendDocumentRequest) (*SendDocumentResponse, error)
+	// SendDocument delivers a document message.
+	SendDocument(context.Context, *SendDocumentRequest) (*SendDocumentResponse, error)
 	// SendImage delivers image-specific messages.
 	SendImage(context.Context, *SendImageRequest) (*SendImageResponse, error)
+	// Mark message as read by id.
+	Read(context.Context, *ReadMessageRequest) (*ReadMessageResponse, error)
+	// Sends an interactive message (buttons, lists, CTA).
+	SendInteractive(context.Context, *SendInteractiveMessageRequest) (*SendMessageResponse, error)
 	mustEmbedUnimplementedMessageServer()
 }
 
@@ -93,11 +121,17 @@ type UnimplementedMessageServer struct {
 func (UnimplementedMessageServer) SendText(context.Context, *SendTextRequest) (*SendTextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendText not implemented")
 }
-func (UnimplementedMessageServer) SendFile(context.Context, *SendDocumentRequest) (*SendDocumentResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendFile not implemented")
+func (UnimplementedMessageServer) SendDocument(context.Context, *SendDocumentRequest) (*SendDocumentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendDocument not implemented")
 }
 func (UnimplementedMessageServer) SendImage(context.Context, *SendImageRequest) (*SendImageResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SendImage not implemented")
+}
+func (UnimplementedMessageServer) Read(context.Context, *ReadMessageRequest) (*ReadMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Read not implemented")
+}
+func (UnimplementedMessageServer) SendInteractive(context.Context, *SendInteractiveMessageRequest) (*SendMessageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SendInteractive not implemented")
 }
 func (UnimplementedMessageServer) mustEmbedUnimplementedMessageServer() {}
 
@@ -130,20 +164,20 @@ func _Message_SendText_Handler(srv interface{}, ctx context.Context, dec func(in
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Message_SendFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Message_SendDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SendDocumentRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(MessageServer).SendFile(ctx, in)
+		return srv.(MessageServer).SendDocument(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Message_SendFile_FullMethodName,
+		FullMethod: Message_SendDocument_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MessageServer).SendFile(ctx, req.(*SendDocumentRequest))
+		return srv.(MessageServer).SendDocument(ctx, req.(*SendDocumentRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -166,6 +200,42 @@ func _Message_SendImage_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Message_Read_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).Read(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_Read_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).Read(ctx, req.(*ReadMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Message_SendInteractive_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SendInteractiveMessageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(MessageServer).SendInteractive(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Message_SendInteractive_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(MessageServer).SendInteractive(ctx, req.(*SendInteractiveMessageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Message_ServiceDesc is the grpc.ServiceDesc for Message service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -178,12 +248,20 @@ var Message_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Message_SendText_Handler,
 		},
 		{
-			MethodName: "SendFile",
-			Handler:    _Message_SendFile_Handler,
+			MethodName: "SendDocument",
+			Handler:    _Message_SendDocument_Handler,
 		},
 		{
 			MethodName: "SendImage",
 			Handler:    _Message_SendImage_Handler,
+		},
+		{
+			MethodName: "Read",
+			Handler:    _Message_Read_Handler,
+		},
+		{
+			MethodName: "SendInteractive",
+			Handler:    _Message_SendInteractive_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
