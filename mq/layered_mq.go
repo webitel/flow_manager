@@ -45,3 +45,7 @@ func (l *LayeredMQ) ConsumeIM() <-chan model.MessageWrapper {
 func (l *LayeredMQ) QueueEvent() QueueEvent {
 	return l.MQLayer.QueueEvent()
 }
+
+func (l *LayeredMQ) ConsumeCCEvents() <-chan model.CCQueueEvent {
+	return l.MQLayer.ConsumeCCEvents()
+}

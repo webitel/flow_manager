@@ -2,7 +2,9 @@ package cc
 
 import (
 	"context"
+
 	"github.com/webitel/engine/pkg/wbt"
+
 	"github.com/webitel/flow_manager/gen/cc"
 )
 
@@ -24,15 +26,17 @@ func (api *memberApi) JoinChatToQueue(ctx context.Context, in *cc.ChatJoinToQueu
 	return api.Api.ChatJoinToQueue(ctx, in)
 }
 
-func (api *memberApi) DirectAgentToMember(domainId int64, memberId int64, communicationId int, agentId int64) (int64, error) {
+func (api *memberApi) JoinIMToQueue(ctx context.Context, in *cc.IMJoinToQueueRequest) (*cc.IMJoinToQueueResponse, error) {
+	return api.Api.IMJoinToQueue(ctx, in)
+}
 
+func (api *memberApi) DirectAgentToMember(domainId, memberId int64, communicationId int, agentId int64) (int64, error) {
 	res, err := api.Api.DirectAgentToMember(context.Background(), &cc.DirectAgentToMemberRequest{
 		MemberId:        memberId,
 		AgentId:         agentId,
 		CommunicationId: int32(communicationId),
 		DomainId:        domainId,
 	})
-
 	if err != nil {
 		return 0, err
 	}
@@ -41,9 +45,7 @@ func (api *memberApi) DirectAgentToMember(domainId int64, memberId int64, commun
 }
 
 func (api *memberApi) AttemptResult(result *cc.AttemptResultRequest) error {
-
 	_, err := api.Api.AttemptResult(context.Background(), result)
-
 	if err != nil {
 		return err
 	}
@@ -98,7 +100,7 @@ func (api *memberApi) CancelAttempt(ctx context.Context, attemptId int64, result
 	return err
 }
 
-func (api *memberApi) InterceptAttempt(ctx context.Context, domainId int64, attemptId int64, agentId int32) error {
+func (api *memberApi) InterceptAttempt(ctx context.Context, domainId, attemptId int64, agentId int32) error {
 	_, err := api.Api.InterceptAttempt(ctx, &cc.InterceptAttemptRequest{
 		DomainId:  domainId,
 		AttemptId: attemptId,
@@ -108,7 +110,7 @@ func (api *memberApi) InterceptAttempt(ctx context.Context, domainId int64, atte
 	return err
 }
 
-func (api *memberApi) ResumeAttempt(ctx context.Context, attemptId int64, domainId int64) error {
+func (api *memberApi) ResumeAttempt(ctx context.Context, attemptId, domainId int64) error {
 	_, err := api.Api.ResumeAttempt(ctx, &cc.ResumeAttemptRequest{
 		DomainId:  domainId,
 		AttemptId: attemptId,
