@@ -87,6 +87,9 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		}
 	}
 
+	from := conn.From()
+	lastMsg := conn.LastMessage()
+
 	attId, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
 		ThreadId: conn.Id(),
 		Queue: &cc.IMJoinToQueueRequest_Queue{
@@ -98,6 +101,12 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		// Variables:     conn.DumpExportVariables(),
 		DomainId:      conn.DomainId(),
 		StickyAgentId: stickyAgentId,
+		Member: &cc.IMJoinToQueueRequest_Member{
+			Name:    from.Name,
+			Sub:     from.Sub,
+			LastMsg: lastMsg.Text,
+			LastSub: lastMsg.To.Sub, // TODO
+		},
 	})
 	if err != nil {
 		conn.Log().Error(err.Error())
@@ -123,5 +132,4 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 			}
 		}
 	}
-
 }

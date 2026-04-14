@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -37,14 +38,18 @@ type Connection struct {
 	waitMsgChan chan model.MessageWrapper
 	hdrs        metadata.MD
 	queueKey    *model.InQueueKey
+	lastMsg     model.Message
+	from        model.ImEndpoint
 }
 
 func newConnection(s *server, msg model.MessageWrapper) *Connection {
 	id := msg.Message.ThreadID // todo
-	schemaId := 2522
+	schemaId, _ := strconv.Atoi(msg.Message.To.Sub)
+
 	conn := &Connection{
-		id:  id,
-		srv: s,
+		id:   id,
+		srv:  s,
+		from: msg.Message.From,
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.DomainID, schemaId),
@@ -80,12 +85,21 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 
 	c.Lock()
 	ch := c.waitMsgChan
+	c.lastMsg = msg.Message
 	c.Unlock()
 	if ch != nil { // todo skip flow messages
 		ch <- msg
 		return
 	}
 	c.log.Debug("message "+msg.Message.Text, wlog.String("thread_id", msg.Message.ThreadID))
+}
+
+func (c *Connection) From() model.ImEndpoint {
+	return c.from
+}
+
+func (c *Connection) LastMessage() model.Message {
+	return c.lastMsg
 }
 
 func (c *Connection) setStateWaitMessage(ch chan model.MessageWrapper) error {

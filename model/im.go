@@ -4,6 +4,8 @@ import "context"
 
 type IMDialog interface {
 	Connection
+	From() ImEndpoint
+	LastMessage() Message
 	SchemaId() int
 	Stop(err error)
 	IsTransfer() bool
