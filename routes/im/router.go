@@ -17,7 +17,7 @@ type Router struct {
 	apps flow.ApplicationHandlers
 }
 
-type Dialog model.IMDialog // TODO
+type Dialog model.IMDialog
 
 func Init(fm *app.FlowManager, fr flow.Router) {
 	router := &Router{

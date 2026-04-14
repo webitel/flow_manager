@@ -21,6 +21,36 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["recvMessage"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.recvMessage),
 	}
+	apps["sendImage"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendImage),
+	}
+	apps["sendFile"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendFile),
+	}
+	apps["sendAction"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendAction),
+	}
+	apps["sendTts"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendTTS),
+	}
+	apps["stt"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.sendSTT),
+	}
+	apps["joinQueue"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.joinQueue),
+	}
+	apps["cancelQueue"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.cancelQueue),
+	}
+	apps["export"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.export),
+	}
+	apps["menu"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.Menu),
+	}
+	apps["unSet"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.UnSet),
+	}
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
 	}

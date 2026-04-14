@@ -11,28 +11,30 @@ type IMDialog interface {
 	IsTransfer() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
+	SendImageMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	SendDocumentMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
+	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
-	SetQueue(*InQueueKey) bool
+	Export(ctx context.Context, vars []string) (Response, *AppError)
+	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	LastMessages(limit int) []ChatMessage
 	GetQueueKey() *InQueueKey
-}
-
-type CCQueueEvent struct {
-	AttemptId int64  `json:"attempt_id"`
-	Event     string `json:"event"`
+	SetQueue(*InQueueKey) bool
+	DumpExportVariables() map[string]string
 }
 
 // MessageWrapper представляє кореневий об'єкт
 type MessageWrapper struct {
-	ID       string  `json:"id"`
-	Message  Message `json:"payload"`
+	ID       string  `json:"ID"`
+	Message  Message `json:"message"`
 	UserID   string  `json:"user_id"`
 	DomainID int64   `json:"domain_id"`
-	Echo     bool    `json:"echo"`
 }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string     `json:"id"`
+	ID        string     `json:"ID"`
 	ThreadID  string     `json:"thread_id"`
 	DomainID  int        `json:"domain_id"`
 	From      ImEndpoint `json:"from"`

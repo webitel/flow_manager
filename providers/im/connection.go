@@ -40,6 +40,13 @@ type Connection struct {
 	queueKey    *model.InQueueKey
 	lastMsg     model.Message
 	from        model.ImEndpoint
+	log             *wlog.Logger
+	waitMsgChan     chan model.MessageWrapper
+	hdrs            metadata.MD
+	queueKey        *model.InQueueKey
+	exportVariables []string
+	messages        []model.MessageWrapper
+	chBridge        chan struct{}
 }
 
 func newConnection(s *server, msg model.MessageWrapper) *Connection {
@@ -85,6 +92,7 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 	}
 
 	c.Lock()
+	c.messages = append(c.messages, msg)
 	ch := c.waitMsgChan
 	c.lastMsg = msg.Message
 	c.Unlock()
@@ -167,6 +175,156 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 		return model.CallResponseError, model.NewAppError("SendTextMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+	var images []*p.ImageInput
+	if msg.File != nil {
+		f := msg.File
+		images = append(images, &p.ImageInput{
+			Id:       string(f.Id),
+			Name:     f.Name,
+			Link:     f.Url,
+			MimeType: f.MimeType,
+		})
+	}
+	_, err := c.srv.client.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+			Sub: c.msg.From.Sub,
+			Iss: c.msg.From.Issuer,
+		}}},
+		Image: &p.ImageRequest{Images: images, Body: msg.Text},
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+	var docs []*p.DocumentInput
+	if msg.File != nil {
+		f := msg.File
+		docs = append(docs, &p.DocumentInput{
+			FileName:  f.Name,
+			Url:       f.Url,
+			MimeType:  f.MimeType,
+			SizeBytes: &f.Size,
+		})
+	}
+	_, err := c.srv.client.Api.SendFile(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+			Sub: c.msg.From.Sub,
+			Iss: c.msg.From.Issuer,
+		}}},
+		Document: &p.DocumentRequest{Documents: docs, Body: msg.Text},
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendDocumentMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, *model.AppError) {
+	var docs []*p.DocumentInput
+	if f != nil {
+		docs = append(docs, &p.DocumentInput{
+			FileName:  f.Name,
+			Url:       f.Url,
+			MimeType:  f.MimeType,
+			SizeBytes: &f.Size,
+		})
+	}
+	_, err := c.srv.client.Api.SendFile(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+			Sub: c.msg.From.Sub,
+			Iss: c.msg.From.Issuer,
+		}}},
+		Document: &p.DocumentRequest{Documents: docs, Body: text},
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendFile", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SendMenu(_ context.Context, _ *model.ChatMenuArgs) (model.Response, *model.AppError) {
+	return model.CallResponseError, nil
+}
+
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+	exp := make(map[string]any)
+	for _, v := range vars {
+		tmp, _ := c.Get(v)
+		tmp = strings.ToValidUTF8(tmp, "")
+		exp[fmt.Sprintf("usr_%s", v)] = tmp
+	}
+
+	c.Lock()
+	c.exportVariables = append(c.exportVariables, vars...)
+	c.Unlock()
+
+	if len(exp) > 0 {
+		return c.Set(ctx, exp)
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response, *model.AppError) {
+	c.Lock()
+	defer c.Unlock()
+	for _, k := range varKeys {
+		delete(c.variables, k)
+	}
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) LastMessages(limit int) []model.ChatMessage {
+	c.RLock()
+	msgs := c.messages
+	c.RUnlock()
+
+	if limit > 0 && len(msgs) > limit {
+		msgs = msgs[len(msgs)-limit:]
+	}
+	result := make([]model.ChatMessage, 0, len(msgs))
+	for _, m := range msgs {
+		result = append(result, model.ChatMessage{Text: m.Message.Text})
+	}
+	return result
+}
+
+func (c *Connection) GetQueueKey() *model.InQueueKey {
+	c.log.Info("GetQueueKey")
+	c.RLock()
+	defer c.RUnlock()
+	return c.queueKey
+}
+
+func (c *Connection) SetQueue(key *model.InQueueKey) bool {
+	c.log.Info("SetQueue called")
+	c.Lock()
+	defer c.Unlock()
+
+	if c.queueKey == key {
+		return false
+	}
+
+	c.queueKey = key
+	return true
+}
+
+func (c *Connection) DumpExportVariables() map[string]string {
+	c.RLock()
+	defer c.RUnlock()
+	out := make(map[string]string, len(c.exportVariables))
+	for _, k := range c.exportVariables {
+		if v, ok := c.variables[k]; ok {
+			out[k] = v
+		}
+	}
+	return out
 }
 
 func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *model.AppError) {
