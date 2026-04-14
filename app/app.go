@@ -250,7 +250,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		}
 	}
 
-	fm.cc = cc.NewCCManager(config.DiscoverySettings.Url)
+	fm.cc = cc.NewCCManager(config.DiscoverySettings.Url, fm.eventQueue.ConsumeCCEvents())
 
 	if err = fm.cc.Start(); err != nil {
 		return nil, err

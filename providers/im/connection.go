@@ -36,6 +36,7 @@ type Connection struct {
 	log         *wlog.Logger
 	waitMsgChan chan model.MessageWrapper
 	hdrs        metadata.MD
+	queueKey    *model.InQueueKey
 }
 
 func newConnection(s *server, msg model.MessageWrapper) *Connection {
@@ -278,6 +279,25 @@ func (c *Connection) Variables() map[string]string {
 	defer c.RUnlock()
 
 	return maps.Clone(c.variables)
+}
+
+func (c *Connection) SetQueue(key *model.InQueueKey) bool {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.queueKey == key {
+		return false
+	}
+
+	c.queueKey = key
+	return true
+}
+
+func (c *Connection) GetQueueKey() *model.InQueueKey {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.queueKey
 }
 
 func toVariables(in map[string]json.RawMessage) map[string]string {

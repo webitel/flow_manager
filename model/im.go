@@ -10,6 +10,13 @@ type IMDialog interface {
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
+	SetQueue(*InQueueKey) bool
+	GetQueueKey() *InQueueKey
+}
+
+type CCQueueEvent struct {
+	AttemptId int64  `json:"attempt_id"`
+	Event     string `json:"event"`
 }
 
 // MessageWrapper представляє кореневий об'єкт

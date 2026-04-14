@@ -21,7 +21,7 @@ func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJo
 	return fm.cc.Member().JoinChatToQueue(ctx, in)
 }
 
-func (fm *FlowManager) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) *model.AppError {
+func (fm *FlowManager) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) *model.AppError {
 	return fm.Store.Member().CreateMember(domainId, queueId, holdSec, member)
 }
 
@@ -81,12 +81,25 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 	req.AddCommunications = ccCommunications(result.AddCommunications)
 
 	err := fm.cc.Member().AttemptResult(req)
-
 	if err != nil {
 		return model.NewAppError("AttemptResult", "app.attempt.result", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	return nil
+}
+
+func (fm *FlowManager) JoinIMToInboundQueue(ctx context.Context, in *cc.IMJoinToQueueRequest) (int64, <-chan model.CCQueueEvent, error) {
+	res, err := fm.cc.Member().JoinIMToQueue(ctx, in)
+	if err != nil {
+		return 0, nil, err
+	}
+
+	ch := fm.cc.SubscribeAttempt(res.AttemptId)
+	return res.AttemptId, ch, err
+}
+
+func (fm *FlowManager) LeavingIMToInboundQueue(attId int64) {
+	fm.cc.UnSubscribeAttempt(attId)
 }
 
 func ccCommunications(r []model.CallbackCommunication) []*cc.MemberCommunicationCreateRequest {
@@ -143,6 +156,6 @@ func (fm *FlowManager) CancelAttempt(ctx context.Context, att model.InQueueKey, 
 	return nil
 }
 
-func (fm *FlowManager) ResumeAttempt(ctx context.Context, attemptId int64, domainId int64) error {
+func (fm *FlowManager) ResumeAttempt(ctx context.Context, attemptId, domainId int64) error {
 	return fm.cc.Member().ResumeAttempt(ctx, attemptId, domainId)
 }

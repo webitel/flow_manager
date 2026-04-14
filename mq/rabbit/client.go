@@ -49,6 +49,7 @@ type AMQP struct {
 	callEvent          chan model.CallActionData
 	execEvent          chan model.ChannelExec
 	imEvents           chan model.MessageWrapper
+	ccEvents           chan model.CCQueueEvent
 	queueEvent         mq.QueueEvent
 	sync.RWMutex
 }
@@ -59,6 +60,7 @@ func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 		callEvent: make(chan model.CallActionData, CallChanBufferCount),
 		execEvent: make(chan model.ChannelExec, CallChanBufferCount),
 		imEvents:  make(chan model.MessageWrapper, CallChanBufferCount),
+		ccEvents:  make(chan model.CCQueueEvent, CallChanBufferCount),
 		nodeName:  nodeName,
 	}
 	mq_.queueEvent = NewQueueMQ(mq_)
@@ -362,7 +364,7 @@ func (a *AMQP) subscribeCC() {
 		wlog.Debug(fmt.Sprintf("Success declare queue %v connected consumers %v", queue.Name, queue.Consumers))
 	}
 
-	if err = a.channel.QueueBind(queue.Name, "queue.leaving", model.CallCenterExchange, true, nil); err != nil {
+	if err = a.channel.QueueBind(queue.Name, "queue", model.CallCenterExchange, true, nil); err != nil {
 		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queue.Name, model.CallCenterExchange, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
@@ -388,7 +390,13 @@ func (a *AMQP) subscribeCC() {
 
 			switch m.Exchange {
 			case model.CallCenterExchange:
-				println(m.RoutingKey, string(m.Body))
+				var ev model.CCQueueEvent
+				err = json.Unmarshal(m.Body, &ev)
+				if err != nil {
+					wlog.Warn(fmt.Sprintf("unable to parse event, %s", err.Error()))
+				} else {
+					a.ccEvents <- ev
+				}
 
 			default:
 				wlog.Warn(fmt.Sprintf("unable to parse event, not found exchange %s", m.Exchange))
@@ -536,4 +544,8 @@ func (a *AMQP) ConsumeExec() <-chan model.ChannelExec {
 
 func (a *AMQP) ConsumeIM() <-chan model.MessageWrapper {
 	return a.imEvents
+}
+
+func (a *AMQP) ConsumeCCEvents() <-chan model.CCQueueEvent {
+	return a.ccEvents
 }
