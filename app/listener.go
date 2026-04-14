@@ -63,7 +63,6 @@ func (f *FlowManager) listenImConnection(stop chan struct{}, wg *sync.WaitGroup,
 			if !ok {
 				return
 			}
-			println("consume:", c)
 			if err := f.IMRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}

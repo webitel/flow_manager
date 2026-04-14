@@ -316,7 +316,6 @@ func (a *AMQP) subscribeIM() {
 
 	go func() {
 		for m := range msgs {
-			println(string(m.Body))
 			switch m.Exchange {
 			case model.IMExchange:
 				var data model.MessageWrapper
@@ -325,8 +324,6 @@ func (a *AMQP) subscribeIM() {
 					println("skip echo")
 					continue
 				}
-				println(m.RoutingKey)
-				println(string(m.Body))
 				a.imEvents <- data
 
 			default:
