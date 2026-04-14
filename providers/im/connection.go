@@ -194,7 +194,7 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.Api.SendFile(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+	_, err := c.srv.client.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
@@ -217,7 +217,7 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.Api.SendFile(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+	_, err := c.srv.client.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
@@ -230,8 +230,49 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendMenu(_ context.Context, _ *model.ChatMenuArgs) (model.Response, *model.AppError) {
-	return model.CallResponseError, nil
+func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
+	rows := buildKeyboardRows(menu.Buttons)
+	if menu.Type == "inline" {
+		rows = buildKeyboardRows(menu.Inline)
+	}
+
+	_, err := c.srv.client.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
+		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+			Sub: c.msg.From.Sub,
+			Iss: c.msg.From.Issuer,
+		}}},
+		Body: &menu.Text,
+		Interactive: &p.Interactive{
+			Kind: &p.Interactive_Markup{
+				Markup: &p.KeyboardMarkup{Rows: rows},
+			},
+		},
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("Connection.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return model.CallResponseOK, nil
+}
+
+func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
+	rows := make([]*p.KeyboardRow, 0, len(src))
+	for _, row := range src {
+		buttons := make([]*p.KeyboardButton, 0, len(row))
+		for _, btn := range row {
+			kb := &p.KeyboardButton{Label: btn.Caption}
+			switch {
+			case btn.Type == "url":
+				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
+			case btn.Code != "":
+				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Code}}
+			default:
+				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
+			}
+			buttons = append(buttons, kb)
+		}
+		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
+	}
+	return rows
 }
 
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
