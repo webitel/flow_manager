@@ -24,17 +24,23 @@ type IMDialog interface {
 	DumpExportVariables() map[string]string
 }
 
+type CCQueueEvent struct {
+	AttemptId int64  `json:"attempt_id"`
+	Event     string `json:"event"`
+}
+
 // MessageWrapper представляє кореневий об'єкт
 type MessageWrapper struct {
-	ID       string  `json:"ID"`
-	Message  Message `json:"message"`
+	ID       string  `json:"id"`
+	Message  Message `json:"payload"`
 	UserID   string  `json:"user_id"`
 	DomainID int64   `json:"domain_id"`
+	Echo     bool    `json:"echo"`
 }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string     `json:"ID"`
+	ID        string     `json:"id"`
 	ThreadID  string     `json:"thread_id"`
 	DomainID  int        `json:"domain_id"`
 	From      ImEndpoint `json:"from"`

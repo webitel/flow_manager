@@ -34,19 +34,14 @@ type Connection struct {
 	variables map[string]string
 	msg       model.Message
 	sync.RWMutex
-	log         *wlog.Logger
-	waitMsgChan chan model.MessageWrapper
-	hdrs        metadata.MD
-	queueKey    *model.InQueueKey
-	lastMsg     model.Message
-	from        model.ImEndpoint
+	lastMsg         model.Message
+	from            model.ImEndpoint
 	log             *wlog.Logger
 	waitMsgChan     chan model.MessageWrapper
 	hdrs            metadata.MD
 	queueKey        *model.InQueueKey
 	exportVariables []string
 	messages        []model.MessageWrapper
-	chBridge        chan struct{}
 }
 
 func newConnection(s *server, msg model.MessageWrapper) *Connection {
@@ -452,25 +447,6 @@ func (c *Connection) Variables() map[string]string {
 	defer c.RUnlock()
 
 	return maps.Clone(c.variables)
-}
-
-func (c *Connection) SetQueue(key *model.InQueueKey) bool {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.queueKey == key {
-		return false
-	}
-
-	c.queueKey = key
-	return true
-}
-
-func (c *Connection) GetQueueKey() *model.InQueueKey {
-	c.RLock()
-	defer c.RUnlock()
-
-	return c.queueKey
 }
 
 func toVariables(in map[string]json.RawMessage) map[string]string {
