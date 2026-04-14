@@ -2,7 +2,6 @@ package im
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/webitel/flow_manager/flow"
@@ -32,7 +31,6 @@ func (r *Router) sendTTS(ctx context.Context, scope *flow.Flow, conv Dialog, arg
 	if err != nil {
 		return model.CallResponseError, err
 	}
-	fmt.Println(uri)
 	// TODO: mime type, size
 	return conv.SendFile(ctx, "", &model.File{Url: argv.Server + uri, MimeType: "audio/mpeg", Name: argv.FileName, Id: -1, Size: 1}, argv.Kind)
 }
