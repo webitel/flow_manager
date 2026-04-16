@@ -88,6 +88,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 	}
 
 	from := conn.From()
+	to := conn.To()
 	lastMsg := conn.LastMessage()
 
 	attId, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
@@ -102,8 +103,15 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		DomainId:      conn.DomainId(),
 		StickyAgentId: stickyAgentId,
 		Member: &cc.IMJoinToQueueRequest_Member{
-			Name:    from.Name,
-			Sub:     from.Sub,
+			From: &cc.IMJoinToQueueRequest_Endpoint{
+				Name: from.Name,
+				Sub:  from.Sub,
+			},
+			To: &cc.IMJoinToQueueRequest_Endpoint{
+				Name: to.Name,
+				Sub:  to.Sub,
+			},
+
 			LastMsg: lastMsg.Text,
 			LastSub: lastMsg.To.Sub, // TODO
 		},

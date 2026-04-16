@@ -5,6 +5,7 @@ import "context"
 type IMDialog interface {
 	Connection
 	From() ImEndpoint
+	To() ImEndpoint
 	LastMessage() Message
 	SchemaId() int
 	Stop(err error)

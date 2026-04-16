@@ -36,6 +36,7 @@ type Connection struct {
 	sync.RWMutex
 	lastMsg         model.Message
 	from            model.ImEndpoint
+	to              model.ImEndpoint
 	log             *wlog.Logger
 	waitMsgChan     chan model.MessageWrapper
 	hdrs            metadata.MD
@@ -52,6 +53,7 @@ func newConnection(s *server, msg model.MessageWrapper) *Connection {
 		id:      id,
 		srv:     s,
 		from:    msg.Message.From,
+		to:      msg.Message.To,
 		lastMsg: msg.Message,
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
@@ -100,6 +102,10 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 
 func (c *Connection) From() model.ImEndpoint {
 	return c.from
+}
+
+func (c *Connection) To() model.ImEndpoint {
+	return c.to
 }
 
 func (c *Connection) LastMessage() model.Message {
