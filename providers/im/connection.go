@@ -14,6 +14,7 @@ import (
 
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/webitel/wlog"
 
@@ -180,6 +181,39 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendTextMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
+	return model.CallResponseOK, nil
+}
+
+func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMessageOutbound) (model.Response, *model.AppError) {
+	var meta *structpb.Struct
+	var err error
+	if msg.Metadata != "" {
+		var m map[string]interface{}
+		if e := json.Unmarshal([]byte(msg.Metadata), &m); e == nil {
+			meta, err = structpb.NewStruct(m)
+			if err != nil {
+				return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusBadRequest)
+			}
+		}
+	}
+
+	_, err = c.srv.client.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
+		To: &p.Peer{
+			Kind: &p.Peer_Contact{
+				Contact: &p.PeerIdentity{
+					Sub: c.msg.From.Sub,
+					Iss: c.msg.From.Issuer,
+				},
+			},
+		},
+		Type:     msg.Type,
+		Body:     msg.Text,
+		Metadata: meta,
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+	}
+
 	return model.CallResponseOK, nil
 }
 

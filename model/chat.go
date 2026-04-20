@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
 )
@@ -48,6 +49,12 @@ type ChatMessageOutbound struct {
 	Inline  [][]ChatButton `json:"inline"`
 	NoInput bool           `json:"noInput"`
 	Kind    string         `json:"kind"`
+}
+
+type SystemMessageOutbound struct {
+	Type     string `json:"type"`
+	Text     string `json:"text"`
+	Metadata string `json:"metadata"`
 }
 
 type BroadcastPeer struct {
