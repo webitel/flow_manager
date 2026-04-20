@@ -41,13 +41,13 @@ type MessageWrapper struct {
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string     `json:"id"`
-	ThreadID  string     `json:"thread_id"`
-	DomainID  int        `json:"domain_id"`
-	From      ImEndpoint `json:"from"`
-	To        ImEndpoint `json:"to"`
-	Text      string     `json:"text"`
-	CreatedAt int64      `json:"created_at"` // Unix timestamp у мілісекундах
+	ID        string       `json:"id"`
+	ThreadID  string       `json:"thread_id"`
+	DomainID  int          `json:"domain_id"`
+	From      ImEndpoint   `json:"from"`
+	To        []ImEndpoint `json:"to"`
+	Text      string       `json:"text"`
+	CreatedAt int64        `json:"created_at"` // Unix timestamp у мілісекундах
 }
 
 // From описує відправника

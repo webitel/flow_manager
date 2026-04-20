@@ -113,7 +113,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 			},
 
 			LastMsg: lastMsg.Text,
-			LastSub: lastMsg.To.Sub, // TODO
+			LastSub: lastMsg.From.Sub, // TODO
 		},
 	})
 	if err != nil {
