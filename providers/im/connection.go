@@ -27,6 +27,7 @@ var _ model.IMDialog = (*Connection)(nil)
 
 type Connection struct {
 	id        string
+	threadId  string
 	ctx       context.Context
 	domainId  int64
 	schemaId  int
@@ -49,11 +50,12 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	conn := &Connection{
-		id:      id,
-		srv:     s,
-		from:    msg.Message.From,
-		to:      to,
-		lastMsg: msg.Message,
+		id:       id,
+		threadId: msg.Message.ThreadID,
+		srv:      s,
+		from:     msg.Message.From,
+		to:       to,
+		lastMsg:  msg.Message,
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.DomainID, schemaId),
@@ -105,6 +107,10 @@ func (c *Connection) From() model.ImEndpoint {
 
 func (c *Connection) To() model.ImEndpoint {
 	return c.to
+}
+
+func (c *Connection) ThreadId() string {
+	return c.threadId
 }
 
 func (c *Connection) LastMessage() model.Message {

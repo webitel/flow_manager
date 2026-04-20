@@ -92,7 +92,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 	lastMsg := conn.LastMessage()
 
 	attId, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
-		ThreadId: conn.Id(),
+		ThreadId: conn.ThreadId(),
 		Queue: &cc.IMJoinToQueueRequest_Queue{
 			Id:   q.Queue.Id,
 			Name: q.Queue.Name,

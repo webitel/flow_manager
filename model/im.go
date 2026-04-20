@@ -4,6 +4,7 @@ import "context"
 
 type IMDialog interface {
 	Connection
+	ThreadId() string
 	From() ImEndpoint
 	To() ImEndpoint
 	LastMessage() Message
