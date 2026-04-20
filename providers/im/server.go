@@ -135,28 +135,37 @@ func (s *server) nodeMessage(msg model.MessageWrapper) error {
 		return nil
 	}
 
-	conn, ok := s.connectionStore.Get(msg.Message.ThreadID)
-	if ok {
-		conn.OnMessage(msg)
-		return nil
-	}
+	for _, endpoint := range msg.Message.To {
+		if endpoint.Issuer != "bot" {
+			continue
+		}
 
-	seq, err := s.sessionStore.Touch(msg.Message.ThreadID, s.id)
-	if err != nil {
-		return err
-	}
-	if seq == nil {
-		return nil
-	}
+		id := fmt.Sprintf("%s.%s", msg.Message.ThreadID, endpoint.Sub)
+		conn, ok := s.connectionStore.Get(id)
+		if ok {
+			conn.OnMessage(msg)
+			continue
 
-	if *seq > 1 {
-		s.log.Warn(fmt.Sprintf("received message with seq thread id %v", *seq))
-	}
+		}
 
-	dialog := newConnection(s, msg)
-	s.connectionStore.Add(dialog)
-	dialog.log.Debug("start dialog")
-	s.consume <- dialog
+		seq, err := s.sessionStore.Touch(id, s.id)
+		if err != nil {
+			return err
+		}
+		if seq == nil {
+			return nil
+		}
+
+		if *seq > 1 {
+			s.log.Warn(fmt.Sprintf("received message with seq thread id %v", *seq))
+		}
+
+		dialog := newConnection(s, id, endpoint, msg)
+		s.connectionStore.Add(dialog)
+		dialog.log.Debug("start dialog " + id)
+		s.consume <- dialog
+
+	}
 
 	return nil
 }

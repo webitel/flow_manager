@@ -45,15 +45,14 @@ type Connection struct {
 	messages        []model.MessageWrapper
 }
 
-func newConnection(s *server, msg model.MessageWrapper) *Connection {
-	id := msg.Message.ThreadID // todo
-	schemaId, _ := strconv.Atoi(msg.Message.To.Sub)
+func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageWrapper) *Connection {
+	schemaId, _ := strconv.Atoi(to.Sub)
 
 	conn := &Connection{
 		id:      id,
 		srv:     s,
 		from:    msg.Message.From,
-		to:      msg.Message.To,
+		to:      to,
 		lastMsg: msg.Message,
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
@@ -83,7 +82,7 @@ func newConnection(s *server, msg model.MessageWrapper) *Connection {
 }
 
 func (c *Connection) OnMessage(msg model.MessageWrapper) {
-	if msg.Message.From.Sub == c.msg.To.Sub {
+	if msg.Message.From.Sub == c.to.Sub {
 		c.log.Debug("message from sub changed")
 		return
 	}
