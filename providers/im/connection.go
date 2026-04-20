@@ -186,18 +186,15 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 
 func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMessageOutbound) (model.Response, *model.AppError) {
 	var meta *structpb.Struct
-	var err error
-	if msg.Metadata != "" {
-		var m map[string]interface{}
-		if e := json.Unmarshal([]byte(msg.Metadata), &m); e == nil {
-			meta, err = structpb.NewStruct(m)
-			if err != nil {
-				return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusBadRequest)
-			}
+	if len(msg.Metadata) > 0 {
+		var err error
+		meta, err = structpb.NewStruct(msg.Metadata)
+		if err != nil {
+			return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusBadRequest)
 		}
 	}
 
-	_, err = c.srv.client.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
+	_, err := c.srv.client.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{

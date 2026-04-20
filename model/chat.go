@@ -52,9 +52,9 @@ type ChatMessageOutbound struct {
 }
 
 type SystemMessageOutbound struct {
-	Type     string `json:"type"`
-	Text     string `json:"text"`
-	Metadata string `json:"metadata"`
+	Type     string         `json:"type"`
+	Text     string         `json:"text"`
+	Metadata map[string]any `json:"metadata"`
 }
 
 type BroadcastPeer struct {

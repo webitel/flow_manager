@@ -13,7 +13,7 @@ type IMDialog interface {
 	IsTransfer() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
-	SendSystemMessage(ctx context.Context, text SystemMessageOutbound) (Response, *AppError)
+	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
 	SendImageMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendDocumentMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
