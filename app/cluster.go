@@ -2,7 +2,9 @@ package app
 
 import (
 	"fmt"
+
 	"github.com/webitel/engine/pkg/discovery"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -25,16 +27,21 @@ func (c *cluster) Start() error {
 	if err != nil {
 		return err
 	}
+
 	c.discovery = sd
 
 	host, port := c.app.GetPublicInterface()
-	err = sd.RegisterService(model.AppServiceName, host, port, model.AppServiceTTL, model.AppDeregisterCriticalTTL)
-	if err != nil {
+	if err = sd.RegisterService(model.AppServiceName, host, port, model.AppServiceTTL, model.AppDeregisterCriticalTTL); err != nil {
 		return err
 	}
+
 	c.connection = fmt.Sprintf("%s-%s", model.AppServiceName, c.app.id)
 
 	return nil
+}
+
+func (c *cluster) Stop() {
+	c.discovery.Shutdown()
 }
 
 func (f *FlowManager) ConnectionString() string {
@@ -47,8 +54,4 @@ func (f *FlowManager) GetPublicInterface() (string, int) {
 	}
 
 	return f.grpcServer.Host(), f.grpcServer.Port()
-}
-
-func (c *cluster) Stop() {
-	c.discovery.Shutdown()
 }

@@ -1,0 +1,20 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    schema: "internal/storage/postgres/schema/"
+    queries: "internal/storage/postgres/queries/"
+    gen:
+      go:
+        package: "sqlcgen"
+        out: "internal/storage/postgres/sqlcgen"
+        sql_package: "database/sql"
+        emit_json_tags: false
+        emit_db_tags: false
+        overrides:
+          - db_type: "uuid"
+            go_type: "string"
+          - db_type: "pg_catalog.jsonb"
+            go_type: "encoding/json.RawMessage"
+          - db_type: "pg_catalog.jsonb"
+            nullable: true
+            go_type: "encoding/json.RawMessage"

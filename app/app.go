@@ -19,6 +19,8 @@ import (
 	"github.com/webitel/flow_manager/cases"
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/gen/engine"
+	"github.com/webitel/flow_manager/internal/session"
+	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
@@ -32,7 +34,7 @@ import (
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 
-	_ "github.com/mbobakov/grpc-consul-resolver"
+	_ "github.com/webitel/flow_manager/infra/resolver"
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
@@ -43,12 +45,13 @@ import (
 )
 
 type FlowManager struct {
-	log           *wlog.Logger
-	id            string
-	config        *model.Config
-	cluster       *cluster
-	Store         store.Store
-	ExternalStore *cachelayer.ExternalStoreManager
+	log            *wlog.Logger
+	id             string
+	config         *model.Config
+	cluster        *cluster
+	Store          store.Store
+	ExternalStore  *cachelayer.ExternalStoreManager
+	CheckpointRepo session.Repository
 
 	grpcServer    model.Server
 	mailServer    model.Server
@@ -161,7 +164,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	wlog.Info(fmt.Sprintf("version: %s", Version()))
 	wlog.Info("server is initializing...")
 
-	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
+	sqlSupplier := sqlstore.NewSqlSupplier(fm.Config().SqlSettings)
+	fm.Store = store.NewLayeredStore(sqlSupplier)
+	checkpointRepo := postgresStorage.NewCheckpointRepository(sqlSupplier)
+	if err := checkpointRepo.Migrate(fm.ctx); err != nil {
+		return nil, fmt.Errorf("session checkpoint migration: %w", err)
+	}
+	fm.CheckpointRepo = checkpointRepo
 
 	fm.cluster = NewCluster(fm)
 
@@ -321,6 +330,10 @@ func (f *FlowManager) Shutdown() {
 
 func (f *FlowManager) Log() *wlog.Logger {
 	return f.log
+}
+
+func (f *FlowManager) AppID() string {
+	return f.id
 }
 
 func (f *FlowManager) Callback() *CallbackResolver {

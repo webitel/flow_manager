@@ -9,6 +9,7 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -99,7 +100,11 @@ func (r *Router) handle(conn model.Connection) {
 		model.FlowSchemaNameVariable: routing.Schema.Name,
 	})
 
+	cp := session.Save(r.fm.CheckpointRepo, r.fm.AppID(), conn, routing.SchemaId)
+
 	flow.Route(conn.Context(), i, r)
+
+	session.Update(r.fm.CheckpointRepo, cp, conn)
 
 	if !conv.IsTransfer() {
 		conv.Stop(nil)
@@ -112,6 +117,8 @@ func (r *Router) handle(conn model.Connection) {
 		<-ctxDisc.Done()
 		cancel()
 	}
+
+	session.Close(r.fm.CheckpointRepo, r.fm.Log(), cp, conn.Id())
 }
 
 func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
