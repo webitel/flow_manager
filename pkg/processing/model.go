@@ -50,6 +50,14 @@ type FormTable struct {
 	} `json:"view"`
 }
 
+type SelectOption struct {
+	Id      int    `json:"id"`
+	Name    string `json:"name"`
+	Value   string `json:"value"`
+	Initial bool   `json:"initial"`
+	Final   bool   `json:"final"`
+}
+
 type FormView struct {
 	Component string `json:"component"`
 
@@ -57,18 +65,15 @@ type FormView struct {
 	Hint         string `json:"hint,omitempty"`
 	InitialValue string `json:"initialValue,omitempty"`
 
-	CurrentTime bool `json:"currentTime,omitempty"` // wt-datetimepicker
-	Options     []struct {
-		Name  string `json:"name"`
-		Value string `json:"value"`
-	} `json:"options,omitempty"` // wt-select
-	Multiple      bool   `json:"multiple,omitempty"`      // wt-select
-	Color         string `json:"color,omitempty"`         // form-text
-	Collapsible   bool   `json:"collapsible,omitempty"`   // form-text
-	EnableCopying bool   `json:"enableCopying,omitempty"` // form-text
-	Output        string `json:"output,omitempty"`        // "rich-text-editor"
-	Height        any    `json:"height,omitempty"`        // form-i-frame
-	Variable      string `json:"variable,omitempty"`      // form-select-from-object
+	CurrentTime   bool           `json:"currentTime,omitempty"`   // wt-datetimepicker
+	Options       []SelectOption `json:"options,omitempty"`       // wt-select
+	Multiple      bool           `json:"multiple,omitempty"`      // wt-select
+	Color         string         `json:"color,omitempty"`         // form-text
+	Collapsible   bool           `json:"collapsible,omitempty"`   // form-text
+	EnableCopying bool           `json:"enableCopying,omitempty"` // form-text
+	Output        string         `json:"output,omitempty"`        // "rich-text-editor"
+	Height        any            `json:"height,omitempty"`        // form-i-frame
+	Variable      string         `json:"variable,omitempty"`      // form-select-from-object
 	Object        *struct {
 		Fields []string `json:"fields"`
 		Source struct {
@@ -78,7 +83,10 @@ type FormView struct {
 		DisplayColumn string   `json:"displayColumn"`
 		Filters       []string `json:"filters"`
 	} `json:"object,omitempty"` // form-select-from-object
-	Table *TableView `json:"table"`
+	Table *TableView `json:"table,omitempty"`
+
+	Token     string `json:"token,omitempty"`
+	ServiceId int64  `json:"serviceId,omitempty"`
 }
 
 type FormComponent struct {
