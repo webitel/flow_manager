@@ -30,6 +30,7 @@ type IMDialog interface {
 type CCQueueEvent struct {
 	AttemptId int64  `json:"attempt_id"`
 	Event     string `json:"event"`
+	Result    string `json:"result"`
 }
 
 // MessageWrapper представляє кореневий об'єкт
