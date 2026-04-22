@@ -136,6 +136,11 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 			case "bridged":
 				wCancel()
 			case "leaving":
+				if e.Result != "" {
+					return conn.Set(ctx, model.Variables{
+						"cc_result": e.Result,
+					})
+				}
 				return model.CallResponseOK, nil
 			}
 		}
