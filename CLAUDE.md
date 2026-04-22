@@ -144,7 +144,7 @@ Existing assets: `store/pg_store/session.go`, `store/pg_store/socket_session.go`
 | observability-and-errors | medium | Standardize error codes and log fields in `flow/handler.go` |
 | provider-boundaries | medium | Isolate provider concerns in `providers/*/server.go` |
 
-**Next default session focus:** Phase 1 bootstrap wiring — start with `app/config.go` → `internal/bootstrap/config/`.
+**Next default session focus:** Phase 1 bootstrap wiring — `app/*_cli.go` → `internal/adapters/outbound/clients/` (one file at a time).
 
 ## Hard rules
 

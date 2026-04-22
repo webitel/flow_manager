@@ -13,6 +13,8 @@ import (
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	"github.com/webitel/flow_manager/app/meeting"
@@ -104,7 +106,7 @@ type FlowManager struct {
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
-	config, err := loadConfig()
+	config, err := bscfg.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +224,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 
-	t, err := LoadTlsCreds(config.Tls)
+	t, err := bscfg.LoadTLSCreds(config.Tls)
 	if err != nil {
 		return nil, err
 	}
