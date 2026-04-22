@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/infra/watcher"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -23,7 +23,7 @@ Nov 24 16:57:54 dev flow_manager[13448]: 2020-11-24T16:57:54.185+0200        deb
 type callWatcher struct {
 	fm                 *FlowManager
 	startOnce          sync.Once
-	callHistoryWatcher *discovery.Watcher
+	callHistoryWatcher *watcher.Watcher
 }
 
 func NewCallWatcher(fm *FlowManager) *callWatcher {
@@ -36,7 +36,7 @@ func NewCallWatcher(fm *FlowManager) *callWatcher {
 func (c *callWatcher) Start() {
 	c.startOnce.Do(func() {
 		go func() {
-			c.callHistoryWatcher = discovery.MakeWatcher("call-history", 1000, c.storeHangupCalls)
+			c.callHistoryWatcher = watcher.MakeWatcher("call-history", 1000, c.storeHangupCalls)
 			c.callHistoryWatcher.Start()
 		}()
 	})

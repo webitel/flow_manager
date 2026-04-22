@@ -3,7 +3,7 @@ package grpc
 import (
 	"testing"
 
-	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/infra/discovery"
 )
 
 func TestChatClient(t *testing.T) {

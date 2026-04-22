@@ -5,14 +5,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/webitel/engine/pkg/discovery"
-	"github.com/webitel/flow_manager/gen/chat"
-	"github.com/webitel/flow_manager/gen/workflow"
-	"github.com/webitel/flow_manager/model"
-	"google.golang.org/grpc/metadata"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/webitel/flow_manager/gen/chat"
+	"github.com/webitel/flow_manager/gen/workflow"
+	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/model"
+	"google.golang.org/grpc/metadata"
 )
 
 const (

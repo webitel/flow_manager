@@ -3,8 +3,7 @@ package app
 import (
 	"fmt"
 
-	"github.com/webitel/engine/pkg/discovery"
-
+	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 

@@ -3,15 +3,16 @@ package email
 import (
 	"context"
 	"fmt"
-	"golang.org/x/sync/singleflight"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
+	"golang.org/x/sync/singleflight"
+
 	"golang.org/x/oauth2"
 
-	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"

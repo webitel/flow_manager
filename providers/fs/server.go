@@ -7,10 +7,11 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
-	"github.com/webitel/wlog"
 )
 
 const (
@@ -156,7 +157,6 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 	connection.resample = s.cfg.RecordResample
 
 	defer func() {
-
 		if connection.Stopped() {
 			connection.log.Debug("stopped connection")
 		} else {

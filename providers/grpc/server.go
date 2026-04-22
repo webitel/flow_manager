@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/gen/workflow"
+	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"

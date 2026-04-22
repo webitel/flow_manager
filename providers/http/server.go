@@ -10,9 +10,9 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
-	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 

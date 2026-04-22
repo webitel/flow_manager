@@ -3,9 +3,10 @@ package model
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/infra/discovery"
 )
 
 type ConnectionType int8

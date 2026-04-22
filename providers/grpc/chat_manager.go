@@ -6,20 +6,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/flow_manager/gen/chat/messages"
+	"github.com/webitel/wlog"
 
 	proto "github.com/webitel/flow_manager/gen/chat"
+	"github.com/webitel/flow_manager/gen/chat/messages"
+	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/infra/watcher"
 	"github.com/webitel/flow_manager/model"
-
-	"github.com/webitel/engine/pkg/discovery"
-	"github.com/webitel/wlog"
 )
 
 type ChatManager struct {
 	serviceDiscovery discovery.ServiceDiscovery
 	poolConnections  discovery.Pool
 
-	watcher   *discovery.Watcher
+	watcher   *watcher.Watcher
 	startOnce sync.Once
 	stop      chan struct{}
 	stopped   chan struct{}
@@ -51,7 +51,7 @@ func (cm *ChatManager) Start(sd discovery.ServiceDiscovery) error {
 	}
 
 	cm.startOnce.Do(func() {
-		cm.watcher = discovery.MakeWatcher("chat client", WatcherInterval, cm.wakeUp)
+		cm.watcher = watcher.MakeWatcher("chat client", WatcherInterval, cm.wakeUp)
 		go cm.watcher.Start()
 		go func() {
 			defer func() {
@@ -244,7 +244,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	return &res, nil
 }
 
-func (cc *ChatManager) LinkContact(ctx context.Context, contactId string, conversationId string) error {
+func (cc *ChatManager) LinkContact(ctx context.Context, contactId, conversationId string) error {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return e
@@ -270,7 +270,6 @@ func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action 
 	switch action {
 	case model.ChatActionCancel:
 		a = proto.UserAction_Cancel
-
 	}
 
 	msg := &proto.SendUserActionRequest{

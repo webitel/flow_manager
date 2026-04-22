@@ -7,7 +7,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/flow_manager/infra/watcher"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -18,7 +18,7 @@ const (
 type listWatcher struct {
 	fm        *FlowManager
 	startOnce sync.Once
-	watcher   *discovery.Watcher
+	watcher   *watcher.Watcher
 	log       *wlog.Logger
 }
 
@@ -35,7 +35,7 @@ func NewListWatcher(fm *FlowManager) *listWatcher {
 func (c *listWatcher) Start() {
 	c.startOnce.Do(func() {
 		go func() {
-			c.watcher = discovery.MakeWatcher("list-communications", pollingRemoveExpiredNumbers, c.cleanExpiredNumbers)
+			c.watcher = watcher.MakeWatcher("list-communications", pollingRemoveExpiredNumbers, c.cleanExpiredNumbers)
 			c.watcher.Start()
 		}()
 	})
