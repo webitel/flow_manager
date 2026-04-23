@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
+	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
 	"github.com/webitel/flow_manager/routes/call"
 	"github.com/webitel/flow_manager/routes/channel"
 	"github.com/webitel/flow_manager/routes/chat"
@@ -47,7 +48,11 @@ func main() {
 	if err = contactsCli.Start(); err != nil {
 		panic(err.Error())
 	}
-	router := flow.NewRouter(fm, contactsCli)
+	meetingCli := outboundmeeting.New(fm.Config().DiscoverySettings.Url)
+	if err = meetingCli.Start(); err != nil {
+		panic(err.Error())
+	}
+	router := flow.NewRouter(fm, contactsCli, meetingCli)
 	call.Init(fm, router, contactsCli)
 	grpc.Init(fm, router)
 	chat.Init(fm, router)

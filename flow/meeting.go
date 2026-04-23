@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -14,24 +15,17 @@ type MeetingArgs struct {
 }
 
 func (r *router) createMeeting(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
-
-	var (
-		argv MeetingArgs
-	)
+	var argv MeetingArgs
 	if err := scope.Decode(args, &argv); err != nil {
 		return model.CallResponseError, err
 	}
-
 	if argv.SetVar == "" {
 		return model.CallResponseError, ErrorRequiredParameter("createMeeting", "setVar")
 	}
 
-	url, err := r.fm.Meeting().CreateMeeting(ctx, conn.DomainId(), argv.Title, int(argv.ExpireSec), argv.BasePath, argv.Variables)
-	if err != nil {
-		return model.CallResponseError, err
+	url, cErr := r.meeting.Create(ctx, conn.DomainId(), argv.Title, int(argv.ExpireSec), argv.BasePath, argv.Variables)
+	if cErr != nil {
+		return model.CallResponseError, model.NewInternalError("flow.createMeeting", cErr.Error())
 	}
-
-	return conn.Set(ctx, model.Variables{
-		argv.SetVar: url,
-	})
+	return conn.Set(ctx, model.Variables{argv.SetVar: url})
 }

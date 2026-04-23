@@ -2,16 +2,16 @@ package meeting
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/webitel/wlog"
 
 	wmb "github.com/webitel/flow_manager/gen/web-meeting-backend"
 	"github.com/webitel/flow_manager/infra/grpcdial"
-	"github.com/webitel/flow_manager/model"
 )
 
-const ServiceName = "web_meeting_backend"
+const serviceName = "web_meeting_backend"
 
 type Client struct {
 	consulAddr string
@@ -20,35 +20,24 @@ type Client struct {
 }
 
 func New(consulAddr string) *Client {
-	cli := &Client{
-		consulAddr: consulAddr,
-	}
-
-	return cli
+	return &Client{consulAddr: consulAddr}
 }
 
-func (cm *Client) Start() error {
-	wlog.Debug("starting " + ServiceName + " client")
+func (c *Client) Start() error {
+	wlog.Debug("starting " + serviceName + " client")
 	var err error
-	cm.startOnce.Do(func() {
-		cm.api, err = grpcdial.NewClient(cm.consulAddr, ServiceName, wmb.NewMeetingServiceClient)
-		if err != nil {
-			return
-		}
+	c.startOnce.Do(func() {
+		c.api, err = grpcdial.NewClient(c.consulAddr, serviceName, wmb.NewMeetingServiceClient)
 	})
 	return err
 }
 
-func (cm *Client) Stop() {
-	_ = cm.api.Close()
+func (c *Client) Stop() {
+	_ = c.api.Close()
 }
 
-func (cm *Client) CreateMeeting(ctx context.Context, domainId int64, title string, expireSec int, basePath string, vars map[string]string) (string, *model.AppError) {
-	if cm == nil {
-		return "", model.NewInternalError("meeting.client", "client is nil")
-	}
-
-	res, err := cm.api.API.CreateMeetingNA(ctx, &wmb.CreateMeetingRequest{
+func (c *Client) Create(ctx context.Context, domainId int64, title string, expireSec int, basePath string, vars map[string]string) (string, error) {
+	res, err := c.api.API.CreateMeetingNA(ctx, &wmb.CreateMeetingRequest{
 		Title:     title,
 		ExpireSec: int64(expireSec),
 		BasePath:  basePath,
@@ -56,23 +45,15 @@ func (cm *Client) CreateMeeting(ctx context.Context, domainId int64, title strin
 		DomainId:  domainId,
 	})
 	if err != nil {
-		return "", model.NewInternalError("meeting.CreateMeetingNA", err.Error())
+		return "", fmt.Errorf("meeting.Create: %w", err)
 	}
-
 	return res.Url, nil
 }
 
-func (cm *Client) GetMeeting(ctx context.Context, id string) (map[string]string, *model.AppError) {
-	if cm == nil {
-		return nil, model.NewInternalError("meeting.client", "client is nil")
-	}
-
-	res, err := cm.api.API.GetMeeting(ctx, &wmb.GetMeetingRequest{
-		Id: id,
-	})
+func (c *Client) Get(ctx context.Context, id string) (map[string]string, error) {
+	res, err := c.api.API.GetMeeting(ctx, &wmb.GetMeetingRequest{Id: id})
 	if err != nil {
-		return nil, model.NewInternalError("meeting.GetMeeting", err.Error())
+		return nil, fmt.Errorf("meeting.Get: %w", err)
 	}
-
 	return res.Variables, nil
 }
