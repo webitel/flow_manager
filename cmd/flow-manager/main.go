@@ -16,7 +16,9 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
+	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/routes/call"
 	"github.com/webitel/flow_manager/routes/channel"
 	"github.com/webitel/flow_manager/routes/chat"
@@ -32,6 +34,7 @@ func main() {
 		fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger }),
 		fx.Provide(app.NewFlowManager),
 		fx.Provide(newContactsClient),
+		fx.Provide(newMeetingClient),
 		fx.Provide(flow.NewRouter),
 		fx.Invoke(initRouters),
 		fx.Invoke(registerLifecycle),
@@ -65,6 +68,16 @@ func registerLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {
 
 func newContactsClient(lc fx.Lifecycle, fm *app.FlowManager) (domaincontacts.Client, error) {
 	c := outboundcontacts.New(fm.Config().DiscoverySettings.Url)
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			return c.Start()
+		},
+	})
+	return c, nil
+}
+
+func newMeetingClient(lc fx.Lifecycle, fm *app.FlowManager) (domainmeeting.Client, error) {
+	c := outboundmeeting.New(fm.Config().DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return c.Start()
