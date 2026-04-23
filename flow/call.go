@@ -13,7 +13,6 @@ func (r *router) makeCall(ctx context.Context, scope *Flow, conn model.Connectio
 	var argv model.OutboundCallRequest
 	var err *model.AppError
 	var set SetVarArgs
-	var id string
 
 	if err = scope.Decode(args, &argv); err != nil {
 		return nil, err
@@ -31,9 +30,9 @@ func (r *router) makeCall(ctx context.Context, scope *Flow, conn model.Connectio
 		return nil, ErrorRequiredParameter("makeCall", "destination")
 	}
 
-	id, err = r.fm.MakeCall(ctx, argv)
-	if err != nil {
-		return model.CallResponseError, err
+	id, cErr := r.engine.MakeCall(ctx, argv)
+	if cErr != nil {
+		return model.CallResponseError, model.NewInternalError("flow.makeCall", cErr.Error())
 	}
 
 	if set.SetVar != "" {

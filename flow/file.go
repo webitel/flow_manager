@@ -46,9 +46,9 @@ func (r *router) feedback(ctx context.Context, scope *Flow, conn model.Connectio
 		return model.CallResponseError, ErrorRequiredParameter("feedback", "setVar")
 	}
 
-	key, err := r.fm.GenerateFeedback(ctx, conn.DomainId(), argv.SourceId, argv.Source, argv.Payload)
-	if err != nil {
-		return nil, err
+	key, cErr := r.engine.GenerateFeedback(ctx, conn.DomainId(), argv.SourceId, argv.Source, argv.Payload)
+	if cErr != nil {
+		return nil, model.NewInternalError("flow.feedback", cErr.Error())
 	}
 
 	return conn.Set(ctx, model.Variables{
