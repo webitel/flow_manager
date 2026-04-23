@@ -6,7 +6,6 @@ package main
 import (
 	"context"
 	"net/http"
-	_ "net/http/pprof"
 
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
@@ -29,6 +28,8 @@ import (
 	"github.com/webitel/flow_manager/routes/im"
 	"github.com/webitel/flow_manager/routes/processing"
 	"github.com/webitel/flow_manager/routes/webhook"
+
+	_ "net/http/pprof"
 )
 
 func main() {
@@ -44,8 +45,8 @@ func main() {
 	).Run()
 }
 
-func initRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client) {
-	call.Init(fm, router, contacts)
+func initRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client, meetings domainmeeting.Client) {
+	call.Init(fm, router, contacts, meetings)
 	grpc.Init(fm, router)
 	chat.Init(fm, router)
 	processing.Init(fm, router)

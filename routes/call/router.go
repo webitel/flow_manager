@@ -13,20 +13,23 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
 	fm               *app.FlowManager
 	contacts         domaincontacts.Client
+	meeting          domainmeeting.Client
 	apps             flow.ApplicationHandlers
 	disconnectedApps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client) {
+func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client, meeting domainmeeting.Client) {
 	router := &Router{
 		fm:       fm,
 		contacts: contacts,
+		meeting:  meeting,
 	}
 
 	router.disconnectedApps = fr.Handlers()
@@ -210,10 +213,9 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if meeting := call.MeetingId(); meeting != "" {
-		var vars map[string]string
-		vars, err = r.fm.Meeting().GetMeeting(call.Context(), meeting)
-		if err != nil {
-			call.Log().Error(err.Error(), wlog.Err(err))
+		vars, err2 := r.meeting.Get(call.Context(), meeting)
+		if err2 != nil {
+			call.Log().Error(err2.Error(), wlog.Err(err2))
 		} else {
 			call.Set(call.Context(), model.VariablesFromStringMap(vars))
 		}

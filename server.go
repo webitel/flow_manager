@@ -58,7 +58,7 @@ func main() {
 		panic(err.Error())
 	}
 	router := flow.NewRouter(fm, contactsCli, engineCli, meetingCli)
-	call.Init(fm, router, contactsCli)
+	call.Init(fm, router, contactsCli, meetingCli)
 	grpc.Init(fm, router)
 	chat.Init(fm, router)
 	processing.Init(fm, router)

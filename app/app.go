@@ -9,15 +9,12 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
 	"github.com/webitel/engine/pkg/presign"
-	"github.com/webitel/engine/pkg/wbt"
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
-	"github.com/webitel/flow_manager/app/meeting"
 	"github.com/webitel/flow_manager/cases"
-	"github.com/webitel/flow_manager/gen/engine"
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/session"
@@ -64,7 +61,6 @@ type FlowManager struct {
 	chatManager *grpc.ChatManager
 	storage     *storageClient
 	cases       *cases.Api
-	meeting     *meeting.Client
 
 	timezoneList map[int]*time.Location
 	cc           cc.CCManager
@@ -89,9 +85,7 @@ type FlowManager struct {
 
 	cacheStore map[CacheType]cachelayer.CacheStore
 
-	engineCallCli     *wbt.Client[engine.CallServiceClient]
-	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
-	AiBots            *bots_client.Client
+	AiBots *bots_client.Client
 
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
@@ -202,11 +196,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, outErr
 	}
 
-	fm.meeting = meeting.New(fm.Config().DiscoverySettings.Url)
-	if outErr = fm.meeting.Start(); outErr != nil {
-		return nil, outErr
-	}
-
 	fm.grpcServer = grpcSrv
 	fm.eslServer = fs.NewServer(&fs.Config{
 		Host:           fm.Config().Esl.Host,
@@ -263,14 +252,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
-	if fm.engineCallCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewCallServiceClient); err != nil {
-		return nil, err
-	}
-
-	if fm.engineFeedbackCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewFeedbackServiceClient); err != nil {
-		return nil, err
-	}
-
 	return fm, outErr
 }
 
@@ -300,10 +281,6 @@ func (f *FlowManager) Shutdown() {
 		f.AiBots.Stop()
 	}
 
-	if f.meeting != nil {
-		f.meeting.Stop()
-	}
-
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()
@@ -323,8 +300,4 @@ func (f *FlowManager) AppID() string {
 
 func (f *FlowManager) Callback() *CallbackResolver {
 	return f.cbr
-}
-
-func (f *FlowManager) Meeting() *meeting.Client {
-	return f.meeting
 }
