@@ -2,14 +2,13 @@ package contacts
 
 import (
 	"context"
-	"net/http"
+	"fmt"
 	"sync"
 
 	"github.com/webitel/wlog"
 
 	gen "github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/infra/grpcdial"
-	"github.com/webitel/flow_manager/model"
 )
 
 const serviceName = "go.webitel.app"
@@ -46,79 +45,60 @@ func (c *Client) Start() error {
 	return err
 }
 
-func (c *Client) Locate(ctx context.Context, token string, req *gen.LocateContactRequest) (*gen.Contact, *model.AppError) {
-	res, err := c.Contacts().LocateContact(c.contacts.WithToken(ctx, token), req)
+func (c *Client) Locate(ctx context.Context, token string, req *gen.LocateContactRequest) (*gen.Contact, error) {
+	res, err := c.contacts.API.LocateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "LocateContact", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.Locate: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) Create(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
-	res, err := c.Contacts().CreateContact(c.contacts.WithToken(ctx, token), req)
+func (c *Client) Create(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, error) {
+	res, err := c.contacts.API.CreateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "CreateContact", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.Create: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) Search(ctx context.Context, token string, req *gen.SearchContactsRequest) (*gen.ContactList, *model.AppError) {
-	res, err := c.Contacts().SearchContacts(c.contacts.WithToken(ctx, token), req)
+func (c *Client) Search(ctx context.Context, token string, req *gen.SearchContactsRequest) (*gen.ContactList, error) {
+	res, err := c.contacts.API.SearchContacts(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "SearchContacts", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.Search: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) SearchNA(ctx context.Context, req *gen.SearchContactsNARequest) (*gen.ContactList, *model.AppError) {
-	res, err := c.Contacts().SearchContactsNA(ctx, req)
+func (c *Client) SearchNA(ctx context.Context, req *gen.SearchContactsNARequest) (*gen.ContactList, error) {
+	res, err := c.contacts.API.SearchContactsNA(ctx, req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "SearchContactsNA", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.SearchNA: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) Update(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
-	res, err := c.Contacts().UpdateContact(c.contacts.WithToken(ctx, token), req)
+func (c *Client) Update(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, error) {
+	res, err := c.contacts.API.UpdateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "UpdateContact", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.Update: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) MergeVariables(ctx context.Context, token string, req *gen.MergeVariablesRequest) (*gen.VariableList, *model.AppError) {
-	res, err := c.Variables().MergeVariables(c.contacts.WithToken(ctx, token), req)
+func (c *Client) MergeVariables(ctx context.Context, token string, req *gen.MergeVariablesRequest) (*gen.VariableList, error) {
+	res, err := c.variables.API.MergeVariables(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "MergeContactVariables", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.MergeVariables: %w", err)
 	}
-
 	return res, nil
 }
 
-func (c *Client) MergePhones(ctx context.Context, token string, req *gen.MergePhonesRequest) (*gen.PhoneList, *model.AppError) {
-	res, err := c.Phone().MergePhones(c.contacts.WithToken(ctx, token), req)
+func (c *Client) MergePhones(ctx context.Context, token string, req *gen.MergePhonesRequest) (*gen.PhoneList, error) {
+	res, err := c.phone.API.MergePhones(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
-		return nil, model.NewAppError("contacts", "MergeContactPhones", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("contacts.MergePhones: %w", err)
 	}
-
 	return res, nil
-}
-
-func (c *Client) Contacts() gen.ContactsClient {
-	return c.contacts.API
-}
-
-func (c *Client) Phone() gen.PhonesClient {
-	return c.phone.API
-}
-
-func (c *Client) Variables() gen.VariablesClient {
-	return c.variables.API
 }
 
 func (c *Client) Stop() {}
