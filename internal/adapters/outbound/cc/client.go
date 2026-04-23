@@ -1,98 +1,49 @@
 package cc
 
 import (
-	"context"
 	"sync"
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/gen/cc"
+	genpb "github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/infra/grpcdial"
+	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/model"
 )
 
 const ServiceName = "call_center"
 
-type AgentApi interface {
-	Online(domainId, agentId int64, onDemand bool) error
-	Offline(domainId, agentId int64) error
-	Pause(domainId, agentId int64, payload string, timeout int) error
-
-	WaitingChannel(agentId int, channel string) (int64, error)
-
-	AcceptTask(appId string, domainId, attemptId int64) error
-	CloseTask(appId string, domainId, attemptId int64) error
-	RunTrigger(ctx context.Context, domainId, userId int64, triggerId int32, vars map[string]string) (string, error)
-}
-
-type MemberApi interface {
-	AttemptResult(result *cc.AttemptResultRequest) error
-	RenewalResult(domainId, attemptId int64, renewal uint32) error
-
-	JoinCallToQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error)
-	JoinChatToQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error)
-	CallJoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error)
-	CallOutbound(ctx context.Context, in *cc.OutboundCallRequest) (*cc.OutboundCallResponse, error)
-	TaskJoinToAgent(ctx context.Context, in *cc.TaskJoinToAgentRequest) (cc.MemberService_TaskJoinToAgentClient, error)
-	JoinIMToQueue(ctx context.Context, in *cc.IMJoinToQueueRequest) (*cc.IMJoinToQueueResponse, error)
-
-	DirectAgentToMember(domainId, memberId int64, communicationId int, agentId int64) (int64, error)
-	CancelAgentDistribute(ctx context.Context, in *cc.CancelAgentDistributeRequest) (*cc.CancelAgentDistributeResponse, error)
-	ProcessingActionForm(ctx context.Context, in *cc.ProcessingFormActionRequest) (*cc.ProcessingFormActionResponse, error)
-	ProcessingActionComponent(ctx context.Context, in *cc.ProcessingComponentActionRequest) (*cc.ProcessingComponentActionResponse, error)
-	SaveFormFields(domainId, attemptId int64, fields map[string]string, form []byte) error
-	CancelAttempt(ctx context.Context, attemptId int64, result, appId string) error
-	InterceptAttempt(ctx context.Context, domainId, attemptId int64, agentId int32) error
-	ResumeAttempt(ctx context.Context, attemptId, domainId int64) error
-}
-
-type CCManager interface {
-	Start() error
-	Stop()
-
-	Agent() AgentApi
-	Member() MemberApi
-
-	SubscribeAttempt(attemptId int64) <-chan model.CCQueueEvent
-	UnSubscribeAttempt(attemptId int64)
-}
-
 type ccManager struct {
 	startOnce  sync.Once
 	consulAddr string
 
-	agentClient  *grpcdial.Client[cc.AgentServiceClient]
-	memberClient *grpcdial.Client[cc.MemberServiceClient]
+	agentClient  *grpcdial.Client[genpb.AgentServiceClient]
+	memberClient *grpcdial.Client[genpb.MemberServiceClient]
 
-	agent    AgentApi
-	member   MemberApi
+	agent    domcc.AgentApi
+	member   domcc.MemberApi
 	events   <-chan model.CCQueueEvent
-	attempts map[int64]chan model.CCQueueEvent
+	attempts map[int64]chan domcc.QueueEvent
 	closed   chan struct{}
 	sync.RWMutex
 }
 
-type AttemptEvent struct {
-	cc *ccManager
-	model.CCQueueEvent
-}
-
-func NewCCManager(consulAddr string, events <-chan model.CCQueueEvent) CCManager {
+func NewCCManager(consulAddr string, events <-chan model.CCQueueEvent) domcc.CCManager {
 	cli := &ccManager{
 		consulAddr: consulAddr,
 		events:     events,
 		closed:     make(chan struct{}),
-		attempts:   make(map[int64]chan model.CCQueueEvent),
+		attempts:   make(map[int64]chan domcc.QueueEvent),
 	}
 
 	return cli
 }
 
-func (cm *ccManager) Agent() AgentApi {
+func (cm *ccManager) Agent() domcc.AgentApi {
 	return cm.agent
 }
 
-func (cm *ccManager) Member() MemberApi {
+func (cm *ccManager) Member() domcc.MemberApi {
 	return cm.member
 }
 
@@ -101,12 +52,12 @@ func (cm *ccManager) Start() error {
 	var err error
 
 	cm.startOnce.Do(func() {
-		cm.agentClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, cc.NewAgentServiceClient)
+		cm.agentClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, genpb.NewAgentServiceClient)
 		if err != nil {
 			return
 		}
 
-		cm.memberClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, cc.NewMemberServiceClient)
+		cm.memberClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, genpb.NewMemberServiceClient)
 		if err != nil {
 			return
 		}
@@ -126,11 +77,17 @@ func (cm *ccManager) listenEvents() {
 	for {
 		select {
 		case event := <-cm.events:
+			cm.RLock()
 			a, ok := cm.attempts[event.AttemptId]
+			cm.RUnlock()
 			if !ok {
 				continue
 			}
-			a <- event
+			a <- domcc.QueueEvent{
+				AttemptId: event.AttemptId,
+				Event:     event.Event,
+				Result:    event.Result,
+			}
 		case <-cm.closed:
 			return
 		}
@@ -147,16 +104,15 @@ func (cm *ccManager) UnSubscribeAttempt(attemptId int64) {
 	cm.Unlock()
 }
 
-func (cm *ccManager) SubscribeAttempt(attemptId int64) <-chan model.CCQueueEvent {
+func (cm *ccManager) SubscribeAttempt(attemptId int64) <-chan domcc.QueueEvent {
 	cm.Lock()
 	e, ok := cm.attempts[attemptId]
 	cm.Unlock()
 	if ok {
-		// todo warn
 		return e
 	}
 
-	e = make(chan model.CCQueueEvent)
+	e = make(chan domcc.QueueEvent)
 	cm.Lock()
 	cm.attempts[attemptId] = e
 	cm.Unlock()

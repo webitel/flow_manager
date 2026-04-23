@@ -8,10 +8,10 @@ import (
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app/cc"
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
@@ -52,7 +52,7 @@ type FlowManager struct {
 	cases       *cases.Api
 
 	timezoneList map[int]*time.Location
-	cc           cc.CCManager
+	cc           domcc.CCManager
 
 	stop    chan struct{}
 	stopped chan struct{}
@@ -91,7 +91,7 @@ func NewFlowManager(
 	aiBots *aibridge.Client,
 	srvs Servers,
 	chatMgr *fmgrpc.ChatManager,
-	ccMgr cc.CCManager,
+	ccMgr domcc.CCManager,
 	eventQueue mq.MQ,
 	cb *CallbackResolver,
 ) (*FlowManager, error) {

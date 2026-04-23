@@ -5,10 +5,11 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/webitel/flow_manager/app/cc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	outcc "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
 	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
+	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
@@ -45,8 +46,8 @@ func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*aibridge.Client, erro
 
 // NewCCManager creates the CC queue manager and registers Start/Stop in the fx
 // lifecycle.
-func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue mq.MQ) (cc.CCManager, error) {
-	mgr := cc.NewCCManager(cfg.DiscoverySettings.Url, eventQueue.ConsumeCCEvents())
+func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue mq.MQ) (domcc.CCManager, error) {
+	mgr := outcc.NewCCManager(cfg.DiscoverySettings.Url, eventQueue.ConsumeCCEvents())
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return mgr.Start()
