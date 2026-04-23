@@ -142,7 +142,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 		})
 	}
 
-	_, err := c.srv.client.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
@@ -164,7 +164,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
-	_, err := c.srv.client.Api.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendTextRequest{
+	_, err := c.srv.client.API.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendTextRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
@@ -194,7 +194,7 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 			MimeType: f.MimeType,
 		})
 	}
-	_, err := c.srv.client.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
@@ -218,7 +218,7 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
@@ -241,7 +241,7 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
+	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
@@ -260,7 +260,7 @@ func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (mo
 		rows = buildKeyboardRows(menu.Inline)
 	}
 
-	_, err := c.srv.client.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
+	_, err := c.srv.client.API.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
 		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,

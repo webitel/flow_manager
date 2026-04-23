@@ -1,17 +1,17 @@
 package im
 
 import (
-	"context"
 	"crypto/tls"
 	"sync"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/webitel/engine/pkg/wbt"
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	"github.com/webitel/flow_manager/infra/grpcdial"
 )
 
 const ServiceName = "im-gateway-service"
@@ -19,20 +19,17 @@ const ServiceName = "im-gateway-service"
 type Client struct {
 	consulAddr string
 	startOnce  sync.Once
-	*wbt.Client[p.MessageClient]
+	*grpcdial.Client[p.MessageClient]
 	log *wlog.Logger
-	ctx context.Context
 	tls *tls.Config
 }
 
 func NewClient(consulAddr string, log *wlog.Logger, t *tls.Config) *Client {
-	cli := &Client{
+	return &Client{
 		consulAddr: consulAddr,
 		log:        log,
 		tls:        t,
 	}
-
-	return cli
 }
 
 func (cm *Client) Start() error {
@@ -40,17 +37,14 @@ func (cm *Client) Start() error {
 
 	var err error
 	cm.startOnce.Do(func() {
-		var opts []wbt.Option
+		var opts []grpc.DialOption
 		if cm.tls != nil {
-			opts = append(opts, wbt.WithGrpcOptions(
-				grpc.WithTransportCredentials(credentials.NewTLS(cm.tls)),
-			))
+			opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(cm.tls)))
+		} else {
+			opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		}
 
-		cm.Client, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...)
-		if err != nil {
-			return
-		}
+		cm.Client, err = grpcdial.NewClientWithOpts(cm.consulAddr, ServiceName, p.NewMessageClient, opts...)
 	})
 	return err
 }
