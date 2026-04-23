@@ -9,10 +9,10 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-type callHandler func(ctx context.Context, scope *flow.Flow, call model.Call, args interface{}) (model.Response, *model.AppError)
+type callHandler func(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError)
 
 func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
-	var apps = make(flow.ApplicationHandlers)
+	apps := make(flow.ApplicationHandlers)
 
 	apps["ringReady"] = &flow.Application{
 		Handler: callHandlerMiddleware(r.ringReady),
@@ -153,10 +153,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.pickup),
 	}
-	apps["speechAi"] = &flow.Application{
-		AllowNoConnect: false,
-		Handler:        callHandlerMiddleware(r.speechAi),
-	}
 	apps["speechAiV2"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.speechAiV2),
@@ -185,7 +181,6 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
 			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-
 		} else {
 			return h.Handler(ctx, scope, req.Args())
 		}
@@ -197,7 +192,7 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 }
 
 func callHandlerMiddleware(h callHandler) flow.ApplicationHandler {
-	return func(ctx context.Context, scope *flow.Flow, args interface{}) model.ResultChannel {
+	return func(ctx context.Context, scope *flow.Flow, args any) model.ResultChannel {
 		return flow.Do(func(result *model.Result) {
 			result.Res, result.Err = h(ctx, scope, scope.Connection.(model.Call), args)
 		})
