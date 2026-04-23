@@ -1,4 +1,4 @@
-package grpc_client
+package grpcdial
 
 import (
 	"context"

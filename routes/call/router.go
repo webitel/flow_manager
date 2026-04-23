@@ -3,26 +3,30 @@ package call
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/wlog"
 	"maps"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
 	fm               *app.FlowManager
+	contacts         domaincontacts.Client
 	apps             flow.ApplicationHandlers
 	disconnectedApps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router) {
-	var router = &Router{
-		fm: fm,
+func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client) {
+	router := &Router{
+		fm:       fm,
+		contacts: contacts,
 	}
 
 	router.disconnectedApps = fr.Handlers()
@@ -139,7 +143,6 @@ func (r *Router) handle(conn model.Connection) {
 			var to *model.CallEndpoint
 			to = r.ToRequired(call, call.To())
 			if to == nil {
-
 				return
 			}
 
@@ -154,7 +157,6 @@ func (r *Router) handle(conn model.Connection) {
 				} else {
 					routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
 				}
-
 			}
 		case model.CallDirectionOutbound:
 			switch from.Type {
@@ -194,7 +196,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	call.timezoneName = routing.TimezoneName
-	call.SetDomainName(routing.DomainName) //fixme
+	call.SetDomainName(routing.DomainName) // fixme
 	i := flow.New(r, flow.Config{
 		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
@@ -223,7 +225,7 @@ func (r *Router) handle(conn model.Connection) {
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		call.ClearExportVariables()
 
-		//TODO config
+		// TODO config
 		ctxDisc, cn := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 		flow.Route(ctxDisc, d, r)
 		cn()
@@ -231,5 +233,4 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	r.fm.StoreLog(i.SchemaId(), conn.Id(), i.Logs())
-
 }

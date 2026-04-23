@@ -3,23 +3,27 @@ package email
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/wlog"
 	"maps"
 	"net/http"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
-	fm   *app.FlowManager
-	apps flow.ApplicationHandlers
+	fm       *app.FlowManager
+	contacts domaincontacts.Client
+	apps     flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router) {
+func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client) {
 	r := &Router{
-		fm: fm,
+		fm:       fm,
+		contacts: contacts,
 	}
 
 	r.apps = flow.UnionApplicationMap(
@@ -53,7 +57,6 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
 			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-
 		} else {
 			return h.Handler(ctx, scope, req.Args())
 		}
@@ -75,7 +78,7 @@ func (r *Router) handle(emailConnection model.Connection) {
 		EmailConnection: emailConnection.(model.EmailConnection),
 	}
 
-	//conn := emailConnection.(model.EmailConnection)
+	// conn := emailConnection.(model.EmailConnection)
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), conn.SchemaId())
 	if err != nil {
@@ -99,6 +102,6 @@ func (r *Router) handle(emailConnection model.Connection) {
 	flow.Route(conn.Context(), f, r)
 }
 
-func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
+func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
 	return scope.Decode(in, out)
 }

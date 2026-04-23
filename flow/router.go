@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/webitel/flow_manager/app"
+	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -16,17 +17,19 @@ var ResponseOK = Response{"SUCCESS"}
 var ResponseErr = Response{"FAIL"}
 
 type router struct {
-	fm   *app.FlowManager
-	apps ApplicationHandlers
+	fm       *app.FlowManager
+	contacts domaincontacts.Client
+	apps     ApplicationHandlers
 }
 
 func (r Response) String() string {
 	return r.Status
 }
 
-func NewRouter(fm *app.FlowManager) Router {
+func NewRouter(fm *app.FlowManager, contacts domaincontacts.Client) Router {
 	var router = &router{
-		fm: fm,
+		fm:       fm,
+		contacts: contacts,
 	}
 
 	router.apps = ApplicationsHandlers(router)

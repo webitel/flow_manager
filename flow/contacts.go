@@ -53,7 +53,7 @@ type MergeContactVariablesRequest struct {
 	contacts.MergeVariablesRequest
 }
 
-func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *MergeContactPhonesRequest
 	var err *model.AppError
 	var res *contacts.PhoneList
@@ -73,7 +73,7 @@ func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model
 		return nil, err
 	}
 
-	res, err = r.fm.MergeContactPhones(argv.Token, &argv.MergePhonesRequest)
+	res, err = r.contacts.MergeContactPhones(ctx, argv.Token, &argv.MergePhonesRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +83,7 @@ func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model
 	})
 }
 
-func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *MergeContactVariablesRequest
 	var err *model.AppError
 	var res *contacts.VariableList
@@ -103,7 +103,7 @@ func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn mo
 		return nil, err
 	}
 
-	res, err = r.fm.MergeContactVariables(argv.Token, &argv.MergeVariablesRequest)
+	res, err = r.contacts.MergeContactVariables(ctx, argv.Token, &argv.MergeVariablesRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn mo
 	})
 }
 
-func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *GetContactRequest
 	var err *model.AppError
 	var res *contacts.Contact
@@ -140,7 +140,7 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "etag")
 	}
 
-	res, err = r.fm.LocateContact(argv.Token, &argv.LocateContactRequest)
+	res, err = r.contacts.LocateContact(ctx, argv.Token, &argv.LocateContactRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +150,7 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 	})
 }
 
-func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *FindContactRequest
 	var err *model.AppError
 	var res *contacts.ContactList
@@ -170,7 +170,7 @@ func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connec
 		return nil, err
 	}
 
-	res, err = r.fm.SearchContacts(argv.Token, &argv.SearchContactsRequest)
+	res, err = r.contacts.SearchContacts(ctx, argv.Token, &argv.SearchContactsRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connec
 	})
 }
 
-func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *LinkContactArgv
 	var err *model.AppError
 	if err = scope.Decode(args, &argv); err != nil {
@@ -233,7 +233,7 @@ func (r *router) linkContact(ctx context.Context, scope *Flow, conn model.Connec
 	})
 }
 
-func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *UpdateContactRequest
 	var err *model.AppError
 	var res *contacts.Contact
@@ -253,7 +253,7 @@ func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Conn
 		return nil, err
 	}
 
-	res, err = r.fm.UpdateContact(argv.Token, &argv.InputContactRequest)
+	res, err = r.contacts.UpdateContact(ctx, argv.Token, &argv.InputContactRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Conn
 	})
 }
 
-func (r *router) addContact(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) addContact(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv *AddContactRequest
 	var err *model.AppError
 	var res *contacts.Contact
@@ -283,7 +283,7 @@ func (r *router) addContact(ctx context.Context, scope *Flow, conn model.Connect
 		return nil, err
 	}
 
-	res, err = r.fm.CreateContact(argv.Token, &argv.InputContactRequest)
+	res, err = r.contacts.CreateContact(ctx, argv.Token, &argv.InputContactRequest)
 	if err != nil {
 		return nil, err
 	}

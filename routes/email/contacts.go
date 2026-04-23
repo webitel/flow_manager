@@ -2,10 +2,11 @@ package email
 
 import (
 	"fmt"
-	"github.com/webitel/flow_manager/gen/contacts"
-	"github.com/webitel/flow_manager/model"
 	"strconv"
 	"time"
+
+	"github.com/webitel/flow_manager/gen/contacts"
+	"github.com/webitel/flow_manager/model"
 )
 
 func (r *Router) linkContact(conn model.EmailConnection) {
@@ -14,14 +15,13 @@ func (r *Router) linkContact(conn model.EmailConnection) {
 		return
 	}
 
-	list, err := r.fm.SearchContactsNA(conn.Context(), &contacts.SearchContactsNARequest{
+	list, err := r.contacts.SearchContactsNA(conn.Context(), &contacts.SearchContactsNARequest{
 		DomainId: conn.DomainId(),
 		Qin:      []string{"emails"},
 		Q:        email.From[0],
 		Size:     2,
 		Fields:   []string{"id"},
 	})
-
 	if err != nil {
 		conn.Log().Error("listContact error:" + err.Error())
 		return

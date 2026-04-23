@@ -1,9 +1,10 @@
 package call
 
 import (
+	"strconv"
+
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/model"
-	"strconv"
 )
 
 func (r *Router) linkContact(call model.Call) {
@@ -17,18 +18,16 @@ func (r *Router) linkContact(call model.Call) {
 	} else if call.From() != nil {
 		dest = *call.From().GetNumber()
 	} else {
-
 		return
 	}
 
-	list, err := r.fm.SearchContactsNA(call.Context(), &contacts.SearchContactsNARequest{
+	list, err := r.contacts.SearchContactsNA(call.Context(), &contacts.SearchContactsNARequest{
 		DomainId: call.DomainId(),
 		Qin:      []string{"phones"},
 		Q:        dest,
 		Size:     2,
 		Fields:   []string{"id"},
 	})
-
 	if err != nil {
 		call.Log().Error("listContact error:" + err.Error())
 		return
@@ -54,7 +53,7 @@ func (r *Router) linkContact(call model.Call) {
 			Action:    "set_contact", // TODO
 			CreatedAt: model.GetMillis(),
 			ForUsers:  []int64{int64(userId)},
-			Body: map[string]interface{}{
+			Body: map[string]any{
 				"id":         call.Id(),
 				"contact_id": contactId,
 				"channel":    model.CallExchange,
