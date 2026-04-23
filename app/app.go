@@ -14,8 +14,8 @@ import (
 
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
-	"github.com/webitel/flow_manager/cases"
 	_ "github.com/webitel/flow_manager/infra/resolver"
+	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"

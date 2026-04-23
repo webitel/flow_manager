@@ -8,7 +8,7 @@ import (
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
-	"github.com/webitel/flow_manager/cases"
+	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
