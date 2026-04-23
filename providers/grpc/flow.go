@@ -13,7 +13,7 @@ const (
 	timeoutFlowSchema = 30 * time.Second //todo config ?
 )
 
-func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
+func (s *Server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
 	var vars = in.Variables
 
 	if vars == nil {
@@ -47,7 +47,7 @@ func (s *server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 	return result, nil
 }
 
-func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error) {
+func (s *Server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error) {
 	var vars = in.Variables
 
 	if vars == nil {
@@ -88,7 +88,7 @@ func (s *server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 	return result, nil
 }
 
-func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*workflow.StartFlowResponse, error) {
+func (s *Server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*workflow.StartFlowResponse, error) {
 	var vars = in.Variables
 
 	if vars == nil {
@@ -112,7 +112,7 @@ func (s *server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	}, nil
 }
 
-func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRequest) (*workflow.StartSyncFlowResponse, error) {
+func (s *Server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRequest) (*workflow.StartSyncFlowResponse, error) {
 	var vars = in.Variables
 
 	if vars == nil {
@@ -131,7 +131,7 @@ func (s *server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 	}, nil
 }
 
-func (s *server) BotExecute(ctx context.Context, in *workflow.BotExecuteRequest) (*workflow.BotExecuteResponse, error) {
+func (s *Server) BotExecute(ctx context.Context, in *workflow.BotExecuteRequest) (*workflow.BotExecuteResponse, error) {
 	res, err := s.cb.Callback(ctx, in.DialogId, in)
 	if err != nil {
 		return nil, err

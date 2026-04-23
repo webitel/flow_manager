@@ -29,13 +29,13 @@ var (
 
 type chatApi struct {
 	conversations model.ObjectCache
-	*server
+	*Server
 	workflow.UnsafeFlowChatServerServiceServer
 }
 
-func NewChatApi(s *server) *chatApi {
+func NewChatApi(s *Server) *chatApi {
 	return &chatApi{
-		server:        s,
+		Server:        s,
 		conversations: model.NewLru(activeConversationCacheSize),
 	}
 }
@@ -91,7 +91,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
 
-	s.server.consume <- conv
+	s.Server.consume <- conv
 
 	return &workflow.StartResponse{}, nil
 }

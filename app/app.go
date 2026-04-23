@@ -59,7 +59,7 @@ type FlowManager struct {
 
 	schemaCache model.ObjectCache
 	chatManager *grpc.ChatManager
-	storage     *storageClient
+	storage     *StorageClient
 	cases       *cases.Api
 
 	timezoneList map[int]*time.Location

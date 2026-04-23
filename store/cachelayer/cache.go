@@ -7,6 +7,16 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+type CacheType string
+
+const (
+	Memory CacheType = "memory"
+	Redis  CacheType = "redis"
+)
+
+// CacheStores is a keyed map of available cache backends; used as an fx-injectable named type.
+type CacheStores map[CacheType]CacheStore
+
 type CacheValue struct {
 	value any
 }

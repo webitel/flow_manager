@@ -19,13 +19,13 @@ var (
 
 type processingApi struct {
 	connections model.ObjectCache
-	*server
+	*Server
 	workflow.UnsafeFlowProcessingServiceServer
 }
 
-func NewProcessingApi(s *server) *processingApi {
+func NewProcessingApi(s *Server) *processingApi {
 	return &processingApi{
-		server:      s,
+		Server:      s,
 		connections: model.NewLru(activeProcessingCacheSize),
 	}
 }
@@ -34,7 +34,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 	c := NewProcessingConnection(in.DomainId, int(in.SchemaId), in.Variables)
 	s.connections.AddWithDefaultExpires(c.id, c)
 
-	c.appId = fmt.Sprintf("workflow-%s", s.server.nodeName)
+	c.appId = fmt.Sprintf("workflow-%s", s.Server.nodeName)
 
 	go func() {
 		for {
@@ -51,7 +51,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 		}
 	}()
 
-	s.server.consume <- c
+	s.Server.consume <- c
 
 	f, err := c.waitForm(waitSecSchemaForm)
 	if err != nil {

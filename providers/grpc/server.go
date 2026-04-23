@@ -24,7 +24,7 @@ type Config struct {
 	NodeName string
 }
 
-type server struct {
+type Server struct {
 	cfg             *Config
 	server          *grpc.Server
 	didFinishListen chan struct{}
@@ -44,8 +44,8 @@ type CallbackResolver interface {
 	Callback(ctx context.Context, id string, data any) (any, error)
 }
 
-func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *server {
-	srv := &server{
+func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
+	srv := &Server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan model.Connection),
@@ -73,11 +73,11 @@ func publicAddr(lis net.Listener) (string, int) {
 }
 
 // todo del me
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *Server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 	return nil
 }
 
-func (s *server) Start() *model.AppError {
+func (s *Server) Start() *model.AppError {
 	address := s.getAddress()
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
@@ -99,7 +99,7 @@ func (s *server) Start() *model.AppError {
 	return nil
 }
 
-func (s *server) listen(lis net.Listener) {
+func (s *Server) listen(lis net.Listener) {
 	defer s.log.Debug(fmt.Sprintf("close server listening"))
 	s.log.Debug(fmt.Sprintf("server listening %s", lis.Addr().String()))
 	err := s.server.Serve(lis)
@@ -111,7 +111,7 @@ func (s *server) listen(lis net.Listener) {
 	}
 }
 
-func (s *server) getAddress() string {
+func (s *Server) getAddress() string {
 	p := s.Port()
 	h := s.Host()
 	if p == 0 {
@@ -120,31 +120,31 @@ func (s *server) getAddress() string {
 	return fmt.Sprintf("%s:%d", h, p)
 }
 
-func (s server) Name() string {
+func (s Server) Name() string {
 	return "GRPC"
 }
 
-func (s *server) Stop() {
+func (s *Server) Stop() {
 	close(s.consume)
 	s.server.Stop()
 	<-s.didFinishListen
 }
 
-func (s *server) Host() string {
+func (s *Server) Host() string {
 	return s.cfg.Host
 }
-func (s *server) Port() int {
+func (s *Server) Port() int {
 	return s.cfg.Port
 }
-func (s *server) Consume() <-chan model.Connection {
+func (s *Server) Consume() <-chan model.Connection {
 	return s.consume
 }
 
-func (s *server) NodeName() string {
+func (s *Server) NodeName() string {
 	return s.nodeName
 }
 
-func (s server) Type() model.ConnectionType {
+func (s Server) Type() model.ConnectionType {
 	return model.ConnectionTypeGrpc
 }
 
