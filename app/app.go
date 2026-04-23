@@ -12,6 +12,7 @@ import (
 	"github.com/webitel/flow_manager/app/cc"
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
@@ -47,7 +48,7 @@ type FlowManager struct {
 
 	schemaCache model.ObjectCache
 	chatManager *fmgrpc.ChatManager
-	storage     *StorageClient
+	storage     domstorage.Client
 	cases       *cases.Api
 
 	timezoneList map[int]*time.Location
@@ -85,7 +86,7 @@ func NewFlowManager(
 	st store.Store,
 	checkpointRepo session.Repository,
 	cacheStores cachelayer.CacheStores,
-	storage *StorageClient,
+	storage domstorage.Client,
 	casesClient *cases.Api,
 	aiBots *bots_client.Client,
 	srvs Servers,

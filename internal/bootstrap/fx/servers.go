@@ -7,6 +7,7 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/providers/channel"
@@ -37,7 +38,7 @@ func NewServers(
 	id AppID,
 	cm *fmgrpc.ChatManager,
 	cb *app.CallbackResolver,
-	storage *app.StorageClient,
+	storage domstorage.Client,
 	s store.Store,
 	eventQueue mq.MQ,
 	log *wlog.Logger,

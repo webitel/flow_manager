@@ -1,24 +1,27 @@
-package app
+package storage
 
 import (
 	"context"
-	"github.com/webitel/engine/pkg/wbt"
-	"github.com/webitel/flow_manager/gen/storage"
-	"github.com/webitel/flow_manager/model"
 	"io"
+
+	"github.com/webitel/flow_manager/gen/storage"
+	"github.com/webitel/flow_manager/infra/grpcdial"
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 )
 
+const serviceName = "storage"
+
 type StorageClient struct {
-	file       *wbt.Client[storage.FileServiceClient]
-	transcript *wbt.Client[storage.FileTranscriptServiceClient]
+	file       *grpcdial.Client[storage.FileServiceClient]
+	transcript *grpcdial.Client[storage.FileTranscriptServiceClient]
 }
 
 func NewStorageClient(consulTarget string) (*StorageClient, error) {
-	file, err := wbt.NewClient(consulTarget, wbt.StorageServiceName, storage.NewFileServiceClient)
+	file, err := grpcdial.NewClient(consulTarget, serviceName, storage.NewFileServiceClient)
 	if err != nil {
 		return nil, err
 	}
-	transcript, err := wbt.NewClient(consulTarget, wbt.StorageServiceName, storage.NewFileTranscriptServiceClient)
+	transcript, err := grpcdial.NewClient(consulTarget, serviceName, storage.NewFileTranscriptServiceClient)
 	if err != nil {
 		return nil, err
 	}
@@ -29,10 +32,10 @@ func NewStorageClient(consulTarget string) (*StorageClient, error) {
 	}, nil
 }
 
-func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error) {
-	stream, err := api.file.Api.UploadFile(ctx)
+func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata domstorage.File) (domstorage.File, error) {
+	stream, err := api.file.API.UploadFile(ctx)
 	if err != nil {
-		return model.File{}, err
+		return domstorage.File{}, err
 	}
 
 	err = stream.Send(&storage.UploadFileRequest{
@@ -46,9 +49,8 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 			},
 		},
 	})
-
 	if err != nil {
-		return model.File{}, err
+		return domstorage.File{}, err
 	}
 
 	defer stream.CloseSend()
@@ -76,13 +78,13 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 	}
 
 	if err != nil {
-		return model.File{}, err
+		return domstorage.File{}, err
 	}
 
 	var res *storage.UploadFileResponse
 	res, err = stream.CloseAndRecv()
 	if err != nil {
-		return model.File{}, err
+		return domstorage.File{}, err
 	}
 
 	metadata.Id = int(res.FileId)
@@ -93,13 +95,12 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 	return metadata, nil
 }
 
-func (api *StorageClient) Download(ctx context.Context, domainId int64, id int64) (io.ReadCloser, error) {
-	stream, err := api.file.Api.DownloadFile(ctx, &storage.DownloadFileRequest{
+func (api *StorageClient) Download(ctx context.Context, domainId, id int64) (io.ReadCloser, error) {
+	stream, err := api.file.API.DownloadFile(ctx, &storage.DownloadFileRequest{
 		Id:       id,
 		DomainId: domainId,
 		Metadata: false,
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +117,6 @@ func (api *StorageClient) Download(ctx context.Context, domainId int64, id int64
 			}
 
 			if r, ok := sf.Data.(*storage.StreamFile_Chunk); ok {
-				// todo
 				writer.Write(r.Chunk)
 			}
 		}
@@ -127,7 +127,7 @@ func (api *StorageClient) Download(ctx context.Context, domainId int64, id int64
 }
 
 func (api *StorageClient) GenerateFileLink(ctx context.Context, fileId, domainId int64, source, action string, query map[string]string) (string, error) {
-	uri, err := api.file.Api.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
+	uri, err := api.file.API.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
 		DomainId: domainId,
 		FileId:   fileId,
 		Source:   source,
@@ -138,28 +138,26 @@ func (api *StorageClient) GenerateFileLink(ctx context.Context, fileId, domainId
 		return "", err
 	}
 	return uri.Url, nil
-
 }
 
-func (api *StorageClient) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, error) {
-	var data []*storage.GenerateFileLinkRequest
-	for _, v := range files {
-		data = append(data, &storage.GenerateFileLinkRequest{
+func (api *StorageClient) BulkGenerateFileLink(ctx context.Context, domainId int64, files []domstorage.FileLinkRequest) ([]string, error) {
+	data := make([]*storage.GenerateFileLinkRequest, len(files))
+	for i, v := range files {
+		data[i] = &storage.GenerateFileLinkRequest{
 			DomainId: domainId,
 			FileId:   v.FileId,
 			Source:   v.Source,
 			Action:   v.Action,
-		})
+		}
 	}
-	res, err := api.file.Api.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
+	res, err := api.file.API.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
 		Files: data,
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	l := len(res.Links)
-	links := make([]string, l, l)
+	links := make([]string, len(res.Links))
 	for k, v := range res.Links {
 		links[k] = v.Url
 	}
@@ -167,9 +165,8 @@ func (api *StorageClient) BulkGenerateFileLink(ctx context.Context, domainId int
 	return links, nil
 }
 
-func (api *StorageClient) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
-
-	resp, err := api.transcript.Api.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
+func (api *StorageClient) GetFileTranscription(ctx context.Context, fileId, domainId, profileId int64, language string) (string, error) {
+	resp, err := api.transcript.API.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
 		FileId:    fileId,
 		Locale:    language,
 		ProfileId: profileId,
@@ -179,16 +176,15 @@ func (api *StorageClient) GetFileTranscription(ctx context.Context, fileId, doma
 		return "", err
 	}
 	return resp.Transcript, nil
-
 }
 
 func fileChannel(s string) storage.UploadFileChannel {
 	switch s {
-	case model.FileChannelCall:
+	case domstorage.ChannelCall:
 		return storage.UploadFileChannel_CallChannel
-	case model.FileChannelMail:
+	case domstorage.ChannelMail:
 		return storage.UploadFileChannel_MailChannel
-	case model.FileChannelChat:
+	case domstorage.ChannelChat:
 		return storage.UploadFileChannel_ChatChannel
 	default:
 		return storage.UploadFileChannel_UnknownChannel

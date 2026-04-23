@@ -13,6 +13,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/webitel/flow_manager/infra/discovery"
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"
@@ -39,7 +40,7 @@ type MailServer struct {
 }
 
 type StorageApi interface {
-	Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata model.File) (model.File, error)
+	Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata domstorage.File) (domstorage.File, error)
 }
 
 func New(storageApi StorageApi, s store.EmailStore, debug bool) model.Server {

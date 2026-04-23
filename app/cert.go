@@ -2,9 +2,11 @@ package app
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"strconv"
+
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	"github.com/webitel/flow_manager/model"
 )
 
 //todo export from storage
@@ -54,14 +56,16 @@ func (fm *FlowManager) GeneratePreSignedResourceSignature(ctx context.Context, a
 }
 
 func (fm *FlowManager) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, *model.AppError) {
+	reqs := make([]domstorage.FileLinkRequest, len(files))
+	for i, f := range files {
+		reqs[i] = domstorage.FileLinkRequest{FileId: f.FileId, Action: f.Action, Source: f.Source}
+	}
 
-	resp, err := fm.storage.BulkGenerateFileLink(ctx, domainId, files)
-
+	resp, err := fm.storage.BulkGenerateFileLink(ctx, domainId, reqs)
 	if err != nil {
 		return nil, model.NewAppError("BulkGenerateFileLink", "app.cert.generate_file_link.bulk_link.error", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return resp, nil
-
 }
 
 // Previous version

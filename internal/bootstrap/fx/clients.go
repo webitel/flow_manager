@@ -5,10 +5,11 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
@@ -18,8 +19,8 @@ func NewMQ(cfg *model.Config, id AppID) mq.MQ {
 	return mq.NewMQ(rabbit.NewRabbitMQ(cfg.MQSettings, string(id)))
 }
 
-func NewStorageClient(cfg *model.Config) (*app.StorageClient, error) {
-	return app.NewStorageClient(cfg.DiscoverySettings.Url)
+func NewStorageClient(cfg *model.Config) (domstorage.Client, error) {
+	return outstorage.NewStorageClient(cfg.DiscoverySettings.Url)
 }
 
 func NewCasesClient(cfg *model.Config) (*cases.Api, error) {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/webitel/wlog"
 
+	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
 
 	_ "github.com/emersion/go-message/charset"
@@ -425,12 +426,12 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 		case *mail.InlineHeader:
 			cid := h.Get("Content-ID")
 			if cid != "" {
-				var file model.File
+				var file domstorage.File
 				cid = strings.Trim(cid, "<>")
-				file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
+				file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, domstorage.File{
 					Name:     cid,
 					MimeType: h.Get("Content-Type"),
-					Channel:  model.FileChannelMail,
+					Channel:  domstorage.ChannelMail,
 				})
 				if err != nil {
 					p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
@@ -457,17 +458,23 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				fileName = model.NewId()
 			}
 
-			var file model.File
-			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
+			var file domstorage.File
+			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, domstorage.File{
 				Name:     fileName,
 				MimeType: h.Get("Content-Type"),
-				Channel:  model.FileChannelMail,
+				Channel:  domstorage.ChannelMail,
 			})
 			if err != nil {
 				p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
 				continue
 			}
-			m.Attachments = append(m.Attachments, file)
+			m.Attachments = append(m.Attachments, model.File{
+				Id:       file.Id,
+				Url:      file.Url,
+				Name:     file.Name,
+				Size:     file.Size,
+				MimeType: file.MimeType,
+			})
 		}
 	}
 
