@@ -25,37 +25,36 @@ func NewTLSConfig(cfg *model.Config) (*tls.Config, error) {
 	return bscfg.LoadTLSCreds(cfg.Tls)
 }
 
-func NewGrpcServer(cfg *model.Config, id AppID, cm *fmgrpc.ChatManager, cb *app.CallbackResolver) *fmgrpc.Server {
-	return fmgrpc.NewServer(&fmgrpc.Config{
+func NewChatManager() *fmgrpc.ChatManager {
+	return fmgrpc.NewChatManager()
+}
+
+// NewServers constructs all protocol-level servers. Grouping them into a single
+// app.Servers value avoids the fx same-type ambiguity for multiple model.Server
+// providers.
+func NewServers(
+	cfg *model.Config,
+	id AppID,
+	cm *fmgrpc.ChatManager,
+	cb *app.CallbackResolver,
+	storage *app.StorageClient,
+	s store.Store,
+	eventQueue mq.MQ,
+	log *wlog.Logger,
+	tlsCfg *tls.Config,
+) app.Servers {
+	grpcSrv := fmgrpc.NewServer(&fmgrpc.Config{
 		Host:     cfg.Grpc.Host,
 		Port:     cfg.Grpc.Port,
 		NodeName: string(id),
 	}, cm, cb)
-}
 
-func NewEslServer(cfg *model.Config) model.Server {
-	return fs.NewServer(&fs.Config{
-		Host:           cfg.Esl.Host,
-		Port:           cfg.Esl.Port,
-		RecordResample: cfg.Record.Sample,
-	})
-}
-
-func NewMailServer(storage *app.StorageClient, s store.Store, cfg *model.Config) model.Server {
-	return email.New(storage, s.Email(), cfg.DebugImap)
-}
-
-func NewChannelServer(eventQueue mq.MQ) model.Server {
-	return channel.New(eventQueue.ConsumeExec())
-}
-
-func NewImServer(id AppID, cfg *model.Config, eventQueue mq.MQ, log *wlog.Logger, tlsCfg *tls.Config, s store.Store) model.Server {
-	return im.NewServer(
-		string(id),
-		cfg.DiscoverySettings.Url,
-		eventQueue.ConsumeIM(),
-		log,
-		tlsCfg,
-		s.Session(),
-	)
+	return app.Servers{
+		Grpc:    grpcSrv,
+		Esl:     fs.NewServer(&fs.Config{Host: cfg.Esl.Host, Port: cfg.Esl.Port, RecordResample: cfg.Record.Sample}),
+		Mail:    email.New(storage, s.Email(), cfg.DebugImap),
+		Channel: channel.New(eventQueue.ConsumeExec()),
+		Im:      im.NewServer(string(id), cfg.DiscoverySettings.Url, eventQueue.ConsumeIM(), log, tlsCfg, s.Session()),
+		// Http is created inside NewFlowManager (needs *FlowManager as the App interface)
+	}
 }

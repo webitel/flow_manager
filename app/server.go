@@ -4,8 +4,20 @@ import (
 	"fmt"
 
 	"github.com/webitel/flow_manager/model"
+	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/wlog"
 )
+
+// Servers groups all protocol-level servers so they can be injected into
+// NewFlowManager as a single value, avoiding the fx same-type ambiguity.
+type Servers struct {
+	Grpc    *fmgrpc.Server
+	Esl     model.Server
+	Mail    model.Server
+	Channel model.Server
+	Im      model.Server
+	Http    model.Server // nil when WebHook.Addr is not configured
+}
 
 func (f *FlowManager) RegisterServers() *model.AppError {
 	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}

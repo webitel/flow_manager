@@ -17,6 +17,7 @@ import (
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
 	outboundengine "github.com/webitel/flow_manager/internal/adapters/outbound/engine"
 	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
+	bsfx "github.com/webitel/flow_manager/internal/bootstrap/fx"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
@@ -35,6 +36,26 @@ import (
 func main() {
 	fx.New(
 		fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger }),
+		// infrastructure
+		fx.Provide(bsfx.NewConfig),
+		fx.Provide(bsfx.NewAppID),
+		fx.Provide(bsfx.NewLogger),
+		fx.Provide(bsfx.NewSqlSupplier),
+		fx.Provide(bsfx.NewStore),
+		fx.Provide(bsfx.NewCheckpointRepo),
+		fx.Provide(bsfx.NewCacheStores),
+		// clients
+		fx.Provide(bsfx.NewMQ),
+		fx.Provide(bsfx.NewStorageClient),
+		fx.Provide(bsfx.NewCasesClient),
+		fx.Provide(bsfx.NewAiBotsClient),
+		fx.Provide(bsfx.NewCCManager),
+		// servers
+		fx.Provide(bsfx.NewCallbackResolver),
+		fx.Provide(bsfx.NewTLSConfig),
+		fx.Provide(bsfx.NewChatManager),
+		fx.Provide(bsfx.NewServers),
+		// app
 		fx.Provide(app.NewFlowManager),
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),

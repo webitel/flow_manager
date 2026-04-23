@@ -12,7 +12,6 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
-	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 )
 
 func NewMQ(cfg *model.Config, id AppID) mq.MQ {
@@ -57,11 +56,4 @@ func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue mq.MQ) (cc.CCMa
 		},
 	})
 	return mgr, nil
-}
-
-// NewChatManager constructs the chat gRPC manager. Start requires
-// cluster discovery and is called by FlowManager until the cluster is
-// extracted as an fx provider (planned for Phase 2).
-func NewChatManager() *fmgrpc.ChatManager {
-	return fmgrpc.NewChatManager()
 }

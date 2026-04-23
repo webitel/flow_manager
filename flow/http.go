@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tidwall/gjson"
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/store/cachelayer"
 	"github.com/webitel/wlog"
 	"gopkg.in/xmlpath.v2"
 	"io"
@@ -48,7 +48,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	cacheKey := fmt.Sprintf("%s.%s", uriEncoded, cookieVariableName)
 
 	if cookieVariableName != "" && cacheEnabled {
-		v, err := r.fm.CacheGetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey)
+		v, err := r.fm.CacheGetValue(ctx, string(cachelayer.Memory), conn.DomainId(), cacheKey)
 		if err == nil {
 			_, err = conn.Set(context.Background(), model.Variables{
 				cookieVariableName: v,
@@ -99,7 +99,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 						}
 					}
 				}
-				err := r.fm.CacheSetValue(ctx, string(app.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
+				err := r.fm.CacheSetValue(ctx, string(cachelayer.Memory), conn.DomainId(), cacheKey, cookie, cookieExpiresAfter)
 				if err != nil {
 					return nil, err
 				}

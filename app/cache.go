@@ -12,13 +12,6 @@ import (
 
 var g = singleflight.Group{}
 
-type CacheType string
-
-const (
-	Memory CacheType = "memory"
-	Redis  CacheType = "redis"
-)
-
 // Cache set value sets value to the given type of cache storage. (expiresAfter in seconds!)
 func (fm *FlowManager) CacheSetValue(ctx context.Context, cacheType string, domainId int64, key string, value any, expiresAfter int64) *model.AppError {
 	cacheTypeParsed := parseCacheType(cacheType)
@@ -26,7 +19,7 @@ func (fm *FlowManager) CacheSetValue(ctx context.Context, cacheType string, doma
 	return fm.cacheSetValue(ctx, cacheTypeParsed, cacheKey, value, expiresAfter)
 }
 
-func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType CacheType, key string, value any, expiresAfter int64) *model.AppError {
+func (fm *FlowManager) cacheSetValue(ctx context.Context, cacheType cachelayer.CacheType, key string, value any, expiresAfter int64) *model.AppError {
 	v, appErr := fm.GetCacheStoreByType(cacheType)
 	if appErr != nil {
 		return appErr
@@ -55,7 +48,7 @@ func (fm *FlowManager) CacheGetValue(ctx context.Context, cacheType string, doma
 
 	return v.(*cachelayer.CacheValue), nil
 }
-func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType CacheType, key string) (*cachelayer.CacheValue, *model.AppError) {
+func (fm *FlowManager) cacheGetValue(ctx context.Context, cacheType cachelayer.CacheType, key string) (*cachelayer.CacheValue, *model.AppError) {
 	v, err := fm.GetCacheStoreByType(cacheType)
 	if err != nil {
 		return nil, err
@@ -81,7 +74,7 @@ func (fm *FlowManager) CacheDeleteValue(ctx context.Context, cacheType string, d
 
 	return nil
 }
-func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType CacheType, key string) *model.AppError {
+func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType cachelayer.CacheType, key string) *model.AppError {
 	v, err := fm.GetCacheStoreByType(cacheType)
 	if err != nil {
 		return err
@@ -94,26 +87,26 @@ func (fm *FlowManager) cacheDeleteValue(ctx context.Context, cacheType CacheType
 	return nil
 }
 
-func (fm *FlowManager) GetCacheStoreByType(cacheType CacheType) (cachelayer.CacheStore, *model.AppError) {
+func (fm *FlowManager) GetCacheStoreByType(cacheType cachelayer.CacheType) (cachelayer.CacheStore, *model.AppError) {
 	v, ok := fm.cacheStore[cacheType]
 	if !ok {
 		fm.log.Debug(fmt.Sprintf("unable to find given cache storage (%s), setting memory storage..", cacheType))
-		return fm.cacheStore["memory"], nil
+		return fm.cacheStore[cachelayer.Memory], nil
 	}
 
 	return v, nil
 }
 
-func parseCacheType(cacheType string) CacheType {
+func parseCacheType(cacheType string) cachelayer.CacheType {
 	switch cacheType {
-	case string(Redis):
-		return Redis
+	case string(cachelayer.Redis):
+		return cachelayer.Redis
 	default:
-		return Memory
+		return cachelayer.Memory
 	}
 }
 
-func formatKeys(cacheType CacheType, method string, domainId int64, key string) (workerKey string, cacheKey string) {
+func formatKeys(cacheType cachelayer.CacheType, method string, domainId int64, key string) (workerKey string, cacheKey string) {
 	cacheKey = fmt.Sprintf("%s.%s", strconv.FormatInt(domainId, 10), key)
 	workerKey = fmt.Sprintf("%s.%s.%s", cacheType, method, cacheKey)
 	return

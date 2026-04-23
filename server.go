@@ -4,10 +4,11 @@
 package main
 
 import (
+	"context"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
+
+	"go.uber.org/fx"
+	"go.uber.org/fx/fxevent"
 
 	"github.com/webitel/wlog"
 
@@ -16,6 +17,10 @@ import (
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
 	outboundengine "github.com/webitel/flow_manager/internal/adapters/outbound/engine"
 	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
+	bsfx "github.com/webitel/flow_manager/internal/bootstrap/fx"
+	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/routes/call"
 	"github.com/webitel/flow_manager/routes/channel"
 	"github.com/webitel/flow_manager/routes/chat"
@@ -39,48 +44,80 @@ import (
 //go:generate go mod tidy
 
 func main() {
-	interruptChan := make(chan os.Signal, 1)
-	fm, err := app.NewFlowManager()
-	if err != nil {
-		panic(err.Error())
-	}
+	fx.New(
+		fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger }),
+		fx.Provide(bsfx.NewConfig),
+		fx.Provide(bsfx.NewAppID),
+		fx.Provide(bsfx.NewLogger),
+		fx.Provide(bsfx.NewSqlSupplier),
+		fx.Provide(bsfx.NewStore),
+		fx.Provide(bsfx.NewCheckpointRepo),
+		fx.Provide(bsfx.NewCacheStores),
+		fx.Provide(bsfx.NewMQ),
+		fx.Provide(bsfx.NewStorageClient),
+		fx.Provide(bsfx.NewCasesClient),
+		fx.Provide(bsfx.NewAiBotsClient),
+		fx.Provide(bsfx.NewCCManager),
+		fx.Provide(bsfx.NewCallbackResolver),
+		fx.Provide(bsfx.NewTLSConfig),
+		fx.Provide(bsfx.NewChatManager),
+		fx.Provide(bsfx.NewServers),
+		fx.Provide(app.NewFlowManager),
+		fx.Provide(newRootContactsClient),
+		fx.Provide(newRootEngineClient),
+		fx.Provide(newRootMeetingClient),
+		fx.Provide(flow.NewRouter),
+		fx.Invoke(initRootRouters),
+		fx.Invoke(registerRootLifecycle),
+	).Run()
+}
 
-	contactsCli := outboundcontacts.New(fm.Config().DiscoverySettings.Url)
-	if err = contactsCli.Start(); err != nil {
-		panic(err.Error())
-	}
-	engineCli := outboundengine.New(fm.Config().DiscoverySettings.Url)
-	if err = engineCli.Start(); err != nil {
-		panic(err.Error())
-	}
-	meetingCli := outboundmeeting.New(fm.Config().DiscoverySettings.Url)
-	if err = meetingCli.Start(); err != nil {
-		panic(err.Error())
-	}
-	router := flow.NewRouter(fm, contactsCli, engineCli, meetingCli)
-	call.Init(fm, router, contactsCli, meetingCli)
+func initRootRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client, meetings domainmeeting.Client) {
+	call.Init(fm, router, contacts, meetings)
 	grpc.Init(fm, router)
 	chat.Init(fm, router)
 	processing.Init(fm, router)
-	email.Init(fm, router, contactsCli)
+	email.Init(fm, router, contacts)
 	channel.Init(fm, router)
 	webhook.Init(fm, router)
 	im.Init(fm, router)
+}
 
-	go fm.Listen()
-	setDebug()
+func registerRootLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			go fm.Listen()
+			go setDebug()
+			return nil
+		},
+		OnStop: func(_ context.Context) error {
+			fm.Shutdown()
+			return nil
+		},
+	})
+}
 
-	signal.Notify(interruptChan, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-	<-interruptChan
-	fm.Shutdown()
+func newRootContactsClient(lc fx.Lifecycle, fm *app.FlowManager) (domaincontacts.Client, error) {
+	c := outboundcontacts.New(fm.Config().DiscoverySettings.Url)
+	lc.Append(fx.Hook{OnStart: func(_ context.Context) error { return c.Start() }})
+	return c, nil
+}
+
+func newRootEngineClient(lc fx.Lifecycle, fm *app.FlowManager) (domainengine.Client, error) {
+	c := outboundengine.New(fm.Config().DiscoverySettings.Url)
+	lc.Append(fx.Hook{OnStart: func(_ context.Context) error { return c.Start() }})
+	return c, nil
+}
+
+func newRootMeetingClient(lc fx.Lifecycle, fm *app.FlowManager) (domainmeeting.Client, error) {
+	c := outboundmeeting.New(fm.Config().DiscoverySettings.Url)
+	lc.Append(fx.Hook{OnStart: func(_ context.Context) error { return c.Start() }})
+	return c, nil
 }
 
 func setDebug() {
-	// debug.SetGCPercent(-1)
-
-	go func() {
-		wlog.Info("start debug server on http://localhost:8092/debug/pprof/")
-		err := http.ListenAndServe(":8092", nil)
+	wlog.Info("start debug server on http://localhost:8092/debug/pprof/")
+	if err := http.ListenAndServe(":8092", nil); err != nil {
 		wlog.Info(err.Error())
-	}()
+	}
 }

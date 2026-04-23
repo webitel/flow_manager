@@ -5,32 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
-
 	"github.com/webitel/engine/pkg/presign"
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
-	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/session"
-	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
-	"github.com/webitel/flow_manager/mq/rabbit"
-	"github.com/webitel/flow_manager/providers/channel"
-	"github.com/webitel/flow_manager/providers/email"
-	"github.com/webitel/flow_manager/providers/fs"
-	"github.com/webitel/flow_manager/providers/grpc"
-	"github.com/webitel/flow_manager/providers/http"
-	"github.com/webitel/flow_manager/providers/im"
+	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
+	fmhttp "github.com/webitel/flow_manager/providers/http"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/flow_manager/store/cachelayer"
-	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
@@ -50,7 +38,7 @@ type FlowManager struct {
 	ExternalStore  *cachelayer.ExternalStoreManager
 	CheckpointRepo session.Repository
 
-	grpcServer    model.Server
+	grpcServer    *fmgrpc.Server
 	mailServer    model.Server
 	eslServer     model.Server
 	channelServer model.Server
@@ -58,7 +46,7 @@ type FlowManager struct {
 	imServer      model.Server
 
 	schemaCache model.ObjectCache
-	chatManager *grpc.ChatManager
+	chatManager *fmgrpc.ChatManager
 	storage     *StorageClient
 	cases       *cases.Api
 
@@ -83,176 +71,95 @@ type FlowManager struct {
 	cert        presign.PreSign
 	listWatcher *listWatcher
 
-	cacheStore map[CacheType]cachelayer.CacheStore
+	cacheStore cachelayer.CacheStores
 
 	AiBots *bots_client.Client
 
-	ctx              context.Context
-	otelShutdownFunc otelsdk.ShutdownFunc
-	cbr              *CallbackResolver
+	ctx context.Context
+	cbr *CallbackResolver
 }
 
-func NewFlowManager() (outApp *FlowManager, outErr error) {
-	config, err := bscfg.Load()
-	if err != nil {
-		return nil, err
-	}
-
+func NewFlowManager(
+	cfg *model.Config,
+	log *wlog.Logger,
+	st store.Store,
+	checkpointRepo session.Repository,
+	cacheStores cachelayer.CacheStores,
+	storage *StorageClient,
+	casesClient *cases.Api,
+	aiBots *bots_client.Client,
+	srvs Servers,
+	chatMgr *fmgrpc.ChatManager,
+	ccMgr cc.CCManager,
+	eventQueue mq.MQ,
+	cb *CallbackResolver,
+) (*FlowManager, error) {
 	fm := &FlowManager{
-		config:      config,
-		id:          fmt.Sprintf("%s-%s", model.AppServiceName, config.Id),
-		schemaCache: model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
-		stop:        make(chan struct{}),
-		stopped:     make(chan struct{}),
-		ctx:         context.Background(),
-		cbr:         NewCallbackResolver(),
+		log:            log,
+		id:             fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
+		config:         cfg,
+		Store:          st,
+		CheckpointRepo: checkpointRepo,
+		cacheStore:     cacheStores,
+		storage:        storage,
+		cases:          casesClient,
+		AiBots:         aiBots,
+		chatManager:    chatMgr,
+		cc:             ccMgr,
+		eventQueue:     eventQueue,
+		grpcServer:     srvs.Grpc,
+		eslServer:      srvs.Esl,
+		mailServer:     srvs.Mail,
+		channelServer:  srvs.Channel,
+		imServer:       srvs.Im,
+		httpServer:     srvs.Http,
+		schemaCache:    model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
+		stop:           make(chan struct{}),
+		stopped:        make(chan struct{}),
+		ctx:            context.Background(),
+		cbr:            cb,
 	}
 
-	if config.ExternalSql {
+	if cfg.ExternalSql {
 		fm.ExternalStore = cachelayer.NewExternalStoreManager()
 	}
-
-	logConfig := &wlog.LoggerConfiguration{
-		EnableConsole: config.Log.Console,
-		ConsoleJson:   false,
-		ConsoleLevel:  config.Log.Lvl,
-	}
-
-	if config.Log.File != "" {
-		logConfig.FileLocation = config.Log.File
-		logConfig.EnableFile = true
-		logConfig.FileJson = true
-		logConfig.FileLevel = config.Log.Lvl
-	}
-
-	if config.Log.Otel {
-		// TODO
-		logConfig.EnableExport = true
-		fm.otelShutdownFunc, err = otelsdk.Configure(
-			fm.ctx,
-			otelsdk.WithResource(resource.NewSchemaless(
-				semconv.ServiceName(model.AppServiceName),
-				semconv.ServiceVersion(model.CurrentVersion),
-				semconv.ServiceInstanceID(fm.id),
-				semconv.ServiceNamespace("webitel"),
-			)),
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	fm.log = wlog.NewLogger(logConfig)
-
-	fm.callWatcher = NewCallWatcher(fm)
-	fm.listWatcher = NewListWatcher(fm)
-
-	wlog.RedirectStdLog(fm.log)
-	wlog.InitGlobalLogger(fm.log)
 
 	wlog.Info(fmt.Sprintf("version: %s", Version()))
 	wlog.Info("server is initializing...")
 
-	sqlSupplier := sqlstore.NewSqlSupplier(fm.Config().SqlSettings)
-	fm.Store = store.NewLayeredStore(sqlSupplier)
-	checkpointRepo := postgresStorage.NewCheckpointRepository(sqlSupplier)
-	if err := checkpointRepo.Migrate(fm.ctx); err != nil {
-		return nil, fmt.Errorf("session checkpoint migration: %w", err)
-	}
-	fm.CheckpointRepo = checkpointRepo
-
+	fm.callWatcher = NewCallWatcher(fm)
+	fm.listWatcher = NewListWatcher(fm)
 	fm.cluster = NewCluster(fm)
 
-	fm.cacheStore = map[CacheType]cachelayer.CacheStore{}
-	fm.cacheStore[Memory] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 10000, DefaultExpiry: 10000})
-	if config.RedisSettings.IsValid() {
-		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
-		if err != nil {
-			outErr = err
-			return outApp, outErr
-		}
-		fm.cacheStore[Redis] = storage
-	}
-	fm.chatManager = grpc.NewChatManager()
-
-	grpcSrv := grpc.NewServer(&grpc.Config{
-		Host:     fm.Config().Grpc.Host,
-		Port:     fm.Config().Grpc.Port,
-		NodeName: fm.id,
-	}, fm.chatManager, fm.Callback())
-
-	fm.storage, outErr = NewStorageClient(fm.Config().DiscoverySettings.Url)
-	if outErr != nil {
-		return nil, outErr
-	}
-
-	fm.cases, outErr = cases.NewClient(fm.Config().DiscoverySettings.Url)
-	if outErr != nil {
-		return nil, outErr
-	}
-
-	fm.AiBots = bots_client.New(fm.Config().DiscoverySettings.Url)
-	if outErr = fm.AiBots.Start(); outErr != nil {
-		return nil, outErr
-	}
-
-	fm.grpcServer = grpcSrv
-	fm.eslServer = fs.NewServer(&fs.Config{
-		Host:           fm.Config().Esl.Host,
-		Port:           fm.Config().Esl.Port,
-		RecordResample: fm.Config().Record.Sample,
-	})
-	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
-	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
-	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
-
-	t, err := bscfg.LoadTLSCreds(config.Tls)
-	if err != nil {
+	if err := fm.cluster.Start(); err != nil {
 		return nil, err
 	}
-	fm.imServer = im.NewServer(fm.id, fm.Config().DiscoverySettings.Url, fm.eventQueue.ConsumeIM(),
-		fm.log, t, fm.Store.Session())
-
-	if len(fm.Config().WebHook.Addr) > 1 {
-		fm.httpServer = http.NewServer(fm, fm.Config().WebHook.Addr)
-	}
-
-	if err := fm.RegisterServers(); err != nil {
-		outErr = err
-		return outApp, outErr
-	}
-
-	if err = fm.cluster.Start(); err != nil {
-		return nil, err
-	}
-
 	if err := fm.chatManager.Start(fm.cluster.discovery); err != nil {
-		outErr = err
-		return outApp, outErr
+		return nil, err
+	}
+	if err := srvs.Grpc.Cluster(fm.cluster.discovery); err != nil {
+		return nil, err
+	}
+	if len(cfg.WebHook.Addr) > 1 {
+		fm.httpServer = fmhttp.NewServer(fm, cfg.WebHook.Addr)
+	}
+	if err := fm.RegisterServers(); err != nil {
+		return nil, err
 	}
 
-	// todo fixme
-	if err := grpcSrv.Cluster(fm.cluster.discovery); err != nil {
-		outErr = err
-		return outApp, outErr
-	}
-
-	if config.PreSignedCertificateLocation != "" {
-		if fm.cert, err = presign.NewPreSigned(config.PreSignedCertificateLocation); err != nil {
+	if cfg.PreSignedCertificateLocation != "" {
+		cert, err := presign.NewPreSigned(cfg.PreSignedCertificateLocation)
+		if err != nil {
 			return nil, err
 		}
+		fm.cert = cert
 	}
 
-	fm.cc = cc.NewCCManager(config.DiscoverySettings.Url, fm.eventQueue.ConsumeCCEvents())
-
-	if err = fm.cc.Start(); err != nil {
-		return nil, err
-	}
 	if err := fm.InitCacheTimezones(); err != nil {
 		return nil, err
 	}
 
-	return fm, outErr
+	return fm, nil
 }
 
 func (f *FlowManager) Shutdown() {
@@ -284,10 +191,6 @@ func (f *FlowManager) Shutdown() {
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()
-
-	if f.otelShutdownFunc != nil {
-		f.otelShutdownFunc(f.ctx)
-	}
 }
 
 func (f *FlowManager) Log() *wlog.Logger {
