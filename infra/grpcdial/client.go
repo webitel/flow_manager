@@ -76,3 +76,20 @@ func (c *Client[T]) Close() error {
 func (c *Client[T]) Start() error {
 	return nil
 }
+
+// NewClientWithOpts creates a Client without shared connection caching.
+// Use this when custom DialOptions (e.g. TLS credentials) are required.
+func NewClientWithOpts[T any](consulTarget, service string, api func(conn grpc.ClientConnInterface) T, opts ...grpc.DialOption) (*Client[T], error) {
+	dsn := fmt.Sprintf("wbt://%s/%s?wait=15s", consulTarget, service)
+	base := []grpc.DialOption{
+		grpc.WithDefaultServiceConfig(`{"loadBalancingPolicy": "wbt_round_robin"}`),
+	}
+	conn, err := grpc.NewClient(dsn, append(base, opts...)...)
+	if err != nil {
+		return nil, err
+	}
+	return &Client[T]{
+		conn: conn,
+		API:  api(conn),
+	}, nil
+}
