@@ -8,9 +8,9 @@ import (
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	_ "github.com/webitel/flow_manager/infra/resolver"
+	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/session"
@@ -74,7 +74,7 @@ type FlowManager struct {
 
 	cacheStore cachelayer.CacheStores
 
-	AiBots *bots_client.Client
+	AiBots *aibridge.Client
 
 	ctx context.Context
 	cbr *CallbackResolver
@@ -88,7 +88,7 @@ func NewFlowManager(
 	cacheStores cachelayer.CacheStores,
 	storage domstorage.Client,
 	casesClient *cases.Api,
-	aiBots *bots_client.Client,
+	aiBots *aibridge.Client,
 	srvs Servers,
 	chatMgr *fmgrpc.ChatManager,
 	ccMgr cc.CCManager,

@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/fx"
 
-	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
+	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
@@ -29,8 +29,8 @@ func NewCasesClient(cfg *model.Config) (*cases.Api, error) {
 
 // NewAiBotsClient creates the AI bots gRPC client and registers Start/Stop in
 // the fx lifecycle.
-func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*bots_client.Client, error) {
-	cli := bots_client.New(cfg.DiscoverySettings.Url)
+func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*aibridge.Client, error) {
+	cli := aibridge.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return cli.Start()
