@@ -13,14 +13,13 @@ import (
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 
-	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
-
 	"github.com/webitel/flow_manager/app/bots_client"
 	"github.com/webitel/flow_manager/app/cc"
 	"github.com/webitel/flow_manager/app/meeting"
 	"github.com/webitel/flow_manager/cases"
-	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/gen/engine"
+	_ "github.com/webitel/flow_manager/infra/resolver"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
@@ -36,7 +35,6 @@ import (
 	"github.com/webitel/flow_manager/store/cachelayer"
 	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 
-	_ "github.com/webitel/flow_manager/infra/resolver"
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
@@ -90,11 +88,6 @@ type FlowManager struct {
 	listWatcher *listWatcher
 
 	cacheStore map[CacheType]cachelayer.CacheStore
-
-	//------------- Contacts GRPC Client -------------//
-	contacts            *wbt.Client[contacts.ContactsClient]
-	contactPhoneNumbers *wbt.Client[contacts.PhonesClient]
-	contactVariables    *wbt.Client[contacts.VariablesClient]
 
 	engineCallCli     *wbt.Client[engine.CallServiceClient]
 	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
@@ -267,16 +260,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 	if err := fm.InitCacheTimezones(); err != nil {
-		return nil, err
-	}
-
-	if fm.contacts, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewContactsClient); err != nil {
-		return nil, err
-	}
-	if fm.contactPhoneNumbers, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewPhonesClient); err != nil {
-		return nil, err
-	}
-	if fm.contactVariables, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.WebitelServiceName, contacts.NewVariablesClient); err != nil {
 		return nil, err
 	}
 

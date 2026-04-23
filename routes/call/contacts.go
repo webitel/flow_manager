@@ -21,7 +21,7 @@ func (r *Router) linkContact(call model.Call) {
 		return
 	}
 
-	list, err := r.contacts.SearchContactsNA(call.Context(), &contacts.SearchContactsNARequest{
+	list, err := r.contacts.SearchNA(call.Context(), &contacts.SearchContactsNARequest{
 		DomainId: call.DomainId(),
 		Qin:      []string{"phones"},
 		Q:        dest,

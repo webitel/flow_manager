@@ -38,12 +38,12 @@ func main() {
 	).Run()
 }
 
-func initRouters(fm *app.FlowManager, router flow.Router) {
-	call.Init(fm, router)
+func initRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client) {
+	call.Init(fm, router, contacts)
 	grpc.Init(fm, router)
 	chat.Init(fm, router)
 	processing.Init(fm, router)
-	email.Init(fm, router)
+	email.Init(fm, router, contacts)
 	channel.Init(fm, router)
 	webhook.Init(fm, router)
 	im.Init(fm, router)

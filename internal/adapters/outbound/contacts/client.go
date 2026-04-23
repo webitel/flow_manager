@@ -46,7 +46,7 @@ func (c *Client) Start() error {
 	return err
 }
 
-func (c *Client) LocateContact(ctx context.Context, token string, req *gen.LocateContactRequest) (*gen.Contact, *model.AppError) {
+func (c *Client) Locate(ctx context.Context, token string, req *gen.LocateContactRequest) (*gen.Contact, *model.AppError) {
 	res, err := c.Contacts().LocateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "LocateContact", nil, err.Error(), http.StatusInternalServerError)
@@ -55,7 +55,7 @@ func (c *Client) LocateContact(ctx context.Context, token string, req *gen.Locat
 	return res, nil
 }
 
-func (c *Client) CreateContact(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
+func (c *Client) Create(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
 	res, err := c.Contacts().CreateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "CreateContact", nil, err.Error(), http.StatusInternalServerError)
@@ -64,7 +64,7 @@ func (c *Client) CreateContact(ctx context.Context, token string, req *gen.Input
 	return res, nil
 }
 
-func (c *Client) SearchContacts(ctx context.Context, token string, req *gen.SearchContactsRequest) (*gen.ContactList, *model.AppError) {
+func (c *Client) Search(ctx context.Context, token string, req *gen.SearchContactsRequest) (*gen.ContactList, *model.AppError) {
 	res, err := c.Contacts().SearchContacts(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "SearchContacts", nil, err.Error(), http.StatusInternalServerError)
@@ -73,7 +73,7 @@ func (c *Client) SearchContacts(ctx context.Context, token string, req *gen.Sear
 	return res, nil
 }
 
-func (c *Client) SearchContactsNA(ctx context.Context, req *gen.SearchContactsNARequest) (*gen.ContactList, *model.AppError) {
+func (c *Client) SearchNA(ctx context.Context, req *gen.SearchContactsNARequest) (*gen.ContactList, *model.AppError) {
 	res, err := c.Contacts().SearchContactsNA(ctx, req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "SearchContactsNA", nil, err.Error(), http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func (c *Client) SearchContactsNA(ctx context.Context, req *gen.SearchContactsNA
 	return res, nil
 }
 
-func (c *Client) UpdateContact(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
+func (c *Client) Update(ctx context.Context, token string, req *gen.InputContactRequest) (*gen.Contact, *model.AppError) {
 	res, err := c.Contacts().UpdateContact(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "UpdateContact", nil, err.Error(), http.StatusInternalServerError)
@@ -91,7 +91,7 @@ func (c *Client) UpdateContact(ctx context.Context, token string, req *gen.Input
 	return res, nil
 }
 
-func (c *Client) MergeContactVariables(ctx context.Context, token string, req *gen.MergeVariablesRequest) (*gen.VariableList, *model.AppError) {
+func (c *Client) MergeVariables(ctx context.Context, token string, req *gen.MergeVariablesRequest) (*gen.VariableList, *model.AppError) {
 	res, err := c.Variables().MergeVariables(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "MergeContactVariables", nil, err.Error(), http.StatusInternalServerError)
@@ -100,7 +100,7 @@ func (c *Client) MergeContactVariables(ctx context.Context, token string, req *g
 	return res, nil
 }
 
-func (c *Client) MergeContactPhones(ctx context.Context, token string, req *gen.MergePhonesRequest) (*gen.PhoneList, *model.AppError) {
+func (c *Client) MergePhones(ctx context.Context, token string, req *gen.MergePhonesRequest) (*gen.PhoneList, *model.AppError) {
 	res, err := c.Phone().MergePhones(c.contacts.WithToken(ctx, token), req)
 	if err != nil {
 		return nil, model.NewAppError("contacts", "MergeContactPhones", nil, err.Error(), http.StatusInternalServerError)

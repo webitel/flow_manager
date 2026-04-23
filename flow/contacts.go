@@ -73,7 +73,7 @@ func (r *router) mergeContactPhones(ctx context.Context, scope *Flow, conn model
 		return nil, err
 	}
 
-	res, err = r.contacts.MergeContactPhones(ctx, argv.Token, &argv.MergePhonesRequest)
+	res, err = r.contacts.MergePhones(ctx, argv.Token, &argv.MergePhonesRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,7 @@ func (r *router) mergeContactVariables(ctx context.Context, scope *Flow, conn mo
 		return nil, err
 	}
 
-	res, err = r.contacts.MergeContactVariables(ctx, argv.Token, &argv.MergeVariablesRequest)
+	res, err = r.contacts.MergeVariables(ctx, argv.Token, &argv.MergeVariablesRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -140,7 +140,7 @@ func (r *router) getContact(ctx context.Context, scope *Flow, conn model.Connect
 		return model.CallResponseError, model.ErrorRequiredParameter("getContact", "etag")
 	}
 
-	res, err = r.contacts.LocateContact(ctx, argv.Token, &argv.LocateContactRequest)
+	res, err = r.contacts.Locate(ctx, argv.Token, &argv.LocateContactRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (r *router) findContact(ctx context.Context, scope *Flow, conn model.Connec
 		return nil, err
 	}
 
-	res, err = r.contacts.SearchContacts(ctx, argv.Token, &argv.SearchContactsRequest)
+	res, err = r.contacts.Search(ctx, argv.Token, &argv.SearchContactsRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func (r *router) updateContact(ctx context.Context, scope *Flow, conn model.Conn
 		return nil, err
 	}
 
-	res, err = r.contacts.UpdateContact(ctx, argv.Token, &argv.InputContactRequest)
+	res, err = r.contacts.Update(ctx, argv.Token, &argv.InputContactRequest)
 	if err != nil {
 		return nil, err
 	}
@@ -283,7 +283,7 @@ func (r *router) addContact(ctx context.Context, scope *Flow, conn model.Connect
 		return nil, err
 	}
 
-	res, err = r.contacts.CreateContact(ctx, argv.Token, &argv.InputContactRequest)
+	res, err = r.contacts.Create(ctx, argv.Token, &argv.InputContactRequest)
 	if err != nil {
 		return nil, err
 	}

@@ -8,12 +8,12 @@ import (
 )
 
 type Client interface {
-	CreateContact(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, *model.AppError)
-	LocateContact(ctx context.Context, token string, req *contacts.LocateContactRequest) (*contacts.Contact, *model.AppError)
-	SearchContacts(ctx context.Context, token string, req *contacts.SearchContactsRequest) (*contacts.ContactList, *model.AppError)
-	SearchContactsNA(ctx context.Context, req *contacts.SearchContactsNARequest) (*contacts.ContactList, *model.AppError)
-	UpdateContact(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, *model.AppError)
+	Create(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, *model.AppError)
+	Locate(ctx context.Context, token string, req *contacts.LocateContactRequest) (*contacts.Contact, *model.AppError)
+	Search(ctx context.Context, token string, req *contacts.SearchContactsRequest) (*contacts.ContactList, *model.AppError)
+	SearchNA(ctx context.Context, req *contacts.SearchContactsNARequest) (*contacts.ContactList, *model.AppError)
+	Update(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, *model.AppError)
 
-	MergeContactVariables(ctx context.Context, token string, req *contacts.MergeVariablesRequest) (*contacts.VariableList, *model.AppError)
-	MergeContactPhones(ctx context.Context, token string, req *contacts.MergePhonesRequest) (*contacts.PhoneList, *model.AppError)
+	MergeVariables(ctx context.Context, token string, req *contacts.MergeVariablesRequest) (*contacts.VariableList, *model.AppError)
+	MergePhones(ctx context.Context, token string, req *contacts.MergePhonesRequest) (*contacts.PhoneList, *model.AppError)
 }

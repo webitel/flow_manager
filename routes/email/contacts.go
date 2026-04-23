@@ -15,7 +15,7 @@ func (r *Router) linkContact(conn model.EmailConnection) {
 		return
 	}
 
-	list, err := r.contacts.SearchContactsNA(conn.Context(), &contacts.SearchContactsNARequest{
+	list, err := r.contacts.SearchNA(conn.Context(), &contacts.SearchContactsNARequest{
 		DomainId: conn.DomainId(),
 		Qin:      []string{"emails"},
 		Q:        email.From[0],
