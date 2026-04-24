@@ -1,37 +1,29 @@
-package sqlstore
+package postgres
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
-	"net/http"
 
+	"github.com/jackc/pgx/v5"
+
+	infraSql "github.com/webitel/flow_manager/infra/sql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
-type SqlEndpointStore struct {
-	SqlStore
+type EndpointRepository struct {
+	db infraSql.Store
 }
 
-func NewSqlEndpointStore(sqlStore SqlStore) store.EndpointStore {
-	st := &SqlEndpointStore{sqlStore}
-	return st
+func NewEndpointRepository(db infraSql.Store) store.EndpointStore {
+	return &EndpointRepository{db: db}
 }
 
-func (s SqlEndpointStore) Get(domainId int64, callerName, callerNumber string, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {
-	request, err := json.Marshal(endpoints)
-	var res []*model.Endpoint
-
-	if err != nil {
-		return nil, model.NewAppError("SqlEndpointStore.Get", "store.sql_endpoint.parse.error", nil,
-			fmt.Sprintf("domainId=%v %v", domainId, err.Error()), http.StatusBadRequest)
-	}
-
-	_, err = s.GetReplica().Select(&res, `with endpoints as (
+const getEndpointSQL = `with endpoints as (
     select t.*
-    from jsonb_array_elements(:Request::jsonb) with ordinality as t (endpoint, idx)
+    from jsonb_array_elements(@Request::jsonb) with ordinality as t (endpoint, idx)
 )
-select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables ,
+select e.idx, res.id, res.name, coalesce(e.endpoint->>'type', '') as type_name, res.dnd, res.destination, coalesce(res.variables, '{}')::text[] as variables,
 	has_push
 from endpoints e
  left join lateral (
@@ -66,7 +58,7 @@ from endpoints e
 		   where c.user_id = u.id and c.hangup_at isnull and c.direction notnull
 		   limit 1
 		) x on not uss.dnd and (e.endpoint->>'idle')::bool
-     where (e.endpoint->>'type')::varchar = 'user' and u.dc = :DomainId and
+     where (e.endpoint->>'type')::varchar = 'user' and u.dc = @DomainId and
            ( u.extension = (e.endpoint->>'extension')::varchar or
              u.id = (e.endpoint->>'id')::bigint)
 
@@ -91,21 +83,26 @@ from endpoints e
             end vars, false
      from directory.sip_gateway g
         left join directory.sip_gateway_register reg on reg.id = g.id
-     where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = :DomainId and
+     where  (e.endpoint->>'type')::varchar = 'gateway' and  g.dc = @DomainId and
              ( g.name = (e.endpoint->>'name')::varchar or
              g.id = (e.endpoint->>'id')::bigint or g.name = (e.endpoint->'gateway'->>'name')::varchar or g.id = (e.endpoint->'gateway'->>'id')::bigint)
 
      limit 1
  ) res on true
-order by e.idx`, map[string]any{
+order by e.idx`
+
+func (r *EndpointRepository) Get(domainId int64, _, _ string, endpoints model.Applications) ([]*model.Endpoint, error) {
+	request, err := json.Marshal(endpoints)
+	if err != nil {
+		return nil, err
+	}
+
+	var res []*model.Endpoint
+	if err := r.db.Select(context.Background(), &res, getEndpointSQL, pgx.NamedArgs{
 		"DomainId": domainId,
 		"Request":  request,
-		//"CallerName":   callerName,
-		//"CallerNumber": callerNumber,
-	})
-	if err != nil {
-		return nil, model.NewAppError("SqlEndpointStore.Get", "store.sql_endpoint.get.error", nil,
-			fmt.Sprintf("domainId=%v %v", domainId, err.Error()), extractCodeFromErr(err))
+	}); err != nil {
+		return nil, err
 	}
 
 	return res, nil

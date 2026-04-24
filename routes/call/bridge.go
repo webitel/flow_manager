@@ -124,9 +124,9 @@ func (r *Router) bridge(ctx context.Context, scope *flow.Flow, call model.Call, 
 
 func getRemoteEndpoints(r *Router, call model.Call, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {
 	length := len(endpoints)
-	endp, err := r.fm.GetStore().Endpoint().Get(int64(call.DomainId()), "NAME", "NUMBER", endpoints)
-	if err != nil {
-		return nil, err
+	endp, storeErr := r.fm.GetStore().Endpoint().Get(int64(call.DomainId()), "NAME", "NUMBER", endpoints)
+	if storeErr != nil {
+		return nil, model.NewAppError("getRemoteEndpoints", "store.endpoint.get", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
 	for key, e := range endp {

@@ -100,7 +100,7 @@ type CallRoutingStore interface {
 }
 
 type EndpointStore interface {
-	Get(domainId int64, callerName, callerNumber string, endpoints model.Applications) ([]*model.Endpoint, *model.AppError)
+	Get(domainId int64, callerName, callerNumber string, endpoints model.Applications) ([]*model.Endpoint, error)
 }
 
 type MediaStore interface {
