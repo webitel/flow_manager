@@ -77,12 +77,12 @@ func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier 
 
 	supplier.oldStores.schema = postgresStorage.NewSchemaRepository(db)
 	supplier.oldStores.webHook = postgresStorage.NewWebHookRepository(db)
+	supplier.oldStores.media = postgresStorage.NewMediaRepository(db)
 
 	supplier.oldStores.call = NewSqlCallStore(supplier)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)
-	supplier.oldStores.media = NewSqlMediaStore(supplier)
 	supplier.oldStores.calendar = NewSqlCalendarStore(supplier)
 	supplier.oldStores.list = NewSqlListStore(supplier)
 	supplier.oldStores.chat = NewSqlChatStore(supplier)
