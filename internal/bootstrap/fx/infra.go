@@ -4,12 +4,15 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.uber.org/fx"
 
+	infraSql "github.com/webitel/flow_manager/infra/sql"
+	pgsqlImpl "github.com/webitel/flow_manager/infra/sql/pgsql"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
@@ -79,14 +82,30 @@ func NewStore(s *sqlstore.SqlSupplier) store.Store {
 	return store.NewLayeredStore(s)
 }
 
-// NewCheckpointRepo creates the postgres session-checkpoint repository and runs
-// schema migrations before returning.
-func NewCheckpointRepo(s *sqlstore.SqlSupplier) (session.Repository, error) {
-	repo := postgresStorage.NewCheckpointRepository(s)
-	if err := repo.Migrate(context.Background()); err != nil {
-		return nil, fmt.Errorf("session checkpoint migration: %w", err)
+// NewPgxPool creates a pgxpool connection pool from cfg and registers pool.Close in the fx lifecycle.
+func NewPgxPool(lc fx.Lifecycle, cfg *model.Config) (*pgxpool.Pool, error) {
+	pool, err := pgxpool.New(context.Background(), *cfg.SqlSettings.DataSource)
+	if err != nil {
+		return nil, fmt.Errorf("pgxpool: %w", err)
 	}
-	return repo, nil
+	lc.Append(fx.Hook{
+		OnStop: func(_ context.Context) error {
+			pool.Close()
+			return nil
+		},
+	})
+	return pool, nil
+}
+
+// NewSqlStore wraps the pgxpool as the driver-agnostic sql.Store interface.
+func NewSqlStore(pool *pgxpool.Pool, log *wlog.Logger) infraSql.Store {
+	return pgsqlImpl.NewFromPool(context.Background(), pool, log)
+}
+
+// NewCheckpointRepo creates the session-checkpoint repository backed by pgx.
+// Goose migrations must run before this is called (see RunMigrations invoke in main).
+func NewCheckpointRepo(db infraSql.Store) session.Repository {
+	return postgresStorage.NewCheckpointRepository(db)
 }
 
 // NewCacheStores always provides in-memory cache; adds Redis when configured.

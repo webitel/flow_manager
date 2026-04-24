@@ -43,10 +43,14 @@ type Rows interface {
 }
 
 type Store interface {
+	// Select scans multiple rows into out using named args (@param style).
 	Select(ctx context.Context, out any, query string, args pgx.NamedArgs) error
+	// SelectArgs scans multiple rows into out using positional args (squirrel/Dollar style).
+	SelectArgs(ctx context.Context, out any, query string, args ...any) error
 	Query(ctx context.Context, sql string, args pgx.NamedArgs) (Rows, error)
 	Get(ctx context.Context, out any, query string, args pgx.NamedArgs) error
 	Exec(ctx context.Context, sql string, args pgx.NamedArgs) error
+	Ping(ctx context.Context) error
 	Close() error
 	Begin(ctx context.Context) (pgx.Tx, error)
 }

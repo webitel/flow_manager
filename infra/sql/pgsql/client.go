@@ -33,17 +33,28 @@ func New(ctx context.Context, dsn string, log *wlog.Logger) (sql.Store, error) {
 		return nil, err
 	}
 
-	db := &DB{
-		ctx:  ctx,
-		pool: pool,
-		log:  log,
-	}
+	return NewFromPool(ctx, pool, log), nil
+}
 
-	return db, nil
+// NewFromPool wraps an existing pgxpool as a sql.Store without creating a new connection.
+func NewFromPool(ctx context.Context, pool *pgxpool.Pool, log *wlog.Logger) sql.Store {
+	return &DB{ctx: ctx, pool: pool, log: log}
 }
 
 func (db *DB) Select(ctx context.Context, out any, query string, args pgx.NamedArgs) error {
 	return pgxscan.Select(ctx, db.pool, out, query, args)
+}
+
+func (db *DB) SelectArgs(ctx context.Context, out any, query string, args ...any) error {
+	return pgxscan.Select(ctx, db.pool, out, query, args...)
+}
+
+func (db *DB) Ping(ctx context.Context) error {
+	return db.pool.Ping(ctx)
+}
+
+func (db *DB) Pool() *pgxpool.Pool {
+	return db.pool
 }
 
 func (db *DB) Get(ctx context.Context, out any, query string, args pgx.NamedArgs) error {

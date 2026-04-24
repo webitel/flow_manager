@@ -1,87 +1,69 @@
-//go:generate sqlc generate
-
 package postgres
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"time"
 
-	"github.com/go-gorp/gorp"
-	"github.com/sqlc-dev/pqtype"
+	"github.com/jackc/pgx/v5"
 
+	infraSql "github.com/webitel/flow_manager/infra/sql"
 	"github.com/webitel/flow_manager/internal/session"
-	"github.com/webitel/flow_manager/internal/storage/postgres/sqlcgen"
 	"github.com/webitel/flow_manager/model"
 )
 
-// dbGetter is the minimal interface satisfied by *sqlstore.SqlSupplier.
-type dbGetter interface {
-	GetMaster() *gorp.DbMap
-}
-
 type CheckpointRepository struct {
-	db *sql.DB
-	q  *sqlcgen.Queries
+	db infraSql.Store
 }
 
-func NewCheckpointRepository(provider dbGetter) *CheckpointRepository {
-	db := provider.GetMaster().Db
-	return &CheckpointRepository{db: db, q: sqlcgen.New(db)}
+func NewCheckpointRepository(db infraSql.Store) *CheckpointRepository {
+	return &CheckpointRepository{db: db}
 }
 
-// Migrate creates the session_checkpoint table if it does not exist.
-// Safe to call on every startup.
-func (r *CheckpointRepository) Migrate(ctx context.Context) error {
-	_, err := r.db.ExecContext(ctx, `
-		CREATE TABLE IF NOT EXISTS flow.session_checkpoint
-		(
-		    id            uuid        NOT NULL DEFAULT gen_random_uuid(),
-		    connection_id text        NOT NULL,
-		    domain_id     bigint      NOT NULL,
-		    channel       smallint    NOT NULL,
-		    schema_id     int         NOT NULL,
-		    app_id        text        NOT NULL,
-		    variables     jsonb,
-		    status        text        NOT NULL DEFAULT 'active',
-		    created_at    timestamptz NOT NULL DEFAULT now(),
-		    updated_at    timestamptz NOT NULL DEFAULT now(),
-		    closed_at     timestamptz,
-		    CONSTRAINT flow_session_checkpoint_pkey PRIMARY KEY (id)
-		);
-		CREATE INDEX IF NOT EXISTS flow_session_checkpoint_conn_idx
-		    ON flow.session_checkpoint (connection_id);
-		CREATE INDEX IF NOT EXISTS flow_session_checkpoint_app_active_idx
-		    ON flow.session_checkpoint (app_id, updated_at)
-		    WHERE status = 'active';
-	`)
-	return err
+// checkpointRow is the scan target for DB rows. uuid columns are cast to text in SQL.
+type checkpointRow struct {
+	ID           string          `db:"id"`
+	ConnectionID string          `db:"connection_id"`
+	DomainID     int64           `db:"domain_id"`
+	Channel      int16           `db:"channel"`
+	SchemaID     int32           `db:"schema_id"`
+	AppID        string          `db:"app_id"`
+	Variables    json.RawMessage `db:"variables"`
+	Status       string          `db:"status"`
+	CreatedAt    time.Time       `db:"created_at"`
+	UpdatedAt    time.Time       `db:"updated_at"`
+	ClosedAt     *time.Time      `db:"closed_at"`
 }
+
+const insertCheckpointSQL = `
+INSERT INTO flow.session_checkpoint
+    (connection_id, domain_id, channel, schema_id, app_id, variables, status, created_at, updated_at)
+VALUES (@conn_id, @domain_id, @channel, @schema_id, @app_id, @variables, @status, @created_at, @updated_at)
+RETURNING id::text`
 
 func (r *CheckpointRepository) Save(ctx context.Context, cp *session.Checkpoint) error {
 	vars, err := marshalVars(cp.Variables)
 	if err != nil {
 		return fmt.Errorf("session.checkpoint.save: %w", err)
 	}
-	id, err := r.q.InsertCheckpoint(ctx, sqlcgen.InsertCheckpointParams{
-		ConnectionID: cp.ConnectionID,
-		DomainID:     cp.DomainID,
-		Channel:      int16(cp.Channel),
-		SchemaID:     int32(cp.SchemaID),
-		AppID:        cp.AppID,
-		Variables:    vars,
-		Status:       string(cp.Status),
-		CreatedAt:    cp.CreatedAt,
-		UpdatedAt:    cp.UpdatedAt,
+	return r.db.Get(ctx, &cp.ID, insertCheckpointSQL, pgx.NamedArgs{
+		"conn_id":    cp.ConnectionID,
+		"domain_id":  cp.DomainID,
+		"channel":    int16(cp.Channel),
+		"schema_id":  int32(cp.SchemaID),
+		"app_id":     cp.AppID,
+		"variables":  vars,
+		"status":     string(cp.Status),
+		"created_at": cp.CreatedAt,
+		"updated_at": cp.UpdatedAt,
 	})
-	if err != nil {
-		return err
-	}
-	cp.ID = id
-	return nil
 }
+
+const updateCheckpointSQL = `
+UPDATE flow.session_checkpoint
+   SET variables = @variables, updated_at = @updated_at
+ WHERE id = @id::uuid`
 
 func (r *CheckpointRepository) Update(ctx context.Context, cp *session.Checkpoint) error {
 	vars, err := marshalVars(cp.Variables)
@@ -89,36 +71,59 @@ func (r *CheckpointRepository) Update(ctx context.Context, cp *session.Checkpoin
 		return fmt.Errorf("session.checkpoint.update: %w", err)
 	}
 	cp.UpdatedAt = time.Now().UTC()
-	return r.q.UpdateCheckpointVars(ctx, sqlcgen.UpdateCheckpointVarsParams{
-		ID:        cp.ID,
-		Variables: vars,
-		UpdatedAt: cp.UpdatedAt,
+	return r.db.Exec(ctx, updateCheckpointSQL, pgx.NamedArgs{
+		"id":         cp.ID,
+		"variables":  vars,
+		"updated_at": cp.UpdatedAt,
 	})
 }
 
+const closeCheckpointSQL = `
+UPDATE flow.session_checkpoint
+   SET status = 'closed', closed_at = now(), updated_at = now()
+ WHERE connection_id = @conn_id AND status = 'active'`
+
 func (r *CheckpointRepository) Close(ctx context.Context, connectionID string) error {
-	return r.q.CloseCheckpoint(ctx, connectionID)
+	return r.db.Exec(ctx, closeCheckpointSQL, pgx.NamedArgs{"conn_id": connectionID})
 }
+
+const touchByAppSQL = `
+UPDATE flow.session_checkpoint
+   SET updated_at = now()
+ WHERE app_id = @app_id AND status = 'active'`
 
 func (r *CheckpointRepository) Touch(ctx context.Context, appID string) error {
-	return r.q.TouchByApp(ctx, appID)
+	return r.db.Exec(ctx, touchByAppSQL, pgx.NamedArgs{"app_id": appID})
 }
 
+const listActiveByAppSQL = `
+SELECT id::text, connection_id, domain_id, channel, schema_id, app_id,
+       variables, status, created_at, updated_at, closed_at
+  FROM flow.session_checkpoint
+ WHERE app_id = @app_id AND status = 'active'`
+
 func (r *CheckpointRepository) ActiveByApp(ctx context.Context, appID string) ([]*session.Checkpoint, error) {
-	rows, err := r.q.ListActiveByApp(ctx, appID)
-	if err != nil {
+	var rows []checkpointRow
+	if err := r.db.Select(ctx, &rows, listActiveByAppSQL, pgx.NamedArgs{"app_id": appID}); err != nil {
 		return nil, err
 	}
 	return toCheckpoints(rows)
 }
 
+const claimOrphanedSQL = `
+UPDATE flow.session_checkpoint
+   SET app_id = @app_id, updated_at = now()
+ WHERE status = 'active' AND updated_at < @stale_threshold
+RETURNING id::text, connection_id, domain_id, channel, schema_id, app_id,
+          variables, status, created_at, updated_at, closed_at`
+
 func (r *CheckpointRepository) ClaimOrphaned(ctx context.Context, appID string, staleDuration time.Duration) ([]*session.Checkpoint, error) {
 	staleThreshold := time.Now().UTC().Add(-staleDuration)
-	rows, err := r.q.ClaimOrphaned(ctx, sqlcgen.ClaimOrphanedParams{
-		AppID:     appID,
-		UpdatedAt: staleThreshold,
-	})
-	if err != nil {
+	var rows []checkpointRow
+	if err := r.db.Select(ctx, &rows, claimOrphanedSQL, pgx.NamedArgs{
+		"app_id":          appID,
+		"stale_threshold": staleThreshold,
+	}); err != nil {
 		return nil, err
 	}
 	return toCheckpoints(rows)
@@ -126,7 +131,7 @@ func (r *CheckpointRepository) ClaimOrphaned(ctx context.Context, appID string, 
 
 // --- helpers ---
 
-func toCheckpoints(rows []sqlcgen.FlowSessionCheckpoint) ([]*session.Checkpoint, error) {
+func toCheckpoints(rows []checkpointRow) ([]*session.Checkpoint, error) {
 	out := make([]*session.Checkpoint, 0, len(rows))
 	for _, row := range rows {
 		cp, err := toCheckpoint(row)
@@ -138,12 +143,12 @@ func toCheckpoints(rows []sqlcgen.FlowSessionCheckpoint) ([]*session.Checkpoint,
 	return out, nil
 }
 
-func toCheckpoint(row sqlcgen.FlowSessionCheckpoint) (*session.Checkpoint, error) {
+func toCheckpoint(row checkpointRow) (*session.Checkpoint, error) {
 	vars, err := unmarshalVars(row.Variables)
 	if err != nil {
 		return nil, err
 	}
-	cp := &session.Checkpoint{
+	return &session.Checkpoint{
 		ID:           row.ID,
 		ConnectionID: row.ConnectionID,
 		DomainID:     row.DomainID,
@@ -154,30 +159,27 @@ func toCheckpoint(row sqlcgen.FlowSessionCheckpoint) (*session.Checkpoint, error
 		Status:       session.Status(row.Status),
 		CreatedAt:    row.CreatedAt,
 		UpdatedAt:    row.UpdatedAt,
-	}
-	if row.ClosedAt.Valid {
-		cp.ClosedAt = &row.ClosedAt.Time
-	}
-	return cp, nil
+		ClosedAt:     row.ClosedAt,
+	}, nil
 }
 
-func marshalVars(vars map[string]string) (pqtype.NullRawMessage, error) {
+func marshalVars(vars map[string]string) (json.RawMessage, error) {
 	if len(vars) == 0 {
-		return pqtype.NullRawMessage{}, nil
+		return nil, nil
 	}
 	b, err := json.Marshal(vars)
 	if err != nil {
-		return pqtype.NullRawMessage{}, fmt.Errorf("marshal vars: %w", err)
+		return nil, fmt.Errorf("marshal vars: %w", err)
 	}
-	return pqtype.NullRawMessage{RawMessage: b, Valid: true}, nil
+	return b, nil
 }
 
-func unmarshalVars(v pqtype.NullRawMessage) (map[string]string, error) {
-	if !v.Valid || len(v.RawMessage) == 0 {
+func unmarshalVars(raw json.RawMessage) (map[string]string, error) {
+	if len(raw) == 0 {
 		return nil, nil
 	}
 	var m map[string]string
-	if err := json.Unmarshal(v.RawMessage, &m); err != nil {
+	if err := json.Unmarshal(raw, &m); err != nil {
 		return nil, fmt.Errorf("unmarshal vars: %w", err)
 	}
 	return m, nil

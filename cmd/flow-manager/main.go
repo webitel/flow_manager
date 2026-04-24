@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/fx"
 	"go.uber.org/fx/fxevent"
 
@@ -22,6 +23,7 @@ import (
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
+	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/routes/call"
 	"github.com/webitel/flow_manager/routes/channel"
@@ -44,8 +46,11 @@ func main() {
 		fx.Provide(bsfx.NewLogger),
 		fx.Provide(bsfx.NewSqlSupplier),
 		fx.Provide(bsfx.NewStore),
+		fx.Provide(bsfx.NewPgxPool),
+		fx.Provide(bsfx.NewSqlStore),
 		fx.Provide(bsfx.NewCheckpointRepo),
 		fx.Provide(bsfx.NewCacheStores),
+		fx.Invoke(runMigrations),
 		// clients
 		fx.Provide(bsfx.NewMQ),
 		fx.Provide(bsfx.NewStorageClient),
@@ -184,6 +189,10 @@ func (fxErrLogger) LogEvent(event fxevent.Event) {
 			wlog.Error("fx run " + e.Name + ": " + e.Err.Error())
 		}
 	}
+}
+
+func runMigrations(pool *pgxpool.Pool) error {
+	return postgresStorage.RunMigrations(context.Background(), pool)
 }
 
 func startDebugServer() {
