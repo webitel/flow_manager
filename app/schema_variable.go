@@ -38,7 +38,6 @@ func (f *FlowManager) SetSchemaVariable(ctx context.Context, domainId int64, var
 		return nil
 	}
 	var err error
-	var appErr *model.AppError
 
 	for k, v := range vars {
 		if v.Encrypt {
@@ -53,8 +52,8 @@ func (f *FlowManager) SetSchemaVariable(ctx context.Context, domainId int64, var
 		buffer.WriteString(`"`)
 		v.Value = buffer.Bytes()
 
-		if appErr = f.Store.Schema().SetVariable(domainId, k, v); appErr != nil {
-			wlog.Error(appErr.Error())
+		if setErr := f.Store.Schema().SetVariable(domainId, k, v); setErr != nil {
+			wlog.Error(setErr.Error())
 		}
 	}
 

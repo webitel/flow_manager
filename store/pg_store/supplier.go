@@ -13,6 +13,8 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/lib/pq"
+	infraSql "github.com/webitel/flow_manager/infra/sql"
+	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/store"
 
 	"github.com/go-gorp/gorp"
@@ -67,7 +69,7 @@ type SqlSupplier struct {
 	lockedToMaster bool
 }
 
-func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
+func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier {
 	supplier := &SqlSupplier{
 		rrCounter: 0,
 		srCounter: 0,
@@ -76,7 +78,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.initConnection()
 
 	supplier.oldStores.call = NewSqlCallStore(supplier)
-	supplier.oldStores.schema = NewSqlSchemaStore(supplier)
+	supplier.oldStores.schema = postgresStorage.NewSchemaRepository(db)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)

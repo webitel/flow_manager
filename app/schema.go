@@ -75,15 +75,26 @@ func (f *FlowManager) GetSchemaById(domainId int64, id int) (*model.Schema, *mod
 }
 
 func (f *FlowManager) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError) {
-	routing, err := f.Store.Schema().GetTransferredRouting(domainId, schemaId)
-	if err != nil {
-		return nil, err
+	routing, rErr := f.Store.Schema().GetTransferredRouting(domainId, schemaId)
+	if rErr != nil {
+		return nil, toAppError("App.SearchTransferredRouting", rErr)
 	}
 
-	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
-	if err != nil {
-		return nil, err
+	var schemaErr *model.AppError
+	routing.Schema, schemaErr = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
+	if schemaErr != nil {
+		return nil, schemaErr
 	}
 
 	return routing, nil
+}
+
+func toAppError(op string, err error) *model.AppError {
+	if err == nil {
+		return nil
+	}
+	if ae, ok := err.(*model.AppError); ok {
+		return ae
+	}
+	return model.NewAppError(op, "app.store_err", nil, err.Error(), http.StatusInternalServerError)
 }

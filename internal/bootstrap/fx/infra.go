@@ -74,8 +74,8 @@ func NewLogger(lc fx.Lifecycle, cfg *model.Config, id AppID) (*wlog.Logger, erro
 	return log, nil
 }
 
-func NewSqlSupplier(cfg *model.Config) *sqlstore.SqlSupplier {
-	return sqlstore.NewSqlSupplier(cfg.SqlSettings)
+func NewSqlSupplier(cfg *model.Config, db infraSql.Store) *sqlstore.SqlSupplier {
+	return sqlstore.NewSqlSupplier(cfg.SqlSettings, db)
 }
 
 func NewStore(s *sqlstore.SqlSupplier) store.Store {

@@ -86,11 +86,11 @@ type CallStore interface {
 }
 
 type SchemaStore interface {
-	Get(domainId int64, id int) (*model.Schema, *model.AppError)
-	GetUpdatedAt(domainId int64, id int) (int64, *model.AppError)
-	GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError)
-	GetVariable(domainId int64, name string) (*model.SchemaVariable, *model.AppError)
-	SetVariable(domainId int64, name string, val *model.SchemaVariable) *model.AppError
+	Get(domainId int64, id int) (*model.Schema, error)
+	GetUpdatedAt(domainId int64, id int) (int64, error)
+	GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, error)
+	GetVariable(domainId int64, name string) (*model.SchemaVariable, error)
+	SetVariable(domainId int64, name string, val *model.SchemaVariable) error
 }
 
 type CallRoutingStore interface {
