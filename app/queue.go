@@ -1,7 +1,15 @@
 package app
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"net/http"
+
+	"github.com/webitel/flow_manager/model"
+)
 
 func (f *FlowManager) FindQueueByName(domainId int64, name string) (int32, *model.AppError) {
-	return f.Store.Queue().FindQueueByName(domainId, name)
+	id, err := f.Store.Queue().FindQueueByName(domainId, name)
+	if err != nil {
+		return 0, model.NewAppError("FindQueueByName", "store.queue.find_by_name", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return id, nil
 }

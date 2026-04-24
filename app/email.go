@@ -1,12 +1,18 @@
 package app
 
 import (
+	"net/http"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/email"
 )
 
 func (f *FlowManager) GetEmailProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError) {
-	return f.Store.Email().GerProperties(domainId, id, messageId, mapRes)
+	vars, err := f.Store.Email().GerProperties(domainId, id, messageId, mapRes)
+	if err != nil {
+		return nil, model.NewAppError("GetEmailProperties", "store.email.get_properties", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return vars, nil
 }
 
 func (f *FlowManager) ReplyEmail(conn model.EmailConnection, text string) *model.AppError {
@@ -15,7 +21,10 @@ func (f *FlowManager) ReplyEmail(conn model.EmailConnection, text string) *model
 		return err
 	}
 
-	return f.Store.Email().Save(conn.DomainId(), email)
+	if storeErr := f.Store.Email().Save(conn.DomainId(), email); storeErr != nil {
+		return model.NewAppError("ReplyEmail", "store.email.save", nil, storeErr.Error(), http.StatusInternalServerError)
+	}
+	return nil
 }
 
 func (f *FlowManager) MailServer() *email.MailServer {

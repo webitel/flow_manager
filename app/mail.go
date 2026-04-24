@@ -43,5 +43,8 @@ func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (
 }
 
 func (f *FlowManager) MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError {
-	return f.Store.Email().SetContact(ctx, domainId, id, contactIds)
+	if err := f.Store.Email().SetContact(ctx, domainId, id, contactIds); err != nil {
+		return model.NewAppError("MailSetContacts", "store.email.set_contact", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return nil
 }

@@ -56,7 +56,7 @@ func (fm *FlowManager) smtpSettingsOAuthToken(settings *model.SmtSettings) (stri
 	if !t.Equal(newToken.Expiry) {
 		if err2 := fm.Store.Email().SetToken(settings.Id, newToken); err2 != nil {
 			wlog.Error(fmt.Sprintf("profile_id=%v, store token error: %s", settings.Id, err2.Error()))
-			return "", err2
+			return "", model.NewAppError("SmtSettingsOAuthToken", "store.email.set_token", nil, err2.Error(), http.StatusInternalServerError)
 		}
 	}
 

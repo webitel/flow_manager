@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -45,9 +46,10 @@ func (r *router) getQueueInfo(ctx context.Context, scope *Flow, c model.Connecti
 		return model.CallResponseError, ErrorRequiredParameter("getQueueInfo", "set")
 	}
 
-	res, err = r.fm.Store.Queue().GetQueueData(c.DomainId(), argv.Queue, argv.Set)
-	if err != nil {
-		return nil, err
+	var storeErr error
+	res, storeErr = r.fm.Store.Queue().GetQueueData(c.DomainId(), argv.Queue, argv.Set)
+	if storeErr != nil {
+		return nil, model.NewAppError("getQueueInfo", "store.queue.get_data", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
 	return c.Set(ctx, res)
@@ -91,8 +93,9 @@ func (r *router) getQueueMetrics(ctx context.Context, scope *Flow, c model.Conne
 				req.BucketName = argv.Bucket.Name
 			}
 
-			if res, err = r.fm.Store.Queue().HistoryStatistics(c.DomainId(), req); err != nil {
-				return nil, err
+			var histErr error
+			if res, histErr = r.fm.Store.Queue().HistoryStatistics(c.DomainId(), req); histErr != nil {
+				return nil, model.NewAppError("getQueueMetrics", "store.queue.history_stat", nil, histErr.Error(), http.StatusInternalServerError)
 			}
 		}
 	case "":
@@ -132,9 +135,10 @@ func (r *router) getQueueAgents(ctx context.Context, scope *Flow, c model.Connec
 		return model.CallResponseError, ErrorRequiredParameter("getQueueAgent", "queue")
 	}
 
-	res, err = r.fm.Store.Queue().GetQueueAgents(c.DomainId(), *argv.Queue.Id, argv.Channel, argv.Set)
-	if err != nil {
-		return model.CallResponseError, err
+	var agentsErr error
+	res, agentsErr = r.fm.Store.Queue().GetQueueAgents(c.DomainId(), *argv.Queue.Id, argv.Channel, argv.Set)
+	if agentsErr != nil {
+		return model.CallResponseError, model.NewAppError("getQueueAgents", "store.queue.get_agents", nil, agentsErr.Error(), http.StatusInternalServerError)
 	}
 
 	return c.Set(ctx, res)

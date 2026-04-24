@@ -216,8 +216,8 @@ retry:
 			rr.InReplyTo = argv.ReplyToId[1 : len(argv.ReplyToId)-1]
 		}
 
-		err = r.fm.Store.Email().Save(domainId, rr)
-		if err != nil {
+		if saveErr := r.fm.Store.Email().Save(domainId, rr); saveErr != nil {
+			err = model.NewAppError("sendEmailFn", "store.email.save", nil, saveErr.Error(), http.StatusInternalServerError)
 			return nil, err
 		}
 	}

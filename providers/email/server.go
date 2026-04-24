@@ -211,8 +211,8 @@ retry:
 	}
 
 	for _, email := range emails {
-		if err = s.store.Save(profile.DomainId, email); err != nil {
-			s.log.Err(err)
+		if storeErr := s.store.Save(profile.DomainId, email); storeErr != nil {
+			s.log.Err(storeErr)
 			continue
 		}
 		s.consume <- NewConnection(s, PKey{
@@ -246,9 +246,10 @@ func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
 
 func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError {
 	var profile *Profile
-	updatedAt, err := s.store.GetProfileUpdatedAt(domainId, profileId)
-	if err != nil {
-		return err
+	var err *model.AppError
+	updatedAt, storeErr := s.store.GetProfileUpdatedAt(domainId, profileId)
+	if storeErr != nil {
+		return model.NewAppError("TestProfile", "store.email.get_profile_updated_at", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
 	if profile, err = s.GetProfile(profileId, updatedAt); err != nil {

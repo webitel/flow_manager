@@ -53,16 +53,16 @@ type UserStore interface {
 }
 
 type EmailStore interface {
-	Save(domainId int64, m *model.Email) *model.AppError
-	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
-	GetProfile(id int) (*model.EmailProfile, *model.AppError)
-	GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError)
-	SetError(profileId int, appErr *model.AppError) *model.AppError
+	Save(domainId int64, m *model.Email) error
+	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, error)
+	GetProfile(id int) (*model.EmailProfile, error)
+	GetProfileUpdatedAt(domainId int64, id int) (int64, error)
+	SetError(profileId int, appErr *model.AppError) error
 
-	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
-	SetToken(id int, token *oauth2.Token) *model.AppError
-	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
-	SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
+	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, error)
+	SetToken(id int, token *oauth2.Token) error
+	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error)
+	SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) error
 }
 
 type CallStore interface {
@@ -130,10 +130,10 @@ type ChatStore interface {
 }
 
 type QueueStore interface {
-	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, *model.AppError)
-	GetQueueData(domainId int64, search *model.SearchEntity, mapRes model.Variables) (model.Variables, *model.AppError)
-	GetQueueAgents(domainId int64, queueId int, channel string, mapRes model.Variables) (model.Variables, *model.AppError)
-	FindQueueByName(domainId int64, name string) (int32, *model.AppError)
+	HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, error)
+	GetQueueData(domainId int64, search *model.SearchEntity, mapRes model.Variables) (model.Variables, error)
+	GetQueueAgents(domainId int64, queueId int, channel string, mapRes model.Variables) (model.Variables, error)
+	FindQueueByName(domainId int64, name string) (int32, error)
 }
 
 type MemberStore interface {
