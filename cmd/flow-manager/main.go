@@ -21,6 +21,8 @@ import (
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
+	"github.com/webitel/flow_manager/internal/domain/shared/ports"
+	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/routes/call"
 	"github.com/webitel/flow_manager/routes/channel"
 	"github.com/webitel/flow_manager/routes/chat"
@@ -57,24 +59,55 @@ func main() {
 		fx.Provide(bsfx.NewServers),
 		// app
 		fx.Provide(app.NewFlowManager),
+		fx.Provide(func(fm *app.FlowManager) ports.RouterDeps { return fm }),
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
 		fx.Provide(flow.NewRouter),
-		fx.Invoke(initRouters),
+		fx.Provide(newAppRouters),
+		fx.Invoke(wireRouters),
 		fx.Invoke(registerLifecycle),
 	).Run()
 }
 
-func initRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client, meetings domainmeeting.Client) {
-	fm.CallRouter = call.Init(fm, router, contacts, meetings)
-	fm.GRPCRouter = grpc.Init(fm, router)
-	fm.ChatRouter = chat.Init(fm, router)
-	fm.FormRouter = processing.Init(fm, router)
-	fm.EmailRouter = email.Init(fm, router, contacts)
-	fm.ChannelRouter = channel.Init(fm, router)
-	fm.WebHookRouter = webhook.Init(fm, router)
-	fm.IMRouter = im.Init(fm, router)
+type appRouters struct {
+	Call    model.Router
+	GRPC    model.Router
+	Chat    model.Router
+	Form    model.Router
+	Email   model.Router
+	Channel model.Router
+	WebHook model.Router
+	IM      model.Router
+}
+
+func newAppRouters(
+	deps ports.RouterDeps,
+	router flow.Router,
+	contacts domaincontacts.Client,
+	meetings domainmeeting.Client,
+) *appRouters {
+	return &appRouters{
+		Call:    call.Init(deps, router, contacts, meetings),
+		GRPC:    grpc.Init(deps, router),
+		Chat:    chat.Init(deps, router),
+		Form:    processing.Init(deps, router),
+		Email:   email.Init(deps, router, contacts),
+		Channel: channel.Init(deps, router),
+		WebHook: webhook.Init(deps, router),
+		IM:      im.Init(deps, router),
+	}
+}
+
+func wireRouters(fm *app.FlowManager, routers *appRouters) {
+	fm.CallRouter = routers.Call
+	fm.GRPCRouter = routers.GRPC
+	fm.ChatRouter = routers.Chat
+	fm.FormRouter = routers.Form
+	fm.EmailRouter = routers.Email
+	fm.ChannelRouter = routers.Channel
+	fm.WebHookRouter = routers.WebHook
+	fm.IMRouter = routers.IM
 }
 
 func registerLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {

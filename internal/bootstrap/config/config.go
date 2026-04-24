@@ -52,11 +52,13 @@ func LoadTLSCreds(cfg model.TLSConfig) (*tls.Config, error) {
 		return nil, nil
 	}
 
+	// Load client's certificate and private key
 	clientCert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
 	if err != nil {
 		return nil, err
 	}
 
+	// Load the CA certificate to verify server
 	caCert, err := os.ReadFile(cfg.CAPath)
 	if err != nil {
 		return nil, err
@@ -64,9 +66,10 @@ func LoadTLSCreds(cfg model.TLSConfig) (*tls.Config, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
+	// Configure TLS
 	return &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
 		RootCAs:      caCertPool,
-		ServerName:   "im-gateway-service",
+		ServerName:   "im-gateway-service", // Common Name of the server cert
 	}, nil
 }

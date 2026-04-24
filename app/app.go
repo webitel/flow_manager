@@ -12,6 +12,7 @@ import (
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
@@ -29,6 +30,8 @@ import (
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/otlp"
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/stdout"
 )
+
+var _ ports.RouterDeps = (*FlowManager)(nil)
 
 type FlowManager struct {
 	log            *wlog.Logger
