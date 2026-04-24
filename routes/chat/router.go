@@ -7,23 +7,23 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	proto "github.com/webitel/flow_manager/gen/chat"
+	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
-	fm   *app.FlowManager
+	fm   ports.RouterDeps
 	apps flow.ApplicationHandlers
 }
 
 type Conversation model.Conversation // TODO
 
-func Init(fm *app.FlowManager, fr flow.Router) {
+func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	router := &Router{
-		fm: fm,
+		fm: deps,
 	}
 
 	router.apps = flow.UnionApplicationMap(
@@ -31,7 +31,7 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 		ApplicationsHandlers(router),
 	)
 
-	fm.ChatRouter = router
+	return router
 }
 
 func (r *Router) GlobalVariable(domainId int64, name string) string {
@@ -105,11 +105,11 @@ func (r *Router) handle(conn model.Connection) {
 		model.FlowSchemaNameVariable: routing.Schema.Name,
 	})
 
-	cp := session.Save(r.fm.CheckpointRepo, r.fm.AppID(), conn, routing.SchemaId)
+	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
 
 	flow.Route(conn.Context(), i, r)
 
-	session.Update(r.fm.CheckpointRepo, cp, conn)
+	session.Update(r.fm.CheckpointRepo(), cp, conn)
 
 	if !conv.IsTransfer() {
 		conv.Stop(nil, proto.CloseConversationCause_flow_end)
@@ -123,7 +123,7 @@ func (r *Router) handle(conn model.Connection) {
 		cancel()
 	}
 
-	session.Close(r.fm.CheckpointRepo, r.fm.Log(), cp, conn.Id())
+	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
 }
 
 func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {

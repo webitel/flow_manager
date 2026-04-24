@@ -10,24 +10,24 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
+	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
-	fm               *app.FlowManager
+	fm               ports.RouterDeps
 	contacts         domaincontacts.Client
 	meeting          domainmeeting.Client
 	apps             flow.ApplicationHandlers
 	disconnectedApps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client, meeting domainmeeting.Client) {
+func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
 	router := &Router{
-		fm:       fm,
+		fm:       deps,
 		contacts: contacts,
 		meeting:  meeting,
 	}
@@ -39,7 +39,7 @@ func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client, m
 		ApplicationsHandlers(router),
 	)
 
-	fm.CallRouter = router
+	return router
 }
 
 func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {

@@ -35,7 +35,7 @@ import (
 
 func main() {
 	fx.New(
-		fx.WithLogger(func() fxevent.Logger { return fxevent.NopLogger }),
+		fx.WithLogger(func() fxevent.Logger { return fxErrLogger{} }),
 		// infrastructure
 		fx.Provide(bsfx.NewConfig),
 		fx.Provide(bsfx.NewAppID),
@@ -67,14 +67,14 @@ func main() {
 }
 
 func initRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client, meetings domainmeeting.Client) {
-	call.Init(fm, router, contacts, meetings)
-	grpc.Init(fm, router)
-	chat.Init(fm, router)
-	processing.Init(fm, router)
-	email.Init(fm, router, contacts)
-	channel.Init(fm, router)
-	webhook.Init(fm, router)
-	im.Init(fm, router)
+	fm.CallRouter = call.Init(fm, router, contacts, meetings)
+	fm.GRPCRouter = grpc.Init(fm, router)
+	fm.ChatRouter = chat.Init(fm, router)
+	fm.FormRouter = processing.Init(fm, router)
+	fm.EmailRouter = email.Init(fm, router, contacts)
+	fm.ChannelRouter = channel.Init(fm, router)
+	fm.WebHookRouter = webhook.Init(fm, router)
+	fm.IMRouter = im.Init(fm, router)
 }
 
 func registerLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {
@@ -119,6 +119,38 @@ func newMeetingClient(lc fx.Lifecycle, fm *app.FlowManager) (domainmeeting.Clien
 		},
 	})
 	return c, nil
+}
+
+// fxErrLogger is an fxevent.Logger that prints only error events to stderr.
+type fxErrLogger struct{}
+
+func (fxErrLogger) LogEvent(event fxevent.Event) {
+	switch e := event.(type) {
+	case *fxevent.Started:
+		if e.Err != nil {
+			wlog.Error("fx start: " + e.Err.Error())
+		}
+	case *fxevent.Stopped:
+		if e.Err != nil {
+			wlog.Error("fx stop: " + e.Err.Error())
+		}
+	case *fxevent.RolledBack:
+		if e.Err != nil {
+			wlog.Error("fx rollback: " + e.Err.Error())
+		}
+	case *fxevent.Provided:
+		if e.Err != nil {
+			wlog.Error("fx provide " + e.ConstructorName + ": " + e.Err.Error())
+		}
+	case *fxevent.Decorated:
+		if e.Err != nil {
+			wlog.Error("fx decorate " + e.DecoratorName + ": " + e.Err.Error())
+		}
+	case *fxevent.Run:
+		if e.Err != nil {
+			wlog.Error("fx run " + e.Name + ": " + e.Err.Error())
+		}
+	}
 }
 
 func startDebugServer() {

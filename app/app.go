@@ -37,7 +37,7 @@ type FlowManager struct {
 	cluster        *cluster
 	Store          store.Store
 	ExternalStore  *cachelayer.ExternalStoreManager
-	CheckpointRepo session.Repository
+	checkpointRepo session.Repository
 
 	grpcServer    *fmgrpc.Server
 	mailServer    model.Server
@@ -100,7 +100,7 @@ func NewFlowManager(
 		id:             fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
 		config:         cfg,
 		Store:          st,
-		CheckpointRepo: checkpointRepo,
+		checkpointRepo: checkpointRepo,
 		cacheStore:     cacheStores,
 		storage:        storage,
 		cases:          casesClient,
@@ -202,6 +202,18 @@ func (f *FlowManager) AppID() string {
 	return f.id
 }
 
+func (f *FlowManager) CheckpointRepo() session.Repository {
+	return f.checkpointRepo
+}
+
 func (f *FlowManager) Callback() *CallbackResolver {
 	return f.cbr
+}
+
+func (f *FlowManager) GetStore() store.Store {
+	return f.Store
+}
+
+func (f *FlowManager) GetAiBots() *aibridge.Client {
+	return f.AiBots
 }

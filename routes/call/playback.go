@@ -40,7 +40,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 		gs.SetVar = "wbt_stt_text"
 	}
 
-	res, errGrpc := r.fm.AiBots.Bot().STT(ctx, &ai_bots.STTRequest{
+	res, errGrpc := r.fm.GetAiBots().Bot().STT(ctx, &ai_bots.STTRequest{
 		ProfileId:         gs.Profile.Id,
 		DomainId:          call.DomainId(),
 		CallId:            call.Id(),
@@ -70,7 +70,7 @@ func (r *Router) aiBridgeStt(ctx context.Context, call model.Call, argv model.Pl
 	}
 
 	if gs.Timeout > 0 && gs.BreakFinalOnTimeout && gs.DisableBreakFinal {
-		r.fm.AiBots.Bot().STTUpdateSession(ctx, &ai_bots.STTUpdateSessionRequest{
+		r.fm.GetAiBots().Bot().STTUpdateSession(ctx, &ai_bots.STTUpdateSessionRequest{
 			DialogId:          con.DialogId,
 			DisableBreakFinal: false,
 		})

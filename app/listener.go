@@ -19,13 +19,13 @@ func (f *FlowManager) Listen() {
 	f.callWatcher.Start()
 	f.listWatcher.Start()
 
-	if f.CheckpointRepo != nil {
+	if f.checkpointRepo != nil {
 		workerCtx, workerCancel := context.WithCancel(context.Background())
 		go func() {
 			<-f.stop
 			workerCancel()
 		}()
-		go session_recovery.New(f.CheckpointRepo, f.id, f.log).Run(workerCtx)
+		go session_recovery.New(f.checkpointRepo, f.id, f.log).Run(workerCtx)
 	}
 
 	go f.listenCallEvents(f.stop)

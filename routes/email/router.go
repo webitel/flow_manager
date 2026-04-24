@@ -8,21 +8,21 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/model"
 )
 
 type Router struct {
-	fm       *app.FlowManager
+	fm       ports.RouterDeps
 	contacts domaincontacts.Client
 	apps     flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client) {
+func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client) model.Router {
 	r := &Router{
-		fm:       fm,
+		fm:       deps,
 		contacts: contacts,
 	}
 
@@ -31,7 +31,7 @@ func Init(fm *app.FlowManager, fr flow.Router, contacts domaincontacts.Client) {
 		ApplicationsHandlers(r),
 	)
 
-	fm.EmailRouter = r
+	return r
 }
 
 func (r *Router) GlobalVariable(domainId int64, name string) string {

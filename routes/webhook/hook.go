@@ -8,20 +8,20 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/model"
 	httpprovider "github.com/webitel/flow_manager/providers/http"
 )
 
 type Router struct {
-	fm   *app.FlowManager
+	fm   ports.RouterDeps
 	apps flow.ApplicationHandlers
 }
 
-func Init(fm *app.FlowManager, fr flow.Router) {
+func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	router := &Router{
-		fm: fm,
+		fm: deps,
 	}
 
 	router.apps = flow.UnionApplicationMap(
@@ -29,7 +29,7 @@ func Init(fm *app.FlowManager, fr flow.Router) {
 		ApplicationsHandlers(router),
 	)
 
-	fm.WebHookRouter = router
+	return router
 }
 
 func (r *Router) GlobalVariable(domainId int64, name string) string {
