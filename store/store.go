@@ -153,7 +153,7 @@ type FileStore interface {
 }
 
 type WebHookStore interface {
-	Get(id string) (model.WebHook, *model.AppError)
+	Get(id string) (model.WebHook, error)
 }
 
 type SystemcSettings interface {

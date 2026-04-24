@@ -8,21 +8,19 @@ import (
 	"fmt"
 	sqltrace "log"
 	"os"
+	"sync/atomic"
 	"time"
 
+	"github.com/go-gorp/gorp"
+	"github.com/lib/pq"
 	"golang.org/x/oauth2"
 
-	"github.com/lib/pq"
+	"github.com/webitel/wlog"
+
 	infraSql "github.com/webitel/flow_manager/infra/sql"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
-	"github.com/webitel/flow_manager/store"
-
-	"github.com/go-gorp/gorp"
-
-	"sync/atomic"
-
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
+	"github.com/webitel/flow_manager/store"
 )
 
 const (
@@ -77,8 +75,10 @@ func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier 
 	}
 	supplier.initConnection()
 
-	supplier.oldStores.call = NewSqlCallStore(supplier)
 	supplier.oldStores.schema = postgresStorage.NewSchemaRepository(db)
+	supplier.oldStores.webHook = postgresStorage.NewWebHookRepository(db)
+
+	supplier.oldStores.call = NewSqlCallStore(supplier)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)
@@ -91,7 +91,6 @@ func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier 
 	supplier.oldStores.user = NewSqlUserStore(supplier)
 	supplier.oldStores.log = NewSqlLogStore(supplier)
 	supplier.oldStores.file = NewSqlFileStore(supplier)
-	supplier.oldStores.webHook = NewSqlWebHookStore(supplier)
 	supplier.oldStores.sysSettings = NewSqlSysSettingsStore(supplier)
 	supplier.oldStores.socketSession = NewSQLSocketSessionStore(supplier)
 	supplier.oldStores.session = NewSQLSessionStore(supplier)
@@ -113,7 +112,7 @@ func (ss *SqlSupplier) GetAllConns() []*gorp.DbMap {
 	return all
 }
 
-func setupConnection(con_type string, dataSource string, settings *model.SqlSettings) *gorp.DbMap {
+func setupConnection(con_type, dataSource string, settings *model.SqlSettings) *gorp.DbMap {
 	db, err := dbsql.Open(*settings.DriverName, dataSource)
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("failed to open SQL connection to err:%v", err.Error()))
@@ -191,15 +190,14 @@ func (ss *SqlSupplier) DriverName() string {
 
 type typeConverter struct{}
 
-func (me typeConverter) ToDb(val interface{}) (interface{}, error) {
-
+func (me typeConverter) ToDb(val any) (any, error) {
 	return val, nil
 }
 
-func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
+func (me typeConverter) FromDb(target any) (gorp.CustomScanner, bool) {
 	switch target.(type) {
 	case *model.Variables, *model.SmtSettings, *model.SmtpPlainAuth, **model.MailParams, **oauth2.Token:
-		binder := func(holder, target interface{}) error {
+		binder := func(holder, target any) error {
 			s, ok := holder.(*[]byte)
 			if !ok {
 				return errors.New("Bad request ") // fixme json
@@ -212,7 +210,7 @@ func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
 
 	case *[]string:
-		binder := func(holder, target interface{}) error {
+		binder := func(holder, target any) error {
 			s, ok := holder.(*[]byte)
 			if !ok {
 				return errors.New("store.sql.convert_string_array")
