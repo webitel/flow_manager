@@ -23,7 +23,7 @@ func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *genpb.Cha
 }
 
 func (fm *FlowManager) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) *model.AppError {
-	return fm.Store.Member().CreateMember(domainId, queueId, holdSec, member)
+	return toAppError("App.CreateMember", fm.Store.Member().CreateMember(domainId, queueId, holdSec, member))
 }
 
 func (fm *FlowManager) JoinToAgent(ctx context.Context, in *genpb.CallJoinToAgentRequest) (genpb.MemberService_CallJoinToAgentClient, error) {

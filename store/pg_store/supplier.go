@@ -86,7 +86,7 @@ func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier 
 	supplier.oldStores.list = NewSqlListStore(supplier)
 	supplier.oldStores.chat = NewSqlChatStore(supplier)
 	supplier.oldStores.queue = NewSqlQueueStore(supplier)
-	supplier.oldStores.member = NewSqlMemberStore(supplier)
+	supplier.oldStores.member = postgresStorage.NewMemberRepository(db)
 	supplier.oldStores.user = NewSqlUserStore(supplier)
 	supplier.oldStores.log = NewSqlLogStore(supplier)
 	supplier.oldStores.file = NewSqlFileStore(supplier)

@@ -137,11 +137,11 @@ type QueueStore interface {
 }
 
 type MemberStore interface {
-	CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) *model.AppError
-	CallPosition(callId string) (int64, *model.AppError)
-	EWTPuzzle(domainId int64, callId string, min int, queueIds, bucketIds []int) (float64, *model.AppError)
-	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, *model.AppError)
-	PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, *model.AppError)
+	CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error
+	CallPosition(callId string) (int64, error)
+	EWTPuzzle(domainId int64, callId string, min int, queueIds, bucketIds []int) (float64, error)
+	GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, error)
+	PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, error)
 }
 
 type LogStore interface {
