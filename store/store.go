@@ -94,9 +94,9 @@ type SchemaStore interface {
 }
 
 type CallRoutingStore interface {
-	FromGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError)
-	SearchToDestination(domainId int64, destination string) (*model.Routing, *model.AppError)
-	FromQueue(domainId int64, queueId int) (*model.Routing, *model.AppError)
+	FromGateway(domainId int64, gatewayId int) (*model.Routing, error)
+	SearchToDestination(domainId int64, destination string) (*model.Routing, error)
+	FromQueue(domainId int64, queueId int) (*model.Routing, error)
 }
 
 type EndpointStore interface {

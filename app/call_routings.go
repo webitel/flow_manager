@@ -3,11 +3,12 @@ package app
 import "github.com/webitel/flow_manager/model"
 
 func (f *FlowManager) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError) {
-	routing, err := f.Store.CallRouting().FromGateway(domainId, gatewayId)
-	if err != nil {
-		return nil, err
+	routing, storeErr := f.Store.CallRouting().FromGateway(domainId, gatewayId)
+	if storeErr != nil {
+		return nil, toAppError("GetRoutingFromDestToGateway", storeErr)
 	}
 
+	var err *model.AppError
 	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if err != nil {
 		return nil, err
@@ -17,11 +18,12 @@ func (f *FlowManager) GetRoutingFromDestToGateway(domainId int64, gatewayId int)
 }
 
 func (f *FlowManager) SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, *model.AppError) {
-	routing, err := f.Store.CallRouting().SearchToDestination(domainId, dest)
-	if err != nil {
-		return nil, err
+	routing, storeErr := f.Store.CallRouting().SearchToDestination(domainId, dest)
+	if storeErr != nil {
+		return nil, toAppError("SearchOutboundToDestinationRouting", storeErr)
 	}
 
+	var err *model.AppError
 	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if err != nil {
 		return nil, err
@@ -31,11 +33,12 @@ func (f *FlowManager) SearchOutboundToDestinationRouting(domainId int64, dest st
 }
 
 func (f *FlowManager) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError) {
-	routing, err := f.Store.CallRouting().FromQueue(domainId, queueId)
-	if err != nil {
-		return nil, err
+	routing, storeErr := f.Store.CallRouting().FromQueue(domainId, queueId)
+	if storeErr != nil {
+		return nil, toAppError("SearchOutboundFromQueueRouting", storeErr)
 	}
 
+	var err *model.AppError
 	routing.Schema, err = f.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if err != nil {
 		return nil, err
