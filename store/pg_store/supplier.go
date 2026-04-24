@@ -78,8 +78,7 @@ func NewSqlSupplier(settings model.SqlSettings, db infraSql.Store) *SqlSupplier 
 	supplier.oldStores.schema = postgresStorage.NewSchemaRepository(db)
 	supplier.oldStores.webHook = postgresStorage.NewWebHookRepository(db)
 	supplier.oldStores.media = postgresStorage.NewMediaRepository(db)
-
-	supplier.oldStores.call = NewSqlCallStore(supplier)
+	supplier.oldStores.call = postgresStorage.NewCallRepository(db)
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)

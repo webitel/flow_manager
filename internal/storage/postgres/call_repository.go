@@ -1,32 +1,33 @@
-package sqlstore
+package postgres
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/lib/pq"
 
+	infraSql "github.com/webitel/flow_manager/infra/sql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
-type SqlCallStore struct {
-	SqlStore
+type CallRepository struct {
+	db infraSql.Store
 }
 
-func NewSqlCallStore(sqlStore SqlStore) store.CallStore {
-	st := &SqlCallStore{sqlStore}
-	return st
+func NewCallRepository(db infraSql.Store) store.CallStore {
+	return &CallRepository{db: db}
 }
 
-func (s SqlCallStore) Save(call *model.CallActionRinging) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
-                      from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id,
-					  attempt_id, member_id, grantee_id, params, heartbeat, destination_name, contact_id)
-values (:Id, :Direction, :Destination, :ParentId, to_timestamp(:Timestamp::double precision /1000), :State, :AppId, :FromType, :FromName, :FromNumber, :FromId,
-        :ToType, :ToName, :ToNumber, :ToId, :Payload, :DomainId, to_timestamp(:CreatedAt::double precision /1000), :GatewayId, :UserId, :QueueId, :AgentId, :TeamId,
-		:AttemptId, :MemberId, :GranteeId, :Params::jsonb, case when :Hb::int > 0 then now() end, :DestinationName, :ContactId)
+const saveCallSQL = `insert into call_center.cc_calls (id, direction, destination, parent_id, "timestamp", state, app_id, from_type, from_name,
+                  from_number, from_id, to_type, to_name, to_number, to_id, payload, domain_id, created_at, gateway_id, user_id, queue_id, agent_id, team_id,
+				  attempt_id, member_id, grantee_id, params, heartbeat, destination_name, contact_id)
+values (@Id, @Direction, @Destination, @ParentId, to_timestamp(@Timestamp::double precision /1000), @State, @AppId, @FromType, @FromName, @FromNumber, @FromId,
+        @ToType, @ToName, @ToNumber, @ToId, @Payload, @DomainId, to_timestamp(@CreatedAt::double precision /1000), @GatewayId, @UserId, @QueueId, @AgentId, @TeamId,
+		@AttemptId, @MemberId, @GranteeId, @Params::jsonb, case when @Hb::int > 0 then now() end, @DestinationName, @ContactId)
 on conflict (id)
     do update set
 		created_at = EXCLUDED.created_at,
@@ -53,22 +54,23 @@ on conflict (id)
 		params = EXCLUDED.params,
         heartbeat = EXCLUDED.heartbeat,
         destination_name = EXCLUDED.destination_name,
-        contact_id = EXCLUDED.contact_id
-		`, map[string]any{
-		"DomainId":    call.DomainId,
-		"Id":          call.Id,
-		"Direction":   call.Direction,
-		"Destination": call.Destination,
-		"ParentId":    call.ParentId,
-		"Timestamp":   call.Timestamp,
-		"State":       call.Event,
-		"AppId":       call.AppId,
-		"CreatedAt":   call.Timestamp,
-		"FromType":    call.GetFrom().GetType(),
-		"FromName":    call.GetFrom().GetName(),
-		"FromNumber":  call.GetFrom().GetNumber(),
-		"FromId":      call.GetFrom().GetId(),
+        contact_id = EXCLUDED.contact_id`
 
+func (r *CallRepository) Save(call *model.CallActionRinging) error {
+	return r.db.Exec(context.Background(), saveCallSQL, pgx.NamedArgs{
+		"DomainId":        call.DomainId,
+		"Id":              call.Id,
+		"Direction":       call.Direction,
+		"Destination":     call.Destination,
+		"ParentId":        call.ParentId,
+		"Timestamp":       call.Timestamp,
+		"State":           call.Event,
+		"AppId":           call.AppId,
+		"CreatedAt":       call.Timestamp,
+		"FromType":        call.GetFrom().GetType(),
+		"FromName":        call.GetFrom().GetName(),
+		"FromNumber":      call.GetFrom().GetNumber(),
+		"FromId":          call.GetFrom().GetId(),
 		"ToType":          call.GetTo().GetType(),
 		"ToName":          call.GetTo().GetName(),
 		"ToNumber":        call.GetTo().GetNumber(),
@@ -87,44 +89,32 @@ on conflict (id)
 		"DestinationName": call.DestinationName,
 		"ContactId":       call.ContactId,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.Save", "store.sql_call.save.error", nil,
-			fmt.Sprintf("Id=%v %v", call.Id, err.Error()), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-// TODO race... fix remove
-func (s SqlCallStore) SetState(call *model.CallAction) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls(id, state, timestamp, app_id, domain_id)
-values (:Id::uuid, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId)
-on conflict (id) where timestamp < to_timestamp(:Timestamp::double precision /1000) and cause isnull
+const setStateSQL = `insert into call_center.cc_calls(id, state, timestamp, app_id, domain_id)
+values (@Id::uuid, @State, to_timestamp(@Timestamp::double precision /1000), @AppId, @DomainId)
+on conflict (id) where timestamp < to_timestamp(@Timestamp::double precision /1000) and cause isnull
     do update set
       state = EXCLUDED.state,
-      timestamp = EXCLUDED.timestamp`, map[string]any{
+      timestamp = EXCLUDED.timestamp`
+
+func (r *CallRepository) SetState(call *model.CallAction) error {
+	return r.db.Exec(context.Background(), setStateSQL, pgx.NamedArgs{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
 		"AppId":     call.AppId,
 		"DomainId":  call.DomainId,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetState", "store.sql_call.set_state.error", nil,
-			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetHangup(call *model.CallActionHangup) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause,
-			sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive,
-		    schema_ids, hangup_phrase, transfer_from)
-values (:Id, :State, to_timestamp(:Timestamp::double precision /1000), :AppId, :DomainId, :Cause,
-	:SipCode, :Variables::json, :HangupBy, :Tags, :AmdResult, :Params::jsonb, coalesce(:TalkSec::int, 0), :AmdAiResult,
-	:AmdAiResultLog, :AmdAiPositive, :SchemaIds::int[], :HangupPhrase::varchar, :TransferFrom::uuid)
-on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 1000)
+const setHangupSQL = `insert into call_center.cc_calls (id, state, timestamp, app_id, domain_id, cause,
+		sip_code, payload, hangup_by, tags, amd_result, params, talk_sec, amd_ai_result, amd_ai_logs, amd_ai_positive,
+	    schema_ids, hangup_phrase, transfer_from)
+values (@Id, @State, to_timestamp(@Timestamp::double precision /1000), @AppId, @DomainId, @Cause,
+	@SipCode, @Variables::json, @HangupBy, @Tags, @AmdResult, @Params::jsonb, coalesce(@TalkSec::int, 0), @AmdAiResult,
+	@AmdAiResultLog, @AmdAiPositive, @SchemaIds::int[], @HangupPhrase::varchar, @TransferFrom::uuid)
+on conflict (id) where timestamp <= to_timestamp(@Timestamp::double precision / 1000)
     do update set
       state = EXCLUDED.state,
       cause = EXCLUDED.cause,
@@ -141,8 +131,10 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
       amd_ai_positive = EXCLUDED.amd_ai_positive,
       schema_ids = EXCLUDED.schema_ids,
       hangup_phrase = EXCLUDED.hangup_phrase,
-      transfer_from = coalesce(call_center.cc_calls.transfer_from, EXCLUDED.transfer_from)
-     `, map[string]any{
+      transfer_from = coalesce(call_center.cc_calls.transfer_from, EXCLUDED.transfer_from)`
+
+func (r *CallRepository) SetHangup(call *model.CallActionHangup) error {
+	return r.db.Exec(context.Background(), setHangupSQL, pgx.NamedArgs{
 		"Id":             call.Id,
 		"State":          call.Event,
 		"Timestamp":      call.Timestamp,
@@ -153,27 +145,23 @@ on conflict (id) where timestamp <= to_timestamp(:Timestamp::double precision / 
 		"HangupBy":       call.HangupBy,
 		"AmdResult":      call.AmdResult,
 		"TalkSec":        call.TalkSec,
-		"Tags":           pq.Array(call.Tags),
+		"Tags":           call.Tags,
 		"Variables":      call.VariablesToJson(),
 		"Params":         call.Parameters(),
 		"AmdAiResult":    call.AmdAiResult,
-		"AmdAiResultLog": pq.Array(call.AmdAiResultLog),
+		"AmdAiResultLog": call.AmdAiResultLog,
 		"AmdAiPositive":  call.AmdAiPositive,
-		"SchemaIds":      pq.Array(call.SchemaIds),
+		"SchemaIds":      call.SchemaIds,
 		"HangupPhrase":   call.HangupPhrase,
 		"TransferFrom":   call.TransferFrom,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetHangup", "store.sql_call.set_state.error", nil,
-			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
-	_, err := s.GetMaster().Exec(`call call_center.cc_call_set_bridged(:Id::uuid, :State::varchar, to_timestamp(:Timestamp::double precision /1000), :AppId::varchar,
-    :DomainId::int8, :BridgedId::uuid, :ToName::varchar)`, map[string]any{
+const setBridgedSQL = `call call_center.cc_call_set_bridged(@Id::uuid, @State::varchar, to_timestamp(@Timestamp::double precision /1000), @AppId::varchar,
+    @DomainId::int8, @BridgedId::uuid, @ToName::varchar)`
+
+func (r *CallRepository) SetBridged(call *model.CallActionBridge) error {
+	return r.db.Exec(context.Background(), setBridgedSQL, pgx.NamedArgs{
 		"Id":        call.Id,
 		"State":     call.Event,
 		"Timestamp": call.Timestamp,
@@ -182,30 +170,15 @@ func (s SqlCallStore) SetBridged(call *model.CallActionBridge) *model.AppError {
 		"BridgedId": call.BridgedId,
 		"ToName":    call.To.Name,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetBridged", "store.sql_call.set_bridged.error", nil,
-			fmt.Sprintf("Id=%v, State=%v %v", call.Id, call.Event, err.Error()), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) Delete(id string) *model.AppError {
-	_, err := s.GetMaster().Exec(`delete from call_center.cc_calls
-where id = :Id;`, map[string]any{
-		"Id": id,
-	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.Delete", "store.sql_call.delete.error", nil,
-			fmt.Sprintf("Id=%v, %v", id, err.Error()), extractCodeFromErr(err))
-	}
+const deleteCallSQL = `delete from call_center.cc_calls where id = @Id`
 
-	return nil
+func (r *CallRepository) Delete(id string) error {
+	return r.db.Exec(context.Background(), deleteCallSQL, pgx.NamedArgs{"Id": id})
 }
 
-func (s SqlCallStore) MoveToHistory() ([]model.MissedCall, *model.AppError) {
-	var missedCalls []model.MissedCall
-	_, err := s.GetMaster().Select(&missedCalls, `with hb as materialized (
+const moveToHistorySQL = `with hb as materialized (
 	update call_center.cc_calls
 	set state = 'hangup',
 		sip_code = 604,
@@ -342,98 +315,91 @@ from (
 										select ch.destination
 									) nums on true
 							  group by 1
-						  ) t
+					  ) t
      ) c
     returning  id, parent_id::uuid, bridged_id, user_id, domain_id
 )
-select id, user_id, domain_id
+select id::text, user_id, domain_id
 from ins
-where bridged_id isnull and parent_id notnull and user_id notnull`)
-	if err != nil {
-		return nil, model.NewAppError("SqlCallStore.MoveToHistory", "store.sql_call.move_to_store.error", nil,
-			err.Error(), extractCodeFromErr(err))
-	}
+where bridged_id isnull and parent_id notnull and user_id notnull`
 
-	return missedCalls, nil
+func (r *CallRepository) MoveToHistory() ([]model.MissedCall, error) {
+	var out []model.MissedCall
+	if err := r.db.Select(context.Background(), &out, moveToHistorySQL, pgx.NamedArgs{}); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-func (s SqlCallStore) UpdateFrom(id string, name, number, destination *string) *model.AppError {
-	_, err := s.GetMaster().Exec(`update call_center.cc_calls
-set from_number = coalesce(:Number, from_number),
-    from_name = coalesce(:Name, from_name),
-    destination = coalesce(:Destination, destination)
-where id = :Id`, map[string]any{
+const updateFromSQL = `update call_center.cc_calls
+set from_number = coalesce(@Number, from_number),
+    from_name = coalesce(@Name, from_name),
+    destination = coalesce(@Destination, destination)
+where id = @Id`
+
+func (r *CallRepository) UpdateFrom(id string, name, number, destination *string) error {
+	return r.db.Exec(context.Background(), updateFromSQL, pgx.NamedArgs{
 		"Number":      number,
 		"Name":        name,
 		"Destination": destination,
 		"Id":          id,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.UpdateFrom", "store.sql_call.update_from.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-// todo only mod_google
-func (s SqlCallStore) SaveTranscript(transcribe *model.CallActionTranscript) *model.AppError {
-	r, _ := json.Marshal(transcribe.Transcript)
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_transcribe (call_id, confidence, transcribe, response)
-select :CallId, (x.j->'alternatives'->0->'confidence')::text::numeric,
+const saveTranscriptSQL = `insert into call_center.cc_calls_transcribe (call_id, confidence, transcribe, response)
+select @CallId, (x.j->'alternatives'->0->'confidence')::text::numeric,
         x.j->'alternatives'->0->>'transcript' as transcript,
         x.j
 from (
-    select :R::jsonb as j
-) x;`, map[string]any{
-		"CallId": transcribe.Id,
-		"R":      r,
-	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SaveTranscribe", "store.sql_call.save_transcribe.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
+    select @R::jsonb as j
+) x`
 
-	return nil
+func (r *CallRepository) SaveTranscript(transcribe *model.CallActionTranscript) error {
+	raw, _ := json.Marshal(transcribe.Transcript)
+	return r.db.Exec(context.Background(), saveTranscriptSQL, pgx.NamedArgs{
+		"CallId": transcribe.Id,
+		"R":      raw,
+	})
 }
 
-func (s SqlCallStore) LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
-	f := make([]string, 0)
+type lastBridgedRow struct {
+	Variables json.RawMessage `db:"variables"`
+}
 
+func (r *CallRepository) LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, error) {
+	fields := make([]string, 0, len(mapRes))
 	for k, v := range mapRes {
-		val := ""
+		var col string
 		switch v {
 		case "extension":
-			val = "extension::varchar as " + pq.QuoteIdentifier(k)
+			col = "extension::varchar as " + pq.QuoteIdentifier(k)
 		case "id":
-			val = "id::varchar as " + pq.QuoteIdentifier(k)
+			col = "id::varchar as " + pq.QuoteIdentifier(k)
 		case "queue_id":
-			val = "queue_id::varchar as " + pq.QuoteIdentifier(k)
+			col = "queue_id::varchar as " + pq.QuoteIdentifier(k)
 		case "agent_id":
-			val = "agent_id::varchar as " + pq.QuoteIdentifier(k)
+			col = "agent_id::varchar as " + pq.QuoteIdentifier(k)
 		case "description":
-			val = "description::varchar as " + pq.QuoteIdentifier(k)
+			col = "description::varchar as " + pq.QuoteIdentifier(k)
 		case "created_at":
-			val = "created_at::varchar as " + pq.QuoteIdentifier(k)
+			col = "created_at::varchar as " + pq.QuoteIdentifier(k)
 		case "gateway_id":
-			val = "gateway_id::varchar as " + pq.QuoteIdentifier(k)
+			col = "gateway_id::varchar as " + pq.QuoteIdentifier(k)
 		case "destination":
-			val = "destination::varchar as " + pq.QuoteIdentifier(k)
+			col = "destination::varchar as " + pq.QuoteIdentifier(k)
 		default:
-
-			if !strings.HasPrefix(fmt.Sprintf("%s", v), "variables.") {
+			sv := fmt.Sprintf("%s", v)
+			if !strings.HasPrefix(sv, "variables.") {
 				continue
 			}
-
-			val = fmt.Sprintf("coalesce(regexp_replace((h.variables->%s)::text, '\n|\t', ' ', 'g'), '') as %s", pq.QuoteLiteral(fmt.Sprintf("%s", v)[10:]), pq.QuoteIdentifier(k))
+			col = fmt.Sprintf("coalesce(regexp_replace((h.variables->%s)::text, '\n|\t', ' ', 'g'), '') as %s",
+				pq.QuoteLiteral(sv[10:]), pq.QuoteIdentifier(k))
 		}
-
-		f = append(f, val)
+		fields = append(fields, col)
 	}
 
-	var t *properties
-
-	// fixme extension dialer logic
-	err := s.GetReplica().SelectOne(&t, `select row_to_json(t) variables
-from (select `+strings.Join(f, ", ")+`
+	q := `select row_to_json(t) variables
+from (select ` + strings.Join(fields, ", ") + `
       from (select to_char(h.created_at, 'YYYY-MM-DD"T"HH24:MI:SS"Z"') created_at,
                    coalesce(case
                                 when h.direction = 'inbound' or q.type = any (array [4,5]::smallint[]) then h.to_number
@@ -449,36 +415,36 @@ from (select `+strings.Join(f, ", ")+`
                      left join call_center.cc_queue q on q.id = h.queue_id
                      left join call_center.cc_member_attempt_history ah
                                on ah.domain_id = h.domain_id and ah.member_call_id = h.id::text
-            where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
-              and (:QueueIds::int[] isnull or (h.queue_id = any (:QueueIds) or h.queue_id isnull))
+            where (h.domain_id = @DomainId and h.created_at > now() - (@Hours::varchar || ' hours')::interval)
+              and (@QueueIds::int[] isnull or (h.queue_id = any (@QueueIds) or h.queue_id isnull))
               and (
-                    (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
-                    or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
-                    or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
+                    (h.domain_id = @DomainId and h.destination ~~* @Number::varchar)
+                    or (h.domain_id = @DomainId and h.to_number ~~* @Number::varchar)
+                    or (h.domain_id = @DomainId and h.from_number ~~* @Number::varchar)
                 )
               and h.parent_id isnull
               and (
-                    ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
-                     (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
-                     (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
+                    ((@Dialer::varchar isnull or @Dialer::varchar = 'false') and
+                     (@Inbound::varchar isnull or @Inbound::varchar = 'false') and
+                     (@Outbound::varchar isnull or @Outbound::varchar = 'false')) or
                     (
                             case
-                                when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
-                                        h.attempt_id notnull and case :Dialer
+                                when @Dialer::varchar notnull and @Dialer::varchar != 'false' then
+                                        h.attempt_id notnull and case @Dialer
                                                                      when 'bridged' then h.bridged_at notnull
                                                                      when 'attempt' then h.bridged_at isnull
                                                                      else true end
                                 else false end
                             or case
-                                   when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
-                                               h.direction = 'inbound' and case :Inbound
+                                   when @Inbound::varchar notnull and @Inbound::varchar != 'false' then
+                                               h.direction = 'inbound' and case @Inbound
                                                                                when 'bridged' then h.bridged_at notnull
                                                                                when 'attempt' then h.bridged_at isnull
                                                                                else true end
                                    else false end
                             or case
-                                   when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
-                                               h.direction = 'outbound' and case :Outbound
+                                   when @Outbound::varchar notnull and @Outbound::varchar != 'false' then
+                                               h.direction = 'outbound' and case @Outbound
                                                                                 when 'bridged' then h.bridged_at notnull
                                                                                 when 'attempt' then h.bridged_at isnull
                                                                                 else true end
@@ -487,77 +453,73 @@ from (select `+strings.Join(f, ", ")+`
                 )
             order by h.created_at desc) h
       order by h.created_at desc
-      limit 1) t`, map[string]any{
+      limit 1) t`
+
+	var row lastBridgedRow
+	if err := r.db.Get(context.Background(), &row, q, pgx.NamedArgs{
 		"DomainId": domainId,
 		"Hours":    hours,
 		"Number":   number,
 		"Dialer":   dialer,
 		"Inbound":  inbound,
 		"Outbound": outbound,
-		"QueueIds": pq.Array(queueIds),
-	})
-	if err != nil {
-		return nil, model.NewAppError("SqlCallStore.LastBridgedExtension", "store.sql_call.get_last_bridged.app_error", nil, err.Error(), extractCodeFromErr(err))
+		"QueueIds": queueIds,
+	}); err != nil {
+		return nil, err
 	}
 
-	return t.Variables, nil
+	var vars model.Variables
+	if err := json.Unmarshal(row.Variables, &vars); err != nil {
+		return nil, err
+	}
+	return vars, nil
 }
 
-func (s SqlCallStore) SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError {
-	_, err := s.GetMaster().Exec(`update call_center.cc_calls
-set grantee_id = :GranteeId
-where domain_id = :DomainId and id = :Id;`, map[string]any{
+const setGranteeIdSQL = `update call_center.cc_calls
+set grantee_id = @GranteeId
+where domain_id = @DomainId and id = @Id`
+
+func (r *CallRepository) SetGranteeId(domainId int64, id string, granteeId int64) error {
+	return r.db.Exec(context.Background(), setGranteeIdSQL, pgx.NamedArgs{
 		"DomainId":  domainId,
 		"GranteeId": granteeId,
 		"Id":        id,
 	})
-	if err != nil {
-		model.NewAppError("SqlCallStore.SetGranteeId", "store.sql_call.set_grantee.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetUserId(domainId int64, id string, userId int64) *model.AppError {
-	_, err := s.GetMaster().Exec(`update call_center.cc_calls
-set user_id = :UserId
-where domain_id = :DomainId and id = :Id;`, map[string]any{
+const setUserIdSQL = `update call_center.cc_calls
+set user_id = @UserId
+where domain_id = @DomainId and id = @Id`
+
+func (r *CallRepository) SetUserId(domainId int64, id string, userId int64) error {
+	return r.db.Exec(context.Background(), setUserIdSQL, pgx.NamedArgs{
 		"DomainId": domainId,
 		"UserId":   userId,
 		"Id":       id,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetUserId", "store.sql_call.set_user_id.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetBlindTransfer(domainId int64, id, destination string) *model.AppError {
-	_, err := s.GetMaster().Exec(`update call_center.cc_calls
-set blind_transfer = :Destination::varchar,
-    blind_transfers = coalesce(blind_transfers, '[]')::jsonb || jsonb_build_object('number', :Destination::varchar, 'time', (extract(epoch from now())::numeric * 1000)::int8)
-where id = :Id and domain_id = :DomainId`, map[string]any{
+const setBlindTransferSQL = `update call_center.cc_calls
+set blind_transfer = @Destination::varchar,
+    blind_transfers = coalesce(blind_transfers, '[]')::jsonb || jsonb_build_object('number', @Destination::varchar, 'time', (extract(epoch from now())::numeric * 1000)::int8)
+where id = @Id and domain_id = @DomainId`
+
+func (r *CallRepository) SetBlindTransfer(domainId int64, id, destination string) error {
+	return r.db.Exec(context.Background(), setBlindTransferSQL, pgx.NamedArgs{
 		"Id":          id,
 		"DomainId":    domainId,
 		"Destination": destination,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetBlindTransfer", "store.sql_call.set_blind_transfer.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetContactId(domainId int64, id string, contactId int64) *model.AppError {
-	_, err := s.GetMaster().Exec(`with ua as (
+const setContactIdSQL = `with ua as (
     update call_center.cc_calls
-        set contact_id = :ContactId
-        where id = :Id and domain_id = :DomainId
+        set contact_id = @ContactId
+        where id = @Id and domain_id = @DomainId
         returning id),
      uh as (
          update call_center.cc_calls_history h
-             set contact_id = :ContactId
+             set contact_id = @ContactId
              from (select *
                    from (select ua.id
                          from ua
@@ -565,35 +527,32 @@ func (s SqlCallStore) SetContactId(domainId int64, id string, contactId int64) *
                          select null) x
                    order by x.id nulls last
                    limit 1) x
-             where h.id = :Id and h.domain_id = :DomainId
+             where h.id = @Id and h.domain_id = @DomainId
                  and x.id isnull
              returning h.id)
 select ua.id as id
 from ua
 union all
 select uh.id as id
-from uh`, map[string]any{
+from uh`
+
+func (r *CallRepository) SetContactId(domainId int64, id string, contactId int64) error {
+	return r.db.Exec(context.Background(), setContactIdSQL, pgx.NamedArgs{
 		"DomainId":  domainId,
 		"ContactId": contactId,
 		"Id":        id,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetContactId", "store.sql_call.set_contact.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetVariables(id string, vars *model.CallVariables) *model.AppError {
-	_, err := s.GetMaster().Exec(`with a as (
+const setVariablesSQL = `with a as (
     update call_center.cc_calls c
-        set payload = coalesce(payload, '{}') || :Vars
-    where c.id = :Id::uuid
+        set payload = coalesce(payload, '{}') || @Vars
+    where c.id = @Id::uuid
     returning c.id
 ), h as (
     update call_center.cc_calls_history c
-        set payload = coalesce(payload, '{}') || :Vars
-    where c.id = :Id::uuid
+        set payload = coalesce(payload, '{}') || @Vars
+    where c.id = @Id::uuid
     returning c.id
 )
 select *
@@ -605,39 +564,33 @@ from (
     from h
  ) as t
 where t.id notnull
-limit 1`, map[string]any{
+limit 1`
+
+func (r *CallRepository) SetVariables(id string, vars *model.CallVariables) error {
+	return r.db.Exec(context.Background(), setVariablesSQL, pgx.NamedArgs{
 		"Id":   id,
 		"Vars": vars.ToMapJson(),
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetVariables", "store.sql_call.set_vars.app_error", nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }
 
-func (s SqlCallStore) SetHeartbeat(id string) *model.AppError {
-	_, err := s.GetMaster().Exec(`update call_center.cc_calls
+const setHeartbeatSQL = `update call_center.cc_calls
 set heartbeat = now() + (params->>'heartbeat' || ' sec')::interval
-where id = :Id`, map[string]any{
-		"Id": id,
-	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SetHeartbeat", "store.sql_call.heartbeat.error", nil,
-			fmt.Sprintf("Id=%v %v", id, err.Error()), extractCodeFromErr(err))
-	}
+where id = @Id`
 
-	return nil
+func (r *CallRepository) SetHeartbeat(id string) error {
+	return r.db.Exec(context.Background(), setHeartbeatSQL, pgx.NamedArgs{"Id": id})
 }
 
-func (s SqlCallStore) SaveMediaStats(stats *model.CallActionMediaStats) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, user_id, mos_avg, mos_min, mos_min_at, mos_max,
-                                              mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max, jitter_max_at,
-                                              packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max, packetloss_max_at,
-                                              roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min, roundtrip_min_at)
-values (now(), :SipId, :DomainId, :UserId, :MosAvg, :MosMin, :MosMinAt, :MosMax, :MosMaxAt, :JitterAvg, :JitterMin,
-        :JitterMinAt, :JitterMax, :JitterMaxAt, :PacketlossAvg, :PacketlossMin, :PacketlossMinAt, :PacketlossMax, :PacketlossMaxAt,
-        :RoundtripAvg, :RoundtripMax, :RoundtripMaxAt, :RoundtripMin, :RoundtripMinAt)`, map[string]any{
+const saveMediaStatsSQL = `insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, user_id, mos_avg, mos_min, mos_min_at, mos_max,
+                                          mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max, jitter_max_at,
+                                          packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max, packetloss_max_at,
+                                          roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min, roundtrip_min_at)
+values (now(), @SipId, @DomainId, @UserId, @MosAvg, @MosMin, @MosMinAt, @MosMax, @MosMaxAt, @JitterAvg, @JitterMin,
+        @JitterMinAt, @JitterMax, @JitterMaxAt, @PacketlossAvg, @PacketlossMin, @PacketlossMinAt, @PacketlossMax, @PacketlossMaxAt,
+        @RoundtripAvg, @RoundtripMax, @RoundtripMaxAt, @RoundtripMin, @RoundtripMinAt)`
+
+func (r *CallRepository) SaveMediaStats(stats *model.CallActionMediaStats) error {
+	return r.db.Exec(context.Background(), saveMediaStatsSQL, pgx.NamedArgs{
 		"DomainId":        stats.DomainId,
 		"SipId":           stats.SipId,
 		"UserId":          stats.UserId,
@@ -662,10 +615,4 @@ values (now(), :SipId, :DomainId, :UserId, :MosAvg, :MosMin, :MosMinAt, :MosMax,
 		"RoundtripMin":    stats.RTP.RoundTrip.Min,
 		"RoundtripMinAt":  stats.RTP.RoundTrip.MinAt,
 	})
-	if err != nil {
-		return model.NewAppError("SqlCallStore.SaveMediaStats", "store.sql_call.media.error",
-			nil, err.Error(), extractCodeFromErr(err))
-	}
-
-	return nil
 }

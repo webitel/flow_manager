@@ -66,23 +66,23 @@ type EmailStore interface {
 }
 
 type CallStore interface {
-	Save(call *model.CallActionRinging) *model.AppError
-	SetState(call *model.CallAction) *model.AppError
-	SetBridged(call *model.CallActionBridge) *model.AppError
-	SetHangup(call *model.CallActionHangup) *model.AppError
-	MoveToHistory() ([]model.MissedCall, *model.AppError)
-	Delete(id string) *model.AppError
-	UpdateFrom(id string, name, number, destination *string) *model.AppError
-	SaveTranscript(transcribe *model.CallActionTranscript) *model.AppError
-	SetHeartbeat(id string) *model.AppError
+	Save(call *model.CallActionRinging) error
+	SetState(call *model.CallAction) error
+	SetBridged(call *model.CallActionBridge) error
+	SetHangup(call *model.CallActionHangup) error
+	MoveToHistory() ([]model.MissedCall, error)
+	Delete(id string) error
+	UpdateFrom(id string, name, number, destination *string) error
+	SaveTranscript(transcribe *model.CallActionTranscript) error
+	SetHeartbeat(id string) error
 
-	LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
-	SetGranteeId(domainId int64, id string, granteeId int64) *model.AppError
-	SetUserId(domainId int64, id string, userId int64) *model.AppError
-	SetBlindTransfer(domainId int64, id, destination string) *model.AppError
-	SetContactId(domainId int64, id string, contactId int64) *model.AppError
-	SetVariables(id string, vars *model.CallVariables) *model.AppError
-	SaveMediaStats(stats *model.CallActionMediaStats) *model.AppError
+	LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, error)
+	SetGranteeId(domainId int64, id string, granteeId int64) error
+	SetUserId(domainId int64, id string, userId int64) error
+	SetBlindTransfer(domainId int64, id, destination string) error
+	SetContactId(domainId int64, id string, contactId int64) error
+	SetVariables(id string, vars *model.CallVariables) error
+	SaveMediaStats(stats *model.CallActionMediaStats) error
 }
 
 type SchemaStore interface {

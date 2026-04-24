@@ -144,23 +144,24 @@ func (c *callWatcher) storeHangupCalls() {
 }
 
 func (c *FlowManager) UpdateCallFrom(id string, name, number, destination *string) *model.AppError {
-	return c.Store.Call().UpdateFrom(id, name, number, destination)
+	return toAppError("App.UpdateCallFrom", c.Store.Call().UpdateFrom(id, name, number, destination))
 }
 
 func (c *FlowManager) LastBridgedCall(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
-	return c.Store.Call().LastBridged(domainId, number, hours, dialer, inbound, outbound, queueIds, mapRes)
+	res, err := c.Store.Call().LastBridged(domainId, number, hours, dialer, inbound, outbound, queueIds, mapRes)
+	return res, toAppError("App.LastBridgedCall", err)
 }
 
 func (c *FlowManager) SetCallUserId(domainId int64, id string, userId int64) *model.AppError {
-	return c.Store.Call().SetUserId(domainId, id, userId)
+	return toAppError("App.SetCallUserId", c.Store.Call().SetUserId(domainId, id, userId))
 }
 
 func (f *FlowManager) SetBlindTransferNumber(domainId int64, callId, destination string) *model.AppError {
-	return f.Store.Call().SetBlindTransfer(domainId, callId, destination)
+	return toAppError("App.SetBlindTransferNumber", f.Store.Call().SetBlindTransfer(domainId, callId, destination))
 }
 
 func (f *FlowManager) CallSetContactId(domainId int64, callId string, contactId int64) *model.AppError {
-	return f.Store.Call().SetContactId(domainId, callId, contactId)
+	return toAppError("App.CallSetContactId", f.Store.Call().SetContactId(domainId, callId, contactId))
 }
 
 func (f *FlowManager) StoreCallVariables(id string, vars map[string]string) *model.AppError {
@@ -173,5 +174,5 @@ func (f *FlowManager) StoreCallVariables(id string, vars map[string]string) *mod
 		cv[k] = v
 	}
 
-	return f.Store.Call().SetVariables(id, &cv)
+	return toAppError("App.StoreCallVariables", f.Store.Call().SetVariables(id, &cv))
 }
