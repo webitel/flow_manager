@@ -30,7 +30,7 @@ type server struct {
 	log        *wlog.Logger
 }
 
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	// TODO implement me
 	panic("implement me")
 }
@@ -54,7 +54,7 @@ func (s *server) Name() string {
 	return "web hook"
 }
 
-func (s *server) Start() *model.AppError {
+func (s *server) Start() error {
 	var handler http.Handler = &CorsWrapper{s.RootRouter}
 	s.Server = &http.Server{
 		Handler: handlers.RecoveryHandler(handlers.RecoveryLogger(&RecoveryLogger{}), handlers.PrintRecoveryStack(true))(handler),
@@ -62,7 +62,7 @@ func (s *server) Start() *model.AppError {
 
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
-		return model.NewAppError("http", "http.server.start", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("http.server.start: %w", err)
 	}
 
 	s.ListenAddr = listener.Addr().(*net.TCPAddr)

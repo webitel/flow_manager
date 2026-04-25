@@ -24,13 +24,13 @@ const (
 
 type Server interface {
 	Name() string
-	Start() *AppError
+	Start() error
 	Stop()
 	Host() string
 	Port() int
 	Consume() <-chan Connection
 	Type() ConnectionType
-	Cluster(discovery discovery.ServiceDiscovery) *AppError
+	Cluster(discovery discovery.ServiceDiscovery) error
 }
 
 type Connection interface {
@@ -44,13 +44,13 @@ type Connection interface {
 	Set(ctx context.Context, vars Variables) (Response, *AppError)
 	ParseText(text string, ops ...ParseOption) string
 
-	Close() *AppError
+	Close() error
 	Variables() map[string]string
 	Log() *wlog.Logger
 }
 
 type Result struct {
-	Err *AppError
+	Err error
 	Res Response
 }
 

@@ -359,7 +359,7 @@ func (c *Connection) PrintLastEvent() {
 	}
 }
 
-func (c *Connection) Close() *model.AppError {
+func (c *Connection) Close() error {
 	c.connection.Close()
 	// FIXME
 	return nil

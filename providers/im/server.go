@@ -48,7 +48,7 @@ func (s *server) Name() string {
 	return "IM"
 }
 
-func (s *server) Start() *model.AppError {
+func (s *server) Start() error {
 	s.startOnce.Do(func() {
 		err := s.client.Start()
 		if err != nil {
@@ -92,7 +92,7 @@ func (s *server) Type() model.ConnectionType {
 	return model.ConnectionTypeIM
 }
 
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 

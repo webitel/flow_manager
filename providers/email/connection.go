@@ -128,7 +128,7 @@ func (c *connection) SchemaId() int {
 	return c.pkey.FlowId
 }
 
-func (c *connection) Close() *model.AppError {
+func (c *connection) Close() error {
 	return nil
 }
 

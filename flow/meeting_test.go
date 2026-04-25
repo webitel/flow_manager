@@ -53,7 +53,7 @@ func (c *mockConn) Context() context.Context                             { retur
 func (c *mockConn) Get(_ string) (string, bool)                          { return "", false }
 func (c *mockConn) Variables() map[string]string                         { return nil }
 func (c *mockConn) Log() *wlog.Logger                                    { return c.logger }
-func (c *mockConn) Close() *model.AppError                               { return nil }
+func (c *mockConn) Close() error                                          { return nil }
 func (c *mockConn) ParseText(text string, _ ...model.ParseOption) string { return text }
 func (c *mockConn) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	return c.setFn(ctx, vars)

@@ -141,7 +141,7 @@ func (c *conversation) ParseText(text string, ops ...model.ParseOption) string {
 	return model.ParseText(c, text, ops...)
 }
 
-func (c *conversation) Close() *model.AppError {
+func (c *conversation) Close() error {
 	return nil // fixme
 }
 

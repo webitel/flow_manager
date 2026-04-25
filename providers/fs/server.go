@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"net/http"
 	"sync"
 
 	"github.com/webitel/wlog"
@@ -54,7 +53,7 @@ func (s server) Name() string {
 	return "FreeSWITCH"
 }
 
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 
@@ -62,11 +61,11 @@ func (s server) Type() model.ConnectionType {
 	return model.ConnectionTypeCall
 }
 
-func (s *server) Start() *model.AppError {
+func (s *server) Start() error {
 	address := s.getAddress()
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		return model.NewAppError(s.Name(), "fs.start_server.error", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("fs.start_server.error: %w", err)
 	}
 
 	// todo validate ?

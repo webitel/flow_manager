@@ -138,8 +138,8 @@ func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.Cance
 		return nil, err
 	}
 
-	if err = c.Close(); err != nil {
-		return nil, err
+	if closeErr := c.Close(); closeErr != nil {
+		return nil, closeErr
 	}
 	return &workflow.CancelProcessingResponse{}, nil
 }

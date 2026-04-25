@@ -30,7 +30,7 @@ func (s *server) Name() string {
 	return "Channel queue"
 }
 
-func (s *server) Start() *model.AppError {
+func (s *server) Start() error {
 	s.startOnce.Do(func() {
 		go s.listen()
 	})
@@ -58,7 +58,7 @@ func (s *server) Type() model.ConnectionType {
 	return model.ConnectionTypeCall
 }
 
-func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 

@@ -61,11 +61,11 @@ func (s *MailServer) Name() string {
 	return "Email"
 }
 
-func (s *MailServer) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *MailServer) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 
-func (s *MailServer) Start() *model.AppError {
+func (s *MailServer) Start() error {
 	s.startOnce.Do(func() {
 		go s.listen()
 	})

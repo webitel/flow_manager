@@ -90,7 +90,7 @@ func (c *Connection) SchemaId() int {
 	return c.schemaId
 }
 
-func (c *Connection) Close() *model.AppError {
+func (c *Connection) Close() error {
 	c.cancel()
 	return nil
 }

@@ -88,7 +88,7 @@ func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
 	return model.ParseText(c, text, ops...)
 }
 
-func (c *Connection) Close() *model.AppError {
+func (c *Connection) Close() error {
 	c.stop()
 	return nil
 }

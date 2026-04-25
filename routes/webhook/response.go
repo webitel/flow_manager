@@ -34,10 +34,7 @@ func (r *Router) httpResponse(ctx context.Context, scope *flow.Flow, hook *http.
 		hook.WriteCode(*argv.ResponseCode)
 	}
 
-	err = hook.Close()
-	if err != nil {
-		return model.CallResponseError, err
-	}
+	_ = hook.Close()
 
 	return model.CallResponseOK, nil
 }

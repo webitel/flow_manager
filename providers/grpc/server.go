@@ -73,15 +73,15 @@ func publicAddr(lis net.Listener) (string, int) {
 }
 
 // todo del me
-func (s *Server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
+func (s *Server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 
-func (s *Server) Start() *model.AppError {
+func (s *Server) Start() error {
 	address := s.getAddress()
 	lis, err := net.Listen("tcp", address)
 	if err != nil {
-		return model.NewAppError("GRPC", "grpc.start_server.error", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("grpc.start_server.error: %w", err)
 	}
 
 	s.server = grpc.NewServer(

@@ -19,7 +19,7 @@ type Servers struct {
 	Http    model.Server // nil when WebHook.Addr is not configured
 }
 
-func (f *FlowManager) RegisterServers() *model.AppError {
+func (f *FlowManager) RegisterServers() error {
 	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
 
 	for _, v := range servers {
@@ -39,7 +39,7 @@ func (f *FlowManager) StopServers() {
 	}
 }
 
-func startServer(s model.Server) *model.AppError {
+func startServer(s model.Server) error {
 	if s == nil {
 		return nil
 	}

@@ -231,7 +231,7 @@ func (c *processingConnection) SchemaId() int {
 	return c.schemaId
 }
 
-func (c *processingConnection) Close() *model.AppError {
+func (c *processingConnection) Close() error {
 	c.cancel()
 	return nil
 }
