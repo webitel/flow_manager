@@ -50,6 +50,7 @@ type Store interface {
 	Query(ctx context.Context, sql string, args pgx.NamedArgs) (Rows, error)
 	Get(ctx context.Context, out any, query string, args pgx.NamedArgs) error
 	Exec(ctx context.Context, sql string, args pgx.NamedArgs) error
+	ExecResult(ctx context.Context, sql string, args pgx.NamedArgs) (int64, error)
 	Ping(ctx context.Context) error
 	Close() error
 	Begin(ctx context.Context) (pgx.Tx, error)

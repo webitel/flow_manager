@@ -74,11 +74,15 @@ func (db *DB) Query(ctx context.Context, sql string, args pgx.NamedArgs) (sql.Ro
 
 func (db *DB) Exec(ctx context.Context, sql string, args pgx.NamedArgs) error {
 	_, err := db.pool.Exec(ctx, sql, args)
-	if err != nil {
-		return err
-	}
+	return err
+}
 
-	return nil
+func (db *DB) ExecResult(ctx context.Context, sql string, args pgx.NamedArgs) (int64, error) {
+	tag, err := db.pool.Exec(ctx, sql, args)
+	if err != nil {
+		return 0, err
+	}
+	return tag.RowsAffected(), nil
 }
 
 func (db *DB) Begin(ctx context.Context) (pgx.Tx, error) {

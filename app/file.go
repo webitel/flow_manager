@@ -43,5 +43,9 @@ func (fm *FlowManager) GetFileTranscription(ctx context.Context, fileId, domainI
 }
 
 func (fm *FlowManager) GetFileMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError) {
-	return fm.Store.File().GetMetadata(domainId, ids)
+	files, err := fm.Store.File().GetMetadata(domainId, ids)
+	if err != nil {
+		return nil, model.NewAppError("GetFileMetadata", "store.file.get_metadata", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return files, nil
 }

@@ -116,9 +116,9 @@ type CalendarStore interface {
 }
 
 type ListStore interface {
-	CheckNumber(domainId int64, number string, listId *int, listName *string) (bool, *model.AppError)
-	AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) *model.AppError
-	CleanExpired() (int64, *model.AppError)
+	CheckNumber(domainId int64, number string, listId *int, listName *string) (bool, error)
+	AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) error
+	CleanExpired() (int64, error)
 }
 
 type ChatStore interface {
@@ -145,11 +145,11 @@ type MemberStore interface {
 }
 
 type LogStore interface {
-	Save(schemaId int, connId string, log any) *model.AppError
+	Save(schemaId int, connId string, log any) error
 }
 
 type FileStore interface {
-	GetMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError)
+	GetMetadata(domainId int64, ids []int64) ([]model.File, error)
 }
 
 type WebHookStore interface {
