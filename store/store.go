@@ -111,8 +111,8 @@ type MediaStore interface {
 }
 
 type CalendarStore interface {
-	Check(domainId int64, id *int, name *string) (*model.Calendar, *model.AppError)
-	GetTimezones() ([]*model.Timezone, *model.AppError)
+	Check(domainId int64, id *int, name *string) (*model.Calendar, error)
+	GetTimezones() ([]*model.Timezone, error)
 }
 
 type ListStore interface {
@@ -122,11 +122,11 @@ type ListStore interface {
 }
 
 type ChatStore interface {
-	RoutingFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
-	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
-	GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError)
-	LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
-	ProfileType(domainId int64, profileId int) (string, *model.AppError)
+	RoutingFromProfile(domainId, profileId int64) (*model.Routing, error)
+	RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error)
+	GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) ([]model.ChatMessage, error)
+	LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, error)
+	ProfileType(domainId int64, profileId int) (string, error)
 }
 
 type QueueStore interface {

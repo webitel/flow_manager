@@ -2,15 +2,17 @@ package app
 
 import (
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"time"
 )
 
 func (fm *FlowManager) InitCacheTimezones() *model.AppError {
-	list, err := fm.Store.Calendar().GetTimezones()
-	if err != nil {
-		return err
+	list, storeErr := fm.Store.Calendar().GetTimezones()
+	if storeErr != nil {
+		return model.NewAppError("InitCacheTimezones", "store.calendar.get_timezones", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
 	fm.timezoneList = make(map[int]*time.Location, len(list))

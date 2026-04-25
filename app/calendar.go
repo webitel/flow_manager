@@ -1,7 +1,15 @@
 package app
 
-import "github.com/webitel/flow_manager/model"
+import (
+	"net/http"
+
+	"github.com/webitel/flow_manager/model"
+)
 
 func (fm *FlowManager) CheckCalendar(domainId int64, id *int, name *string) (*model.Calendar, *model.AppError) {
-	return fm.Store.Calendar().Check(domainId, id, name)
+	c, err := fm.Store.Calendar().Check(domainId, id, name)
+	if err != nil {
+		return nil, model.NewAppError("CheckCalendar", "store.calendar.check", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return c, nil
 }

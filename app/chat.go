@@ -12,11 +12,12 @@ import (
 )
 
 func (fm *FlowManager) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError) {
-	routing, err := fm.Store.Chat().RoutingFromProfile(domainId, profileId)
-	if err != nil {
-		return nil, err
+	routing, storeErr := fm.Store.Chat().RoutingFromProfile(domainId, profileId)
+	if storeErr != nil {
+		return nil, model.NewAppError("GetChatRouteFromProfile", "store.chat.routing_from_profile", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
+	var err *model.AppError
 	routing.Schema, err = fm.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if err != nil {
 		return nil, err
@@ -26,11 +27,11 @@ func (fm *FlowManager) GetChatRouteFromProfile(domainId, profileId int64) (*mode
 }
 
 func (fm *FlowManager) GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, *model.AppError) {
-	messages, err := fm.Store.Chat().GetMessagesByConversation(ctx, domainId, conversationId, limit)
-	if err != nil {
-		return nil, err
+	messages, storeErr := fm.Store.Chat().GetMessagesByConversation(ctx, domainId, conversationId, limit)
+	if storeErr != nil {
+		return nil, model.NewAppError("GetChatMessagesByConversationId", "store.chat.get_messages", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
-	return messages, nil
+	return &messages, nil
 }
 
 // ParseChatMessages converts all chat message models to the given output type.
@@ -99,11 +100,12 @@ func (fm *FlowManager) getMessageTemplateByType(messageType string, sender strin
 }
 
 func (fm *FlowManager) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError) {
-	routing, err := fm.Store.Chat().RoutingFromSchemaId(domainId, schemaId)
-	if err != nil {
-		return nil, err
+	routing, storeErr := fm.Store.Chat().RoutingFromSchemaId(domainId, schemaId)
+	if storeErr != nil {
+		return nil, model.NewAppError("GetChatRouteFromSchemaId", "store.chat.routing_from_schema", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
+	var err *model.AppError
 	routing.Schema, err = fm.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if err != nil {
 		return nil, err
@@ -144,11 +146,19 @@ func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64,
 }
 
 func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
-	return c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
+	vars, err := c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
+	if err != nil {
+		return nil, model.NewAppError("LastBridgedChat", "store.chat.last_bridged", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return vars, nil
 }
 
 func (c *FlowManager) ChatProfileType(domainId int64, profileId int) (string, *model.AppError) {
-	return c.Store.Chat().ProfileType(domainId, profileId)
+	t, err := c.Store.Chat().ProfileType(domainId, profileId)
+	if err != nil {
+		return "", model.NewAppError("ChatProfileType", "store.chat.profile_type", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return t, nil
 }
 
 func (fm *FlowManager) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError {
