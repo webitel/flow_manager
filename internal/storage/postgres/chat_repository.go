@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/lib/pq"
 
 	infraSql "github.com/webitel/flow_manager/infra/sql"
+	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -117,27 +117,27 @@ func (r *ChatRepository) LastBridged(domainId int64, number, hours string, queue
 		var val string
 		switch v {
 		case "extension":
-			val = "extension::varchar as " + pq.QuoteIdentifier(k)
+			val = "extension::varchar as " + pgsql.QuoteIdentifier(k)
 		case "id":
-			val = "id::varchar as " + pq.QuoteIdentifier(k)
+			val = "id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "queue_id":
-			val = "queue_id::varchar as " + pq.QuoteIdentifier(k)
+			val = "queue_id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "agent_id":
-			val = "agent_id::varchar as " + pq.QuoteIdentifier(k)
+			val = "agent_id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "description":
-			val = "description::varchar as " + pq.QuoteIdentifier(k)
+			val = "description::varchar as " + pgsql.QuoteIdentifier(k)
 		case "created_at":
-			val = "created_at::varchar as " + pq.QuoteIdentifier(k)
+			val = "created_at::varchar as " + pgsql.QuoteIdentifier(k)
 		case "gateway_id":
-			val = "gateway_id::varchar as " + pq.QuoteIdentifier(k)
+			val = "gateway_id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "destination":
-			val = "destination::varchar as " + pq.QuoteIdentifier(k)
+			val = "destination::varchar as " + pgsql.QuoteIdentifier(k)
 		default:
 			if !strings.HasPrefix(v, "variables.") {
 				continue
 			}
 			val = fmt.Sprintf("coalesce(regexp_replace((h.variables->%s)::text, '\n|\t', ' ', 'g'), '') as %s",
-				pq.QuoteLiteral(v[10:]), pq.QuoteIdentifier(k))
+				pgsql.QuoteLiteral(v[10:]), pgsql.QuoteIdentifier(k))
 		}
 		f = append(f, val)
 	}

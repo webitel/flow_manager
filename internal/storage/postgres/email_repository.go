@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/lib/pq"
 	"golang.org/x/oauth2"
+
+	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
 
 	infraSql "github.com/webitel/flow_manager/infra/sql"
 	"github.com/webitel/flow_manager/model"
@@ -197,11 +198,11 @@ func (r *EmailRepository) GerProperties(domainId int64, id *int64, messageId *st
 		var val string
 		switch v {
 		case "html":
-			f = append(f, "cid as "+pq.QuoteIdentifier(model.MailCidKey))
-			val = `coalesce("html"::text, '') as ` + pq.QuoteIdentifier(k)
+			f = append(f, "cid as "+pgsql.QuoteIdentifier(model.MailCidKey))
+			val = `coalesce("html"::text, '') as ` + pgsql.QuoteIdentifier(k)
 		case "from", "to", "subject", "contact_ids", "owner_id",
 			"cc", "sender", "reply_to", "in_reply_to", "body", "attachments", "message_id", "id":
-			val = `coalesce("` + v + `"::text, '') as ` + pq.QuoteIdentifier(k)
+			val = `coalesce("` + v + `"::text, '') as ` + pgsql.QuoteIdentifier(k)
 		default:
 			continue
 		}

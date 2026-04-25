@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/lib/pq"
 
 	infraSql "github.com/webitel/flow_manager/infra/sql"
+	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -90,17 +90,17 @@ func (r *QueueRepository) GetQueueData(domainId int64, search *model.SearchEntit
 		var val string
 		switch v {
 		case "type":
-			val = "type::varchar as " + pq.QuoteIdentifier(k)
+			val = "type::varchar as " + pgsql.QuoteIdentifier(k)
 		case "name":
-			val = "name::varchar as " + pq.QuoteIdentifier(k)
+			val = "name::varchar as " + pgsql.QuoteIdentifier(k)
 		case "enabled":
-			val = "enabled::varchar as " + pq.QuoteIdentifier(k)
+			val = "enabled::varchar as " + pgsql.QuoteIdentifier(k)
 		case "priority":
-			val = "priority::varchar as " + pq.QuoteIdentifier(k)
+			val = "priority::varchar as " + pgsql.QuoteIdentifier(k)
 		case "waiting":
-			val = "waiting::varchar as " + pq.QuoteIdentifier(k)
+			val = "waiting::varchar as " + pgsql.QuoteIdentifier(k)
 		case "size":
-			val = "size::varchar as " + pq.QuoteIdentifier(k)
+			val = "size::varchar as " + pgsql.QuoteIdentifier(k)
 		default:
 			continue
 		}
@@ -143,7 +143,7 @@ func (r *QueueRepository) GetQueueAgents(domainId int64, queueId int, channel st
 	for k, v := range mapRes {
 		switch v {
 		case "count", "online", "offline", "pause", "waiting":
-			f = append(f, fmt.Sprintf("%s as %s", v, pq.QuoteIdentifier(k)))
+			f = append(f, fmt.Sprintf("%s as %s", v, pgsql.QuoteIdentifier(k)))
 		}
 	}
 

@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/lib/pq"
 
 	infraSql "github.com/webitel/flow_manager/infra/sql"
+	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -128,27 +128,27 @@ func (r *MemberRepository) GetProperties(domainId int64, req *model.SearchMember
 		var col string
 		switch v {
 		case "id":
-			col = "id::varchar as " + pq.QuoteIdentifier(k)
+			col = "id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "name":
-			col = "name::varchar as " + pq.QuoteIdentifier(k)
+			col = "name::varchar as " + pgsql.QuoteIdentifier(k)
 		case "priority":
-			col = "priority::varchar as " + pq.QuoteIdentifier(k)
+			col = "priority::varchar as " + pgsql.QuoteIdentifier(k)
 		case "attempts":
-			col = "attempts::varchar as " + pq.QuoteIdentifier(k)
+			col = "attempts::varchar as " + pgsql.QuoteIdentifier(k)
 		case "stop_cause":
-			col = "stop_cause::varchar as " + pq.QuoteIdentifier(k)
+			col = "stop_cause::varchar as " + pgsql.QuoteIdentifier(k)
 		case "bucket_id":
-			col = "bucket_id::varchar as " + pq.QuoteIdentifier(k)
+			col = "bucket_id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "count_destinations":
-			col = "array_length(m.sys_destinations, 1)::varchar as " + pq.QuoteIdentifier(k)
+			col = "array_length(m.sys_destinations, 1)::varchar as " + pgsql.QuoteIdentifier(k)
 		case "all_destinations":
-			col = "array_length(m.search_destinations, 1)::varchar as " + pq.QuoteIdentifier(k)
+			col = "array_length(m.search_destinations, 1)::varchar as " + pgsql.QuoteIdentifier(k)
 		default:
 			sv := fmt.Sprintf("%s", v)
 			if !strings.HasPrefix(sv, "variables.") {
 				continue
 			}
-			col = fmt.Sprintf("(m.variables->%s) as %s", pq.QuoteLiteral(sv[10:]), pq.QuoteIdentifier(k))
+			col = fmt.Sprintf("(m.variables->%s) as %s", pgsql.QuoteLiteral(sv[10:]), pgsql.QuoteIdentifier(k))
 		}
 		fields = append(fields, col)
 	}

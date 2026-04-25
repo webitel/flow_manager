@@ -3,8 +3,6 @@ package model
 import (
 	"fmt"
 	"strings"
-
-	"github.com/lib/pq"
 )
 
 type Endpoint struct {
@@ -15,7 +13,7 @@ type Endpoint struct {
 	Dnd         *bool             `json:"dnd" db:"dnd"`
 	Destination *string           `json:"destination" db:"destination"`
 	Number      *string           `json:"number" db:"-"`
-	Variables   pq.StringArray    `json:"variables" db:"variables"`
+	Variables   []string          `json:"variables" db:"variables"`
 	Params      map[string]string `json:"parameters"`
 	HasPush     *bool             `json:"has_push" db:"has_push"`
 }

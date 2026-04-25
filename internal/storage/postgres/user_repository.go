@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
-	"github.com/lib/pq"
 
 	infraSql "github.com/webitel/flow_manager/infra/sql"
+	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -66,56 +66,56 @@ func (r *UserRepository) GetProperties(domainId int64, search *model.SearchUser,
 		var col string
 		switch v {
 		case "name":
-			col = "coalesce(u.name, u.username)::varchar as " + pq.QuoteIdentifier(k)
+			col = "coalesce(u.name, u.username)::varchar as " + pgsql.QuoteIdentifier(k)
 		case "user_id":
-			col = "a.user_id::varchar as " + pq.QuoteIdentifier(k)
+			col = "a.user_id::varchar as " + pgsql.QuoteIdentifier(k)
 		case "username":
-			col = "coalesce(u.username, '')::varchar as " + pq.QuoteIdentifier(k)
+			col = "coalesce(u.username, '')::varchar as " + pgsql.QuoteIdentifier(k)
 		case "extension":
-			col = "u.extension::varchar as " + pq.QuoteIdentifier(k)
+			col = "u.extension::varchar as " + pgsql.QuoteIdentifier(k)
 		case "email":
-			col = "coalesce(u.email::varchar, '') as " + pq.QuoteIdentifier(k)
+			col = "coalesce(u.email::varchar, '') as " + pgsql.QuoteIdentifier(k)
 		case "dnd":
-			col = "u.dnd::varchar as " + pq.QuoteIdentifier(k)
+			col = "u.dnd::varchar as " + pgsql.QuoteIdentifier(k)
 		case "agent_id":
 			col = `(select a.id::text
-				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "team_id":
 			col = `(select a.team_id::text
-				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "team_name":
-			col = `(select tm.name::text from call_center.cc_agent a left join call_center.cc_team tm on tm.id = a.team_id where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+			col = `(select tm.name::text from call_center.cc_agent a left join call_center.cc_team tm on tm.id = a.team_id where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "bridged_calls":
 			col = `(select count(*) from call_center.cc_calls c
-where c.user_id = u.id and c.bridged_at notnull and c.hangup_at isnull) ` + pq.QuoteIdentifier(k)
+where c.user_id = u.id and c.bridged_at notnull and c.hangup_at isnull) ` + pgsql.QuoteIdentifier(k)
 		case "active_calls":
 			col = `(select count(*) from call_center.cc_calls c
-where c.user_id = u.id) ` + pq.QuoteIdentifier(k)
+where c.user_id = u.id) ` + pgsql.QuoteIdentifier(k)
 		case "agent_status":
 			col = `(select a.status::text
-				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "status_payload":
 			col = `(select coalesce(a.status_payload, '')::text
-				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "super_extension":
 			col = `(select su.extension::text
 from call_center.cc_agent a
     inner join call_center.cc_agent s on s.id = a.supervisor_ids[1]
     inner join directory.wbt_user su on su.id = s.user_id
-where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		case "admin_extension":
 			col = `(select su.extension::text
 from call_center.cc_agent a
     inner join call_center.cc_team t on t.id = a.team_id
     inner join call_center.cc_agent s on s.id = t.admin_id
     inner join directory.wbt_user su on su.id = s.user_id
-where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
+where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		default:
 			if !strings.HasPrefix(v, "variables.") {
 				continue
 			}
 			col = fmt.Sprintf("coalesce((u.profile->>%s)::text, '') as %s",
-				pq.QuoteLiteral(v[10:]), pq.QuoteIdentifier(k))
+				pgsql.QuoteLiteral(v[10:]), pgsql.QuoteIdentifier(k))
 		}
 		cols = append(cols, col)
 	}
