@@ -34,7 +34,7 @@ type Store interface {
 }
 
 type SocketSessionStore interface {
-	Get(userID, domainID int64, appName string) (*model.SocketSession, *model.AppError)
+	Get(userID, domainID int64, appName string) (*model.SocketSession, error)
 }
 
 type SessionStore interface {
@@ -48,8 +48,8 @@ type CacheStore interface {
 }
 
 type UserStore interface {
-	GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, *model.AppError)
-	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
+	GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, error)
+	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 }
 
 type EmailStore interface {
@@ -157,5 +157,5 @@ type WebHookStore interface {
 }
 
 type SystemcSettings interface {
-	Get(ctx context.Context, domainId int64, name string) (json.RawMessage, *model.AppError)
+	Get(ctx context.Context, domainId int64, name string) (json.RawMessage, error)
 }

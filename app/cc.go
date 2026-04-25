@@ -35,9 +35,9 @@ func (fm *FlowManager) TaskJoinToAgent(ctx context.Context, in *genpb.TaskJoinTo
 }
 
 func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64, extension string) *model.AppError {
-	agentId, err := fm.Store.User().GetAgentIdByExtension(domainId, extension)
-	if err != nil {
-		return err
+	agentId, storeErr := fm.Store.User().GetAgentIdByExtension(domainId, extension)
+	if storeErr != nil {
+		return model.NewAppError("CancelUserDistribute", "store.user.get_agent_id", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
 	if agentId == nil {
@@ -49,7 +49,7 @@ func (fm *FlowManager) CancelUserDistribute(ctx context.Context, domainId int64,
 	})
 
 	if perr != nil {
-		return model.NewAppError("App", "CancelUserDistribute", nil, err.Error(), http.StatusNotFound)
+		return model.NewAppError("App", "CancelUserDistribute", nil, perr.Error(), http.StatusNotFound)
 	}
 
 	return nil

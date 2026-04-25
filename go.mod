@@ -15,7 +15,6 @@ require (
 	github.com/emersion/go-sasl v0.0.0-20231106173351-e73c9f7bad43
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/georgysavva/scany/v2 v2.1.4
-	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-playground/form v3.1.4+incompatible
 	github.com/go-sql-driver/mysql v1.9.3
 	github.com/gorilla/handlers v1.5.2
@@ -118,7 +117,6 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
-	github.com/poy/onpar v1.1.2 // indirect
 	github.com/sethvargo/go-retry v0.3.0 // indirect
 	github.com/shirou/gopsutil/v4 v4.26.3 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect

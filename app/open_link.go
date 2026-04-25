@@ -15,16 +15,15 @@ const (
 )
 
 func (fm *FlowManager) OpenLink(domainId int64, sockId string, userId int64, message string, url string) *model.AppError {
-	var sockSession *model.SocketSession
-	var err *model.AppError
-
 	if sockId == "" {
-		sockSession, err = fm.Store.SocketSession().Get(userId, domainId, descTrackAppName)
-		if err != nil {
-			return model.NewAppError("open_link", "store.open_link.error", nil, err.Error(), http.StatusInternalServerError)
+		sockSession, storeErr := fm.Store.SocketSession().Get(userId, domainId, descTrackAppName)
+		if storeErr != nil {
+			return model.NewAppError("open_link", "store.open_link.error", nil, storeErr.Error(), http.StatusInternalServerError)
 		}
 		sockId = sockSession.ID
 	}
+
+	var err *model.AppError
 
 	n := model.Notification{
 		DomainId:  domainId,
