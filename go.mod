@@ -26,7 +26,6 @@ require (
 	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jpillora/backoff v1.0.0
 	github.com/k3a/html2text v1.2.1
-	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/pborman/uuid v1.2.1

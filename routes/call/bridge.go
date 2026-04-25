@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lib/pq"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -206,7 +205,7 @@ func getArrayStringFromMap(name string, params map[string]interface{}) (res []st
 	return
 }
 
-func getVars(src model.ApplicationObject, res pq.StringArray) pq.StringArray {
+func getVars(src model.ApplicationObject, res []string) []string {
 	if v, ok := src["parameters"].(map[string]interface{}); ok {
 		for k, vv := range v {
 			res = append(res, fmt.Sprintf("'%s'='%s'", k, vv))
