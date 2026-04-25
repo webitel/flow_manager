@@ -1,10 +1,9 @@
-package cachelayer
+package cache
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
-	"net/http"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -33,53 +32,48 @@ func NewExternalStoreManager() *ExternalStoreManager {
 }
 
 // TODO sync
-func (e *ExternalStoreManager) Connect(driver, dns string) (*ExternalDb, *model.AppError) {
+func (e *ExternalStoreManager) Connect(driver, dns string) (*ExternalDb, error) {
 	if d, ok := e.cache.Get(dns); ok {
 		return d.(*ExternalDb), nil
 	}
 
 	db, err := sql.Open(driver, dns)
 	if err != nil {
-		return nil, model.NewAppError("Cache", "cache.connect.open_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("external store: open %q: %w", dns, err)
 	}
 
 	db.SetConnMaxIdleTime(time.Second * (CacheExpire - 60))
 
-	e.cache.AddWithDefaultExpires(dns, &ExternalDb{
-		db: db,
-	})
+	e.cache.AddWithDefaultExpires(dns, &ExternalDb{db: db})
 
 	wlog.Info(fmt.Sprintf("store cache db %s", dns))
 	return e.Connect(driver, dns)
 }
 
-func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{}) (map[string]interface{}, *model.AppError) {
+func (d *ExternalDb) Query(ctx context.Context, text string, params []interface{}) (map[string]interface{}, error) {
 	rows, err := d.db.QueryContext(ctx, text, params...)
-
 	if err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("external db: query: %w", err)
 	}
-
 	defer rows.Close()
 
 	colNames, err := rows.Columns()
 	if err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.columns.err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("external db: columns: %w", err)
 	}
 
 	cols := make([]interface{}, len(colNames))
 	colPtrs := make([]interface{}, len(colNames))
-	for i := 0; i < len(colNames); i++ {
+	for i := range colNames {
 		colPtrs[i] = &cols[i]
 	}
 
 	rows.Next()
 	if err = rows.Scan(colPtrs...); err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.scan.err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("external db: scan: %w", err)
 	}
 
-	result := make(map[string]interface{})
-
+	result := make(map[string]interface{}, len(colNames))
 	for i, col := range cols {
 		switch col.(type) {
 		case []uint8, []uint32, []uint:

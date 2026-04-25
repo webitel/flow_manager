@@ -14,11 +14,11 @@ import (
 	infraSql "github.com/webitel/flow_manager/infra/sql"
 	pgsqlImpl "github.com/webitel/flow_manager/infra/sql/pgsql"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"github.com/webitel/flow_manager/store/cachelayer"
 )
 
 // AppID is a distinct named type so fx can inject it unambiguously.
@@ -104,15 +104,15 @@ func NewCheckpointRepo(db infraSql.Store) session.Repository {
 }
 
 // NewCacheStores always provides in-memory cache; adds Redis when configured.
-func NewCacheStores(cfg *model.Config) (cachelayer.CacheStores, error) {
-	stores := cachelayer.CacheStores{
-		cachelayer.Memory: cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{
+func NewCacheStores(cfg *model.Config) (cache.CacheStores, error) {
+	stores := cache.CacheStores{
+		cache.Memory: cache.NewMemoryCache(&cache.MemoryCacheConfig{
 			Size:          10000,
 			DefaultExpiry: 10000,
 		}),
 	}
 	if cfg.RedisSettings.IsValid() {
-		redis, err := cachelayer.NewRedisCache(
+		redis, err := cache.NewRedisCache(
 			cfg.RedisSettings.Host,
 			cfg.RedisSettings.Port,
 			cfg.RedisSettings.Password,
@@ -121,7 +121,7 @@ func NewCacheStores(cfg *model.Config) (cachelayer.CacheStores, error) {
 		if err != nil {
 			return nil, err
 		}
-		stores[cachelayer.Redis] = redis
+		stores[cache.Redis] = redis
 	}
 	return stores, nil
 }

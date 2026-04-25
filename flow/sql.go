@@ -2,8 +2,10 @@ package flow
 
 import (
 	"context"
-	"github.com/webitel/flow_manager/model"
+	"net/http"
 	"time"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 type SqlArgs struct {
@@ -35,14 +37,14 @@ func (r *router) SqlHandler(ctx context.Context, scope *Flow, conn model.Connect
 
 	db, err := r.fm.GetSqlDb(req.Driver, req.Dns)
 	if err != nil {
-		return model.CallResponseError, err
+		return model.CallResponseError, model.NewAppError("SqlHandler", "flow.sql.connect", nil, err.Error(), http.StatusInternalServerError)
 	}
 
 	c, _ := context.WithTimeout(ctx, time.Duration(req.Timeout)*time.Millisecond)
 
-	result, err := db.Query(c, req.Query, req.Params)
-	if err != nil {
-		return model.CallResponseError, err
+	result, qErr := db.Query(c, req.Query, req.Params)
+	if qErr != nil {
+		return model.CallResponseError, model.NewAppError("SqlHandler", "flow.sql.query", nil, qErr.Error(), http.StatusInternalServerError)
 	}
 
 	return conn.Set(ctx, result)

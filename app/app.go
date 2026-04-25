@@ -14,13 +14,13 @@ import (
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 	fmhttp "github.com/webitel/flow_manager/providers/http"
 	"github.com/webitel/flow_manager/store"
-	"github.com/webitel/flow_manager/store/cachelayer"
 
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
@@ -39,7 +39,7 @@ type FlowManager struct {
 	config         *model.Config
 	cluster        *cluster
 	Store          store.Store
-	ExternalStore  *cachelayer.ExternalStoreManager
+	ExternalStore  *cache.ExternalStoreManager
 	checkpointRepo session.Repository
 
 	grpcServer    *fmgrpc.Server
@@ -75,7 +75,7 @@ type FlowManager struct {
 	cert        presign.PreSign
 	listWatcher *listWatcher
 
-	cacheStore cachelayer.CacheStores
+	cacheStore cache.CacheStores
 
 	AiBots *aibridge.Client
 
@@ -88,7 +88,7 @@ func NewFlowManager(
 	log *wlog.Logger,
 	st store.Store,
 	checkpointRepo session.Repository,
-	cacheStores cachelayer.CacheStores,
+	cacheStores cache.CacheStores,
 	storage domstorage.Client,
 	casesClient *cases.Api,
 	aiBots *aibridge.Client,
@@ -125,7 +125,7 @@ func NewFlowManager(
 	}
 
 	if cfg.ExternalSql {
-		fm.ExternalStore = cachelayer.NewExternalStoreManager()
+		fm.ExternalStore = cache.NewExternalStoreManager()
 	}
 
 	wlog.Info(fmt.Sprintf("version: %s", Version()))
