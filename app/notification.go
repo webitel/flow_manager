@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
+	"strconv"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
-	"strconv"
 )
 
 func (fm *FlowManager) NotificationMissedCalls(call model.MissedCall) {
@@ -21,8 +23,7 @@ func (fm *FlowManager) NotificationMissedCalls(call model.MissedCall) {
 }
 
 func (fm *FlowManager) UserNotification(n model.Notification) {
-	err := fm.eventQueue.SendJSON("engine", "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson())
-	if err != nil {
+	if err := fm.eventQueue.Publish(context.Background(), "engine", "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson()); err != nil {
 		wlog.Error(err.Error())
 	}
 }

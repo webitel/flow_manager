@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
@@ -12,5 +13,8 @@ func (f *FlowManager) SendMQJson(exchange, key string, body []byte) *model.AppEr
 	if !f.Config().AllowUseMQ {
 		return ErrAllowUseMQ
 	}
-	return f.eventQueue.SendJSON(exchange, key, body)
+	if err := f.eventQueue.Publish(context.Background(), exchange, key, body); err != nil {
+		return model.NewAppError("MQ", "mq.publish.err", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return nil
 }

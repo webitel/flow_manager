@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -37,9 +38,9 @@ func (fm *FlowManager) OpenLink(domainId int64, sockId string, userId int64, mes
 		},
 	}
 
-	err = fm.eventQueue.SendJSON(engineExchange, "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson())
-	if err != nil {
-		wlog.Error(err.Error())
+	if pubErr := fm.eventQueue.Publish(context.Background(), engineExchange, "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson()); pubErr != nil {
+		wlog.Error(pubErr.Error())
+		err = model.NewAppError("open_link", "mq.publish.err", nil, pubErr.Error(), http.StatusInternalServerError)
 	}
 
 	return err

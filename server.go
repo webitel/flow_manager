@@ -54,7 +54,7 @@ func main() {
 		fx.Provide(bsfx.NewStore),
 		fx.Provide(bsfx.NewCheckpointRepo),
 		fx.Provide(bsfx.NewCacheStores),
-		fx.Provide(bsfx.NewMQ),
+		fx.Provide(bsfx.NewEventBus),
 		fx.Provide(bsfx.NewStorageClient),
 		fx.Provide(bsfx.NewCasesClient),
 		fx.Provide(bsfx.NewAiBotsClient),

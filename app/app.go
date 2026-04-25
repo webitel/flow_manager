@@ -17,7 +17,6 @@ import (
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/mq"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 	fmhttp "github.com/webitel/flow_manager/providers/http"
 	"github.com/webitel/flow_manager/store"
@@ -60,7 +59,7 @@ type FlowManager struct {
 	stop    chan struct{}
 	stopped chan struct{}
 
-	eventQueue mq.MQ
+	eventQueue ports.EventBus
 
 	CallRouter    model.Router
 	GRPCRouter    model.Router
@@ -95,7 +94,7 @@ func NewFlowManager(
 	srvs Servers,
 	chatMgr *fmgrpc.ChatManager,
 	ccMgr domcc.CCManager,
-	eventQueue mq.MQ,
+	eventQueue ports.EventBus,
 	cb *CallbackResolver,
 ) (*FlowManager, error) {
 	fm := &FlowManager{

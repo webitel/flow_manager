@@ -51,7 +51,7 @@ func main() {
 		fx.Provide(bsfx.NewCacheStores),
 		fx.Invoke(runMigrations),
 		// clients
-		fx.Provide(bsfx.NewMQ),
+		fx.Provide(bsfx.NewEventBus),
 		fx.Provide(bsfx.NewStorageClient),
 		fx.Provide(bsfx.NewCasesClient),
 		fx.Provide(bsfx.NewAiBotsClient),

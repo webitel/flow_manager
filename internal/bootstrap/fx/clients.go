@@ -3,21 +3,22 @@ package bsfx
 import (
 	"context"
 
+	"github.com/webitel/wlog"
 	"go.uber.org/fx"
 
+	inframq "github.com/webitel/flow_manager/infra/mq"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	outcc "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
 	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/mq"
-	"github.com/webitel/flow_manager/mq/rabbit"
 )
 
-func NewMQ(cfg *model.Config, id AppID) mq.MQ {
-	return mq.NewMQ(rabbit.NewRabbitMQ(cfg.MQSettings, string(id)))
+func NewEventBus(cfg *model.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
+	return inframq.NewRabbitEventBus(log, cfg.MQSettings.Url, string(id))
 }
 
 func NewStorageClient(cfg *model.Config) (domstorage.Client, error) {
@@ -46,7 +47,7 @@ func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*aibridge.Client, erro
 
 // NewCCManager creates the CC queue manager and registers Start/Stop in the fx
 // lifecycle.
-func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue mq.MQ) (domcc.CCManager, error) {
+func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue ports.EventBus) (domcc.CCManager, error) {
 	mgr := outcc.NewCCManager(cfg.DiscoverySettings.Url, eventQueue.ConsumeCCEvents())
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {

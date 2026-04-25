@@ -7,9 +7,9 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/providers/channel"
 	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
@@ -40,7 +40,7 @@ func NewServers(
 	cb *app.CallbackResolver,
 	storage domstorage.Client,
 	s store.Store,
-	eventQueue mq.MQ,
+	eventQueue ports.EventBus,
 	log *wlog.Logger,
 	tlsCfg *tls.Config,
 ) app.Servers {

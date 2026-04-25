@@ -1,19 +1,18 @@
-package mq
+package ports
 
 import (
+	"context"
+
 	"github.com/webitel/flow_manager/model"
 )
 
-type MQ interface {
-	SendJSON(exchange, key string, data []byte) *model.AppError
+// EventBus is the outbound port for publishing and consuming broker events.
+type EventBus interface {
+	Publish(ctx context.Context, exchange, key string, data []byte) error
 	Close()
 
 	ConsumeCallEvent() <-chan model.CallActionData
 	ConsumeExec() <-chan model.ChannelExec
 	ConsumeIM() <-chan model.MessageWrapper
 	ConsumeCCEvents() <-chan model.CCQueueEvent
-
-	QueueEvent() QueueEvent
 }
-
-type QueueEvent any
