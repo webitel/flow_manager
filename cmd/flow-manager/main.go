@@ -70,6 +70,7 @@ func main() {
 		fx.Provide(flow.NewRouter),
 		fx.Provide(newAppRouters),
 		fx.Invoke(wireRouters),
+		fx.Invoke(bsfx.RegisterStartupHooks),
 		fx.Invoke(registerLifecycle),
 	).Run()
 }

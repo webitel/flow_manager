@@ -134,35 +134,38 @@ func NewFlowManager(
 	fm.listWatcher = NewListWatcher(fm)
 	fm.cluster = NewCluster(fm)
 
+	return fm, nil
+}
+
+// Start runs all I/O-bound startup steps that must happen after the fx graph
+// is fully wired. Called from RegisterStartupHooks via fx.Lifecycle.OnStart.
+func (fm *FlowManager) Start() error {
 	if err := fm.cluster.Start(); err != nil {
-		return nil, err
+		return err
 	}
 	if err := fm.chatManager.Start(fm.cluster.discovery); err != nil {
-		return nil, err
+		return err
 	}
-	if err := srvs.Grpc.Cluster(fm.cluster.discovery); err != nil {
-		return nil, err
+	if err := fm.grpcServer.Cluster(fm.cluster.discovery); err != nil {
+		return err
 	}
-	if len(cfg.WebHook.Addr) > 1 {
-		fm.httpServer = fmhttp.NewServer(fm, cfg.WebHook.Addr)
+	if len(fm.config.WebHook.Addr) > 1 {
+		fm.httpServer = fmhttp.NewServer(fm, fm.config.WebHook.Addr)
 	}
 	if err := fm.RegisterServers(); err != nil {
-		return nil, err
+		return err
 	}
-
-	if cfg.PreSignedCertificateLocation != "" {
-		cert, err := presign.NewPreSigned(cfg.PreSignedCertificateLocation)
+	if fm.config.PreSignedCertificateLocation != "" {
+		cert, err := presign.NewPreSigned(fm.config.PreSignedCertificateLocation)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		fm.cert = cert
 	}
-
 	if err := fm.InitCacheTimezones(); err != nil {
-		return nil, err
+		return err
 	}
-
-	return fm, nil
+	return nil
 }
 
 func (f *FlowManager) Shutdown() {

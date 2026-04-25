@@ -69,6 +69,7 @@ func main() {
 		fx.Provide(newRootMeetingClient),
 		fx.Provide(flow.NewRouter),
 		fx.Invoke(initRootRouters),
+		fx.Invoke(bsfx.RegisterStartupHooks),
 		fx.Invoke(registerRootLifecycle),
 	).Run()
 }
