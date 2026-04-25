@@ -19,7 +19,6 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/flow_manager/store/cachelayer"
-	sqlstore "github.com/webitel/flow_manager/store/pg_store"
 )
 
 // AppID is a distinct named type so fx can inject it unambiguously.
@@ -74,12 +73,8 @@ func NewLogger(lc fx.Lifecycle, cfg *model.Config, id AppID) (*wlog.Logger, erro
 	return log, nil
 }
 
-func NewSqlSupplier(cfg *model.Config, db infraSql.Store) *sqlstore.SqlSupplier {
-	return sqlstore.NewSqlSupplier(cfg.SqlSettings, db)
-}
-
-func NewStore(s *sqlstore.SqlSupplier) store.Store {
-	return store.NewLayeredStore(s)
+func NewStore(db infraSql.Store) store.Store {
+	return postgresStorage.NewStore(db)
 }
 
 // NewPgxPool creates a pgxpool connection pool from cfg and registers pool.Close in the fx lifecycle.

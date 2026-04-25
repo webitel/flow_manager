@@ -44,7 +44,6 @@ func main() {
 		fx.Provide(bsfx.NewConfig),
 		fx.Provide(bsfx.NewAppID),
 		fx.Provide(bsfx.NewLogger),
-		fx.Provide(bsfx.NewSqlSupplier),
 		fx.Provide(bsfx.NewStore),
 		fx.Provide(bsfx.NewPgxPool),
 		fx.Provide(bsfx.NewSqlStore),
