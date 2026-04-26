@@ -294,6 +294,55 @@ func TestUnknownOpIsSkipped(t *testing.T) {
 	}
 }
 
+func TestIfWithStringVarExpression(t *testing.T) {
+	// expression uses ${var} which the old naive expand broke on string comparison.
+	// parseExpression converts it to sys.getVariable("name") == "Alice".
+	schema := tree.Schema{
+		{"set": map[string]any{"name": "Alice"}},
+		{"if": map[string]any{
+			"expression": `${name} == "Alice"`,
+			"then":       []any{map[string]any{"set": map[string]any{"result": "match"}}},
+			"else":       []any{map[string]any{"set": map[string]any{"result": "no-match"}}},
+		}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, kind := runAll(t, startState(1, tr.Version), tr, newReg())
+	if kind != interpreter.ActionDone {
+		t.Fatalf("expected Done, got %v", kind)
+	}
+	if es.Variables["result"] != "match" {
+		t.Errorf("expected result=match, got %q", es.Variables["result"])
+	}
+}
+
+func TestIfWithNumericVarExpression(t *testing.T) {
+	// JS coerces the string "10" to number when compared with > 5.
+	schema := tree.Schema{
+		{"set": map[string]any{"count": "10"}},
+		{"if": map[string]any{
+			"expression": `${count} > 5`,
+			"then":       []any{map[string]any{"set": map[string]any{"result": "big"}}},
+			"else":       []any{map[string]any{"set": map[string]any{"result": "small"}}},
+		}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, kind := runAll(t, startState(1, tr.Version), tr, newReg())
+	if kind != interpreter.ActionDone {
+		t.Fatalf("expected Done, got %v", kind)
+	}
+	if es.Variables["result"] != "big" {
+		t.Errorf("expected result=big, got %q", es.Variables["result"])
+	}
+}
+
 func TestEmptySchema(t *testing.T) {
 	schema := tree.Schema{}
 	tr, err := tree.Parse(1, schema)
