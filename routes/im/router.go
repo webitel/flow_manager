@@ -125,26 +125,34 @@ func (r *Router) handle(conn model.Connection) {
 		tags[tag] = node.ID
 	}
 
-	es := state.NewExecState(routing.SchemaId, tr.Version, tags)
-	// Seed ExecState variables from connection so builtins (if/set) can read them.
-	for k, v := range conn.Variables() {
-		es.Variables[k] = v
-	}
-
-	rec := &persistence.Record{
-		ConnectionID: conn.Id(),
-		DomainID:     conv.DomainId(),
-		Channel:      imChannel,
-		SchemaID:     routing.SchemaId,
-		AppID:        r.fm.AppID(),
-		State:        es,
-		Status:       state.StatusRunning,
-	}
-
 	ctx := conn.Context()
-	if createErr := r.fm.RuntimeStateRepo().Create(ctx, rec); createErr != nil {
-		conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
+
+	// Check for an existing active record (process restart recovery).
+	rec, loadErr := r.fm.RuntimeStateRepo().LoadByConnectionID(ctx, conn.Id())
+	if loadErr != nil {
+		conv.Stop(model.NewAppError("IM", "im.runtime.load", nil, loadErr.Error(), http.StatusInternalServerError))
 		return
+	}
+
+	if rec == nil {
+		// Fresh start — seed state from connection variables.
+		es := state.NewExecState(routing.SchemaId, tr.Version, tags)
+		for k, v := range conn.Variables() {
+			es.Variables[k] = v
+		}
+		rec = &persistence.Record{
+			ConnectionID: conn.Id(),
+			DomainID:     conv.DomainId(),
+			Channel:      imChannel,
+			SchemaID:     routing.SchemaId,
+			AppID:        r.fm.AppID(),
+			State:        es,
+			Status:       state.StatusRunning,
+		}
+		if createErr := r.fm.RuntimeStateRepo().Create(ctx, rec); createErr != nil {
+			conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
+			return
+		}
 	}
 
 	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)

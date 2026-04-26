@@ -43,6 +43,10 @@ type Repository interface {
 	// matches key, or an error if none is found.
 	LoadByResumeKey(ctx context.Context, key string) (*Record, error)
 
+	// LoadByConnectionID returns the active (running or suspended) Record for
+	// the given connection, or (nil, nil) if none exists.
+	LoadByConnectionID(ctx context.Context, connectionID string) (*Record, error)
+
 	// Update persists the current State and Status of rec, refreshing updated_at.
 	// Use Suspend/Complete/Fail for lifecycle transitions.
 	Update(ctx context.Context, rec *Record) error

@@ -2,6 +2,7 @@ package legacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/webitel/flow_manager/flow"
@@ -32,14 +33,17 @@ func (l *LegacyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	before := snapshotVars(conn.Variables())
 	scope := flow.New(l.router, flow.Config{Conn: conn})
 
-	var args interface{} = in.Node.RawArgs
+	var args any = in.Node.RawArgs
 	if l.app.ArgsParser != nil {
 		args = l.app.ArgsParser(conn, args)
 	}
 
 	result := <-l.app.Handler(ctx, scope, args)
-	if result.Err != nil {
-		return ops.OpOutput{}, result.Err
+
+	var appErr *model.AppError
+
+	if errors.As(result.Err, &appErr) && appErr != nil { // todo
+		return ops.OpOutput{}, fmt.Errorf("legacy op %q: %w", l.name, appErr)
 	}
 
 	return ops.OpOutput{SetVars: diffVars(before, conn.Variables())}, nil

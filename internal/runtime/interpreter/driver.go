@@ -38,7 +38,10 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 
 		switch action.Kind {
 		case ActionContinue:
-			// nothing — loop
+			rec.State = es
+			if err2 := d.repo.Update(ctx, rec); err2 != nil {
+				return err2
+			}
 
 		case ActionDone:
 			rec.State = es

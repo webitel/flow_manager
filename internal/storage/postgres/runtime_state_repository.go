@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -174,6 +175,26 @@ func (r *RuntimeStateRepository) Complete(ctx context.Context, id uuid.UUID) err
 		return fmt.Errorf("runtime_state.complete(%s): %w", id, err)
 	}
 	return nil
+}
+
+const loadByConnectionIDSQL = `
+SELECT` + selectFields + `
+  FROM flow.runtime_state
+ WHERE connection_id = @conn_id
+   AND status IN ('running', 'suspended')
+ ORDER BY created_at DESC
+ LIMIT 1`
+
+func (r *RuntimeStateRepository) LoadByConnectionID(ctx context.Context, connectionID string) (*Record, error) {
+	var row runtimeStateRow
+	err := r.db.Get(ctx, &row, loadByConnectionIDSQL, pgx.NamedArgs{"conn_id": connectionID})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("runtime_state.load_by_connection_id(%s): %w", connectionID, err)
+	}
+	return toRecord(row)
 }
 
 const failRuntimeStateSQL = `
