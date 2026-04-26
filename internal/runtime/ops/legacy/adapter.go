@@ -32,7 +32,7 @@ func (l *LegacyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	before := snapshotVars(conn.Variables())
 	scope := flow.New(l.router, flow.Config{Conn: conn})
 
-	var args interface{} = in.Node.Args
+	var args interface{} = in.Node.RawArgs
 	if l.app.ArgsParser != nil {
 		args = l.app.ArgsParser(conn, args)
 	}

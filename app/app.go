@@ -15,6 +15,7 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
@@ -33,13 +34,14 @@ import (
 var _ ports.RouterDeps = (*FlowManager)(nil)
 
 type FlowManager struct {
-	log            *wlog.Logger
-	id             string
-	config         *model.Config
-	cluster        *cluster
-	Store          store.Store
-	ExternalStore  *cache.ExternalStoreManager
-	checkpointRepo session.Repository
+	log              *wlog.Logger
+	id               string
+	config           *model.Config
+	cluster          *cluster
+	Store            store.Store
+	ExternalStore    *cache.ExternalStoreManager
+	checkpointRepo   session.Repository
+	runtimeStateRepo persistence.Repository
 
 	grpcServer    *fmgrpc.Server
 	mailServer    model.Server
@@ -87,6 +89,7 @@ func NewFlowManager(
 	log *wlog.Logger,
 	st store.Store,
 	checkpointRepo session.Repository,
+	runtimeStateRepo persistence.Repository,
 	cacheStores cache.CacheStores,
 	storage domstorage.Client,
 	casesClient *cases.Api,
@@ -98,29 +101,30 @@ func NewFlowManager(
 	cb *CallbackResolver,
 ) (*FlowManager, error) {
 	fm := &FlowManager{
-		log:            log,
-		id:             fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
-		config:         cfg,
-		Store:          st,
-		checkpointRepo: checkpointRepo,
-		cacheStore:     cacheStores,
-		storage:        storage,
-		cases:          casesClient,
-		AiBots:         aiBots,
-		chatManager:    chatMgr,
-		cc:             ccMgr,
-		eventQueue:     eventQueue,
-		grpcServer:     srvs.Grpc,
-		eslServer:      srvs.Esl,
-		mailServer:     srvs.Mail,
-		channelServer:  srvs.Channel,
-		imServer:       srvs.Im,
-		httpServer:     srvs.Http,
-		schemaCache:    model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
-		stop:           make(chan struct{}),
-		stopped:        make(chan struct{}),
-		ctx:            context.Background(),
-		cbr:            cb,
+		log:              log,
+		id:               fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
+		config:           cfg,
+		Store:            st,
+		checkpointRepo:   checkpointRepo,
+		runtimeStateRepo: runtimeStateRepo,
+		cacheStore:       cacheStores,
+		storage:          storage,
+		cases:            casesClient,
+		AiBots:           aiBots,
+		chatManager:      chatMgr,
+		cc:               ccMgr,
+		eventQueue:       eventQueue,
+		grpcServer:       srvs.Grpc,
+		eslServer:        srvs.Esl,
+		mailServer:       srvs.Mail,
+		channelServer:    srvs.Channel,
+		imServer:         srvs.Im,
+		httpServer:       srvs.Http,
+		schemaCache:      model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
+		stop:             make(chan struct{}),
+		stopped:          make(chan struct{}),
+		ctx:              context.Background(),
+		cbr:              cb,
 	}
 
 	if cfg.ExternalSql {
@@ -209,6 +213,10 @@ func (f *FlowManager) AppID() string {
 
 func (f *FlowManager) CheckpointRepo() session.Repository {
 	return f.checkpointRepo
+}
+
+func (f *FlowManager) RuntimeStateRepo() persistence.Repository {
+	return f.runtimeStateRepo
 }
 
 func (f *FlowManager) Callback() *CallbackResolver {

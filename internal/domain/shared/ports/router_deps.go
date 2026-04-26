@@ -9,6 +9,7 @@ import (
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
@@ -20,6 +21,7 @@ type RouterDeps interface {
 	AppID() string
 	Log() *wlog.Logger
 	CheckpointRepo() session.Repository
+	RuntimeStateRepo() persistence.Repository
 	GetStore() store.Store
 	GetAiBots() *aibridge.Client
 

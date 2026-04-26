@@ -17,7 +17,8 @@ type NodeID = string
 type Node struct {
 	ID           NodeID
 	OpName       string         // "if", "while", "httpRequest", …
-	Args         map[string]any // raw args (nested app arrays are removed; see parser)
+	Args         map[string]any // normalised args used by builtins: map args are flattened; scalars are excluded
+	RawArgs      any            // original value from the schema node, used by legacy ops
 	Tag          string         // optional goto label
 	Break        bool           // stop execution after this node
 	Async        bool

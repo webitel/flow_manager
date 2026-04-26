@@ -9,13 +9,24 @@ import (
 
 	"github.com/webitel/flow_manager/flow"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
+	"github.com/webitel/flow_manager/internal/runtime/interpreter"
+	"github.com/webitel/flow_manager/internal/runtime/ops"
+	"github.com/webitel/flow_manager/internal/runtime/ops/builtin"
+	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
+	"github.com/webitel/flow_manager/internal/runtime/state"
+	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 )
 
+// imChannel is the channel discriminator stored in flow.runtime_state.
+const imChannel int16 = 2
+
 type Router struct {
-	fm   ports.RouterDeps
-	apps flow.ApplicationHandlers
+	fm     ports.RouterDeps
+	apps   flow.ApplicationHandlers
+	driver *interpreter.Driver
 }
 
 type Dialog model.IMDialog
@@ -29,6 +40,12 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		fr.Handlers(),
 		ApplicationsHandlers(router),
 	)
+
+	reg := ops.NewRegistry()
+	builtin.Register(reg)
+	legacy.RegisterFromMap(reg, router, router.apps)
+
+	router.driver = interpreter.NewDriver(deps.RuntimeStateRepo(), reg)
 
 	return router
 }
@@ -87,6 +104,52 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
+	conn.Set(conn.Context(), map[string]any{
+		model.FlowSchemaNameVariable: routing.Schema.Name,
+	})
+
+	// Convert model.Applications → tree.Schema.
+	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
+	for i, app := range routing.Schema.Schema {
+		rawSchema[i] = map[string]any(app)
+	}
+	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	if parseErr != nil {
+		conv.Stop(model.NewAppError("IM", "im.schema.parse", nil, parseErr.Error(), http.StatusInternalServerError))
+		return
+	}
+
+	// Build tag index for ExecState.
+	tags := make(map[string]string, len(tr.ByTag))
+	for tag, node := range tr.ByTag {
+		tags[tag] = node.ID
+	}
+
+	es := state.NewExecState(routing.SchemaId, tr.Version, tags)
+	// Seed ExecState variables from connection so builtins (if/set) can read them.
+	for k, v := range conn.Variables() {
+		es.Variables[k] = v
+	}
+
+	rec := &persistence.Record{
+		ConnectionID: conn.Id(),
+		DomainID:     conv.DomainId(),
+		Channel:      imChannel,
+		SchemaID:     routing.SchemaId,
+		AppID:        r.fm.AppID(),
+		State:        es,
+		Status:       state.StatusRunning,
+	}
+
+	ctx := conn.Context()
+	if createErr := r.fm.RuntimeStateRepo().Create(ctx, rec); createErr != nil {
+		conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
+		return
+	}
+
+	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
+
+	// Legacy flow.New is still needed for the disconnect trigger below.
 	i := flow.New(r, flow.Config{
 		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
@@ -96,13 +159,10 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 
-	conn.Set(conn.Context(), map[string]any{
-		model.FlowSchemaNameVariable: routing.Schema.Name,
-	})
-
-	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
-
-	flow.Route(conn.Context(), i, r)
+	runCtx := legacy.WithConnection(ctx, conv)
+	if runErr := r.driver.Run(runCtx, rec, tr); runErr != nil {
+		r.fm.Log().Error(fmt.Sprintf("IM driver.Run conn=%s: %v", conn.Id(), runErr))
+	}
 
 	session.Update(r.fm.CheckpointRepo(), cp, conn)
 

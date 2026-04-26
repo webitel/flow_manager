@@ -112,15 +112,16 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 			continue
 		}
 		node.OpName = k
+		node.RawArgs = v
 
-		// Normalise args to map[string]any.
+		// Normalise args to map[string]any for builtins.
 		switch val := v.(type) {
 		case map[string]any:
 			for argK, argV := range val {
 				node.Args[argK] = argV
 			}
 		default:
-			// Scalar or array — store under the op name key so the op can read it.
+			// Scalar or array — store under the op name key so builtins can read it.
 			node.Args[k] = v
 		}
 		break // only the first non-meta key is the op
