@@ -15,13 +15,15 @@ type NodeID = string
 
 // Node is one parsed application in the flow schema.
 type Node struct {
-	ID       NodeID
-	OpName   string         // "if", "while", "httpRequest", …
-	Args     map[string]any // raw args (nested app arrays are removed; see parser)
-	Tag      string         // optional goto label
-	Break    bool           // stop execution after this node
-	Async    bool
-	Children []*Node // sub-trees: then/else for if, do for while, cases for switch
+	ID           NodeID
+	OpName       string         // "if", "while", "httpRequest", …
+	Args         map[string]any // raw args (nested app arrays are removed; see parser)
+	Tag          string         // optional goto label
+	Break        bool           // stop execution after this node
+	Async        bool
+	Children     []*Node // sub-trees: then/else for if, do for while, cases for switch
+	ParentID     NodeID  // ID of the parent container; empty only for Root
+	SiblingIndex int     // index within parent.Children (used by goto)
 }
 
 // Tree is the fully parsed, indexed schema.

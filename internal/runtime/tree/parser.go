@@ -70,6 +70,8 @@ func parseApps(t *Tree, parent *Node, apps Schema, prefix string) error {
 			continue
 		}
 
+		node.ParentID = parent.ID
+		node.SiblingIndex = len(parent.Children)
 		parent.Children = append(parent.Children, node)
 		t.ByID[node.ID] = node
 		if node.Tag != "" {
