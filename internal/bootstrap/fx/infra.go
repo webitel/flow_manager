@@ -15,6 +15,7 @@ import (
 	pgsqlImpl "github.com/webitel/flow_manager/infra/sql/pgsql"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
@@ -101,6 +102,12 @@ func NewSqlStore(pool *pgxpool.Pool, log *wlog.Logger) infraSql.Store {
 // Goose migrations must run before this is called (see RunMigrations invoke in main).
 func NewCheckpointRepo(db infraSql.Store) session.Repository {
 	return postgresStorage.NewCheckpointRepository(db)
+}
+
+// NewRuntimeStateRepo creates the resumable-flow execution-state repository.
+// Goose migrations must run before this is called (migration 20260426000001).
+func NewRuntimeStateRepo(db infraSql.Store) persistence.Repository {
+	return postgresStorage.NewRuntimeStateRepository(db)
 }
 
 // NewCacheStores always provides in-memory cache; adds Redis when configured.

@@ -48,6 +48,7 @@ func main() {
 		fx.Provide(bsfx.NewPgxPool),
 		fx.Provide(bsfx.NewSqlStore),
 		fx.Provide(bsfx.NewCheckpointRepo),
+		fx.Provide(bsfx.NewRuntimeStateRepo),
 		fx.Provide(bsfx.NewCacheStores),
 		fx.Invoke(runMigrations),
 		// clients
