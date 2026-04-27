@@ -45,7 +45,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	builtin.Register(reg)
 	legacy.RegisterFromMap(reg, router, router.apps)
 
-	router.driver = interpreter.NewDriver(deps.RuntimeStateRepo(), reg)
+	router.driver = interpreter.NewDriver(deps.RuntimeStateRepo(), reg, deps.Log())
 
 	return router
 }

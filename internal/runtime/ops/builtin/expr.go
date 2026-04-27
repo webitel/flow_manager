@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robertkrimen/otto"
+	"github.com/dop251/goja"
 )
 
 var (
@@ -19,7 +19,7 @@ var (
 
 // parseExpression mirrors flow/if.go parseExpression: transforms ${var} into
 // sys.getVariable("var") and date helpers into sys.year() etc. so the expression
-// is safe to evaluate in an otto VM built by buildVM.
+// is safe to evaluate in an goja VM built by buildVM.
 func parseExpression(expr string) string {
 	// $${ } global variables first (longer prefix, must precede ${ } replace).
 	expr = reExprGlobalVar.ReplaceAllStringFunc(expr, func(s string) string {
@@ -41,22 +41,22 @@ func parseExpression(expr string) string {
 	return expr
 }
 
-// buildVM creates an otto VM with a sys object that reads variables from vars.
+// buildVM creates an goja VM with a sys object that reads variables from vars.
 // Global variables are not supported here (returns ""); callers that have a
 // model.Connection can extend the sys object after calling buildVM.
-func buildVM(vars map[string]string) *otto.Otto {
-	vm := otto.New()
-	sys, _ := vm.Object("sys = {}")
+func buildVM(vars map[string]string) *goja.Runtime {
+	vm := goja.New()
+	sys := vm.NewObject()
 
-	sys.Set("getVariable", func(call otto.FunctionCall) otto.Value {
+	sys.Set("getVariable", func(call goja.FunctionCall) goja.Value {
 		key := call.Argument(0).String()
-		v, _ := vm.ToValue(vars[key])
+		v := vm.ToValue(vars[key])
 		return v
 	})
 
 	// Global variables are not available without a connection; return empty string.
-	sys.Set("getGlobalVariable", func(call otto.FunctionCall) otto.Value {
-		v, _ := vm.ToValue("")
+	sys.Set("getGlobalVariable", func(call goja.FunctionCall) goja.Value {
+		v := vm.ToValue("") // TODO
 		return v
 	})
 
@@ -83,10 +83,10 @@ func buildVM(vars map[string]string) *otto.Otto {
 	}
 	sys.Set("wday", dateIntFunc(vm, wd, 7))
 
-	sys.Set("time_of_day", func(call otto.FunctionCall) otto.Value {
+	sys.Set("time_of_day", func(call goja.FunctionCall) goja.Value {
 		param := call.Argument(0).String()
 		if param == "" {
-			v, _ := vm.ToValue(leadingZero(now.Hour()) + ":" + leadingZero(now.Minute()))
+			v := vm.ToValue(leadingZero(now.Hour()) + ":" + leadingZero(now.Minute()))
 			return v
 		}
 		cur := now.Hour()*10000 + now.Minute()*100 + now.Second()
@@ -96,27 +96,28 @@ func buildVM(vars map[string]string) *otto.Otto {
 				continue
 			}
 			if cur >= parseTimeHHMM(parts[0]) && cur <= parseTimeHHMM(parts[1]) {
-				v, _ := vm.ToValue(true)
-				return v
+				return vm.ToValue(true)
 			}
 		}
-		v, _ := vm.ToValue(false)
-		return v
+
+		return vm.ToValue(false)
 	})
+
+	vm.Set("sys", sys)
 
 	return vm
 }
 
-// dateIntFunc returns an otto function: no arg → current value; with arg → range
+// dateIntFunc returns an goja function: no arg → current value; with arg → range
 // comparison (comma-separated integers or "min-max" ranges, same as flow/if.go).
-func dateIntFunc(vm *otto.Otto, current, max int) func(otto.FunctionCall) otto.Value {
-	return func(call otto.FunctionCall) otto.Value {
+func dateIntFunc(vm *goja.Runtime, current, max int) func(goja.FunctionCall) goja.Value {
+	return func(call goja.FunctionCall) goja.Value {
 		param := call.Argument(0).String()
 		if param == "" {
-			v, _ := vm.ToValue(current)
+			v := vm.ToValue(current)
 			return v
 		}
-		v, _ := vm.ToValue(parseDateRange(param, current, max))
+		v := vm.ToValue(parseDateRange(param, current, max))
 		return v
 	}
 }

@@ -21,12 +21,12 @@ func (ifOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutput, error) {
 	expr = parseExpression(expr)
 
 	vm := buildVM(in.Variables)
-	val, err := vm.Run("_r = (" + expr + ")")
+	val, err := vm.RunString("_r = (" + expr + ")")
 	if err != nil {
 		return ops.OpOutput{}, fmt.Errorf("if: eval %q: %w", expr, err)
 	}
 
-	result, _ := val.ToBoolean()
+	result := val.ToBoolean()
 
 	node := in.Node
 	if result && len(node.Children) > 0 {

@@ -165,6 +165,7 @@ func parseIfChildren(t *Tree, node *Node, id string) error {
 			return fmt.Errorf("tree: if.then at %s: %w", id, err)
 		}
 		container := newContainer(id+".then", t)
+		linkContainer(container, node)
 		if err := parseApps(t, container, apps, id+".then"); err != nil {
 			return err
 		}
@@ -172,6 +173,7 @@ func parseIfChildren(t *Tree, node *Node, id string) error {
 	} else {
 		// Ensure index 0 always exists for then, even if empty.
 		container := newContainer(id+".then", t)
+		linkContainer(container, node)
 		node.Children = append(node.Children, container)
 	}
 
@@ -183,12 +185,14 @@ func parseIfChildren(t *Tree, node *Node, id string) error {
 			return fmt.Errorf("tree: if.else at %s: %w", id, err)
 		}
 		container := newContainer(id+".else", t)
+		linkContainer(container, node)
 		if err := parseApps(t, container, apps, id+".else"); err != nil {
 			return err
 		}
 		node.Children = append(node.Children, container)
 	} else {
 		container := newContainer(id+".else", t)
+		linkContainer(container, node)
 		node.Children = append(node.Children, container)
 	}
 
@@ -207,6 +211,7 @@ func parseWhileChildren(t *Tree, node *Node, id string) error {
 		return fmt.Errorf("tree: while.do at %s: %w", id, err)
 	}
 	container := newContainer(id+".do", t)
+	linkContainer(container, node)
 	if err := parseApps(t, container, apps, id+".do"); err != nil {
 		return err
 	}
@@ -232,6 +237,7 @@ func parseSwitchChildren(t *Tree, node *Node, id string) error {
 	for i, name := range names {
 		caseID := id + ".case." + name
 		container := newContainer(caseID, t)
+		linkContainer(container, node)
 		apps, err := toSchema(cases[name])
 		if err != nil {
 			return fmt.Errorf("tree: switch.case[%s] at %s: %w", name, id, err)
@@ -254,6 +260,14 @@ func newContainer(id string, t *Tree) *Node {
 	c := &Node{ID: id, OpName: ""}
 	t.ByID[id] = c
 	return c
+}
+
+// linkContainer sets ParentID and SiblingIndex on a container node so that
+// the goto stack-builder can walk up the ancestor chain from any tagged node.
+// Must be called before the container is appended to parent.Children.
+func linkContainer(c *Node, parent *Node) {
+	c.ParentID = parent.ID
+	c.SiblingIndex = len(parent.Children)
 }
 
 // toSchema coerces a raw value (expected to be []interface{} from JSON

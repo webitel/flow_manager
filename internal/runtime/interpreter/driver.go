@@ -3,6 +3,8 @@ package interpreter
 import (
 	"context"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/state"
@@ -14,10 +16,11 @@ import (
 type Driver struct {
 	repo persistence.Repository
 	reg  *ops.Registry
+	log  *wlog.Logger
 }
 
-func NewDriver(repo persistence.Repository, reg *ops.Registry) *Driver {
-	return &Driver{repo: repo, reg: reg}
+func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger) *Driver {
+	return &Driver{repo: repo, reg: reg, log: log}
 }
 
 // Run executes the flow described by rec and tr until the flow completes,
@@ -28,12 +31,19 @@ func NewDriver(repo persistence.Repository, reg *ops.Registry) *Driver {
 func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree) error {
 	es := rec.State
 
+	l := d.log.With(
+		wlog.String("conn", rec.ConnectionID),
+		wlog.Int("schema_id", rec.SchemaID),
+	)
+
+	l.Debug("run flow")
+
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		action, next, err := Step(ctx, es, tr, d.reg)
+		action, next, err := Step(ctx, l, es, tr, d.reg)
 		es = next
 
 		switch action.Kind {
@@ -44,11 +54,15 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			}
 
 		case ActionDone:
+			l.Debug("flow completed")
 			rec.State = es
 			rec.Status = state.StatusCompleted
 			return d.repo.Complete(ctx, rec.ID)
 
 		case ActionSuspend:
+			l.Debug("flow suspended",
+				wlog.String("key", action.SuspendKey),
+			)
 			rec.State = es
 			rec.Status = state.StatusSuspended
 			// Update persisted state BEFORE suspending so that the external
@@ -63,6 +77,9 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			if err != nil {
 				reason = err.Error()
 			}
+			l.Debug("flow failed",
+				wlog.String("reason", reason),
+			)
 			rec.State = es
 			rec.Status = state.StatusFailed
 			return d.repo.Fail(ctx, rec.ID, reason)

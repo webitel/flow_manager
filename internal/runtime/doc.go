@@ -6,7 +6,7 @@
 //
 //	schema JSON ─► tree.Parser ─► tree.Tree
 //	                                   │
-//	                         interpreter.Step(ctx, state, tree, ops)
+//	                         interpreter.Step(ctx, log, state, tree, ops)
 //	                                   │
 //	                         state.ExecState  (serializable, stored in DB)
 //

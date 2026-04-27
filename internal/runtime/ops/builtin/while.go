@@ -21,12 +21,12 @@ func (whileOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutput, error) 
 	cond = parseExpression(cond)
 
 	vm := buildVM(in.Variables)
-	val, err := vm.Run("_r = (" + cond + ")")
+	val, err := vm.RunString("_r = (" + cond + ")")
 	if err != nil {
 		return ops.OpOutput{}, fmt.Errorf("while: eval %q: %w", cond, err)
 	}
 
-	result, _ := val.ToBoolean()
+	result := val.ToBoolean()
 	if !result || len(in.Node.Children) == 0 {
 		return ops.OpOutput{}, nil
 	}
