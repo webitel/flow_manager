@@ -10,6 +10,7 @@ import (
 type EventBus interface {
 	Publish(ctx context.Context, exchange, key string, data []byte) error
 	Close()
+	Start() error
 
 	ConsumeCallEvent() <-chan model.CallActionData
 	ConsumeExec() <-chan model.ChannelExec

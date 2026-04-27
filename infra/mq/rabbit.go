@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/infra/pubsub"
@@ -59,6 +60,10 @@ func (r *RabbitEventBus) Publish(ctx context.Context, exchange, key string, data
 
 func (r *RabbitEventBus) Close() {
 	r.mgr.Shutdown()
+}
+
+func (r *RabbitEventBus) Start() error {
+	return r.mgr.Start()
 }
 
 func (r *RabbitEventBus) ConsumeCallEvent() <-chan model.CallActionData { return r.callEvent }

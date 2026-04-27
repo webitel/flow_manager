@@ -3,8 +3,9 @@ package bsfx
 import (
 	"context"
 
-	"github.com/webitel/wlog"
 	"go.uber.org/fx"
+
+	"github.com/webitel/wlog"
 
 	inframq "github.com/webitel/flow_manager/infra/mq"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
@@ -17,8 +18,23 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-func NewEventBus(cfg *model.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
-	return inframq.NewRabbitEventBus(log, cfg.MQSettings.Url, string(id))
+func NewEventBus(lc fx.Lifecycle, cfg *model.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
+	cli, err := inframq.NewRabbitEventBus(log, cfg.MQSettings.Url, string(id))
+	if err != nil {
+		return nil, err
+	}
+
+	lc.Append(fx.Hook{
+		OnStart: func(_ context.Context) error {
+			return cli.Start()
+		},
+		OnStop: func(_ context.Context) error {
+			cli.Close()
+			return nil
+		},
+	})
+
+	return cli, nil
 }
 
 func NewStorageClient(cfg *model.Config) (domstorage.Client, error) {

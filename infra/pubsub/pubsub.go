@@ -6,6 +6,7 @@ import (
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
 	"github.com/webitel/wlog"
 )
 
@@ -40,13 +41,6 @@ func New(log *wlog.Logger, address string, hooks ...OnConnetFn) (*Manager, error
 		runningHandlers: sync.WaitGroup{},
 		onConnect:       hooks,
 	}
-
-	if err := m.tryConnect(); err != nil {
-		return nil, err
-	}
-
-	// Its bad case of nil == waitConnection, so close it at start.
-	close(m.waitConnection)
 
 	return m, nil
 }
