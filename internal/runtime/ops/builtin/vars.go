@@ -1,23 +1,9 @@
 package builtin
 
-import (
-	"regexp"
-	"strings"
-)
+import "github.com/webitel/flow_manager/internal/runtime/ops"
 
-var reVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
-
-// expand replaces all ${varName} placeholders in s with the corresponding
-// value from vars. Missing variables are replaced with an empty string.
+// expand is a convenience wrapper for ops.ExpandStr without global-variable support.
+// Used by the set op which has no domain context.
 func expand(s string, vars map[string]string) string {
-	if !strings.Contains(s, "${") {
-		return s
-	}
-	return reVar.ReplaceAllStringFunc(s, func(match string) string {
-		sub := reVar.FindStringSubmatch(match)
-		if len(sub) < 2 {
-			return ""
-		}
-		return vars[sub[1]]
-	})
+	return ops.ExpandStr(s, vars, nil)
 }

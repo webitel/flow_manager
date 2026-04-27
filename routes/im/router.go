@@ -42,6 +42,8 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		ApplicationsHandlers(router),
 	)
 
+	delete(router.apps, "calendar")
+
 	reg := ops.NewRegistry()
 	builtin.Register(reg)
 	legacy.RegisterFromMap(reg, router, router.apps)

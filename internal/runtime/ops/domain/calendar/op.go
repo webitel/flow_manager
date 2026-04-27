@@ -3,7 +3,6 @@ package calendar
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 )
@@ -25,34 +24,24 @@ func New(fn CheckFn) ops.Op { return calendarOp{check: fn} }
 
 func (calendarOp) Kind() ops.OpKind { return ops.OpKindSync }
 
+type calendarArgs struct {
+	Name     *string `json:"name"`
+	Id       *int    `json:"id"`
+	SetVar   string  `json:"setVar"`
+	Extended bool    `json:"extended"`
+}
+
 func (c calendarOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
-	setVar, _ := in.Node.Args["setVar"].(string)
-	if setVar == "" {
+	var argv calendarArgs
+	if err := ops.DecodeArgs(in, &argv); err != nil {
+		return ops.OpOutput{}, err
+	}
+
+	if argv.SetVar == "" {
 		return ops.OpOutput{}, nil
 	}
 
-	extended, _ := in.Node.Args["extended"].(bool)
-
-	var id *int
-	var name *string
-
-	if v, ok := in.Node.Args["id"]; ok && v != nil {
-		switch val := v.(type) {
-		case float64:
-			i := int(val)
-			id = &i
-		case json.Number:
-			if i64, err := val.Int64(); err == nil {
-				i := int(i64)
-				id = &i
-			}
-		}
-	}
-	if v, ok := in.Node.Args["name"].(string); ok && v != "" {
-		name = &v
-	}
-
-	res, err := c.check(ctx, in.DomainID, id, name)
+	res, err := c.check(ctx, in.DomainID, argv.Id, argv.Name)
 	if err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -60,7 +49,7 @@ func (c calendarOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 	value := "false"
 	if res.Accept && !res.Expire && res.Excepted == nil {
 		value = "true"
-	} else if extended {
+	} else if argv.Extended {
 		if res.Expire {
 			value = "expire"
 		} else if res.Excepted != nil && *res.Excepted != "" {
@@ -68,5 +57,5 @@ func (c calendarOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 		}
 	}
 
-	return ops.OpOutput{SetVars: map[string]string{setVar: value}}, nil
+	return ops.OpOutput{SetVars: map[string]string{argv.SetVar: value}}, nil
 }
