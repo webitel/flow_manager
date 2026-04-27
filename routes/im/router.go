@@ -43,6 +43,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	)
 
 	delete(router.apps, "calendar")
+	delete(router.apps, "softSleep")
 
 	reg := ops.NewRegistry()
 	builtin.Register(reg)

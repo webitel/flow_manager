@@ -34,6 +34,13 @@ func (f *FlowManager) Listen() {
 		go runtime_recovery.New(f.runtimeStateRepo, f.id, f.log).Run(workerCtx)
 	}
 
+	type backgroundRunner interface {
+		StartBackground(ctx context.Context)
+	}
+	if br, ok := f.IMRouter.(backgroundRunner); ok {
+		br.StartBackground(workerCtx)
+	}
+
 	go f.listenCallEvents(f.stop)
 
 	if f.eslServer != nil {

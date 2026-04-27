@@ -25,6 +25,16 @@ func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger,
 	return &Driver{repo: repo, reg: reg, log: log, globals: globals}
 }
 
+// Resume transitions a suspended record back to running and continues
+// execution via Run. The caller must ensure rec was loaded from the DB and
+// has Status == StatusSuspended. Pending is cleared so the next Update
+// persists a clean state.
+func (d *Driver) Resume(ctx context.Context, rec *persistence.Record, tr *tree.Tree) error {
+	rec.Status = state.StatusRunning
+	rec.State.Pending = nil
+	return d.Run(ctx, rec, tr)
+}
+
 // Run executes the flow described by rec and tr until the flow completes,
 // suspends, fails, or ctx is cancelled.
 //

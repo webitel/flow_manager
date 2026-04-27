@@ -259,6 +259,42 @@ func (r *RuntimeStateRepository) ClaimOrphaned(ctx context.Context, appID string
 	return out, nil
 }
 
+// claimTimerExpiredSQL atomically transitions soft_sleep records to running
+// (clearing resume_key) so concurrent workers cannot double-resume the same
+// record. The wake_at timestamp is read from the pending intent stored in the
+// state JSONB column.
+const claimTimerExpiredSQL = `
+UPDATE flow.runtime_state
+   SET app_id     = @app_id,
+       status     = 'running',
+       resume_key = NULL,
+       updated_at = now()
+ WHERE status  = 'suspended'
+   AND channel = @channel
+   AND (state->'pending'->>'op') = 'soft_sleep'
+   AND (state->'pending'->'args'->>'wake_at')::timestamptz <= now()
+RETURNING ` + selectFields
+
+func (r *RuntimeStateRepository) ClaimTimerExpired(ctx context.Context, channel int16, appID string) ([]*Record, error) {
+	var rows []runtimeStateRow
+	err := r.db.Select(ctx, &rows, claimTimerExpiredSQL, pgx.NamedArgs{
+		"app_id":  appID,
+		"channel": channel,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("runtime_state.claim_timer_expired: %w", err)
+	}
+	out := make([]*Record, 0, len(rows))
+	for _, row := range rows {
+		rec, err := toRecord(row)
+		if err != nil {
+			return nil, fmt.Errorf("runtime_state.claim_timer_expired toRecord(%s): %w", row.ID, err)
+		}
+		out = append(out, rec)
+	}
+	return out, nil
+}
+
 // --- helpers ---
 
 // Record is a package-level alias to avoid repeating the import path in

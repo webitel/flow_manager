@@ -69,4 +69,9 @@ type Repository interface {
 	// updated_at is older than staleDuration and whose owner differs from
 	// appID. Returns the claimed records so the caller can act on them.
 	ClaimOrphaned(ctx context.Context, appID string, staleDuration time.Duration) ([]*Record, error)
+
+	// ClaimTimerExpired claims suspended soft_sleep records for the given
+	// channel whose wake_at has passed. Claimed records are transitioned to
+	// running so concurrent workers cannot double-resume them.
+	ClaimTimerExpired(ctx context.Context, channel int16, appID string) ([]*Record, error)
 }
