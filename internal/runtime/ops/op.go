@@ -23,6 +23,10 @@ const (
 type OpInput struct {
 	Node      *tree.Node
 	Variables map[string]string
+	DomainID  int64
+	// GlobalVar returns the domain-scoped schema variable for name.
+	// Pre-bound to DomainID by the Driver; nil-safe (returns "" when nil).
+	GlobalVar func(name string) string
 }
 
 // OpOutput carries the interpreter directives produced by one op execution.

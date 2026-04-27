@@ -17,10 +17,12 @@ type Driver struct {
 	repo persistence.Repository
 	reg  *ops.Registry
 	log  *wlog.Logger
+	// globals resolves domain-scoped schema variables; may be nil.
+	globals func(ctx context.Context, domainID int64, name string) string
 }
 
-func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger) *Driver {
-	return &Driver{repo: repo, reg: reg, log: log}
+func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger, globals func(ctx context.Context, domainID int64, name string) string) *Driver {
+	return &Driver{repo: repo, reg: reg, log: log, globals: globals}
 }
 
 // Run executes the flow described by rec and tr until the flow completes,
@@ -30,11 +32,19 @@ func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger)
 // the caller is responsible for creating the record before calling Run.
 func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree) error {
 	es := rec.State
+	domainID := rec.DomainID
 
 	l := d.log.With(
 		wlog.String("conn", rec.ConnectionID),
 		wlog.Int("schema_id", rec.SchemaID),
 	)
+
+	var globalVar func(string) string
+	if d.globals != nil {
+		globalVar = func(name string) string {
+			return d.globals(ctx, domainID, name)
+		}
+	}
 
 	l.Debug("run flow")
 
@@ -43,7 +53,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			return ctx.Err()
 		}
 
-		action, next, err := Step(ctx, l, es, tr, d.reg)
+		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, globalVar)
 		es = next
 
 		switch action.Kind {

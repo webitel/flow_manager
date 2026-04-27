@@ -12,6 +12,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/builtin"
+	"github.com/webitel/flow_manager/internal/runtime/ops/domain/calendar"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/state"
@@ -45,7 +46,26 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	builtin.Register(reg)
 	legacy.RegisterFromMap(reg, router, router.apps)
 
-	router.driver = interpreter.NewDriver(deps.RuntimeStateRepo(), reg, deps.Log())
+	reg.Register("calendar", calendar.New(func(ctx context.Context, domainID int64, id *int, name *string) (*calendar.Result, error) {
+		cal, err := deps.GetStore().Calendar().Check(domainID, id, name)
+		if err != nil {
+			return nil, err
+		}
+		return &calendar.Result{
+			Accept:   cal.Accept,
+			Expire:   cal.Expire,
+			Excepted: cal.Excepted,
+		}, nil
+	}))
+
+	router.driver = interpreter.NewDriver(
+		deps.RuntimeStateRepo(),
+		reg,
+		deps.Log(),
+		func(ctx context.Context, domainID int64, name string) string {
+			return deps.SchemaVariable(ctx, domainID, name)
+		},
+	)
 
 	return router
 }

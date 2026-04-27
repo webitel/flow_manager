@@ -25,7 +25,7 @@ func runAll(t *testing.T, es state.ExecState, tr *tree.Tree, reg *ops.Registry) 
 	t.Helper()
 	ctx := context.Background()
 	for i := 0; i < 10_000; i++ {
-		action, next, err := interpreter.Step(ctx, nil, es, tr, reg)
+		action, next, err := interpreter.Step(ctx, nil, es, tr, reg, 0, nil)
 		if err != nil {
 			t.Fatalf("Step error: %v", err)
 		}

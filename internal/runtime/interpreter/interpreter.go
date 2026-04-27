@@ -16,8 +16,12 @@ const maxGotoDepth = 100
 // and the updated ExecState. The caller (Driver) loops Step until the action
 // is not ActionContinue.
 //
+// domainID and globalVar are forwarded into OpInput for ops that need domain
+// context (e.g. if/while with $${ } global variables, calendar).
+// globalVar may be nil — ops must guard against it.
+//
 // Step is a pure function — it does not touch the database or any I/O.
-func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry) (Action, state.ExecState, error) {
+func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, globalVar func(string) string) (Action, state.ExecState, error) {
 	for {
 		if len(es.Stack) == 0 {
 			return Action{Kind: ActionDone}, es, nil
@@ -59,6 +63,8 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 		out, err := op.Execute(ctx, ops.OpInput{
 			Node:      child,
 			Variables: es.Variables,
+			DomainID:  domainID,
+			GlobalVar: globalVar,
 		})
 		if err != nil {
 			reason := err.Error()

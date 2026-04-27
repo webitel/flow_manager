@@ -42,9 +42,8 @@ func parseExpression(expr string) string {
 }
 
 // buildVM creates an goja VM with a sys object that reads variables from vars.
-// Global variables are not supported here (returns ""); callers that have a
-// model.Connection can extend the sys object after calling buildVM.
-func buildVM(vars map[string]string) *goja.Runtime {
+// globalVar, if non-nil, is called to resolve $${ } global variables.
+func buildVM(vars map[string]string, globalVar func(name string) string) *goja.Runtime {
 	vm := goja.New()
 	sys := vm.NewObject()
 
@@ -54,10 +53,12 @@ func buildVM(vars map[string]string) *goja.Runtime {
 		return v
 	})
 
-	// Global variables are not available without a connection; return empty string.
 	sys.Set("getGlobalVariable", func(call goja.FunctionCall) goja.Value {
-		v := vm.ToValue("") // TODO
-		return v
+		if globalVar == nil {
+			return vm.ToValue("")
+		}
+		key := call.Argument(0).String()
+		return vm.ToValue(globalVar(key))
 	})
 
 	now := time.Now()

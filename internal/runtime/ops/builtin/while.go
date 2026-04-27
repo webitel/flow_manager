@@ -20,7 +20,7 @@ func (whileOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutput, error) 
 	cond, _ := in.Node.Args["condition"].(string)
 	cond = parseExpression(cond)
 
-	vm := buildVM(in.Variables)
+	vm := buildVM(in.Variables, in.GlobalVar)
 	val, err := vm.RunString("_r = (" + cond + ")")
 	if err != nil {
 		return ops.OpOutput{}, fmt.Errorf("while: eval %q: %w", cond, err)
