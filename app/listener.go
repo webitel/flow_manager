@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/webitel/flow_manager/internal/workers/runtime_recovery"
 	"github.com/webitel/flow_manager/internal/workers/session_recovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
@@ -19,13 +20,18 @@ func (f *FlowManager) Listen() {
 	f.callWatcher.Start()
 	f.listWatcher.Start()
 
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	go func() {
+		<-f.stop
+		workerCancel()
+	}()
+
 	if f.checkpointRepo != nil {
-		workerCtx, workerCancel := context.WithCancel(context.Background())
-		go func() {
-			<-f.stop
-			workerCancel()
-		}()
 		go session_recovery.New(f.checkpointRepo, f.id, f.log).Run(workerCtx)
+	}
+
+	if f.runtimeStateRepo != nil {
+		go runtime_recovery.New(f.runtimeStateRepo, f.id, f.log).Run(workerCtx)
 	}
 
 	go f.listenCallEvents(f.stop)

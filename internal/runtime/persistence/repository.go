@@ -60,4 +60,13 @@ type Repository interface {
 
 	// Fail marks the record as failed and stores a human-readable reason.
 	Fail(ctx context.Context, id uuid.UUID, reason string) error
+
+	// Touch updates updated_at for all running records owned by appID.
+	// Called periodically so healthy records are not mistaken for orphans.
+	Touch(ctx context.Context, appID string) error
+
+	// ClaimOrphaned reassigns to appID all running/suspended records whose
+	// updated_at is older than staleDuration and whose owner differs from
+	// appID. Returns the claimed records so the caller can act on them.
+	ClaimOrphaned(ctx context.Context, appID string, staleDuration time.Duration) ([]*Record, error)
 }

@@ -215,6 +215,50 @@ func (r *RuntimeStateRepository) Fail(ctx context.Context, id uuid.UUID, reason 
 	return nil
 }
 
+const touchRuntimeStateSQL = `
+UPDATE flow.runtime_state
+   SET updated_at = now()
+ WHERE app_id = @app_id
+   AND status = 'running'`
+
+func (r *RuntimeStateRepository) Touch(ctx context.Context, appID string) error {
+	err := r.db.Exec(ctx, touchRuntimeStateSQL, pgx.NamedArgs{"app_id": appID})
+	if err != nil {
+		return fmt.Errorf("runtime_state.touch(%s): %w", appID, err)
+	}
+	return nil
+}
+
+const claimOrphanedRuntimeSQL = `
+UPDATE flow.runtime_state
+   SET app_id     = @app_id,
+       updated_at = now()
+ WHERE status IN ('running', 'suspended')
+   AND updated_at < @threshold
+   AND app_id <> @app_id
+RETURNING ` + selectFields
+
+func (r *RuntimeStateRepository) ClaimOrphaned(ctx context.Context, appID string, staleDuration time.Duration) ([]*Record, error) {
+	threshold := time.Now().UTC().Add(-staleDuration)
+	var rows []runtimeStateRow
+	err := r.db.Select(ctx, &rows, claimOrphanedRuntimeSQL, pgx.NamedArgs{
+		"app_id":    appID,
+		"threshold": threshold,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("runtime_state.claim_orphaned: %w", err)
+	}
+	out := make([]*Record, 0, len(rows))
+	for _, row := range rows {
+		rec, err := toRecord(row)
+		if err != nil {
+			return nil, fmt.Errorf("runtime_state.claim_orphaned toRecord(%s): %w", row.ID, err)
+		}
+		out = append(out, rec)
+	}
+	return out, nil
+}
+
 // --- helpers ---
 
 // Record is a package-level alias to avoid repeating the import path in
