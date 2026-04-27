@@ -29,3 +29,14 @@ func (r *Registry) Get(name string) Op {
 	defer r.mu.RUnlock()
 	return r.ops[name]
 }
+
+// All returns a snapshot of the registered ops keyed by name.
+func (r *Registry) All() map[string]Op {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make(map[string]Op, len(r.ops))
+	for k, v := range r.ops {
+		out[k] = v
+	}
+	return out
+}

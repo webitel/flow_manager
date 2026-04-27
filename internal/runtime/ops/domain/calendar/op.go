@@ -31,6 +31,30 @@ type calendarArgs struct {
 	Extended bool    `json:"extended"`
 }
 
+func (calendarOp) Doc() ops.OpDoc {
+	return ops.OpDoc{
+		Description: "Checks business hours using a Webitel calendar. Writes result to a session variable.",
+		AvailableIn: []string{"voice", "chat", "form", "service"},
+		Visual:      true,
+		Args: map[string]ops.ArgDoc{
+			"name":     {Type: "string", Description: "Calendar name (mutually exclusive with id)."},
+			"id":       {Type: "integer", Description: "Calendar ID in Webitel."},
+			"setVar":   {Type: "string", Required: true, Description: "Variable to store result."},
+			"extended": {Type: "boolean", Default: false, Description: "Extended mode: returns 'expire' or exception name instead of plain 'false'."},
+		},
+		Notes: []string{
+			"setVar stores 'true' or 'false' — compare explicitly: ${is_work_time} == 'true'.",
+		},
+		Examples: map[string]ops.Example{
+			"basic": {
+				Description: "Check business hours and branch",
+				Schema: `{"calendar": {"name": "My Calendar", "setVar": "is_work_time"}},` +
+					`{"if": {"expression": "${is_work_time} == 'true'", "then": [...], "else": [...]}}`,
+			},
+		},
+	}
+}
+
 func (c calendarOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
 	var argv calendarArgs
 	if err := ops.DecodeArgs(in, &argv); err != nil {
