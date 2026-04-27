@@ -39,6 +39,7 @@ func (cm *Client) Start() error {
 	cm.startOnce.Do(func() {
 		var opts []grpc.DialOption
 		if cm.tls != nil {
+			cm.tls.InsecureSkipVerify = true
 			opts = append(opts, grpc.WithTransportCredentials(credentials.NewTLS(cm.tls)))
 		} else {
 			opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
