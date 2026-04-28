@@ -19,5 +19,6 @@ const (
 type Action struct {
 	Kind       ActionKind
 	SuspendKey string // non-empty when Kind == ActionSuspend
+	ReSuspend  bool   // true when the op re-suspends on the same key after consuming an event
 	FailReason string // non-empty when Kind == ActionFail
 }

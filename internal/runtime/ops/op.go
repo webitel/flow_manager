@@ -27,6 +27,11 @@ type OpInput struct {
 	// GlobalVar returns the domain-scoped schema variable for name.
 	// Pre-bound to DomainID by the Driver; nil-safe (returns "" when nil).
 	GlobalVar func(name string) string
+
+	// ResumePayload is non-nil when this Execute is triggered by an external
+	// resume event (e.g. inbound message, queue event, timer expiry).
+	// Sync ops always see nil.
+	ResumePayload map[string]string
 }
 
 // OpOutput carries the interpreter directives produced by one op execution.
@@ -42,6 +47,11 @@ type OpOutput struct {
 	// re-execute the current node after the branch body completes (while loop).
 	Repeat bool
 
+	// BranchAsync, when true together with Branch, forks the branch into a
+	// separate goroutine instead of entering it inline. Used for trigger
+	// sub-flows that must not block the main flow.
+	BranchAsync bool
+
 	// Goto is a tag name; the interpreter resets the stack to execute from
 	// the tagged node on the next step.
 	Goto string
@@ -52,6 +62,11 @@ type OpOutput struct {
 	// SuspendKey is non-empty when the op needs to suspend and wait for an
 	// external event identified by this key.
 	SuspendKey string
+
+	// ReSuspend, when true together with SuspendKey, signals that the op
+	// consumed a resume event but still needs more events on the same key.
+	// The Driver keeps the record suspended with the refreshed Pending.
+	ReSuspend bool
 
 	// Pending is a write-ahead idempotency record for suspendable ops.
 	Pending *state.PendingIntent

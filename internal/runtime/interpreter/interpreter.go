@@ -20,8 +20,12 @@ const maxGotoDepth = 100
 // context (e.g. if/while with $${ } global variables, calendar).
 // globalVar may be nil — ops must guard against it.
 //
+// payload is set on the first Step call after a Coordinator.Dispatch; it is
+// passed as OpInput.ResumePayload so suspendable ops can read the event data.
+// Subsequent calls in the same Run loop pass nil.
+//
 // Step is a pure function — it does not touch the database or any I/O.
-func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, globalVar func(string) string) (Action, state.ExecState, error) {
+func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, globalVar func(string) string, payload map[string]string) (Action, state.ExecState, error) {
 	for {
 		if len(es.Stack) == 0 {
 			return Action{Kind: ActionDone}, es, nil
@@ -61,11 +65,14 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 		}
 
 		out, err := op.Execute(ctx, ops.OpInput{
-			Node:      child,
-			Variables: es.Variables,
-			DomainID:  domainID,
-			GlobalVar: globalVar,
+			Node:          child,
+			Variables:     es.Variables,
+			DomainID:      domainID,
+			GlobalVar:     globalVar,
+			ResumePayload: payload,
 		})
+		// payload is consumed by the first op executed; clear for subsequent ops.
+		payload = nil
 		if err != nil {
 			reason := err.Error()
 			return Action{Kind: ActionFail, FailReason: reason}, es, err
@@ -135,7 +142,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			if out.Pending != nil {
 				es.Pending = out.Pending
 			}
-			return Action{Kind: ActionSuspend, SuspendKey: out.SuspendKey}, es, nil
+			return Action{Kind: ActionSuspend, SuspendKey: out.SuspendKey, ReSuspend: out.ReSuspend}, es, nil
 		}
 
 		// Any non-goto op resets the consecutive-goto counter.

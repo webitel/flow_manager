@@ -29,18 +29,25 @@ func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger,
 // execution via Run. The caller must ensure rec was loaded from the DB and
 // has Status == StatusSuspended. Pending is cleared so the next Update
 // persists a clean state.
-func (d *Driver) Resume(ctx context.Context, rec *persistence.Record, tr *tree.Tree) error {
+//
+// payload is the event data from the external trigger (e.g. inbound message
+// body, queue event fields). It is passed as OpInput.ResumePayload to the
+// first op that executes after the resume.
+func (d *Driver) Resume(ctx context.Context, rec *persistence.Record, tr *tree.Tree, payload map[string]string) error {
 	rec.Status = state.StatusRunning
 	rec.State.Pending = nil
-	return d.Run(ctx, rec, tr)
+	return d.Run(ctx, rec, tr, payload)
 }
 
 // Run executes the flow described by rec and tr until the flow completes,
 // suspends, fails, or ctx is cancelled.
 //
+// payload is passed as OpInput.ResumePayload on the first Step call only;
+// subsequent iterations receive nil. Pass nil for a fresh (non-resumed) run.
+//
 // It writes state transitions to the repository but does NOT call Create —
 // the caller is responsible for creating the record before calling Run.
-func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree) error {
+func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree, payload map[string]string) error {
 	es := rec.State
 	domainID := rec.DomainID
 
@@ -58,12 +65,14 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 
 	l.Debug("run flow")
 
+	stepPayload := payload
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
 
-		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, globalVar)
+		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, globalVar, stepPayload)
+		stepPayload = nil // consumed by first Step; nil for all subsequent
 		es = next
 
 		switch action.Kind {
@@ -80,9 +89,15 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			return d.repo.Complete(ctx, rec.ID)
 
 		case ActionSuspend:
-			l.Debug("flow suspended",
-				wlog.String("key", action.SuspendKey),
-			)
+			if action.ReSuspend {
+				l.Debug("flow re-suspended",
+					wlog.String("key", action.SuspendKey),
+				)
+			} else {
+				l.Debug("flow suspended",
+					wlog.String("key", action.SuspendKey),
+				)
+			}
 			rec.State = es
 			rec.Status = state.StatusSuspended
 			// Update persisted state BEFORE suspending so that the external

@@ -87,7 +87,7 @@ func (r *Router) resumeRecord(ctx context.Context, rec *persistence.Record) {
 	// soft_sleep, if, etc.) work correctly without a connection.
 	runCtx := legacy.WithConnection(ctx, nil)
 
-	if runErr := r.driver.Resume(runCtx, rec, tr); runErr != nil {
+	if runErr := r.driver.Resume(runCtx, rec, tr, nil); runErr != nil {
 		r.fm.Log().Warn("im timer wakeup: resume failed",
 			wlog.String("id", rec.ID.String()),
 			wlog.Err(runErr),

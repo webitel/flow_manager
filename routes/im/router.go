@@ -191,7 +191,7 @@ func (r *Router) handle(conn model.Connection) {
 	})
 
 	runCtx := legacy.WithConnection(ctx, conv)
-	if runErr := r.driver.Run(runCtx, rec, tr); runErr != nil {
+	if runErr := r.driver.Run(runCtx, rec, tr, nil); runErr != nil {
 		r.fm.Log().Error(fmt.Sprintf("IM driver.Run conn=%s: %v", conn.Id(), runErr))
 	}
 
