@@ -16,6 +16,8 @@ var nativeOps = map[string]bool{
 	"set":    true,
 	"log":    true,
 	"start":  true,
+	"string": true,
+	"math":   true,
 }
 
 // RegisterLegacy wraps every handler from router as a LegacyOp in reg,

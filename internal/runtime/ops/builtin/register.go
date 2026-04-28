@@ -13,4 +13,6 @@ func Register(reg *ops.Registry) {
 	reg.Register("set", Set())
 	reg.Register("log", Log())
 	reg.Register("softSleep", SoftSleep())
+	reg.Register("string", StringOp())
+	reg.Register("math", MathOp())
 }
