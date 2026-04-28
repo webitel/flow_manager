@@ -155,3 +155,117 @@ func (logOp) Doc() ops.OpDoc {
 		},
 	}
 }
+
+func (softSleepOp) Doc() ops.OpDoc {
+	return ops.OpDoc{
+		Description: "Pauses schema execution for a given duration without blocking the goroutine. " +
+			"The runtime suspends the flow and resumes it via a timer worker after the delay expires.",
+		AvailableIn: []string{"voice", "chat", "form", "service"},
+		Visual:      true,
+		Args: map[string]ops.ArgDoc{
+			"softSleep": {
+				Type:        "integer",
+				Required:    true,
+				Description: "Pause duration in milliseconds.",
+			},
+		},
+		Examples: map[string]ops.Example{
+			"two_seconds": {
+				Description: "Pause for 2 seconds",
+				Schema:      `{"softSleep": 2000}`,
+			},
+		},
+	}
+}
+
+func (stringOp) Doc() ops.OpDoc {
+	return ops.OpDoc{
+		Description: "Applies a string transformation function to data and stores the result in a variable.",
+		AvailableIn: []string{"voice", "chat", "form", "service"},
+		Visual:      true,
+		Args: map[string]ops.ArgDoc{
+			"setVar": {
+				Type:        "string",
+				Required:    true,
+				Description: "Variable to store the result.",
+			},
+			"fn": {
+				Type:     "string",
+				Required: true,
+				Description: "Function name. Go-native: reverse, charAt, length, base64, MD5, SHA-256, SHA-512, gomatch. " +
+					"JS String.prototype: toUpperCase, toLowerCase, trim, split, replace, includes, indexOf, slice.",
+			},
+			"data": {
+				Type:        "string",
+				Required:    true,
+				Description: "Input string. Supports ${variables}.",
+			},
+			"args": {
+				Type:        "array",
+				Description: "Extra arguments for the chosen fn (e.g. index for charAt, delimiter for split, pattern for gomatch).",
+			},
+		},
+		Notes: []string{
+			"For JS-native functions, a /regex/flags string in args is automatically converted to a RegExp object.",
+			"split returns all parts joined by \",\".",
+		},
+		Examples: map[string]ops.Example{
+			"uppercase": {
+				Description: "Convert a variable to upper case",
+				Schema:      `{"string": {"setVar": "name_upper", "fn": "toUpperCase", "data": "${client_name}"}}`,
+			},
+			"md5": {
+				Description: "MD5-hash a phone number",
+				Schema:      `{"string": {"setVar": "phone_hash", "fn": "MD5", "data": "${caller_id_number}"}}`,
+			},
+			"base64_encode": {
+				Description: "Base64-encode a token",
+				Schema:      `{"string": {"setVar": "encoded", "fn": "base64", "data": "${token}", "args": ["encoder"]}}`,
+			},
+			"gomatch": {
+				Description: "Validate input with a Go regexp",
+				Schema:      `{"string": {"setVar": "match", "fn": "gomatch", "data": "${user_input}", "args": ["^[0-9]{10}$"]}}`,
+			},
+		},
+	}
+}
+
+func (mathOp) Doc() ops.OpDoc {
+	return ops.OpDoc{
+		Description: "Applies a Math function or picks a random value from a list.",
+		AvailableIn: []string{"voice", "chat", "form", "service"},
+		Visual:      true,
+		Args: map[string]ops.ArgDoc{
+			"setVar": {
+				Type:        "string",
+				Required:    true,
+				Description: "Variable to store the result.",
+			},
+			"fn": {
+				Type:    "string",
+				Default: "random",
+				Description: "Function name. " +
+					"Go-native: random (picks a random element from data). " +
+					"JS Math.*: round, floor, ceil, abs, max, min, pow, sqrt, PI.",
+			},
+			"data": {
+				Type:        "array",
+				Description: "Input values passed to the function. For random — the pool to pick from.",
+			},
+		},
+		Examples: map[string]ops.Example{
+			"random_pick": {
+				Description: "Pick a random greeting from a list",
+				Schema:      `{"math": {"setVar": "greeting", "fn": "random", "data": ["Hello!", "Hi there!", "Welcome!"]}}`,
+			},
+			"round": {
+				Description: "Round a numeric variable",
+				Schema:      `{"math": {"setVar": "rounded", "fn": "round", "data": ["${raw_score}"]}}`,
+			},
+			"max": {
+				Description: "Return the largest of three values",
+				Schema:      `{"math": {"setVar": "biggest", "fn": "max", "data": [1, 5, 3]}}`,
+			},
+		},
+	}
+}

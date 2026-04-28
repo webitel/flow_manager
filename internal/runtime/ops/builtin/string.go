@@ -19,6 +19,30 @@ import (
 // stringArgs matches the schema format:
 //
 //	{"string": {"setVar": "out", "fn": "toUpperCase", "data": "hello", "args": []}}
+//
+// Supported fn values:
+//
+//	Go-native (no JS VM):
+//	  reverse     — reverse the string character-by-character
+//	  charAt      — return character at index (args: [index])
+//	  length      — return string length as a decimal string
+//	  base64      — base64 encode/decode (args: ["encoder"] or ["decoder"])
+//	  MD5         — hex MD5 digest of data
+//	  SHA-256     — hex SHA-256 digest of data
+//	  SHA-512     — hex SHA-512 digest of data
+//	  gomatch     — Go regexp match; returns captured groups joined by ","
+//	               (args: ["regexp_pattern"])
+//
+//	JS-native (delegated to goja via String.prototype):
+//	  toUpperCase — convert to upper case
+//	  toLowerCase — convert to lower case
+//	  trim        — strip leading/trailing whitespace
+//	  split       — split by delimiter (args: [delimiter]) → joined with ","
+//	  replace     — replace first/all occurrences (args: [search, replacement])
+//	               search may be a /regex/flags literal
+//	  includes    — returns "true" / "false"
+//	  indexOf     — position of first occurrence as decimal string
+//	  slice       — substring (args: [start] or [start, end])
 type stringArgs struct {
 	SetVar string        `json:"setVar"`
 	Fn     string        `json:"fn"`
@@ -28,7 +52,14 @@ type stringArgs struct {
 
 type stringOp struct{}
 
-// StringOp implements the "string" builtin op.
+// StringOp returns the "string" builtin op.
+//
+// Schema examples:
+//
+//	{"string": {"setVar": "name_upper", "fn": "toUpperCase", "data": "${client_name}"}}
+//	{"string": {"setVar": "phone_hash", "fn": "MD5",         "data": "${caller_id_number}"}}
+//	{"string": {"setVar": "encoded",    "fn": "base64",      "data": "${token}", "args": ["encoder"]}}
+//	{"string": {"setVar": "match",      "fn": "gomatch",     "data": "${input}", "args": ["^[0-9]{10}$"]}}
 func StringOp() ops.Op { return stringOp{} }
 
 func (stringOp) Kind() ops.OpKind { return ops.OpKindSync }
