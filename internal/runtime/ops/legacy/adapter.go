@@ -30,6 +30,18 @@ func (l *LegacyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 		return ops.OpOutput{}, fmt.Errorf("legacy op %q: no connection in context", l.name)
 	}
 
+	// Sync interpreter variables into the connection so that legacy ops can
+	// interpolate them via conn.ParseText / conn.Get. Without this, variables
+	// set by builtin ops (set, etc.) would not be visible to sendText and
+	// similar handlers that call scope.Decode / conn.ParseText.
+	if len(in.Variables) > 0 {
+		vars := make(model.Variables, len(in.Variables))
+		for k, v := range in.Variables {
+			vars[k] = v
+		}
+		conn.Set(ctx, vars) // error not actionable; IM Set is in-memory and never fails
+	}
+
 	before := snapshotVars(conn.Variables())
 	scope := flow.New(l.router, flow.Config{Conn: conn})
 

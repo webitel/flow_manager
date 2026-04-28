@@ -35,6 +35,21 @@ func NewDriver(repo persistence.Repository, reg *ops.Registry, log *wlog.Logger,
 // first op that executes after the resume.
 func (d *Driver) Resume(ctx context.Context, rec *persistence.Record, tr *tree.Tree, payload map[string]string) error {
 	rec.Status = state.StatusRunning
+	// Apply payload→variable mappings declared by the suspending op before
+	// clearing Pending, so the next op sees the resolved variables immediately.
+	if len(payload) > 0 && rec.State.Pending != nil {
+		for payloadKey, varName := range rec.State.Pending.VarFromPayload {
+			if varName == "" {
+				continue
+			}
+			if val, ok := payload[payloadKey]; ok {
+				if rec.State.Variables == nil {
+					rec.State.Variables = make(map[string]string)
+				}
+				rec.State.Variables[varName] = val
+			}
+		}
+	}
 	rec.State.Pending = nil
 	return d.Run(ctx, rec, tr, payload)
 }

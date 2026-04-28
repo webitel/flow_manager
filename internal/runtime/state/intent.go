@@ -12,4 +12,7 @@ type PendingIntent struct {
 	IdempotencyKey string            `json:"key"`              // unique per attempt
 	Args           map[string]string `json:"args"`             // op-specific metadata
 	ResumeKey      string            `json:"resume,omitempty"` // non-empty for async waits
+	// VarFromPayload maps resume-payload keys to variable names.
+	// On resume, driver writes payload[key] → variables[varName] for each entry.
+	VarFromPayload map[string]string `json:"var_from_payload,omitempty"`
 }

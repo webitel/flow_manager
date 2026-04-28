@@ -44,6 +44,10 @@ type Connection struct {
 	queueKey        *model.InQueueKey
 	exportVariables []string
 	messages        []model.MessageWrapper
+
+	// inbound handler registry for native suspendable ops (e.g. recv_message).
+	inboundHandlers map[uint64]func(text string)
+	nextHandlerID   uint64
 }
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageWrapper) *Connection {
@@ -93,12 +97,43 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 	c.messages = append(c.messages, msg)
 	ch := c.waitMsgChan
 	c.lastMsg = msg.Message
-	c.Unlock()
-	if ch != nil { // todo skip flow messages
-		ch <- msg
-		return
+	var handlers []func(text string)
+	for _, fn := range c.inboundHandlers {
+		handlers = append(handlers, fn)
 	}
-	c.log.Debug("message "+msg.Message.Text, wlog.String("thread_id", msg.Message.ThreadID))
+	c.Unlock()
+
+	if ch != nil {
+		ch <- msg
+	}
+
+	for _, fn := range handlers {
+		fn(msg.Message.Text)
+	}
+
+	if ch == nil && len(handlers) == 0 {
+		c.log.Debug("message "+msg.Message.Text, wlog.String("thread_id", msg.Message.ThreadID))
+	}
+}
+
+// OnInboundMessage registers handler to be called when the remote end sends a
+// message. The handler must not block. Returns an unregister function that
+// must be called exactly once.
+func (c *Connection) OnInboundMessage(handler func(text string)) (unregister func()) {
+	c.Lock()
+	if c.inboundHandlers == nil {
+		c.inboundHandlers = make(map[uint64]func(text string))
+	}
+	id := c.nextHandlerID
+	c.nextHandlerID++
+	c.inboundHandlers[id] = handler
+	c.Unlock()
+
+	return func() {
+		c.Lock()
+		delete(c.inboundHandlers, id)
+		c.Unlock()
+	}
 }
 
 func (c *Connection) From() model.ImEndpoint {

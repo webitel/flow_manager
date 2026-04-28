@@ -87,7 +87,14 @@ func (r *Router) resumeRecord(ctx context.Context, rec *persistence.Record) {
 	// soft_sleep, if, etc.) work correctly without a connection.
 	runCtx := legacy.WithConnection(ctx, nil)
 
-	if runErr := r.driver.Resume(runCtx, rec, tr, nil); runErr != nil {
+	// For recv_message timeout, inject the timeout payload so VarFromPayload
+	// can map "timeout" → the variable named in timeoutSet.
+	var payload map[string]string
+	if rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
+		payload = map[string]string{"timeout": "true"}
+	}
+
+	if runErr := r.driver.Resume(runCtx, rec, tr, payload); runErr != nil {
 		r.fm.Log().Warn("im timer wakeup: resume failed",
 			wlog.String("id", rec.ID.String()),
 			wlog.Err(runErr),

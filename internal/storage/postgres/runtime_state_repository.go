@@ -113,6 +113,9 @@ func (r *RuntimeStateRepository) LoadByResumeKey(ctx context.Context, key string
 	var row runtimeStateRow
 	err := r.db.Get(ctx, &row, loadByResumeKeySQL, pgx.NamedArgs{"key": key})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("runtime_state.load_by_resume_key(%s): %w", key, err)
 	}
 	return toRecord(row)
@@ -271,7 +274,7 @@ UPDATE flow.runtime_state
        updated_at = now()
  WHERE status  = 'suspended'
    AND channel = @channel
-   AND (state->'pending'->>'op') = 'soft_sleep'
+   AND (state->'pending'->>'op') IN ('soft_sleep', 'recv_message')
    AND (state->'pending'->'args'->>'wake_at')::timestamptz <= now()
 RETURNING ` + selectFields
 
