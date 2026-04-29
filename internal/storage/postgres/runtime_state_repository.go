@@ -103,15 +103,21 @@ func (r *RuntimeStateRepository) Load(ctx context.Context, id uuid.UUID) (*Recor
 	return toRecord(row)
 }
 
-const loadByResumeKeySQL = `
-SELECT` + selectFields + `
-  FROM flow.runtime_state
- WHERE resume_key = @key AND status = 'suspended'
- LIMIT 1`
+// claimByResumeKeySQL atomically transitions the suspended record to running
+// and clears resume_key so concurrent callers cannot double-resume the same
+// record. Only one UPDATE succeeds; the rest find no matching row.
+const claimByResumeKeySQL = `
+UPDATE flow.runtime_state
+   SET status     = 'running',
+       resume_key = NULL,
+       updated_at = now()
+ WHERE resume_key = @key
+   AND status     = 'suspended'
+RETURNING ` + selectFields
 
 func (r *RuntimeStateRepository) LoadByResumeKey(ctx context.Context, key string) (*Record, error) {
 	var row runtimeStateRow
-	err := r.db.Get(ctx, &row, loadByResumeKeySQL, pgx.NamedArgs{"key": key})
+	err := r.db.Get(ctx, &row, claimByResumeKeySQL, pgx.NamedArgs{"key": key})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil

@@ -92,6 +92,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 
 		switch action.Kind {
 		case ActionContinue:
+			l.Debug("flow continue")
 			rec.State = es
 			if err2 := d.repo.Update(ctx, rec); err2 != nil {
 				return err2
