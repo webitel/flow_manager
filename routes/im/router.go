@@ -273,8 +273,10 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persist
 		unregFn func()
 	)
 
+	done := make(chan struct{})
 	teardownFn := func() {
 		once.Do(func() {
+			close(done)
 			if unregFn != nil {
 				unregFn()
 			}
@@ -313,13 +315,7 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persist
 		}
 	}
 
-	var recvTimeout *time.Timer
-
 	unregFn = waitConn.OnInboundMessage(func(text string) {
-		// Cancel the recv_message timeout timer if it hasn't fired yet.
-		if recvTimeout != nil {
-			recvTimeout.Stop()
-		}
 		dispatch(map[string]string{"msg": text})
 	})
 
@@ -327,17 +323,19 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persist
 	// timer instead of relying on the DB polling worker. This gives accurate
 	// short timeouts (e.g. 60s) and works across service restarts: if wake_at
 	// is already in the past we dispatch immediately.
+	//
+	// No need to cancel the timer when a message arrives first — the atomic
+	// claim in LoadByResumeKey ensures a second dispatch is always a no-op.
 	if rec != nil && rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
 		if wakeAtStr, ok := rec.State.Pending.Args["wake_at"]; ok {
 			if wakeAt, parseErr := time.Parse(time.RFC3339, wakeAtStr); parseErr == nil {
 				delay := time.Until(wakeAt)
-				fireTimeout := func() {
-					dispatch(map[string]string{"timeout": "true"})
-				}
 				if delay <= 0 {
-					go fireTimeout()
+					go dispatch(map[string]string{"timeout": "true"})
 				} else {
-					recvTimeout = time.AfterFunc(delay, fireTimeout)
+					time.AfterFunc(delay, func() {
+						dispatch(map[string]string{"timeout": "true"})
+					})
 				}
 			}
 		}
@@ -349,11 +347,12 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persist
 		go dispatch(map[string]string{"msg": initialMsg})
 	}
 
-	// Ensure teardown when the connection context is cancelled.
+	// Ensure teardown when the connection context is cancelled OR when the
+	// flow finishes via dispatch (done is closed inside teardownFn's once.Do).
 	go func() {
-		<-conn.Context().Done()
-		if recvTimeout != nil {
-			recvTimeout.Stop()
+		select {
+		case <-conn.Context().Done():
+		case <-done:
 		}
 		teardownFn()
 	}()
