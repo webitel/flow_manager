@@ -27,7 +27,9 @@ func (l *LegacyOp) Kind() ops.OpKind { return ops.OpKindSuspendable }
 func (l *LegacyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
 	conn := ConnectionFromContext(ctx)
 	if conn == nil {
-		return ops.OpOutput{}, fmt.Errorf("legacy op %q: no connection in context", l.name)
+		// No live connection available (e.g. timer wakeup after service restart).
+		// Skip gracefully so the flow can continue to non-IM ops.
+		return ops.OpOutput{}, nil
 	}
 
 	// Sync interpreter variables into the connection so that legacy ops can

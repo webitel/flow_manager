@@ -8,6 +8,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/infra/discovery"
+	outboundim "github.com/webitel/flow_manager/internal/adapters/outbound/im"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -24,7 +25,7 @@ type server struct {
 	didFinishListen chan struct{}
 	stopped         chan struct{}
 	startOnce       sync.Once
-	client          *Client
+	client          *outboundim.Client
 	log             *wlog.Logger
 	connectionStore *ConnectionStore
 	sessionStore    SessionStore
@@ -37,7 +38,7 @@ func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log 
 		consume:         make(chan model.Connection, 100),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
-		client:          NewClient(consulAddr, log, t),
+		client:          outboundim.NewClient(consulAddr, log, t),
 		sessionStore:    store,
 		connectionStore: NewConnectionStore(log),
 		log:             log,
