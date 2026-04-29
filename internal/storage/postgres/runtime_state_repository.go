@@ -274,7 +274,7 @@ UPDATE flow.runtime_state
        updated_at = now()
  WHERE status  = 'suspended'
    AND channel = @channel
-   AND (state->'pending'->>'op') IN ('soft_sleep', 'recv_message')
+   AND (state->'pending'->>'op') = 'soft_sleep'
    AND (state->'pending'->'args'->>'wake_at')::timestamptz <= now()
 RETURNING ` + selectFields
 

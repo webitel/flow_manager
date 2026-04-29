@@ -267,7 +267,7 @@ func (r *Router) teardown(conn model.Connection, conv Dialog, cp *session.Checkp
 // initialMsg, when non-empty, is dispatched immediately after the handler is
 // registered. This handles the recovery path where the triggering message
 // arrived before the handler was registered.
-func (r *Router) watchSuspended(conn model.Connection, conv Dialog, _ *persistence.Record, cp *session.Checkpoint, i *flow.Flow, initialMsg string) {
+func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persistence.Record, cp *session.Checkpoint, i *flow.Flow, initialMsg string) {
 	var (
 		once    sync.Once
 		unregFn func()
@@ -292,11 +292,13 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, _ *persisten
 	connID := conn.Id()
 	suspendKey := "msg:" + connID
 
-	dispatchMsg := func(text string) {
+	// dispatch sends an arbitrary payload to the coordinator and tears down if
+	// the flow is no longer running/suspended afterwards.
+	dispatch := func(payload map[string]string) {
 		connCtx := legacy.WithConnection(conn.Context(), conv)
 		connCtx = messaging.WithConnID(connCtx, connID)
 
-		if err := r.coord.Dispatch(connCtx, suspendKey, map[string]string{"msg": text}); err != nil {
+		if err := r.coord.Dispatch(connCtx, suspendKey, payload); err != nil {
 			r.fm.Log().Warn(fmt.Sprintf("im watchSuspended: dispatch error conn=%s: %v", connID, err))
 		}
 
@@ -311,17 +313,48 @@ func (r *Router) watchSuspended(conn model.Connection, conv Dialog, _ *persisten
 		}
 	}
 
-	unregFn = waitConn.OnInboundMessage(dispatchMsg)
+	var recvTimeout *time.Timer
+
+	unregFn = waitConn.OnInboundMessage(func(text string) {
+		// Cancel the recv_message timeout timer if it hasn't fired yet.
+		if recvTimeout != nil {
+			recvTimeout.Stop()
+		}
+		dispatch(map[string]string{"msg": text})
+	})
+
+	// If the suspended op is recv_message with a wake_at deadline, fire a local
+	// timer instead of relying on the DB polling worker. This gives accurate
+	// short timeouts (e.g. 60s) and works across service restarts: if wake_at
+	// is already in the past we dispatch immediately.
+	if rec != nil && rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
+		if wakeAtStr, ok := rec.State.Pending.Args["wake_at"]; ok {
+			if wakeAt, parseErr := time.Parse(time.RFC3339, wakeAtStr); parseErr == nil {
+				delay := time.Until(wakeAt)
+				fireTimeout := func() {
+					dispatch(map[string]string{"timeout": "true"})
+				}
+				if delay <= 0 {
+					go fireTimeout()
+				} else {
+					recvTimeout = time.AfterFunc(delay, fireTimeout)
+				}
+			}
+		}
+	}
 
 	// Replay the message that triggered the recovery path — it arrived before
 	// the handler was registered so OnInboundMessage would have missed it.
 	if initialMsg != "" {
-		go dispatchMsg(initialMsg)
+		go dispatch(map[string]string{"msg": initialMsg})
 	}
 
 	// Ensure teardown when the connection context is cancelled.
 	go func() {
 		<-conn.Context().Done()
+		if recvTimeout != nil {
+			recvTimeout.Stop()
+		}
 		teardownFn()
 	}()
 }

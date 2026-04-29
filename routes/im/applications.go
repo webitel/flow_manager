@@ -30,12 +30,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendAction"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendAction),
 	}
-	apps["sendTts"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.sendTTS),
-	}
-	apps["stt"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.sendSTT),
-	}
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
