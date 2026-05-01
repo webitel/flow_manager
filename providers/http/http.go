@@ -43,5 +43,5 @@ func (cw *CorsWrapper) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (rl *RecoveryLogger) Println(i ...any) {
 	wlog.Error("Please check the std error output for the stack trace")
-	wlog.Error(fmt.Sprint(i))
+	wlog.Error(fmt.Sprint(i...))
 }

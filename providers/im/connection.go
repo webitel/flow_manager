@@ -223,7 +223,7 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 	if msg.File != nil {
 		f := msg.File
 		images = append(images, &p.ImageInput{
-			Id:       string(f.Id),
+			Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,

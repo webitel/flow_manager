@@ -407,3 +407,178 @@ func TestEmptySchema(t *testing.T) {
 		t.Fatalf("expected Done for empty schema, got %v", kind)
 	}
 }
+
+// --- inline trigger branch tests ---
+
+// fakeWaitOp is a minimal suspendable op used in trigger tests.
+// On first call it suspends with ReenterOnResume. On resume:
+//   - payload["msg"] matches a commands-* trigger → inline branch + ReenterOnResume
+//   - otherwise → sets the variable named by Node.Args["set"] and continues
+type fakeWaitOp struct{}
+
+func (fakeWaitOp) Kind() ops.OpKind { return ops.OpKindSuspendable }
+func (fakeWaitOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutput, error) {
+	setVar, _ := in.Node.Args["set"].(string)
+
+	if in.ResumePayload != nil {
+		msg := in.ResumePayload["msg"]
+		if trig, ok := in.Triggers["commands-"+msg]; ok {
+			return ops.OpOutput{
+				Branch:          trig,
+				ReenterOnResume: true,
+			}, nil
+		}
+		out := ops.OpOutput{}
+		if setVar != "" {
+			out.SetVars = map[string]string{setVar: msg}
+		}
+		return out, nil
+	}
+	return ops.OpOutput{SuspendKey: "test:1", ReenterOnResume: true}, nil
+}
+
+// runUntilTerminal runs Steps (passing firstPayload on the first Step only) until
+// ActionSuspend, ActionDone, or ActionFail.
+func runUntilTerminal(t *testing.T, es state.ExecState, tr *tree.Tree, reg *ops.Registry, firstPayload map[string]string) (state.ExecState, interpreter.Action) {
+	t.Helper()
+	ctx := context.Background()
+	payload := firstPayload
+	for i := 0; i < 10_000; i++ {
+		action, next, err := interpreter.Step(ctx, nil, es, tr, reg, 0, nil, payload)
+		if err != nil {
+			t.Fatalf("Step error: %v", err)
+		}
+		payload = nil
+		es = next
+		switch action.Kind {
+		case interpreter.ActionDone, interpreter.ActionFail, interpreter.ActionSuspend:
+			return es, action
+		}
+	}
+	t.Fatal("runUntilTerminal: exceeded step limit")
+	return es, interpreter.Action{}
+}
+
+// TestInlineTriggerCommand verifies that a trigger command received by
+// fakeWaitOp runs its sub-tree inline, then re-suspends so the next message
+// goes to the main waitMsg.
+func TestInlineTriggerCommand(t *testing.T) {
+	schema := tree.Schema{
+		{"triggers": map[string]any{
+			"commands": map[string]any{
+				"/help": []any{map[string]any{"set": map[string]any{"helpRan": "yes"}}},
+			},
+		}},
+		{"waitMsg": map[string]any{"set": "answer"}},
+		{"set": map[string]any{"after": "yes"}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := newReg()
+	reg.Register("waitMsg", fakeWaitOp{})
+
+	es := startState(1, tr.Version)
+
+	// Initial run → waitMsg suspends.
+	es, act := runUntilTerminal(t, es, tr, reg, nil)
+	if act.Kind != interpreter.ActionSuspend {
+		t.Fatalf("step1: expected Suspend, got %v", act.Kind)
+	}
+
+	// Resume with trigger command → trigger runs inline, then re-suspends.
+	es, act = runUntilTerminal(t, es, tr, reg, map[string]string{"msg": "/help"})
+	if act.Kind != interpreter.ActionSuspend {
+		t.Fatalf("step2: expected Suspend after trigger, got %v", act.Kind)
+	}
+	if es.Variables["helpRan"] != "yes" {
+		t.Errorf("step2: trigger branch did not run: helpRan=%q", es.Variables["helpRan"])
+	}
+
+	// Resume with real message → main waitMsg receives it, flow completes.
+	es, act = runUntilTerminal(t, es, tr, reg, map[string]string{"msg": "hello"})
+	if act.Kind != interpreter.ActionDone {
+		t.Fatalf("step3: expected Done, got %v", act.Kind)
+	}
+	if es.Variables["answer"] != "hello" {
+		t.Errorf("step3: answer=%q, expected 'hello'", es.Variables["answer"])
+	}
+	if es.Variables["after"] != "yes" {
+		t.Errorf("step3: after-op did not run")
+	}
+}
+
+// TestInlineTriggerWithNestedWait verifies the complex case where the trigger
+// sub-tree itself contains a suspendable op (fakeWaitOp). The trigger's wait
+// suspends the entire flow; the next message goes to the trigger's waitMsg,
+// not to the main waitMsg. When the trigger finishes the main waitMsg
+// re-executes and suspends for the final message.
+func TestInlineTriggerWithNestedWait(t *testing.T) {
+	schema := tree.Schema{
+		{"triggers": map[string]any{
+			"commands": map[string]any{
+				"/help": []any{
+					map[string]any{"set": map[string]any{"helpStart": "yes"}},
+					map[string]any{"waitMsg": map[string]any{"set": "trigAnswer"}},
+					map[string]any{"set": map[string]any{"helpEnd": "yes"}},
+				},
+			},
+		}},
+		{"waitMsg": map[string]any{"set": "mainAnswer"}},
+		{"set": map[string]any{"after": "yes"}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg := newReg()
+	reg.Register("waitMsg", fakeWaitOp{})
+
+	es := startState(1, tr.Version)
+
+	// 1. Initial run → main waitMsg suspends.
+	es, act := runUntilTerminal(t, es, tr, reg, nil)
+	if act.Kind != interpreter.ActionSuspend {
+		t.Fatalf("step1: expected Suspend, got %v", act.Kind)
+	}
+
+	// 2. "/help" → trigger starts: set helpStart, then trigger's waitMsg suspends.
+	es, act = runUntilTerminal(t, es, tr, reg, map[string]string{"msg": "/help"})
+	if act.Kind != interpreter.ActionSuspend {
+		t.Fatalf("step2: expected Suspend (trigger's waitMsg), got %v", act.Kind)
+	}
+	if es.Variables["helpStart"] != "yes" {
+		t.Errorf("step2: helpStart not set")
+	}
+	if es.Variables["helpEnd"] != "" {
+		t.Errorf("step2: helpEnd should not be set yet")
+	}
+
+	// 3. Reply for trigger's waitMsg → trigger completes, main waitMsg re-suspends.
+	es, act = runUntilTerminal(t, es, tr, reg, map[string]string{"msg": "help reply"})
+	if act.Kind != interpreter.ActionSuspend {
+		t.Fatalf("step3: expected Suspend (main waitMsg), got %v", act.Kind)
+	}
+	if es.Variables["helpEnd"] != "yes" {
+		t.Errorf("step3: helpEnd not set — trigger did not complete")
+	}
+	if es.Variables["trigAnswer"] != "help reply" {
+		t.Errorf("step3: trigAnswer=%q, expected 'help reply'", es.Variables["trigAnswer"])
+	}
+	if es.Variables["mainAnswer"] != "" {
+		t.Errorf("step3: mainAnswer should still be empty")
+	}
+
+	// 4. Final message → main waitMsg receives it, flow completes.
+	es, act = runUntilTerminal(t, es, tr, reg, map[string]string{"msg": "final"})
+	if act.Kind != interpreter.ActionDone {
+		t.Fatalf("step4: expected Done, got %v", act.Kind)
+	}
+	if es.Variables["mainAnswer"] != "final" {
+		t.Errorf("step4: mainAnswer=%q, expected 'final'", es.Variables["mainAnswer"])
+	}
+	if es.Variables["after"] != "yes" {
+		t.Errorf("step4: after-op did not run")
+	}
+}

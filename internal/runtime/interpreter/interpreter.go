@@ -144,6 +144,12 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 				// While loop: undo the position increment so the while node
 				// is re-evaluated after the branch body completes.
 				es.Stack[len(es.Stack)-1].Position--
+			} else if out.ReenterOnResume {
+				// Trigger sub-flow that runs inline: back up position so this
+				// op re-executes after the branch finishes. Allows trigger trees
+				// that contain their own recvMessage to suspend/resume correctly
+				// while the parent op stays on the stack waiting to re-evaluate.
+				es.Stack[len(es.Stack)-1].Position--
 			}
 
 			if log != nil {

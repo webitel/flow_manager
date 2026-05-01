@@ -66,19 +66,17 @@ func (recvMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 
 		msg := in.ResumePayload["msg"]
 
-		// TriggerCommands: if message matches a declared command, fork the
-		// trigger sub-flow asynchronously and re-suspend waiting for the next
-		// non-command message.
+		// TriggerCommands: if message matches a declared command, run the
+		// trigger sub-tree inline. ReenterOnResume backs up the position so
+		// this op re-executes after the trigger finishes. The trigger may
+		// itself contain a recvMessage — it suspends normally, frames are
+		// persisted on the shared stack, and resumes arrive at the trigger's
+		// op first. When the trigger completes the stack unwinds back here.
 		if len(in.Triggers) > 0 {
 			cmdKey := "commands-" + msg
 			if trig, ok := in.Triggers[cmdKey]; ok {
-				pending := buildPending(suspendKey, in.Node.ID, argv)
 				return ops.OpOutput{
 					Branch:          trig,
-					BranchAsync:     true,
-					ReSuspend:       true,
-					SuspendKey:      suspendKey,
-					Pending:         pending,
 					ReenterOnResume: true,
 				}, nil
 			}
