@@ -53,8 +53,18 @@ func ParseJSON(schemaID int, data []byte) (*Tree, error) {
 
 // parseApps appends parsed nodes to parent.Children for every element in apps.
 // prefix is the dot-separated path prefix for stable NodeID assignment.
+// Elements that contain only a "triggers" key are consumed into Tree.Triggers
+// and are not appended to parent.Children.
 func parseApps(t *Tree, parent *Node, apps Schema, prefix string) error {
 	for i, obj := range apps {
+		// Triggers element: {"triggers": {...}} — parse into Tree.Triggers and skip.
+		if raw, ok := obj["triggers"]; ok && len(obj) == 1 {
+			if err := parseTriggers(t, raw); err != nil {
+				return fmt.Errorf("tree: triggers element at index %d: %w", i, err)
+			}
+			continue
+		}
+
 		var idPrefix string
 		if prefix == "" {
 			idPrefix = fmt.Sprintf("%d", i)
@@ -78,6 +88,57 @@ func parseApps(t *Tree, parent *Node, apps Schema, prefix string) error {
 			t.ByTag[node.Tag] = node
 		}
 	}
+	return nil
+}
+
+// parseTriggers populates Tree.Triggers from the raw value of a "triggers" key.
+// Flat keys (e.g. "disconnected") map directly to a trigger name.
+// The special "commands" key nests one more level:
+//
+//	{"commands": {"/cancel": [...], "/help": [...]}}
+//
+// produces triggers named "commands-/cancel" and "commands-/help".
+func parseTriggers(t *Tree, raw any) error {
+	trigMap, ok := raw.(map[string]any)
+	if !ok {
+		return fmt.Errorf("expected object, got %T", raw)
+	}
+	if t.Triggers == nil {
+		t.Triggers = make(map[string]*Node, len(trigMap))
+	}
+	for name, val := range trigMap {
+		if name == "commands" {
+			cmdMap, ok := val.(map[string]any)
+			if !ok {
+				return fmt.Errorf("triggers.commands must be an object, got %T", val)
+			}
+			for cmd, cmdVal := range cmdMap {
+				trigName := "commands-" + cmd
+				if err := parseTriggerEntry(t, trigName, cmdVal); err != nil {
+					return fmt.Errorf("triggers.commands[%q]: %w", cmd, err)
+				}
+			}
+		} else {
+			if err := parseTriggerEntry(t, name, val); err != nil {
+				return fmt.Errorf("triggers[%q]: %w", name, err)
+			}
+		}
+	}
+	return nil
+}
+
+// parseTriggerEntry parses a single trigger sub-tree and stores it in t.Triggers.
+func parseTriggerEntry(t *Tree, name string, raw any) error {
+	schema, err := toSchema(raw)
+	if err != nil {
+		return err
+	}
+	id := "trigger." + name
+	container := newContainer(id, t)
+	if err := parseApps(t, container, schema, id); err != nil {
+		return err
+	}
+	t.Triggers[name] = container
 	return nil
 }
 

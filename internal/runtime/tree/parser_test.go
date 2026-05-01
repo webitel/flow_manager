@@ -350,6 +350,70 @@ func TestParse_AllNodeIDsInByID(t *testing.T) {
 	walk(tr.Root)
 }
 
+func TestParse_Triggers(t *testing.T) {
+	const schema = `[
+		{
+			"triggers": {
+				"disconnected": [{"log": {"message": "bye"}}],
+				"commands": {
+					"/cancel": [{"log": {"message": "cancelled"}}],
+					"/help":   [{"log": {"message": "help"}}]
+				}
+			}
+		},
+		{"recvMessage": {"set": "answer"}}
+	]`
+
+	tr := mustParse(t, 14, schema)
+
+	// triggers element must NOT appear in root children.
+	if len(tr.Root.Children) != 1 {
+		t.Fatalf("Root.Children: got %d, want 1 (only recvMessage)", len(tr.Root.Children))
+	}
+	if tr.Root.Children[0].OpName != "recvMessage" {
+		t.Errorf("root child OpName: %q", tr.Root.Children[0].OpName)
+	}
+
+	// Flat trigger.
+	disc, ok := tr.Triggers["disconnected"]
+	if !ok {
+		t.Fatal("Triggers[disconnected] missing")
+	}
+	if len(disc.Children) != 1 || disc.Children[0].OpName != "log" {
+		t.Errorf("disconnected trigger children: %v", disc.Children)
+	}
+	if disc.ID != "trigger.disconnected" {
+		t.Errorf("disconnected container ID: %q", disc.ID)
+	}
+
+	// Command triggers.
+	for _, cmd := range []string{"/cancel", "/help"} {
+		key := "commands-" + cmd
+		trig, ok := tr.Triggers[key]
+		if !ok {
+			t.Errorf("Triggers[%q] missing", key)
+			continue
+		}
+		if len(trig.Children) != 1 {
+			t.Errorf("Triggers[%q] children: %d", key, len(trig.Children))
+		}
+	}
+}
+
+func TestParse_TriggersOnly(t *testing.T) {
+	// Schema with only a triggers element and no regular ops — should parse cleanly.
+	const schema = `[{"triggers": {"disconnected": [{"log": {"message": "x"}}]}}]`
+
+	tr := mustParse(t, 15, schema)
+
+	if len(tr.Root.Children) != 0 {
+		t.Errorf("Root.Children: got %d, want 0", len(tr.Root.Children))
+	}
+	if _, ok := tr.Triggers["disconnected"]; !ok {
+		t.Error("Triggers[disconnected] missing")
+	}
+}
+
 func TestParse_JSONRoundTripOfArgs(t *testing.T) {
 	const schema = `[{"httpRequest": {"url": "https://example.com", "method": "GET", "timeout": 5000}}]`
 

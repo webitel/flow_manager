@@ -34,4 +34,8 @@ type Tree struct {
 	Root     *Node            // virtual root; its Children are the top-level apps
 	ByID     map[NodeID]*Node // all nodes by ID (including containers)
 	ByTag    map[string]*Node // tag label → node (the tagged node itself, not container)
+	// Triggers maps trigger names (e.g. "disconnected", "commands-/cancel") to
+	// their sub-tree root Node. Populated from the schema's top-level "triggers"
+	// element. Empty when schema declares no triggers.
+	Triggers map[string]*Node
 }

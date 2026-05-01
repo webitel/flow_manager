@@ -50,35 +50,71 @@ func (recvMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	}
 
 	connID := ConnIDFromContext(ctx)
+	suspendKey := "msg:" + connID
+
+	// Resume path — op is called again because ReenterOnResume was set on the
+	// initial suspend. Inspect the payload and either forward or re-suspend.
+	if in.ResumePayload != nil {
+		if in.ResumePayload["timeout"] == "true" {
+			// Timer fired; set the timeout variable (if configured) and continue.
+			out := ops.OpOutput{}
+			if argv.TimeoutSet != "" {
+				out.SetVars = map[string]string{argv.TimeoutSet: "true"}
+			}
+			return out, nil
+		}
+
+		msg := in.ResumePayload["msg"]
+
+		// TriggerCommands: if message matches a declared command, fork the
+		// trigger sub-flow asynchronously and re-suspend waiting for the next
+		// non-command message.
+		if len(in.Triggers) > 0 {
+			cmdKey := "commands-" + msg
+			if trig, ok := in.Triggers[cmdKey]; ok {
+				pending := buildPending(suspendKey, in.Node.ID, argv)
+				return ops.OpOutput{
+					Branch:          trig,
+					BranchAsync:     true,
+					ReSuspend:       true,
+					SuspendKey:      suspendKey,
+					Pending:         pending,
+					ReenterOnResume: true,
+				}, nil
+			}
+		}
+
+		// Plain message — set the target variable and continue.
+		out := ops.OpOutput{}
+		if argv.Set != "" {
+			out.SetVars = map[string]string{argv.Set: msg}
+		}
+		return out, nil
+	}
+
+	// Initial suspend path.
 	if connID == "" {
 		return ops.OpOutput{}, fmt.Errorf("recv_message: connection ID not in context")
 	}
 
-	suspendKey := "msg:" + connID
+	return ops.OpOutput{
+		SuspendKey:      suspendKey,
+		Pending:         buildPending(suspendKey, in.Node.ID, argv),
+		ReenterOnResume: true,
+	}, nil
+}
 
+func buildPending(suspendKey, nodeID string, argv recvMessageArgs) *state.PendingIntent {
 	args := map[string]string{}
-	varFromPayload := map[string]string{}
-
-	if argv.Set != "" {
-		varFromPayload["msg"] = argv.Set
-	}
 	if argv.Timeout > 0 {
 		wakeAt := time.Now().Add(time.Duration(argv.Timeout) * time.Second)
 		args["wake_at"] = wakeAt.UTC().Format(time.RFC3339)
-		if argv.TimeoutSet != "" {
-			varFromPayload["timeout"] = argv.TimeoutSet
-		}
 	}
-
-	return ops.OpOutput{
-		SuspendKey: suspendKey,
-		Pending: &state.PendingIntent{
-			OpName:         "recv_message",
-			NodeID:         in.Node.ID,
-			IdempotencyKey: suspendKey,
-			Args:           args,
-			ResumeKey:      suspendKey,
-			VarFromPayload: varFromPayload,
-		},
-	}, nil
+	return &state.PendingIntent{
+		OpName:         "recv_message",
+		NodeID:         nodeID,
+		IdempotencyKey: suspendKey,
+		Args:           args,
+		ResumeKey:      suspendKey,
+	}
 }

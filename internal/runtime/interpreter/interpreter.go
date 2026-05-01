@@ -70,6 +70,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			DomainID:      domainID,
 			GlobalVar:     globalVar,
 			ResumePayload: payload,
+			Triggers:      tr.Triggers,
 		})
 		// payload is consumed by the first op executed; clear for subsequent ops.
 		payload = nil
@@ -120,8 +121,25 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			return Action{Kind: ActionDone}, es, nil
 		}
 
-		// Branch: enter a sub-tree (if/while/switch).
+		// Branch: enter a sub-tree (if/while/switch) or fork async trigger.
 		if out.Branch != nil {
+			if out.BranchAsync {
+				// Trigger sub-flow: run branch in a goroutine; main flow
+				// continues (or re-suspends via the accompanying SuspendKey).
+				if log != nil {
+					log.Debug("branch async", wlog.String("id", out.Branch.ID))
+				}
+				// Apply suspend-related state updates before returning so that
+				// the Driver persists the correct position and pending intent.
+				if out.ReenterOnResume {
+					es.Stack[len(es.Stack)-1].Position--
+				}
+				if out.Pending != nil {
+					es.Pending = out.Pending
+				}
+				return Action{Kind: ActionBranchAsync, AsyncBranch: out.Branch, SuspendKey: out.SuspendKey, ReSuspend: out.ReSuspend}, es, nil
+			}
+
 			if out.Repeat {
 				// While loop: undo the position increment so the while node
 				// is re-evaluated after the branch body completes.
@@ -141,6 +159,11 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			es.GotoCounter = 0
 			if out.Pending != nil {
 				es.Pending = out.Pending
+			}
+			// ReenterOnResume: back up position so this op is called again on
+			// the next resume with OpInput.ResumePayload populated.
+			if out.ReenterOnResume {
+				es.Stack[len(es.Stack)-1].Position--
 			}
 			return Action{Kind: ActionSuspend, SuspendKey: out.SuspendKey, ReSuspend: out.ReSuspend}, es, nil
 		}

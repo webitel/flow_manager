@@ -32,6 +32,11 @@ type OpInput struct {
 	// resume event (e.g. inbound message, queue event, timer expiry).
 	// Sync ops always see nil.
 	ResumePayload map[string]string
+
+	// Triggers maps trigger names (e.g. "disconnected", "commands-/cancel") to
+	// their sub-tree root. Populated by the interpreter from tr.Triggers.
+	// Nil when the schema declares no triggers.
+	Triggers map[string]*tree.Node
 }
 
 // OpOutput carries the interpreter directives produced by one op execution.
@@ -70,6 +75,13 @@ type OpOutput struct {
 
 	// Pending is a write-ahead idempotency record for suspendable ops.
 	Pending *state.PendingIntent
+
+	// ReenterOnResume, when true, causes the interpreter to back up the
+	// execution position before persisting the suspend state, so this op is
+	// called again on resume with OpInput.ResumePayload populated.
+	// Set by suspendable ops that need to inspect the resume event themselves
+	// (e.g. recvMessage for TriggerCommands). Sync ops must not set this.
+	ReenterOnResume bool
 }
 
 // Op is the interface every flow application must implement to run inside the
