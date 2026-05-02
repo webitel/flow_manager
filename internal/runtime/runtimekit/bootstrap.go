@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/builtin"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/calendar"
+	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
@@ -70,6 +71,19 @@ func Bootstrap(cfg Config) *Kit {
 			Excepted: cal.Excepted,
 		}, nil
 	}))
+
+	loadSchemaTr := func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
+		schema, appErr := cfg.Deps.GetSchemaById(domainID, schemaID)
+		if appErr != nil {
+			return nil, appErr
+		}
+		rawSchema := make([]map[string]any, len(schema.Schema))
+		for i, app := range schema.Schema {
+			rawSchema[i] = map[string]any(app)
+		}
+		return tree.Parse(schema.Id, rawSchema)
+	}
+	reg.Register("schema", schemaop.New(loadSchemaTr, reg))
 
 	if cfg.ExtraOps != nil {
 		cfg.ExtraOps(reg)

@@ -8,16 +8,18 @@ import (
 
 // nativeOps lists op names handled by the builtin interpreter; never bridge these.
 var nativeOps = map[string]bool{
-	"if":     true,
-	"while":  true,
-	"switch": true,
-	"goto":   true,
-	"break":  true,
-	"set":    true,
-	"log":    true,
-	"start":  true,
-	"string": true,
-	"math":   true,
+	"if":       true,
+	"while":    true,
+	"switch":   true,
+	"goto":     true,
+	"break":    true,
+	"set":      true,
+	"log":      true,
+	"start":    true,
+	"string":   true,
+	"math":     true,
+	"schema":   true,
+	"calendar": true,
 }
 
 // RegisterLegacy wraps every handler from router as a LegacyOp in reg,
