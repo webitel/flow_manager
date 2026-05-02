@@ -65,6 +65,8 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 		varSnap := maps.Clone(in.Variables)
 		gv := in.GlobalVar
 		reg := s.reg
+		domainID := in.DomainID
+		connID := in.ConnID
 		go func() {
 			subES := state.ExecState{
 				SchemaID:  tr.SchemaID,
@@ -72,7 +74,7 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 				Stack:     []state.Frame{{NodeID: tr.Root.ID, Position: 0}},
 			}
 			for ctx.Err() == nil {
-				action, next, _ := interpreter.Step(ctx, nil, subES, tr, reg, in.DomainID, gv, nil)
+				action, next, _ := interpreter.Step(ctx, nil, subES, tr, reg, domainID, connID, gv, nil)
 				subES = next
 				switch action.Kind {
 				case interpreter.ActionDone, interpreter.ActionFail, interpreter.ActionSuspend, interpreter.ActionBranchAsync:
@@ -120,7 +122,7 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	}
 
 	for ctx.Err() == nil {
-		action, next, stepErr := interpreter.Step(ctx, nil, subES, tr, s.reg, in.DomainID, in.GlobalVar, stepPayload)
+		action, next, stepErr := interpreter.Step(ctx, nil, subES, tr, s.reg, in.DomainID, in.ConnID, in.GlobalVar, stepPayload)
 		stepPayload = nil
 		subES = next
 
@@ -149,13 +151,14 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 			reg := s.reg
 			gv := in.GlobalVar
 			domainID := in.DomainID
+			connID := in.ConnID
 			go func() {
 				brES := state.ExecState{
 					Variables: varSnap,
 					Stack:     []state.Frame{{NodeID: branch.ID, Position: 0}},
 				}
 				for ctx.Err() == nil {
-					a, nb, _ := interpreter.Step(ctx, nil, brES, tr, reg, domainID, gv, nil)
+					a, nb, _ := interpreter.Step(ctx, nil, brES, tr, reg, domainID, connID, gv, nil)
 					brES = nb
 					switch a.Kind {
 					case interpreter.ActionDone, interpreter.ActionFail, interpreter.ActionSuspend, interpreter.ActionBranchAsync:

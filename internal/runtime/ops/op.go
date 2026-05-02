@@ -24,6 +24,9 @@ type OpInput struct {
 	Node      *tree.Node
 	Variables map[string]string
 	DomainID  int64
+	// ConnID is the identifier of the active connection (call UUID, conversation ID, etc.).
+	// Empty for service/processing flows that have no associated connection.
+	ConnID string
 	// GlobalVar returns the domain-scoped schema variable for name.
 	// Pre-bound to DomainID by the Driver; nil-safe (returns "" when nil).
 	GlobalVar func(name string) string

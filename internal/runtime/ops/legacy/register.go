@@ -21,6 +21,10 @@ var nativeOps = map[string]bool{
 	"schema":        true,
 	"calendar":      true,
 	"createMeeting": true,
+	"ccPosition":    true,
+	"memberInfo":    true,
+	"patchMembers":  true,
+	"ewt":           true,
 }
 
 // RegisterLegacy wraps every handler from router as a LegacyOp in reg,

@@ -86,7 +86,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			return ctx.Err()
 		}
 
-		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, globalVar, stepPayload)
+		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, rec.ConnectionID, globalVar, stepPayload)
 		stepPayload = nil // consumed by first Step; nil for all subsequent
 		es = next
 
@@ -135,7 +135,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 				varSnap[k] = v
 			}
 			branch := action.AsyncBranch
-			go d.runBranchAsync(ctx, branch, varSnap, tr, domainID, globalVar)
+			go d.runBranchAsync(ctx, branch, varSnap, tr, domainID, rec.ConnectionID, globalVar)
 			// Re-suspend the main flow on the same key.
 			rec.State = es
 			rec.Status = state.StatusSuspended
@@ -162,7 +162,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 // runBranchAsync executes a trigger sub-tree in a goroutine without persisting
 // state. Variables are a snapshot — writes do not affect the main flow.
 // Errors are logged and swallowed; the goroutine is fire-and-forget.
-func (d *Driver) runBranchAsync(ctx context.Context, branch *tree.Node, vars map[string]string, tr *tree.Tree, domainID int64, globalVar func(string) string) {
+func (d *Driver) runBranchAsync(ctx context.Context, branch *tree.Node, vars map[string]string, tr *tree.Tree, domainID int64, connID string, globalVar func(string) string) {
 	es := state.ExecState{
 		Variables: vars,
 		Stack:     []state.Frame{{NodeID: branch.ID, Position: 0}},
@@ -172,7 +172,7 @@ func (d *Driver) runBranchAsync(ctx context.Context, branch *tree.Node, vars map
 		if ctx.Err() != nil {
 			return
 		}
-		action, next, _ := Step(ctx, l, es, tr, d.reg, domainID, globalVar, nil)
+		action, next, _ := Step(ctx, l, es, tr, d.reg, domainID, connID, globalVar, nil)
 		es = next
 		switch action.Kind {
 		case ActionDone, ActionFail, ActionSuspend:

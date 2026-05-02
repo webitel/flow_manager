@@ -25,7 +25,7 @@ const maxGotoDepth = 100
 // Subsequent calls in the same Run loop pass nil.
 //
 // Step is a pure function — it does not touch the database or any I/O.
-func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, globalVar func(string) string, payload map[string]string) (Action, state.ExecState, error) {
+func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, connID string, globalVar func(string) string, payload map[string]string) (Action, state.ExecState, error) {
 	for {
 		if len(es.Stack) == 0 {
 			return Action{Kind: ActionDone}, es, nil
@@ -68,6 +68,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			Node:          child,
 			Variables:     es.Variables,
 			DomainID:      domainID,
+			ConnID:        connID,
 			GlobalVar:     globalVar,
 			ResumePayload: payload,
 			Triggers:      tr.Triggers,
