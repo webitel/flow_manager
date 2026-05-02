@@ -9,6 +9,7 @@ import (
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
@@ -25,6 +26,7 @@ type RouterDeps interface {
 	RuntimeStateRepo() persistence.Repository
 	GetStore() store.Store
 	GetAiBots() *aibridge.Client
+	Meeting() domainmeeting.Client
 
 	// schema / variable
 	SchemaVariable(ctx context.Context, domainId int64, name string) string

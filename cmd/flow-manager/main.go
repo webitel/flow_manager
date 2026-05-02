@@ -150,8 +150,8 @@ func newEngineClient(lc fx.Lifecycle, fm *app.FlowManager) (domainengine.Client,
 	return c, nil
 }
 
-func newMeetingClient(lc fx.Lifecycle, fm *app.FlowManager) (domainmeeting.Client, error) {
-	c := outboundmeeting.New(fm.Config().DiscoverySettings.Url)
+func newMeetingClient(lc fx.Lifecycle, cfg *model.Config) (domainmeeting.Client, error) {
+	c := outboundmeeting.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return c.Start()

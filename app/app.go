@@ -12,6 +12,7 @@ import (
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
@@ -78,7 +79,8 @@ type FlowManager struct {
 
 	cacheStore cache.CacheStores
 
-	AiBots *aibridge.Client
+	AiBots  *aibridge.Client
+	meeting domainmeeting.Client
 
 	ctx context.Context
 	cbr *CallbackResolver
@@ -94,6 +96,7 @@ func NewFlowManager(
 	storage domstorage.Client,
 	casesClient *cases.Api,
 	aiBots *aibridge.Client,
+	meetingClient domainmeeting.Client,
 	srvs Servers,
 	chatMgr *fmgrpc.ChatManager,
 	ccMgr domcc.CCManager,
@@ -111,6 +114,7 @@ func NewFlowManager(
 		storage:          storage,
 		cases:            casesClient,
 		AiBots:           aiBots,
+		meeting:          meetingClient,
 		chatManager:      chatMgr,
 		cc:               ccMgr,
 		eventQueue:       eventQueue,
@@ -229,4 +233,8 @@ func (f *FlowManager) GetStore() store.Store {
 
 func (f *FlowManager) GetAiBots() *aibridge.Client {
 	return f.AiBots
+}
+
+func (f *FlowManager) Meeting() domainmeeting.Client {
+	return f.meeting
 }

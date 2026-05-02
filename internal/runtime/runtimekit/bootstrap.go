@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/builtin"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/calendar"
+	meetingop "github.com/webitel/flow_manager/internal/runtime/ops/domain/meeting"
 	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -84,6 +85,7 @@ func Bootstrap(cfg Config) *Kit {
 		return tree.Parse(schema.Id, rawSchema)
 	}
 	reg.Register("schema", schemaop.New(loadSchemaTr, reg))
+	reg.Register("createMeeting", meetingop.New(cfg.Deps.Meeting()))
 
 	if cfg.ExtraOps != nil {
 		cfg.ExtraOps(reg)
