@@ -17,7 +17,6 @@ type IMDialog interface {
 	SendDocumentMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
 	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
-	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
 	LastMessages(limit int) []ChatMessage

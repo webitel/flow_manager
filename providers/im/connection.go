@@ -2,15 +2,12 @@ package im
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"net/http"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc/metadata"
@@ -21,31 +18,27 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
-
 var _ model.IMDialog = (*Connection)(nil)
 
 type Connection struct {
-	id        string
-	threadId  string
-	ctx       context.Context
-	domainId  int64
-	schemaId  int
-	srv       *server
-	variables map[string]string
-	msg       model.Message
+	id       string
+	threadId string
+	ctx      context.Context
+	domainId int64
+	schemaId int
+	srv      *server
 	sync.RWMutex
+	variables       map[string]string
+	msg             model.Message
 	lastMsg         model.Message
 	from            model.ImEndpoint
 	to              model.ImEndpoint
 	log             *wlog.Logger
-	waitMsgChan     chan model.MessageWrapper
 	hdrs            metadata.MD
 	queueKey        *model.InQueueKey
 	exportVariables []string
 	messages        []model.MessageWrapper
 
-	// inbound handler registry for native suspendable ops (e.g. recv_message).
 	inboundHandlers map[uint64]func(text string)
 	nextHandlerID   uint64
 }
@@ -54,22 +47,21 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	conn := &Connection{
-		id:       id,
-		threadId: msg.Message.ThreadID,
-		srv:      s,
-		from:     msg.Message.From,
-		to:       to,
-		lastMsg:  msg.Message,
+		id:        id,
+		threadId:  msg.Message.ThreadID,
+		srv:       s,
+		from:      msg.Message.From,
+		to:        to,
+		lastMsg:   msg.Message,
+		msg:       msg.Message,
+		ctx:       context.Background(),
+		domainId:  msg.DomainID,
+		schemaId:  schemaId,
+		variables: make(map[string]string),
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.DomainID, schemaId),
 		}),
-		msg:       msg.Message,
-		ctx:       context.Background(),
-		domainId:  msg.DomainID,
-		variables: toVariables(nil), // todo
-		schemaId:  schemaId,
-		RWMutex:   sync.RWMutex{},
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -79,14 +71,12 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 			wlog.Int("schema_id", schemaId),
 		),
 	}
-	if conn.variables == nil {
-		conn.variables = make(map[string]string)
-	}
 
 	conn.variables[model.ConversationStartMessageVariable] = msg.Message.Text
 	return conn
 }
 
+// OnMessage delivers an inbound message to all registered handlers.
 func (c *Connection) OnMessage(msg model.MessageWrapper) {
 	if msg.Message.From.Sub == c.to.Sub {
 		c.log.Debug("message from sub changed")
@@ -95,7 +85,6 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 
 	c.Lock()
 	c.messages = append(c.messages, msg)
-	ch := c.waitMsgChan
 	c.lastMsg = msg.Message
 	var handlers []func(text string)
 	for _, fn := range c.inboundHandlers {
@@ -103,15 +92,11 @@ func (c *Connection) OnMessage(msg model.MessageWrapper) {
 	}
 	c.Unlock()
 
-	if ch != nil {
-		ch <- msg
-	}
-
 	for _, fn := range handlers {
 		fn(msg.Message.Text)
 	}
 
-	if ch == nil && len(handlers) == 0 {
+	if len(handlers) == 0 {
 		c.log.Debug("message "+msg.Message.Text, wlog.String("thread_id", msg.Message.ThreadID))
 	}
 }
@@ -152,25 +137,12 @@ func (c *Connection) LastMessage() model.Message {
 	return c.lastMsg
 }
 
-func (c *Connection) setStateWaitMessage(ch chan model.MessageWrapper) error {
-	c.Lock()
-	defer c.Unlock()
-
-	if c.waitMsgChan != nil && ch != nil {
-		return errors.New("already set wait message chan")
-	}
-
-	c.waitMsgChan = ch
-	return nil
-}
-
 func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
 	var docs []*p.ImageInput
 
 	if msg.File != nil {
 		f := msg.File
 		docs = append(docs, &p.ImageInput{
-			// Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
@@ -208,10 +180,8 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 				},
 			},
 		},
-
 		Body: text,
 	})
-	// println(res)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendTextMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -378,14 +348,12 @@ func (c *Connection) LastMessages(limit int) []model.ChatMessage {
 }
 
 func (c *Connection) GetQueueKey() *model.InQueueKey {
-	c.log.Info("GetQueueKey")
 	c.RLock()
 	defer c.RUnlock()
 	return c.queueKey
 }
 
 func (c *Connection) SetQueue(key *model.InQueueKey) bool {
-	c.log.Info("SetQueue called")
 	c.Lock()
 	defer c.Unlock()
 
@@ -409,61 +377,12 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	return out
 }
 
-func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *model.AppError) {
-	msgs, err := c.receive(ctx, timeout)
-	if err != nil {
-		return nil, err
-	}
-
-	if messageTimeout > 0 {
-		var m []model.MessageWrapper
-		for err == nil {
-			m, err = c.receive(ctx, messageTimeout)
-			msgs = append(msgs, m...)
-		}
-	}
-	//if len(msgs) > 0 && name != "" {
-	//	c.storeMessages[name], _ = json.Marshal(msgs[0])
-	//}
-	//c.saveMessages(msgs...)
-	return messageToText(msgs...), nil
-}
-
 func (c *Connection) IsTransfer() bool {
 	return false
 }
 
 func (c *Connection) Stop(err error) {
 	c.srv.stopConnection(c)
-}
-
-func (c *Connection) receive(ctx context.Context, timeout int) ([]model.MessageWrapper, *model.AppError) {
-	ch := make(chan model.MessageWrapper)
-	defer func() {
-		c.setStateWaitMessage(nil)
-	}()
-
-	err := c.setStateWaitMessage(ch)
-	if err != nil {
-		c.log.Warn("Failed to set wait message chan")
-		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
-	}
-
-	t := time.After(time.Second * time.Duration(timeout))
-
-	c.log.Debug("wait message", wlog.Duration("wait_sec", time.Second*time.Duration(timeout)))
-
-	select {
-	case <-c.Context().Done():
-		c.log.Debug("cancel")
-		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Cancel", http.StatusInternalServerError)
-	case <-t:
-		c.log.Debug("timeout")
-		return nil, ErrWaitMessageTimeout
-	case msgsProto := <-ch:
-		c.log.Debug(fmt.Sprintf("receive message: %v", msgsProto))
-		return []model.MessageWrapper{msgsProto}, nil
-	}
 }
 
 func (c *Connection) Type() model.ConnectionType {
@@ -501,7 +420,6 @@ func (c *Connection) Get(key string) (string, bool) {
 	idx := strings.Index(key, ".")
 	if idx > 0 {
 		nameRoot := key[0:idx]
-
 		if v, ok := c.variables[nameRoot]; ok {
 			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
 		}
@@ -515,7 +433,7 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	defer c.Unlock()
 
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v) // TODO
+		c.variables[k] = fmt.Sprintf("%v", v)
 	}
 
 	return model.CallResponseOK, nil
@@ -534,24 +452,4 @@ func (c *Connection) Variables() map[string]string {
 	defer c.RUnlock()
 
 	return maps.Clone(c.variables)
-}
-
-func toVariables(in map[string]json.RawMessage) map[string]string {
-	vars := make(map[string]string)
-
-	for k, v := range in {
-		vars[k] = string(v)
-	}
-
-	return vars
-}
-
-func messageToText(messages ...model.MessageWrapper) []string {
-	msgs := make([]string, 0, len(messages))
-
-	for _, m := range messages {
-		msgs = append(msgs, m.Message.Text)
-	}
-
-	return msgs
 }

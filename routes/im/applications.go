@@ -18,9 +18,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendText"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendText),
 	}
-	apps["recvMessage"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.recvMessage),
-	}
 	apps["sendImage"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendImage),
 	}

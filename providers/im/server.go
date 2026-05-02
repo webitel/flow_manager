@@ -12,6 +12,9 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+// SessionStore is the distributed ownership-claim store for IM connections.
+// A DB-backed implementation prevents two nodes from processing the same
+// conversation simultaneously.
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
@@ -28,21 +31,25 @@ type server struct {
 	client          *outboundim.Client
 	log             *wlog.Logger
 	connectionStore *ConnectionStore
-	sessionStore    SessionStore
+	dispatcher      *Dispatcher
 }
 
 func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
-	return &server{
+	consume := make(chan model.Connection, 100)
+	connStore := NewConnectionStore(log)
+
+	s := &server{
 		id:              id,
 		receiver:        receiver,
-		consume:         make(chan model.Connection, 100),
+		consume:         consume,
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
 		client:          outboundim.NewClient(consulAddr, log, t),
-		sessionStore:    store,
-		connectionStore: NewConnectionStore(log),
+		connectionStore: connStore,
 		log:             log,
 	}
+	s.dispatcher = newDispatcher(id, connStore, store, consume, log, s)
+	return s
 }
 
 func (s *server) Name() string {
@@ -51,16 +58,12 @@ func (s *server) Name() string {
 
 func (s *server) Start() error {
 	s.startOnce.Do(func() {
-		err := s.client.Start()
-		if err != nil {
+		if err := s.client.Start(); err != nil {
 			panic(err)
 		}
-
-		err = s.sessionStore.RemoveAll(s.id)
-		if err != nil {
+		if err := s.dispatcher.Startup(); err != nil {
 			panic(err)
 		}
-
 		go s.listen()
 	})
 	return nil
@@ -69,11 +72,7 @@ func (s *server) Start() error {
 func (s *server) Stop() {
 	close(s.didFinishListen)
 	s.client.Stop()
-
-	err := s.sessionStore.RemoveAll(s.id)
-	if err != nil {
-		s.log.Error("failed to remove session store", wlog.Err(err))
-	}
+	s.dispatcher.Shutdown()
 	<-s.stopped
 }
 
@@ -99,74 +98,31 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 
 func (s *server) listen() {
 	defer func() {
-		wlog.Debug("stop listen channel server...")
+		wlog.Debug("stop listen im server...")
 		close(s.stopped)
 	}()
 
-	wlog.Debug("start listen channel")
+	wlog.Debug("start listen im")
 
 	for {
 		select {
 		case <-s.didFinishListen:
 			return
 		case c, ok := <-s.receiver:
-			if ok {
-				if c.Message.ThreadID == "" {
-					s.log.Warn(fmt.Sprintf("received message with empty thread id %v", c))
-					continue
-				}
-				if err := s.nodeMessage(c); err != nil {
-					s.log.Warn(fmt.Sprintf("failed to handle message %v: %v", c, err))
-				}
+			if !ok {
+				return
+			}
+			if c.Message.ThreadID == "" {
+				s.log.Warn(fmt.Sprintf("received message with empty thread id %v", c))
+				continue
+			}
+			if err := s.dispatcher.Handle(c); err != nil {
+				s.log.Warn(fmt.Sprintf("im dispatcher error for msg %v: %v", c, err))
 			}
 		}
 	}
 }
 
 func (s *server) stopConnection(c *Connection) {
-	c.srv.connectionStore.Delete(c)
-	err := s.sessionStore.Remove(c.id, s.id)
-	if err != nil {
-		s.log.Warn("failed to remove session store connection")
-	}
-}
-
-func (s *server) nodeMessage(msg model.MessageWrapper) error {
-	if msg.Message.From.Issuer == "bot" {
-		return nil
-	}
-
-	for _, endpoint := range msg.Message.To {
-		if endpoint.Issuer != "bot" {
-			continue
-		}
-
-		id := fmt.Sprintf("%s.%s", msg.Message.ThreadID, endpoint.Sub)
-		conn, ok := s.connectionStore.Get(id)
-		if ok {
-			conn.OnMessage(msg)
-			continue
-
-		}
-
-		seq, err := s.sessionStore.Touch(id, s.id)
-		if err != nil {
-			return err
-		}
-		if seq == nil {
-			return nil
-		}
-
-		if *seq > 1 {
-			s.log.Warn(fmt.Sprintf("received message with seq thread id %v", *seq))
-		}
-
-		dialog := newConnection(s, id, endpoint, msg)
-		s.connectionStore.Add(dialog)
-		dialog.log.Debug("start dialog " + id)
-		s.consume <- dialog
-
-	}
-
-	return nil
+	s.dispatcher.Unregister(c)
 }

@@ -47,7 +47,6 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 
 	delete(router.apps, "calendar")
 	delete(router.apps, "softSleep")
-	delete(router.apps, "recvMessage")
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:   deps,
