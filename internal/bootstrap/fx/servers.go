@@ -6,6 +6,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/im"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
@@ -14,7 +15,6 @@ import (
 	"github.com/webitel/flow_manager/providers/email"
 	"github.com/webitel/flow_manager/providers/fs"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
-	"github.com/webitel/flow_manager/providers/im"
 	"github.com/webitel/flow_manager/store"
 )
 
