@@ -20,6 +20,7 @@ import (
 type RouterDeps interface {
 	AppID() string
 	Log() *wlog.Logger
+	Config() *model.Config
 	CheckpointRepo() session.Repository
 	RuntimeStateRepo() persistence.Repository
 	GetStore() store.Store

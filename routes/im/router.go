@@ -13,11 +13,10 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/builtin"
-	"github.com/webitel/flow_manager/internal/runtime/ops/domain/calendar"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
+	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
@@ -50,48 +49,30 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	delete(router.apps, "softSleep")
 	delete(router.apps, "recvMessage")
 
-	reg := ops.NewRegistry()
-	builtin.Register(reg)
-	legacy.RegisterFromMap(reg, router, router.apps)
-
-	reg.Register("calendar", calendar.New(func(ctx context.Context, domainID int64, id *int, name *string) (*calendar.Result, error) {
-		cal, err := deps.GetStore().Calendar().Check(domainID, id, name)
-		if err != nil {
-			return nil, err
-		}
-		return &calendar.Result{
-			Accept:   cal.Accept,
-			Expire:   cal.Expire,
-			Excepted: cal.Excepted,
-		}, nil
-	}))
-
-	reg.Register("recvMessage", messaging.New())
-
-	router.driver = interpreter.NewDriver(
-		deps.RuntimeStateRepo(),
-		reg,
-		deps.Log(),
-		func(ctx context.Context, domainID int64, name string) string {
-			return deps.SchemaVariable(ctx, domainID, name)
+	kit := runtimekit.Bootstrap(runtimekit.Config{
+		Deps:   deps,
+		Router: router,
+		Apps:   router.apps,
+		ExtraOps: func(reg *ops.Registry) {
+			reg.Register("recvMessage", messaging.New())
 		},
-	)
-
-	loadTree := func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
-		routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
-		if appErr != nil {
-			return nil, appErr
-		}
-		if routing == nil {
-			return nil, fmt.Errorf("im: schema %d not found for domain %d", schemaID, domainID)
-		}
-		rawSchema := make([]map[string]any, len(routing.Schema.Schema))
-		for i, app := range routing.Schema.Schema {
-			rawSchema[i] = map[string]any(app)
-		}
-		return tree.Parse(routing.SchemaId, rawSchema)
-	}
-	router.coord = coordinator.New(deps.RuntimeStateRepo(), router.driver, loadTree)
+		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
+			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
+			if appErr != nil {
+				return nil, appErr
+			}
+			if routing == nil {
+				return nil, fmt.Errorf("im: schema %d not found for domain %d", schemaID, domainID)
+			}
+			rawSchema := make([]map[string]any, len(routing.Schema.Schema))
+			for i, app := range routing.Schema.Schema {
+				rawSchema[i] = map[string]any(app)
+			}
+			return tree.Parse(routing.SchemaId, rawSchema)
+		},
+	})
+	router.driver = kit.Driver
+	router.coord = kit.Coord
 
 	return router
 }
@@ -191,6 +172,13 @@ func (r *Router) handle(conn model.Connection) {
 		Conn:     conv,
 		Timezone: routing.TimezoneName,
 	})
+
+	// Legacy path: resumable runtime is disabled via config flag.
+	if !r.fm.Config().Runtime.UseResumable.IMEnabled() {
+		flow.Route(conn.Context(), i, r)
+		r.teardown(conn, conv, cp, i)
+		return
+	}
 
 	// Recovery: reconnected to an already-suspended flow — skip Run entirely.
 	if rec != nil && rec.Status == state.StatusSuspended {

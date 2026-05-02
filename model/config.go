@@ -26,6 +26,7 @@ type Config struct {
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 	Log                   LogSettings           `json:"log"`
 	Tls                   TLSConfig             `json:"tls"`
+	Runtime               RuntimeSettings       `json:"runtime"`
 }
 
 type LogSettings struct {
@@ -89,4 +90,35 @@ type WebHookSettings struct {
 
 type MQSettings struct {
 	Url string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
+}
+
+type RuntimeSettings struct {
+	UseResumable UseResumableSettings `json:"use_resumable"`
+}
+
+// UseResumableSettings controls which channels use the new resumable runtime.
+// Pointer fields let us distinguish "not set in config" from an explicit false.
+// Nil → channel default applies (IM=on, Chat/Email=off).
+type UseResumableSettings struct {
+	IM    *bool `json:"im"`
+	Chat  *bool `json:"chat"`
+	Email *bool `json:"email"`
+}
+
+// IMEnabled reports whether the IM channel should use the resumable runtime.
+// Returns true unless the config explicitly sets im=false.
+func (s UseResumableSettings) IMEnabled() bool {
+	return s.IM == nil || *s.IM
+}
+
+// ChatEnabled reports whether the chat channel should use the resumable runtime.
+// Returns false unless the config explicitly sets chat=true.
+func (s UseResumableSettings) ChatEnabled() bool {
+	return s.Chat != nil && *s.Chat
+}
+
+// EmailEnabled reports whether the email channel should use the resumable runtime.
+// Returns false unless the config explicitly sets email=true.
+func (s UseResumableSettings) EmailEnabled() bool {
+	return s.Email != nil && *s.Email
 }
