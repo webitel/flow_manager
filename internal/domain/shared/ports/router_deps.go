@@ -2,12 +2,14 @@ package ports
 
 import (
 	"context"
+	"time"
 
 	"github.com/webitel/wlog"
 
 	casespb "github.com/webitel/flow_manager/gen/cases"
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
+	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
@@ -27,8 +29,10 @@ type RouterDeps interface {
 	GetStore() store.Store
 	GetAiBots() *aibridge.Client
 	Meeting() domainmeeting.Client
+	Cases() domcases.Client
 
 	// schema / variable
+	GetLocation(id int) *time.Location
 	SchemaVariable(ctx context.Context, domainId int64, name string) string
 	GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError)
 	GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError)
@@ -72,6 +76,7 @@ type RouterDeps interface {
 	GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
 
 	// chat operations
+	ContactLinkToChat(ctx context.Context, conversationId string, contactId string) *model.AppError
 	JoinChatToInboundQueue(ctx context.Context, in *genpb.ChatJoinToQueueRequest) (genpb.MemberService_ChatJoinToQueueClient, error)
 	JoinIMToInboundQueue(ctx context.Context, in *genpb.IMJoinToQueueRequest) (int64, <-chan domcc.QueueEvent, error)
 	LeavingIMToInboundQueue(attId int64)

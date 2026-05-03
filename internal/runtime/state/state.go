@@ -32,6 +32,9 @@ type ExecState struct {
 	GotoCounter   int16             `json:"goto_counter"`
 	Status        Status            `json:"status"`
 	Pending       *PendingIntent    `json:"pending,omitempty"`
+	// Timezone is the IANA timezone name set by the "timezone" op (e.g. "Europe/Kyiv").
+	// Empty means UTC / system default.
+	Timezone string `json:"timezone,omitempty"`
 }
 
 // NewExecState returns an initial running state for the given schema, ready to

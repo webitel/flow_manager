@@ -82,7 +82,7 @@ func initRootRouters(fm *app.FlowManager, router flow.Router, contacts domaincon
 	email.Init(fm, router, contacts)
 	channel.Init(fm, router)
 	webhook.Init(fm, router)
-	im.Init(fm, router)
+	im.Init(fm, router, contacts)
 }
 
 func registerRootLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {

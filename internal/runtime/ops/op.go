@@ -40,6 +40,11 @@ type OpInput struct {
 	// their sub-tree root. Populated by the interpreter from tr.Triggers.
 	// Nil when the schema declares no triggers.
 	Triggers map[string]*tree.Node
+
+	// Timezone is the IANA timezone name currently active for this flow
+	// (set by the "timezone" op). Empty means UTC / system default.
+	// Passed to date/time helpers in expression evaluation.
+	Timezone string
 }
 
 // OpOutput carries the interpreter directives produced by one op execution.
@@ -85,6 +90,10 @@ type OpOutput struct {
 	// Set by suspendable ops that need to inspect the resume event themselves
 	// (e.g. recvMessage for TriggerCommands). Sync ops must not set this.
 	ReenterOnResume bool
+
+	// SetTimezone, when non-empty, updates ExecState.Timezone after this op
+	// executes. Use the IANA timezone name (e.g. "Europe/Kyiv").
+	SetTimezone string
 }
 
 // Op is the interface every flow application must implement to run inside the

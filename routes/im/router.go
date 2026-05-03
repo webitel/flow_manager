@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
-	"sync"
 	"time"
 
 	"github.com/webitel/flow_manager/flow"
+	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
+	imop "github.com/webitel/flow_manager/internal/runtime/ops/domain/im"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
+	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
@@ -27,15 +29,16 @@ import (
 const imChannel int16 = 2
 
 type Router struct {
-	fm     ports.RouterDeps
-	apps   flow.ApplicationHandlers
-	driver *interpreter.Driver
-	coord  coordinator.Coordinator
+	fm         ports.RouterDeps
+	apps       flow.ApplicationHandlers
+	driver     *interpreter.Driver
+	coord      coordinator.Coordinator
+	sessionMgr *sessionmgr.Manager
 }
 
 type Dialog model.IMDialog
 
-func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
+func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) model.Router {
 	router := &Router{
 		fm: deps,
 	}
@@ -49,11 +52,13 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	delete(router.apps, "softSleep")
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: router,
-		Apps:   router.apps,
+		Deps:           deps,
+		Router:         router,
+		Apps:           router.apps,
+		ContactsClient: contacts,
 		ExtraOps: func(reg *ops.Registry) {
 			reg.Register("recvMessage", messaging.New())
+			imop.Register(reg, deps)
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -72,6 +77,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	})
 	router.driver = kit.Driver
 	router.coord = kit.Coord
+	router.sessionMgr = sessionmgr.New(kit.Coord, deps.RuntimeStateRepo(), deps.Log())
 
 	return router
 }
@@ -179,12 +185,29 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
+	// Channel-specific dispatch context decoration: legacy adapters need the
+	// connection in ctx, recv_message needs the connID for its SuspendKey.
+	decorator := func(ctx context.Context) context.Context {
+		ctx = legacy.WithConnection(ctx, conv)
+		ctx = messaging.WithConnID(ctx, conn.Id())
+		return ctx
+	}
+	teardownFn := func() {
+		r.teardown(conn, conv, cp, i)
+	}
+	sessConn, ok := conv.(sessionmgr.Connection)
+	if !ok {
+		r.fm.Log().Warn(fmt.Sprintf("im handle: connection %s does not satisfy sessionmgr.Connection", conn.Id()))
+		teardownFn()
+		return
+	}
+
 	// Recovery: reconnected to an already-suspended flow — skip Run entirely.
 	if rec != nil && rec.Status == state.StatusSuspended {
 		// The message that triggered handle() is the intended response to the
 		// suspended recv_message. Replay it immediately after registering the handler.
 		initialMsg := conn.Variables()[model.ConversationStartMessageVariable]
-		r.watchSuspended(conn, conv, rec, cp, i, initialMsg)
+		r.sessionMgr.Watch(sessConn, rec, initialMsg, decorator, teardownFn)
 		return
 	}
 
@@ -218,11 +241,11 @@ func (r *Router) handle(conn model.Connection) {
 	// If the flow suspended waiting for an event, keep the connection alive
 	// and watch for the resume trigger instead of tearing down.
 	if rec.Status == state.StatusSuspended {
-		r.watchSuspended(conn, conv, rec, cp, i, "")
+		r.sessionMgr.Watch(sessConn, rec, "", decorator, teardownFn)
 		return
 	}
 
-	r.teardown(conn, conv, cp, i)
+	teardownFn()
 }
 
 // teardown finalises a completed or failed IM flow: updates the checkpoint,
@@ -243,106 +266,6 @@ func (r *Router) teardown(conn model.Connection, conv Dialog, cp *session.Checkp
 	}
 
 	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
-}
-
-// watchSuspended keeps the IM connection alive while the flow is suspended,
-// routing each inbound message through the coordinator to resume the flow.
-// When the flow is no longer suspended (completed, failed, or timed out via
-// timer wakeup) or the connection context is cancelled, teardown is called
-// exactly once.
-//
-// initialMsg, when non-empty, is dispatched immediately after the handler is
-// registered. This handles the recovery path where the triggering message
-// arrived before the handler was registered.
-func (r *Router) watchSuspended(conn model.Connection, conv Dialog, rec *persistence.Record, cp *session.Checkpoint, i *flow.Flow, initialMsg string) {
-	var (
-		once    sync.Once
-		unregFn func()
-	)
-
-	done := make(chan struct{})
-	teardownFn := func() {
-		once.Do(func() {
-			close(done)
-			if unregFn != nil {
-				unregFn()
-			}
-			r.teardown(conn, conv, cp, i)
-		})
-	}
-
-	waitConn, ok := conv.(ports.WaitableConnection)
-	if !ok {
-		r.fm.Log().Warn(fmt.Sprintf("im watchSuspended: connection %s does not implement WaitableConnection", conn.Id()))
-		teardownFn()
-		return
-	}
-
-	connID := conn.Id()
-	suspendKey := "msg:" + connID
-
-	// dispatch sends an arbitrary payload to the coordinator and tears down if
-	// the flow is no longer running/suspended afterwards.
-	dispatch := func(payload map[string]string) {
-		connCtx := legacy.WithConnection(conn.Context(), conv)
-		connCtx = messaging.WithConnID(connCtx, connID)
-
-		if err := r.coord.Dispatch(connCtx, suspendKey, payload); err != nil {
-			r.fm.Log().Warn(fmt.Sprintf("im watchSuspended: dispatch error conn=%s: %v", connID, err))
-		}
-
-		latest, loadErr := r.fm.RuntimeStateRepo().LoadByConnectionID(conn.Context(), connID)
-		if loadErr != nil {
-			r.fm.Log().Warn(fmt.Sprintf("im watchSuspended: reload after dispatch failed conn=%s: %v", connID, loadErr))
-			teardownFn()
-			return
-		}
-		if latest == nil || (latest.Status != state.StatusSuspended && latest.Status != state.StatusRunning) {
-			teardownFn()
-		}
-	}
-
-	unregFn = waitConn.OnInboundMessage(func(text string) {
-		dispatch(map[string]string{"msg": text})
-	})
-
-	// If the suspended op is recv_message with a wake_at deadline, fire a local
-	// timer instead of relying on the DB polling worker. This gives accurate
-	// short timeouts (e.g. 60s) and works across service restarts: if wake_at
-	// is already in the past we dispatch immediately.
-	//
-	// No need to cancel the timer when a message arrives first — the atomic
-	// claim in LoadByResumeKey ensures a second dispatch is always a no-op.
-	if rec != nil && rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
-		if wakeAtStr, ok := rec.State.Pending.Args["wake_at"]; ok {
-			if wakeAt, parseErr := time.Parse(time.RFC3339, wakeAtStr); parseErr == nil {
-				delay := time.Until(wakeAt)
-				if delay <= 0 {
-					go dispatch(map[string]string{"timeout": "true"})
-				} else {
-					time.AfterFunc(delay, func() {
-						dispatch(map[string]string{"timeout": "true"})
-					})
-				}
-			}
-		}
-	}
-
-	// Replay the message that triggered the recovery path — it arrived before
-	// the handler was registered so OnInboundMessage would have missed it.
-	if initialMsg != "" {
-		go dispatch(map[string]string{"msg": initialMsg})
-	}
-
-	// Ensure teardown when the connection context is cancelled OR when the
-	// flow finishes via dispatch (done is closed inside teardownFn's once.Do).
-	go func() {
-		select {
-		case <-conn.Context().Done():
-		case <-done:
-		}
-		teardownFn()
-	}()
 }
 
 func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {

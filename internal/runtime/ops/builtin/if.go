@@ -20,7 +20,7 @@ func (ifOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutput, error) {
 	expr, _ := in.Node.Args["expression"].(string)
 	expr = parseExpression(expr)
 
-	vm := buildVM(in.Variables, in.GlobalVar)
+	vm := buildVM(in.Variables, in.GlobalVar, in.Timezone)
 	val, err := vm.RunString("_r = (" + expr + ")")
 	if err != nil {
 		return ops.OpOutput{}, fmt.Errorf("if: eval %q: %w", expr, err)

@@ -101,7 +101,7 @@ func newAppRouters(
 		Email:   email.Init(deps, router, contacts),
 		Channel: channel.Init(deps, router),
 		WebHook: webhook.Init(deps, router),
-		IM:      im.Init(deps, router),
+		IM:      im.Init(deps, router, contacts),
 	}
 }
 

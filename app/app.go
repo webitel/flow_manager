@@ -11,6 +11,7 @@ import (
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
@@ -237,4 +238,8 @@ func (f *FlowManager) GetAiBots() *aibridge.Client {
 
 func (f *FlowManager) Meeting() domainmeeting.Client {
 	return f.meeting
+}
+
+func (f *FlowManager) Cases() domcases.Client {
+	return f.cases
 }

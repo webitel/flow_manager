@@ -43,7 +43,8 @@ func parseExpression(expr string) string {
 
 // buildVM creates an goja VM with a sys object that reads variables from vars.
 // globalVar, if non-nil, is called to resolve $${ } global variables.
-func buildVM(vars map[string]string, globalVar func(name string) string) *goja.Runtime {
+// timezone is the IANA timezone name for date/time functions; empty = system default.
+func buildVM(vars map[string]string, globalVar func(name string) string, timezone string) *goja.Runtime {
 	vm := goja.New()
 	sys := vm.NewObject()
 
@@ -62,6 +63,11 @@ func buildVM(vars map[string]string, globalVar func(name string) string) *goja.R
 	})
 
 	now := time.Now()
+	if timezone != "" {
+		if loc, err := time.LoadLocation(timezone); err == nil {
+			now = now.In(loc)
+		}
+	}
 
 	sys.Set("year", dateIntFunc(vm, now.Year(), now.Year()))
 	sys.Set("yday", dateIntFunc(vm, now.YearDay(), 366))

@@ -72,6 +72,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			GlobalVar:     globalVar,
 			ResumePayload: payload,
 			Triggers:      tr.Triggers,
+			Timezone:      es.Timezone,
 		})
 		// payload is consumed by the first op executed; clear for subsequent ops.
 		payload = nil
@@ -88,6 +89,10 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			for k, v := range out.SetVars {
 				es.Variables[k] = v
 			}
+		}
+
+		if out.SetTimezone != "" {
+			es.Timezone = out.SetTimezone
 		}
 
 		// Goto: rebuild ancestor stack so the tagged node executes next and
