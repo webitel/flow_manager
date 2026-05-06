@@ -9,6 +9,7 @@ require github.com/emersion/go-imap v1.2.1
 replace github.com/webitel/flow_manager/pkg/processing => ./pkg/processing
 
 require (
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
 	github.com/BoRuDar/configuration/v4 v4.5.1
 	github.com/dchest/htmlmin v1.2.0
 	github.com/emersion/go-message v0.18.2
@@ -45,7 +46,7 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/grpc v1.72.1
-	google.golang.org/protobuf v1.36.6
+	google.golang.org/protobuf v1.36.11
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 	gopkg.in/xmlpath.v2 v2.0.0-20150820204837-860cbeca3ebc
 )

@@ -17,9 +17,11 @@ import (
 const ServiceName = "im-gateway-service"
 
 type Client struct {
-	consulAddr string
-	startOnce  sync.Once
-	*wbt.Client[p.MessageClient]
+	consulAddr     string
+	startOnce      sync.Once
+	messageService *wbt.Client[p.MessageClient]
+	threadService  *wbt.Client[p.ThreadManagementClient]
+
 	log *wlog.Logger
 	ctx context.Context
 	tls *tls.Config
@@ -47,7 +49,11 @@ func (cm *Client) Start() error {
 			))
 		}
 
-		cm.Client, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...)
+		cm.messageService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...)
+		if err != nil {
+			return
+		}
+		cm.threadService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewThreadManagementClient, opts...)
 		if err != nil {
 			return
 		}
@@ -57,5 +63,6 @@ func (cm *Client) Start() error {
 
 func (cm *Client) Stop() {
 	cm.log.Debug("stopping " + ServiceName + " client")
-	_ = cm.Client.Close()
+	_ = cm.messageService.Close()
+	_ = cm.threadService.Close()
 }

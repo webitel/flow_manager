@@ -20,10 +20,22 @@ type IMDialog interface {
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	TreadInfo(ctx context.Context) (ThreadInfo, *AppError)
 	LastMessages(limit int) []ChatMessage
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
+}
+
+type ThreadMember struct {
+	Type string
+	Name string
+}
+
+type ThreadInfo struct {
+	Subject     string
+	Members     []ThreadMember
+	LastMessage string
 }
 
 type CCQueueEvent struct {
