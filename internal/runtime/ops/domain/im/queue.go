@@ -261,6 +261,9 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 			deps.LeavingIMToInboundQueue(attId)
 		}()
 		for e := range ch {
+			if e.Event == "bridged" {
+				timerCancel()
+			}
 			payload := map[string]string{ccEventKey: e.Event}
 			if e.Result != "" {
 				payload[ccResultKey] = e.Result
