@@ -67,6 +67,16 @@ func (r *Router) sendText(ctx context.Context, scope *flow.Flow, conv Dialog, ar
 	return conv.SendTextMessage(ctx, string(argv))
 }
 
+func (r *Router) sendSystemMessage(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
+	var argv model.SystemMessageOutbound
+
+	if err := r.Decode(scope, args, &argv); err != nil {
+		return nil, err
+	}
+
+	return conv.SendSystemMessage(ctx, argv)
+}
+
 func (r *Router) sendAction(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {
 	var argv ChatAction
 	var err *model.AppError
