@@ -67,7 +67,25 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 				if coord == nil {
 					return nil
 				}
-				return coord.Dispatch(ctx, key, payload)
+				if err := coord.Dispatch(ctx, key, payload); err != nil {
+					return err
+				}
+				// After dispatching a CC event the flow may have completed.
+				// Check the record and stop the connection so sessionmgr
+				// tears down immediately instead of waiting for the next message.
+				connID := messaging.ConnIDFromContext(ctx)
+				if connID == "" {
+					return nil
+				}
+				rec, _ := deps.RuntimeStateRepo().LoadByConnectionID(ctx, connID)
+				if rec == nil || (rec.Status != state.StatusRunning && rec.Status != state.StatusSuspended) {
+					if conn := legacy.ConnectionFromContext(ctx); conn != nil {
+						if d, ok := conn.(model.IMDialog); ok {
+							d.Stop(nil)
+						}
+					}
+				}
+				return nil
 			}))
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
