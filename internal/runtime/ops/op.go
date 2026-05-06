@@ -45,6 +45,13 @@ type OpInput struct {
 	// (set by the "timezone" op). Empty means UTC / system default.
 	// Passed to date/time helpers in expression evaluation.
 	Timezone string
+
+	// RunBranch, when non-nil, asynchronously executes a sub-tree node sharing
+	// a snapshot of the given variables. Intended for blocking ops (e.g.
+	// joinQueue) that need to fire timer sub-flows while waiting on external
+	// events. The branch runs in its own goroutine; variable writes do not
+	// propagate back to the parent flow.
+	RunBranch func(ctx context.Context, node *tree.Node, vars map[string]string)
 }
 
 // OpOutput carries the interpreter directives produced by one op execution.

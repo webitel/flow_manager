@@ -24,8 +24,11 @@ const maxGotoDepth = 100
 // passed as OpInput.ResumePayload so suspendable ops can read the event data.
 // Subsequent calls in the same Run loop pass nil.
 //
+// runBranch, when non-nil, is forwarded to OpInput.RunBranch for blocking ops
+// (e.g. joinQueue) that need to fire timer sub-flows while waiting.
+//
 // Step is a pure function — it does not touch the database or any I/O.
-func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, connID string, globalVar func(string) string, payload map[string]string) (Action, state.ExecState, error) {
+func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tree, reg *ops.Registry, domainID int64, connID string, globalVar func(string) string, payload map[string]string, runBranch func(context.Context, *tree.Node, map[string]string)) (Action, state.ExecState, error) {
 	for {
 		if len(es.Stack) == 0 {
 			return Action{Kind: ActionDone}, es, nil
@@ -73,6 +76,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			ResumePayload: payload,
 			Triggers:      tr.Triggers,
 			Timezone:      es.Timezone,
+			RunBranch:     runBranch,
 		})
 		// payload is consumed by the first op executed; clear for subsequent ops.
 		payload = nil

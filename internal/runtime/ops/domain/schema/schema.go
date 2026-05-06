@@ -74,7 +74,7 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 				Stack:     []state.Frame{{NodeID: tr.Root.ID, Position: 0}},
 			}
 			for ctx.Err() == nil {
-				action, next, _ := interpreter.Step(ctx, nil, subES, tr, reg, domainID, connID, gv, nil)
+				action, next, _ := interpreter.Step(ctx, nil, subES, tr, reg, domainID, connID, gv, nil, nil)
 				subES = next
 				switch action.Kind {
 				case interpreter.ActionDone, interpreter.ActionFail, interpreter.ActionSuspend, interpreter.ActionBranchAsync:
@@ -122,7 +122,7 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	}
 
 	for ctx.Err() == nil {
-		action, next, stepErr := interpreter.Step(ctx, nil, subES, tr, s.reg, in.DomainID, in.ConnID, in.GlobalVar, stepPayload)
+		action, next, stepErr := interpreter.Step(ctx, nil, subES, tr, s.reg, in.DomainID, in.ConnID, in.GlobalVar, stepPayload, nil)
 		stepPayload = nil
 		subES = next
 
@@ -158,7 +158,7 @@ func (s *schemaOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 					Stack:     []state.Frame{{NodeID: branch.ID, Position: 0}},
 				}
 				for ctx.Err() == nil {
-					a, nb, _ := interpreter.Step(ctx, nil, brES, tr, reg, domainID, connID, gv, nil)
+					a, nb, _ := interpreter.Step(ctx, nil, brES, tr, reg, domainID, connID, gv, nil, nil)
 					brES = nb
 					switch a.Kind {
 					case interpreter.ActionDone, interpreter.ActionFail, interpreter.ActionSuspend, interpreter.ActionBranchAsync:

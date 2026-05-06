@@ -5,11 +5,15 @@ package im
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"time"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/state"
+	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -22,10 +26,26 @@ type QueueDeps interface {
 	LeavingIMToInboundQueue(attId int64)
 }
 
+// QueueDispatcher dispatches a resume event to a suspended flow.
+// coordinator.Coordinator satisfies this interface.
+type QueueDispatcher interface {
+	Dispatch(ctx context.Context, resumeKey string, payload map[string]string) error
+}
+
+// DispatchFunc is a function adapter for QueueDispatcher.
+// It allows passing a closure that captures a coordinator variable that may be
+// set after Register is called (late-binding pattern for Bootstrap wiring).
+type DispatchFunc func(ctx context.Context, resumeKey string, payload map[string]string) error
+
+func (f DispatchFunc) Dispatch(ctx context.Context, resumeKey string, payload map[string]string) error {
+	return f(ctx, resumeKey, payload)
+}
+
 // Register adds cancelQueue and joinQueue to reg.
-func Register(reg *ops.Registry, deps QueueDeps) {
+// coord is used by joinQueue to dispatch CC events to the suspended flow.
+func Register(reg *ops.Registry, deps QueueDeps, coord QueueDispatcher) {
 	reg.Register("cancelQueue", &cancelQueueOp{deps: deps})
-	reg.Register("joinQueue", &joinQueueOp{deps: deps})
+	reg.Register("joinQueue", &joinQueueOp{deps: deps, coord: coord})
 }
 
 // dialogFromContext retrieves the IMDialog stored by legacy.WithConnection.
@@ -70,9 +90,12 @@ func (o *cancelQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 
 // ── joinQueue ─────────────────────────────────────────────────────────────────
 
-type joinQueueOp struct{ deps QueueDeps }
+type joinQueueOp struct {
+	deps  QueueDeps
+	coord QueueDispatcher
+}
 
-func (o *joinQueueOp) Kind() ops.OpKind { return ops.OpKindSync }
+func (o *joinQueueOp) Kind() ops.OpKind { return ops.OpKindSuspendable }
 
 type joinQueueArgs struct {
 	Priority int32 `json:"priority"`
@@ -87,10 +110,28 @@ type joinQueueArgs struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	} `json:"agent"`
-	// Timers are decoded but not yet executed in the native runtime.
-	// TODO: support timers when native sub-flow branching is available.
-	Timers []map[string]any `json:"timers"`
+	// Timers are populated by the tree parser: "actions" is extracted into a
+	// child container node and replaced with "_children_idx" so Execute can
+	// look up in.Node.Children[ChildrenIdx].
+	Timers []timerArg `json:"timers"`
 }
+
+// timerArg mirrors flow.TimerArgs for the native runtime.
+// Interval is the initial delay in seconds. After each fire the next delay is
+// Interval += Offset (growing intervals). Tries caps the repetitions (0 = 999).
+type timerArg struct {
+	Interval    int `json:"interval"`
+	Tries       int `json:"tries"`
+	Offset      int `json:"offset"`
+	ChildrenIdx int `json:"_children_idx"`
+}
+
+// ccEventKey and ccResultKey are the payload field names used by the CC event
+// goroutine to communicate queue state changes to the resume path.
+const (
+	ccEventKey  = "cc_event"
+	ccResultKey = "cc_result"
+)
 
 func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
 	var argv joinQueueArgs
@@ -98,6 +139,58 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, err
 	}
 
+	suspendKey := "msg:" + in.ConnID
+
+	// ── Resume path ──────────────────────────────────────────────────────────
+	// The op is called again (ReenterOnResume=true) with the payload that woke
+	// the flow. The payload may carry a CC event or a plain inbound message.
+	if in.ResumePayload != nil {
+		attIDStr := in.Variables["cc_attempt_id"]
+
+		ccEvent := in.ResumePayload[ccEventKey]
+		switch ccEvent {
+		case "leaving":
+			// Subscriber left the queue — only now do we exit the op.
+			out := ops.OpOutput{}
+			if result := in.ResumePayload[ccResultKey]; result != "" {
+				out.SetVars = map[string]string{"cc_result": result}
+			}
+			return out, nil
+
+		case "":
+			// No CC event — plain inbound message. Check trigger commands first.
+			if len(in.Triggers) > 0 {
+				msg := in.ResumePayload["msg"]
+				cmdKey := "commands-" + msg
+				if trig, ok := in.Triggers[cmdKey]; ok {
+					// Run the trigger branch inline; re-enter this op after it
+					// finishes so we keep waiting for the queue result.
+					return ops.OpOutput{
+						Branch:          trig,
+						ReenterOnResume: true,
+					}, nil
+				}
+			}
+			// Unhandled message while waiting — re-suspend on the same key.
+			return ops.OpOutput{
+				SuspendKey:      suspendKey,
+				Pending:         buildQueuePending(suspendKey, in.Node.ID, attIDStr),
+				ReenterOnResume: true,
+				ReSuspend:       true,
+			}, nil
+
+		default:
+			// Unknown CC event — re-suspend and wait for the next one.
+			return ops.OpOutput{
+				SuspendKey:      suspendKey,
+				Pending:         buildQueuePending(suspendKey, in.Node.ID, attIDStr),
+				ReenterOnResume: true,
+				ReSuspend:       true,
+			}, nil
+		}
+	}
+
+	// ── Fresh path ────────────────────────────────────────────────────────────
 	dialog, ok := dialogFromContext(ctx)
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("joinQueue: no IMDialog in context")
@@ -152,27 +245,99 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, nil
 	}
 
-	defer func() {
-		dialog.SetQueue(nil)
-		o.deps.LeavingIMToInboundQueue(attId)
+	attIDStr := strconv.FormatInt(attId, 10)
+
+	// timerCtx lives beyond this Execute call; it is cancelled by the CC
+	// goroutine when the queue terminates, stopping all timer sub-flows.
+	timerCtx, timerCancel := context.WithCancel(ctx)
+	startTimers(timerCtx, argv.Timers, in)
+
+	coord := o.coord
+	deps := o.deps
+	go func() {
+		defer timerCancel()
+		defer func() {
+			dialog.SetQueue(nil)
+			deps.LeavingIMToInboundQueue(attId)
+		}()
+		for e := range ch {
+			payload := map[string]string{ccEventKey: e.Event}
+			if e.Result != "" {
+				payload[ccResultKey] = e.Result
+			}
+			_ = coord.Dispatch(ctx, suspendKey, payload)
+			if e.Event == "leaving" {
+				return
+			}
+		}
 	}()
 
+	return ops.OpOutput{
+		SuspendKey:      suspendKey,
+		Pending:         buildQueuePending(suspendKey, in.Node.ID, attIDStr),
+		ReenterOnResume: true,
+		SetVars:         map[string]string{"cc_attempt_id": attIDStr},
+	}, nil
+}
+
+func buildQueuePending(suspendKey, nodeID, attIDStr string) *state.PendingIntent {
+	return &state.PendingIntent{
+		OpName:    "joinQueue",
+		NodeID:    nodeID,
+		ResumeKey: suspendKey,
+		Args:      map[string]string{"att_id": attIDStr},
+	}
+}
+
+// startTimers launches a goroutine for each timer entry that has a parsed child
+// node. Each goroutine fires every Interval seconds (growing by Offset) up to
+// Tries times, executing the corresponding sub-flow via in.RunBranch.
+func startTimers(ctx context.Context, timers []timerArg, in ops.OpInput) {
+	if in.RunBranch == nil || in.Node == nil || len(timers) == 0 {
+		return
+	}
+	// Snapshot variables once; the blocking Execute loop does not mutate them.
+	varSnap := make(map[string]string, len(in.Variables))
+	for k, v := range in.Variables {
+		varSnap[k] = v
+	}
+	for _, t := range timers {
+		t := t
+		if t.Interval <= 0 {
+			continue
+		}
+		if t.ChildrenIdx < 0 || t.ChildrenIdx >= len(in.Node.Children) {
+			continue
+		}
+		branch := in.Node.Children[t.ChildrenIdx]
+		go runTimer(ctx, t, branch, varSnap, in.RunBranch)
+	}
+}
+
+func runTimer(ctx context.Context, t timerArg, branch *tree.Node, varSnap map[string]string, runBranch func(context.Context, *tree.Node, map[string]string)) {
+	tries := t.Tries
+	if tries <= 0 {
+		tries = 999
+	}
+	interval := time.Duration(t.Interval) * time.Second
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
+	fired := 0
 	for {
 		select {
 		case <-ctx.Done():
-			return ops.OpOutput{}, nil
-		case e := <-ch:
-			switch e.Event {
-			case "bridged":
-				// agent answered; timers (wCancel) not supported yet — see TODO above
-			case "leaving":
-				if e.Result != "" {
-					return ops.OpOutput{
-						SetVars: map[string]string{"cc_result": e.Result},
-					}, nil
-				}
-				return ops.OpOutput{}, nil
+			return
+		case <-timer.C:
+			runBranch(ctx, branch, varSnap)
+			fired++
+			if fired >= tries {
+				return
 			}
+			interval += time.Duration(t.Offset) * time.Second
+			if interval < time.Second {
+				return
+			}
+			timer.Reset(interval)
 		}
 	}
 }

@@ -78,6 +78,10 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 		}
 	}
 
+	runBranch := func(bCtx context.Context, node *tree.Node, vars map[string]string) {
+		go d.runBranchAsync(bCtx, node, vars, tr, domainID, rec.ConnectionID, globalVar)
+	}
+
 	l.Debug("run flow")
 
 	stepPayload := payload
@@ -86,7 +90,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			return ctx.Err()
 		}
 
-		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, rec.ConnectionID, globalVar, stepPayload)
+		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, rec.ConnectionID, globalVar, stepPayload, runBranch)
 		stepPayload = nil // consumed by first Step; nil for all subsequent
 		es = next
 
@@ -172,7 +176,7 @@ func (d *Driver) runBranchAsync(ctx context.Context, branch *tree.Node, vars map
 		if ctx.Err() != nil {
 			return
 		}
-		action, next, _ := Step(ctx, l, es, tr, d.reg, domainID, connID, globalVar, nil)
+		action, next, _ := Step(ctx, l, es, tr, d.reg, domainID, connID, globalVar, nil, nil)
 		es = next
 		switch action.Kind {
 		case ActionDone, ActionFail, ActionSuspend:

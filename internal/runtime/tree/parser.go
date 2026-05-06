@@ -212,6 +212,10 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 		if err := parseSwitchChildren(t, node, id); err != nil {
 			return nil, err
 		}
+	case "joinQueue":
+		if err := parseJoinQueueTimers(t, node, id); err != nil {
+			return nil, err
+		}
 	}
 
 	return node, nil
@@ -312,6 +316,46 @@ func parseSwitchChildren(t *Tree, node *Node, id string) error {
 
 	// Store the index so the switch op can resolve case name → children index.
 	node.Args["_cases_index"] = caseIndex
+	return nil
+}
+
+// parseJoinQueueTimers extracts inline timer action arrays from joinQueue args
+// into addressable child container nodes. For each timer entry with an "actions"
+// key the actions are parsed into a container at "{id}.timer.{i}", "actions" is
+// removed from the map, and "_children_idx" is set to the child index so that
+// the joinQueue op can look up the node via in.Node.Children[idx].
+func parseJoinQueueTimers(t *Tree, node *Node, id string) error {
+	raw, ok := node.Args["timers"]
+	if !ok {
+		return nil
+	}
+	arr, ok := raw.([]any)
+	if !ok {
+		return nil
+	}
+	for i, el := range arr {
+		m, ok := el.(map[string]any)
+		if !ok {
+			continue
+		}
+		actions, hasActions := m["actions"]
+		if !hasActions {
+			continue
+		}
+		schema, err := toSchema(actions)
+		if err != nil {
+			return fmt.Errorf("tree: joinQueue.timers[%d].actions: %w", i, err)
+		}
+		containerID := fmt.Sprintf("%s.timer.%d", id, i)
+		container := newContainer(containerID, t)
+		linkContainer(container, node)
+		if err := parseApps(t, container, schema, containerID); err != nil {
+			return err
+		}
+		node.Children = append(node.Children, container)
+		m["_children_idx"] = len(node.Children) - 1
+		delete(m, "actions")
+	}
 	return nil
 }
 
