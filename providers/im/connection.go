@@ -292,6 +292,7 @@ func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
 			default:
 				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
 			}
+			kb.Id = btn.Code
 			buttons = append(buttons, kb)
 		}
 		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
