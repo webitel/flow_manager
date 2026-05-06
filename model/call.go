@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/webitel/wlog"
 )
@@ -265,27 +264,29 @@ func (r *CallActionRinging) GetTo() *CallEndpoint {
 }
 
 func (r *CallActionRinging) GetParams() []byte {
-	arr := make([]string, 0, 3)
+	res := make(map[string]any)
+
 	if r.SipId != nil {
-		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, *r.SipId))
+		res["sip_id"] = *r.SipId
 	} else {
-		arr = append(arr, fmt.Sprintf(`"sip_id":"%s"`, r.Id))
+		res["sip_id"] = r.Id
 	}
 
 	if r.Heartbeat > 0 {
-		arr = append(arr, fmt.Sprintf(`"heartbeat":%d`, r.Heartbeat))
+		res["heartbeat"] = r.Heartbeat
 	}
 	if r.Video != "" {
-		arr = append(arr, fmt.Sprintf(`"video":"%s"`, r.Video))
+		res["video"] = r.Video
 	}
 	if r.MeetingId != "" {
-		arr = append(arr, fmt.Sprintf(`"meeting_id":"%s"`, r.MeetingId))
+		res["meeting_id"] = r.MeetingId
 	}
 	if r.HideNumber != nil {
-		arr = append(arr, fmt.Sprintf(`"hide_number":%t`, *r.HideNumber))
+		res["hide_number"] = *r.HideNumber
 	}
 
-	return []byte(`{` + strings.Join(arr, ",") + `}`)
+	data, _ := json.Marshal(res)
+	return data
 }
 
 type CallActionActive struct {

@@ -51,6 +51,11 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 	delete(router.apps, "calendar")
 	delete(router.apps, "softSleep")
 
+	// coord is captured by the ExtraOps closure below. Bootstrap calls ExtraOps
+	// synchronously before returning the kit, so coord is set after Bootstrap
+	// returns. By the time a CC event fires and Dispatch is called, coord is
+	// already assigned (late-binding pattern).
+	var coord coordinator.Coordinator
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:           deps,
 		Router:         router,
@@ -58,7 +63,12 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 		ContactsClient: contacts,
 		ExtraOps: func(reg *ops.Registry) {
 			reg.Register("recvMessage", messaging.New())
-			imop.Register(reg, deps)
+			imop.Register(reg, deps, imop.DispatchFunc(func(ctx context.Context, key string, payload map[string]string) error {
+				if coord == nil {
+					return nil
+				}
+				return coord.Dispatch(ctx, key, payload)
+			}))
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -77,6 +87,7 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 	})
 	router.driver = kit.Driver
 	router.coord = kit.Coord
+	coord = kit.Coord
 	router.sessionMgr = sessionmgr.New(kit.Coord, deps.RuntimeStateRepo(), deps.Log())
 
 	return router
