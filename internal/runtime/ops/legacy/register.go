@@ -42,6 +42,10 @@ var nativeOps = map[string]bool{
 
 	"httpRequest": true,
 	"execute":     true,
+	"list":        true,
+	"listAdd":     true,
+	"dump":        true,
+	"cache":       true,
 
 	// contacts native ops
 	"getContact":            true,

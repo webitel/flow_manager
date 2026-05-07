@@ -17,4 +17,5 @@ func Register(reg *ops.Registry) {
 	reg.Register("string", StringOp())
 	reg.Register("math", MathOp())
 	reg.Register("classifier", Classifier())
+	reg.Register("dump", Dump())
 }

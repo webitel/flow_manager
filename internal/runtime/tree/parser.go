@@ -216,6 +216,10 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 		if err := parseJoinQueueTimers(t, node, id); err != nil {
 			return nil, err
 		}
+	case "list":
+		if err := parseListChildren(t, node, id); err != nil {
+			return nil, err
+		}
 	case "function":
 		if err := parseFunctionDef(t, node, id); err != nil {
 			return nil, err
@@ -390,6 +394,27 @@ func parseFunctionDef(t *Tree, node *Node, id string) error {
 		t.Functions = make(map[string]*Node)
 	}
 	t.Functions[name] = container
+	return nil
+}
+
+// parseListChildren extracts the inline "actions" array from a "list" op node
+// into a child container so that the native list op can branch into it.
+func parseListChildren(t *Tree, node *Node, id string) error {
+	raw, ok := node.Args["actions"]
+	if !ok {
+		return nil
+	}
+	delete(node.Args, "actions")
+	apps, err := toSchema(raw)
+	if err != nil {
+		return fmt.Errorf("tree: list.actions at %s: %w", id, err)
+	}
+	container := newContainer(id+".actions", t)
+	linkContainer(container, node)
+	if err := parseApps(t, container, apps, id+".actions"); err != nil {
+		return err
+	}
+	node.Children = append(node.Children, container)
 	return nil
 }
 

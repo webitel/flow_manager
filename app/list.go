@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"sync"
@@ -71,6 +72,30 @@ func (fm *FlowManager) ListCheckNumber(domainId int64, number string, listId *in
 func (fm *FlowManager) ListAddCommunication(domainId int64, search *model.SearchEntity, comm *model.ListCommunication) *model.AppError {
 	if err := fm.Store.List().AddDestination(domainId, search, comm); err != nil {
 		return model.NewAppError("ListAddCommunication", "store.list.add_destination", nil, err.Error(), http.StatusInternalServerError)
+	}
+	return nil
+}
+
+func (fm *FlowManager) CheckList(domainId int64, number string, listId *int, listName *string) (bool, error) {
+	ok, appErr := fm.ListCheckNumber(domainId, number, listId, listName)
+	if appErr != nil {
+		return false, appErr
+	}
+	return ok, nil
+}
+
+func (fm *FlowManager) AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error {
+	comm := &model.ListCommunication{
+		Destination: destination,
+		Description: description,
+	}
+	if expireAtMS > 0 {
+		t := time.UnixMilli(expireAtMS)
+		comm.ExpireAt = &t
+	}
+	appErr := fm.ListAddCommunication(domainId, &model.SearchEntity{Id: listId, Name: listName}, comm)
+	if appErr != nil {
+		return appErr
 	}
 	return nil
 }

@@ -89,6 +89,15 @@ type RouterDeps interface {
 	GetCookieCache(ctx context.Context, domainID int64, key string) (string, error)
 	SetCookieCache(ctx context.Context, domainID int64, key string, value string, ttlSecs int64) error
 
+	// list
+	CheckList(domainId int64, number string, listId *int, listName *string) (bool, error)
+	AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error
+
+	// cache
+	CacheGet(ctx context.Context, cacheType string, domainID int64, key string) (string, error)
+	CacheSet(ctx context.Context, cacheType string, domainID int64, key string, value string, ttlSecs int64) error
+	CacheDelete(ctx context.Context, cacheType string, domainID int64, key string) error
+
 	// email
 	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
 	ReplyEmail(conn model.EmailConnection, text string) *model.AppError

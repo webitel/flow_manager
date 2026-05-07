@@ -92,6 +92,22 @@ func (fm *FlowManager) SetCookieCache(ctx context.Context, domainID int64, key s
 	return fm.CacheSetValue(ctx, string(cache.Memory), domainID, key, value, ttlSecs)
 }
 
+func (fm *FlowManager) CacheGet(ctx context.Context, cacheType string, domainID int64, key string) (string, error) {
+	v, err := fm.CacheGetValue(ctx, cacheType, domainID, key)
+	if err != nil {
+		return "", err
+	}
+	return v.String()
+}
+
+func (fm *FlowManager) CacheSet(ctx context.Context, cacheType string, domainID int64, key string, value string, ttlSecs int64) error {
+	return fm.CacheSetValue(ctx, cacheType, domainID, key, value, ttlSecs)
+}
+
+func (fm *FlowManager) CacheDelete(ctx context.Context, cacheType string, domainID int64, key string) error {
+	return fm.CacheDeleteValue(ctx, cacheType, domainID, key)
+}
+
 func formatKeys(cacheType cache.CacheType, method string, domainId int64, key string) (workerKey string, cacheKey string) {
 	cacheKey = fmt.Sprintf("%s.%s", strconv.FormatInt(domainId, 10), key)
 	workerKey = fmt.Sprintf("%s.%s.%s", cacheType, method, cacheKey)
