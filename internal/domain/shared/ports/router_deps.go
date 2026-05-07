@@ -92,6 +92,9 @@ type RouterDeps interface {
 	// global schema variables
 	SetGlobalVar(ctx context.Context, domainId int64, name string, value string, encrypt bool) error
 
+	// external sql
+	SqlQuery(ctx context.Context, driver, dns, query string, params []interface{}) (map[string]interface{}, error)
+
 	// file links
 	GeneratePreSignedLink(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error)
 

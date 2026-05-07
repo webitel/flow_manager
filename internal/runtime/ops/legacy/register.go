@@ -51,6 +51,7 @@ var nativeOps = map[string]bool{
 	"openLink":     true,
 	"monoPay":      true,
 	"js":           true,
+	"sql":          true,
 
 	// contacts native ops
 	"getContact":            true,
