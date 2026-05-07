@@ -2,6 +2,7 @@ package flow
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"github.com/webitel/flow_manager/model"
@@ -29,13 +30,13 @@ func (r *router) chatHistory(ctx context.Context, scope *Flow, conn model.Connec
 		params.Timeout = 3000
 	}
 	ctx, _ = context.WithTimeout(ctx, time.Millisecond*time.Duration(params.Timeout))
-	messages, appErr := r.fm.GetChatMessagesByConversationId(ctx, conn.DomainId(), params.ConversationId, int64(params.Limit))
-	if appErr != nil {
-		return nil, appErr
+	messages, messagesErr := r.fm.GetChatMessagesByConversationId(ctx, conn.DomainId(), params.ConversationId, int64(params.Limit))
+	if messagesErr != nil {
+		return nil, model.NewAppError("chatHistory", "chat.get_messages", nil, messagesErr.Error(), http.StatusInternalServerError)
 	}
-	text, appErr := r.fm.ParseChatMessages(messages, params.Format)
-	if appErr != nil {
-		return nil, appErr
+	text, parseErr := r.fm.ParseChatMessages(messages, params.Format)
+	if parseErr != nil {
+		return nil, model.NewAppError("chatHistory", "chat.parse_messages", nil, parseErr.Error(), http.StatusInternalServerError)
 	}
 	return conn.Set(ctx, model.Variables{params.Variable: text})
 }

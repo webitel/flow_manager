@@ -10,11 +10,10 @@ import (
 )
 
 func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var err *model.AppError
 	var argv = model.BroadcastChat{}
 	var typeProfile string
 
-	if err = scope.Decode(args, &argv); err != nil {
+	if err := scope.Decode(args, &argv); err != nil {
 		return nil, err
 	}
 
@@ -23,7 +22,11 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 	}
 
 	if argv.Profile.Id > 0 {
-		typeProfile, err = r.fm.ChatProfileType(conn.DomainId(), argv.Profile.Id)
+		var profileErr error
+		typeProfile, profileErr = r.fm.ChatProfileType(conn.DomainId(), argv.Profile.Id)
+		if profileErr != nil {
+			return nil, model.NewAppError("broadcastChatMessage", "chat.profile_type", nil, profileErr.Error(), http.StatusInternalServerError)
+		}
 	}
 
 	peer := make([]model.BroadcastPeer, 0, len(argv.Peer))
@@ -44,9 +47,9 @@ func (r *router) broadcastChatMessage(ctx context.Context, scope *Flow, conn mod
 		}
 	}
 
-	resp, err := r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv, peer)
-	if err != nil {
-		return nil, err
+	resp, broadcastErr := r.fm.BroadcastChatMessage(ctx, conn.DomainId(), argv, peer)
+	if broadcastErr != nil {
+		return nil, model.NewAppError("broadcastChatMessage", "chat.broadcast", nil, broadcastErr.Error(), http.StatusInternalServerError)
 	}
 	if len(resp.Failed) != 0 && (argv.FailedReceivers != "" || argv.ResponseCode != "") {
 		// save previous logic with response code saved from first peer error message

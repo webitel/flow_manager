@@ -12,6 +12,8 @@ import (
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
+	"github.com/webitel/flow_manager/internal/runtime/ops"
+	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
@@ -49,6 +51,9 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		Deps:   deps,
 		Router: router,
 		Apps:   router.apps,
+		ExtraOps: func(reg *ops.Registry) {
+			chatop.Register(reg, deps)
+		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
 			if appErr != nil {

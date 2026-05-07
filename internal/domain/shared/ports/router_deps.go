@@ -84,6 +84,10 @@ type RouterDeps interface {
 	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, *model.AppError)
 	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError)
 	GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError)
+	ChatProfileType(domainId int64, profileId int) (string, error)
+	BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, error)
+	GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, error)
+	ParseChatMessages(messages *[]model.ChatMessage, format string) (string, error)
 
 	// http / cookie cache
 	GetCookieCache(ctx context.Context, domainID int64, key string) (string, error)
