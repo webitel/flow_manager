@@ -10,16 +10,29 @@ import (
 	"github.com/webitel/flow_manager/flow"
 	proto "github.com/webitel/flow_manager/gen/chat"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
+	"github.com/webitel/flow_manager/internal/runtime/coordinator"
+	"github.com/webitel/flow_manager/internal/runtime/interpreter"
+	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
+	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
+	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 )
 
+// chatChannel is the channel discriminator stored in flow.runtime_state.
+// Matches model.ConnectionTypeChat (iota = 4).
+const chatChannel int16 = 4
+
 type Router struct {
-	fm   ports.RouterDeps
-	apps flow.ApplicationHandlers
+	fm         ports.RouterDeps
+	apps       flow.ApplicationHandlers
+	driver     *interpreter.Driver
+	coord      coordinator.Coordinator
+	sessionMgr *sessionmgr.Manager
 }
 
-type Conversation model.Conversation // TODO
+type Conversation model.Conversation
 
 func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	router := &Router{
@@ -30,6 +43,34 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		fr.Handlers(),
 		ApplicationsHandlers(router),
 	)
+
+	// Remove ops that Bootstrap registers natively so the legacy adapter does
+	// not shadow the builtin implementations.
+	delete(router.apps, "calendar")
+	delete(router.apps, "softSleep")
+
+	kit := runtimekit.Bootstrap(runtimekit.Config{
+		Deps:   deps,
+		Router: router,
+		Apps:   router.apps,
+		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
+			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
+			if appErr != nil {
+				return nil, appErr
+			}
+			if routing == nil {
+				return nil, fmt.Errorf("chat: schema %d not found for domain %d", schemaID, domainID)
+			}
+			rawSchema := make([]map[string]any, len(routing.Schema.Schema))
+			for i, app := range routing.Schema.Schema {
+				rawSchema[i] = map[string]any(app)
+			}
+			return tree.Parse(routing.SchemaId, rawSchema)
+		},
+	})
+	router.driver = kit.Driver
+	router.coord = kit.Coord
+	router.sessionMgr = sessionmgr.New(kit.Coord, deps.RuntimeStateRepo(), deps.Log())
 
 	return router
 }
@@ -69,7 +110,7 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 }
 
 func (r *Router) handle(conn model.Connection) {
-	conv := conn.(Conversation)
+	conv := conn.(model.Conversation)
 	var routing *model.Routing
 	var err *model.AppError
 	shId := conv.SchemaId()
@@ -92,6 +133,35 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
+	conn.Set(conn.Context(), map[string]any{
+		model.FlowSchemaNameVariable: routing.Schema.Name,
+	})
+
+	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
+	for i, app := range routing.Schema.Schema {
+		rawSchema[i] = map[string]any(app)
+	}
+	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	if parseErr != nil {
+		conv.Stop(model.NewAppError("Chat", "chat.schema.parse", nil, parseErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+		return
+	}
+
+	tags := make(map[string]string, len(tr.ByTag))
+	for tag, node := range tr.ByTag {
+		tags[tag] = node.ID
+	}
+
+	ctx := conn.Context()
+
+	rec, loadErr := r.fm.RuntimeStateRepo().LoadByConnectionID(ctx, conn.Id())
+	if loadErr != nil {
+		conv.Stop(model.NewAppError("Chat", "chat.runtime.load", nil, loadErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+		return
+	}
+
+	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
+
 	i := flow.New(r, flow.Config{
 		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
@@ -101,14 +171,40 @@ func (r *Router) handle(conn model.Connection) {
 		Timezone: routing.TimezoneName,
 	})
 
-	conn.Set(conn.Context(), map[string]any{
-		model.FlowSchemaNameVariable: routing.Schema.Name,
-	})
+	if !r.fm.Config().Runtime.UseResumable.ChatEnabled() {
+		flow.Route(conn.Context(), i, r)
+		r.teardown(conn, conv, cp, i)
+		return
+	}
 
-	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
+	decorator := func(ctx context.Context) context.Context {
+		return legacy.WithConnection(ctx, conv)
+	}
+	teardownFn := func() {
+		r.teardown(conn, conv, cp, i)
+	}
 
-	flow.Route(conn.Context(), i, r)
+	if _, createErr := runtimekit.RunSession(rec, runtimekit.HandleConfig{
+		ChannelName: "chat",
+		ChannelType: chatChannel,
+		Conn:        conn,
+		Tr:          tr,
+		Tags:        tags,
+		SchemaID:    routing.SchemaId,
+		DomainID:    conv.DomainId(),
+		AppID:       r.fm.AppID(),
+		Repo:        r.fm.RuntimeStateRepo(),
+		Driver:      r.driver,
+		SessionMgr:  r.sessionMgr,
+		Decorator:   decorator,
+		Teardown:    teardownFn,
+		Log:         r.fm.Log(),
+	}); createErr != nil {
+		conv.Stop(model.NewAppError("Chat", "chat.runtime.create", nil, createErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+	}
+}
 
+func (r *Router) teardown(conn model.Connection, conv model.Conversation, cp *session.Checkpoint, i *flow.Flow) {
 	session.Update(r.fm.CheckpointRepo(), cp, conn)
 
 	if !conv.IsTransfer() {
@@ -116,7 +212,6 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		// TODO config
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		flow.Route(ctxDisc, d, r)
 		<-ctxDisc.Done()

@@ -41,6 +41,9 @@ type conversation struct {
 	queueKey        *model.InQueueKey
 	messages        []*proto.Message
 
+	inboundHandlers map[uint64]func(text string)
+	nextHandlerID   uint64
+
 	chat *chatApi
 
 	log *wlog.Logger
@@ -568,6 +571,40 @@ func (c *conversation) DumpExportVariables() map[string]string {
 
 func (c *conversation) Variables() map[string]string {
 	return c.variables.Data()
+}
+
+// OnInboundMessage registers a handler called when the remote peer sends a
+// message while the runtime has no active WaitMessage subscription (e.g.
+// during a softSleep or a native recvMessage suspend). The handler must not
+// block. Returns an unregister function that must be called exactly once.
+func (c *conversation) OnInboundMessage(handler func(text string)) (unregister func()) {
+	c.mx.Lock()
+	if c.inboundHandlers == nil {
+		c.inboundHandlers = make(map[uint64]func(text string))
+	}
+	id := c.nextHandlerID
+	c.nextHandlerID++
+	c.inboundHandlers[id] = handler
+	c.mx.Unlock()
+	return func() {
+		c.mx.Lock()
+		delete(c.inboundHandlers, id)
+		c.mx.Unlock()
+	}
+}
+
+// fireInboundHandlers delivers text to all registered OnInboundMessage handlers.
+// Called by ConfirmationMessage when no legacy WaitMessage confirmation is active.
+func (c *conversation) fireInboundHandlers(text string) {
+	c.mx.RLock()
+	handlers := make([]func(text string), 0, len(c.inboundHandlers))
+	for _, fn := range c.inboundHandlers {
+		handlers = append(handlers, fn)
+	}
+	c.mx.RUnlock()
+	for _, fn := range handlers {
+		fn(text)
+	}
 }
 
 func (c *conversation) SetQueue(key *model.InQueueKey) bool {

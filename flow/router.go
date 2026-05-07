@@ -59,7 +59,11 @@ type flowHandler func(ctx context.Context, scope *Flow, conn model.Connection, a
 func (r *router) doExecute(delMe flowHandler) ApplicationHandler {
 	return func(ctx context.Context, scope *Flow, args interface{}) model.ResultChannel {
 		return Do(func(result *model.Result) {
-			result.Res, result.Err = delMe(ctx, scope, scope.Connection, args)
+			var appErr *model.AppError
+			result.Res, appErr = delMe(ctx, scope, scope.Connection, args)
+			if appErr != nil {
+				result.Err = appErr
+			}
 		})
 	}
 }

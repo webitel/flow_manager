@@ -194,7 +194,11 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 func callHandlerMiddleware(h callHandler) flow.ApplicationHandler {
 	return func(ctx context.Context, scope *flow.Flow, args any) model.ResultChannel {
 		return flow.Do(func(result *model.Result) {
-			result.Res, result.Err = h(ctx, scope, scope.Connection.(model.Call), args)
+			var appErr *model.AppError
+			result.Res, appErr = h(ctx, scope, scope.Connection.(model.Call), args)
+			if appErr != nil {
+				result.Err = appErr
+			}
 		})
 	}
 }

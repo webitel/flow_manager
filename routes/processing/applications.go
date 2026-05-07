@@ -44,7 +44,11 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 func processingHandlerMiddleware(h processingHandler) flow.ApplicationHandler {
 	return func(ctx context.Context, scope *flow.Flow, args any) model.ResultChannel {
 		return flow.Do(func(result *model.Result) {
-			result.Res, result.Err = h(ctx, scope, scope.Connection.(Connection), args)
+			var appErr *model.AppError
+			result.Res, appErr = h(ctx, scope, scope.Connection.(Connection), args)
+			if appErr != nil {
+				result.Err = appErr
+			}
 		})
 	}
 }

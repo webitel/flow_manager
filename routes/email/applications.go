@@ -27,7 +27,11 @@ func emailHandlerMiddleware(h emailHandler) flow.ApplicationHandler {
 			if scope.Connection.Type() != model.ConnectionTypeEmail {
 				result.Err = model.NewAppError("Email", "email.middleware.valid.type", nil, "bad type", http.StatusBadRequest)
 			} else {
-				result.Res, result.Err = h(ctx, scope, scope.Connection.(model.EmailConnection), args)
+				var appErr *model.AppError
+				result.Res, appErr = h(ctx, scope, scope.Connection.(model.EmailConnection), args)
+				if appErr != nil {
+					result.Err = appErr
+				}
 			}
 		})
 	}

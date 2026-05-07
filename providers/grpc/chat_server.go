@@ -124,7 +124,13 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 	conv.mx.Unlock()
 
 	if !ok {
-		return nil, model.NewAppError("ConfirmationMessage", "chat.confirmation_message.not_found", nil, "Not found", http.StatusNotFound)
+		// No active WaitMessage subscription: the runtime may have a native
+		// recvMessage or softSleep suspend with an OnInboundMessage handler.
+		// Fire those handlers instead of returning an error so the message is
+		// not silently dropped.
+		text := strings.Join(messageToText(req.Messages...), " ")
+		conv.fireInboundHandlers(text)
+		return &workflow.ConfirmationMessageResponse{}, nil
 	}
 
 	select {

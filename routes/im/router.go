@@ -16,7 +16,6 @@ import (
 	imop "github.com/webitel/flow_manager/internal/runtime/ops/domain/im"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
-	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/state"
@@ -224,57 +223,24 @@ func (r *Router) handle(conn model.Connection) {
 	teardownFn := func() {
 		r.teardown(conn, conv, cp, i)
 	}
-	sessConn, ok := conv.(sessionmgr.Connection)
-	if !ok {
-		r.fm.Log().Warn(fmt.Sprintf("im handle: connection %s does not satisfy sessionmgr.Connection", conn.Id()))
-		teardownFn()
-		return
+	if _, createErr := runtimekit.RunSession(rec, runtimekit.HandleConfig{
+		ChannelName: "im",
+		ChannelType: imChannel,
+		Conn:        conn,
+		Tr:          tr,
+		Tags:        tags,
+		SchemaID:    routing.SchemaId,
+		DomainID:    conv.DomainId(),
+		AppID:       r.fm.AppID(),
+		Repo:        r.fm.RuntimeStateRepo(),
+		Driver:      r.driver,
+		SessionMgr:  r.sessionMgr,
+		Decorator:   decorator,
+		Teardown:    teardownFn,
+		Log:         r.fm.Log(),
+	}); createErr != nil {
+		conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
 	}
-
-	// Recovery: reconnected to an already-suspended flow — skip Run entirely.
-	if rec != nil && rec.Status == state.StatusSuspended {
-		// The message that triggered handle() is the intended response to the
-		// suspended recv_message. Replay it immediately after registering the handler.
-		initialMsg := conn.Variables()[model.ConversationStartMessageVariable]
-		r.sessionMgr.Watch(sessConn, rec, initialMsg, decorator, teardownFn)
-		return
-	}
-
-	if rec == nil {
-		// Fresh start — seed state from connection variables.
-		es := state.NewExecState(routing.SchemaId, tr.Version, tags)
-		for k, v := range conn.Variables() {
-			es.Variables[k] = v
-		}
-		rec = &persistence.Record{
-			ConnectionID: conn.Id(),
-			DomainID:     conv.DomainId(),
-			Channel:      imChannel,
-			SchemaID:     routing.SchemaId,
-			AppID:        r.fm.AppID(),
-			State:        es,
-			Status:       state.StatusRunning,
-		}
-		if createErr := r.fm.RuntimeStateRepo().Create(ctx, rec); createErr != nil {
-			conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
-			return
-		}
-	}
-
-	runCtx := legacy.WithConnection(ctx, conv)
-	runCtx = messaging.WithConnID(runCtx, conn.Id())
-	if runErr := r.driver.Run(runCtx, rec, tr, nil); runErr != nil {
-		r.fm.Log().Error(fmt.Sprintf("IM driver.Run conn=%s: %v", conn.Id(), runErr))
-	}
-
-	// If the flow suspended waiting for an event, keep the connection alive
-	// and watch for the resume trigger instead of tearing down.
-	if rec.Status == state.StatusSuspended {
-		r.sessionMgr.Watch(sessConn, rec, "", decorator, teardownFn)
-		return
-	}
-
-	teardownFn()
 }
 
 // teardown finalises a completed or failed IM flow: updates the checkpoint,

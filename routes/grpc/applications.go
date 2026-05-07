@@ -37,7 +37,11 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 func grpcHandlerMiddleware(h grpcHandler) flow.ApplicationHandler {
 	return func(ctx context.Context, scope *flow.Flow, args any) model.ResultChannel {
 		return flow.Do(func(result *model.Result) {
-			result.Res, result.Err = h(ctx, scope, scope.Connection.(model.GRPCConnection), args)
+			var appErr *model.AppError
+			result.Res, appErr = h(ctx, scope, scope.Connection.(model.GRPCConnection), args)
+			if appErr != nil {
+				result.Err = appErr
+			}
 		})
 	}
 }
