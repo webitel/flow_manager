@@ -21,7 +21,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/webitel/flow_manager/providers/fs/fs_reader"
 	"io"
 	"log"
 	"net"
@@ -30,6 +29,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	fs_reader2 "github.com/webitel/flow_manager/internal/adapters/inbound/fs/fs_reader"
 )
 
 const bufferSize = 1024 << 6 // For the socket reader
@@ -45,7 +46,7 @@ var errTimeout = errors.New("Timeout")
 type Connection struct {
 	conn          net.Conn
 	reader        *bufio.Reader
-	textreader    *fs_reader.Reader
+	textreader    *fs_reader2.Reader
 	err           chan error
 	cmd, api, evt chan *Event
 }
@@ -60,7 +61,7 @@ func newConnection(c net.Conn) *Connection {
 		api:    make(chan *Event),
 		evt:    make(chan *Event, eventsBuffer),
 	}
-	h.textreader = fs_reader.NewReader(h.reader)
+	h.textreader = fs_reader2.NewReader(h.reader)
 	return &h
 }
 
@@ -209,7 +210,7 @@ func (h *Connection) readOne() bool {
 		reader := bufio.NewReader(bytes.NewReader([]byte(resp.Body)))
 		resp.Body = ""
 
-		textreader := fs_reader.NewReader(reader)
+		textreader := fs_reader2.NewReader(reader)
 		hdr, err = textreader.ReadMIMEHeader()
 		if err != nil {
 			//h.err <- err
@@ -292,7 +293,7 @@ func (h *Connection) ReadEvent() (*Event, error) {
 // unescaping them when decode is set to true.
 //
 // It's used after parsing plain text event headers, but not JSON.
-func copyHeaders(src *fs_reader.MIMEHeader, dst *Event, decode bool) {
+func copyHeaders(src *fs_reader2.MIMEHeader, dst *Event, decode bool) {
 	var err error
 	for k, v := range *src {
 		//k = capitalize(k)

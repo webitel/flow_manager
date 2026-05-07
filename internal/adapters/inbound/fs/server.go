@@ -9,8 +9,8 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/fs/eventsocket"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/fs/eventsocket"
 )
 
 const (
