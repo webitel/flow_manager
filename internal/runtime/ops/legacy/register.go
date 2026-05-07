@@ -50,6 +50,7 @@ var nativeOps = map[string]bool{
 	"generateLink": true,
 	"openLink":     true,
 	"monoPay":      true,
+	"js":           true,
 
 	// contacts native ops
 	"getContact":            true,
