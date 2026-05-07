@@ -57,6 +57,30 @@ func (o *patchMembersOp) Doc() ops.OpDoc {
 	}
 }
 
+func (o *callbackQueueOp) Doc() ops.OpDoc {
+	return ops.OpDoc{
+		Description: "Creates a callback member in the specified queue.",
+		AvailableIn: []string{"voice", "chat", "service"},
+		Visual:      true,
+		Args: map[string]ops.ArgDoc{
+			"queue_id":      {Type: "integer", Description: "Target queue ID (deprecated; prefer queue.id)."},
+			"holdSec":       {Type: "integer", Description: "Hold time in seconds before the callback attempt."},
+			"name":          {Type: "string", Description: "Member display name."},
+			"communication": {Type: "object", Required: true, Description: "Destination and communication type."},
+			"queue":         {Type: "object", Description: "Queue reference {id} — takes precedence over queue_id."},
+			"variables":     {Type: "object", Description: "Extra key/value variables attached to the member."},
+			"expire_at":     {Type: "integer", Description: "Unix timestamp (ms) after which the member expires."},
+			"stop_cause":    {Type: "string", Description: "Pre-set stop cause for the callback attempt."},
+		},
+		Examples: map[string]ops.Example{
+			"create_callback": {
+				Description: "Create a callback member in queue 7",
+				Schema:      `{"callbackQueue": {"queue": {"id": 7}, "holdSec": 0, "communication": {"destination": "${caller_id_number}"}}}`,
+			},
+		},
+	}
+}
+
 func (o *ewtOp) Doc() ops.OpDoc {
 	return ops.OpDoc{
 		Description: "Calculates the Estimated Wait Time (EWT) for the given queues and buckets.",

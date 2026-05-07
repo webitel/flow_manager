@@ -1,10 +1,12 @@
 // Package member provides native ops for CC member/queue operations:
-// ccPosition, memberInfo, patchMembers, ewt.
+// ccPosition, memberInfo, patchMembers, ewt, callbackQueue.
 package member
 
 import (
 	"context"
 	"fmt"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
@@ -17,6 +19,7 @@ func Register(reg *ops.Registry, s store.MemberStore) {
 	reg.Register("memberInfo", &memberInfoOp{store: s})
 	reg.Register("patchMembers", &patchMembersOp{store: s})
 	reg.Register("ewt", &ewtOp{store: s})
+	reg.Register("callbackQueue", &callbackQueueOp{store: s})
 }
 
 // ── ccPosition ────────────────────────────────────────────────────────────────
@@ -141,4 +144,49 @@ func (o *ewtOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, fmt.Errorf("ewt: %w", err)
 	}
 	return ops.OpOutput{SetVars: map[string]string{argv.SetVar: fmt.Sprintf("%f", val)}}, nil
+}
+
+// ── callbackQueue ─────────────────────────────────────────────────────────────
+
+type callbackQueueOp struct{ store store.MemberStore }
+
+func (o *callbackQueueOp) Kind() ops.OpKind { return ops.OpKindSync }
+
+type callbackQueueParams struct {
+	QueueId int `json:"queue_id"`
+	HoldSec int `json:"holdSec"`
+}
+
+func (o *callbackQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
+	var params callbackQueueParams
+	if err := ops.DecodeArgs(in, &params); err != nil {
+		return ops.OpOutput{}, fmt.Errorf("callbackQueue: %w", err)
+	}
+	var member model.CallbackMember
+	if err := ops.DecodeArgs(in, &member); err != nil {
+		return ops.OpOutput{}, fmt.Errorf("callbackQueue: %w", err)
+	}
+
+	// deprecated queue_id — queue.id takes precedence
+	if member.Queue.Id != nil {
+		params.QueueId = *member.Queue.Id
+	}
+
+	// deprecated communication.type_id
+	if member.Communication.TypeId != nil && member.Communication.Type.Id == nil {
+		member.Communication.Type.Id = member.Communication.TypeId
+	}
+
+	if member.StopCause != nil && *member.StopCause == "" {
+		member.StopCause = nil
+	}
+
+	if member.Name != "" && !utf8.ValidString(member.Name) {
+		member.Name = strings.ToValidUTF8(member.Name, "")
+	}
+
+	if err := o.store.CreateMember(in.DomainID, params.QueueId, params.HoldSec, &member); err != nil {
+		return ops.OpOutput{}, fmt.Errorf("callbackQueue: %w", err)
+	}
+	return ops.OpOutput{}, nil
 }
