@@ -71,6 +71,7 @@ func Bootstrap(cfg Config) *Kit {
 	builtin.Register(reg)
 	legacy.RegisterFromMap(reg, cfg.Router, cfg.Apps)
 
+	reg.Register("httpRequest", builtin.HTTPRequestOp(cfg.Deps))
 	reg.Register("timezone", builtin.TimezoneOp(cfg.Deps.GetLocation))
 	reg.Register("calendar", calendar.New(func(ctx context.Context, domainID int64, id *int, name *string) (*calendar.Result, error) {
 		cal, err := cfg.Deps.GetStore().Calendar().Check(domainID, id, name)

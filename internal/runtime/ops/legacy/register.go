@@ -40,6 +40,8 @@ var nativeOps = map[string]bool{
 	"unSet":         true,
 	"export":        true,
 
+	"httpRequest": true,
+
 	// contacts native ops
 	"getContact":            true,
 	"findContact":           true,

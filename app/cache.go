@@ -80,6 +80,18 @@ func parseCacheType(cacheType string) cache.CacheType {
 	}
 }
 
+func (fm *FlowManager) GetCookieCache(ctx context.Context, domainID int64, key string) (string, error) {
+	v, err := fm.CacheGetValue(ctx, string(cache.Memory), domainID, key)
+	if err != nil {
+		return "", err
+	}
+	return v.String()
+}
+
+func (fm *FlowManager) SetCookieCache(ctx context.Context, domainID int64, key string, value string, ttlSecs int64) error {
+	return fm.CacheSetValue(ctx, string(cache.Memory), domainID, key, value, ttlSecs)
+}
+
 func formatKeys(cacheType cache.CacheType, method string, domainId int64, key string) (workerKey string, cacheKey string) {
 	cacheKey = fmt.Sprintf("%s.%s", strconv.FormatInt(domainId, 10), key)
 	workerKey = fmt.Sprintf("%s.%s.%s", cacheType, method, cacheKey)

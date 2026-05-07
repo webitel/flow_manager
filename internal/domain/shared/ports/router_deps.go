@@ -85,6 +85,10 @@ type RouterDeps interface {
 	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError)
 	GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError)
 
+	// http / cookie cache
+	GetCookieCache(ctx context.Context, domainID int64, key string) (string, error)
+	SetCookieCache(ctx context.Context, domainID int64, key string, value string, ttlSecs int64) error
+
 	// email
 	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
 	ReplyEmail(conn model.EmailConnection, text string) *model.AppError
