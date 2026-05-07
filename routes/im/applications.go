@@ -54,6 +54,7 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["joinQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
+	apps["sendInteractive"] = &flow.Application{Handler: chatHandlerMiddleware(r.SendInteractive)}
 
 	return apps
 }
