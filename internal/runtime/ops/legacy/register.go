@@ -30,6 +30,14 @@ var nativeOps = map[string]bool{
 	"ewt":           true,
 	"cancelQueue":   true,
 	"joinQueue":     true,
+	"sendMessage":   true,
+	"sendText":      true,
+	"sendImage":     true,
+	"sendFile":      true,
+	"sendAction":    true,
+	"menu":          true,
+	"unSet":         true,
+	"export":        true,
 
 	// contacts native ops
 	"getContact":            true,

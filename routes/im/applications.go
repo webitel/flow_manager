@@ -27,12 +27,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["sendAction"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendAction),
 	}
-	apps["joinQueue"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.joinQueue),
-	}
-	apps["cancelQueue"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.cancelQueue),
-	}
 	apps["export"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.export),
 	}
@@ -41,9 +35,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	}
 	apps["unSet"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.UnSet),
-	}
-	apps["joinQueue"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
 
 	return apps

@@ -86,6 +86,10 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 				}
 				return nil
 			}))
+			imop.RegisterSend(reg, deps)
+			imop.RegisterMenu(reg)
+			imop.RegisterUnSet(reg)
+			imop.RegisterExport(reg)
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -196,7 +200,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
 
-	// Legacy flow.New is still needed for the disconnect trigger in teardown.
+	// flow.New is needed for the disconnect trigger in teardown.
 	i := flow.New(r, flow.Config{
 		SchemaId: routing.SchemaId,
 		Name:     routing.Schema.Name,
@@ -205,13 +209,6 @@ func (r *Router) handle(conn model.Connection) {
 		Conn:     conv,
 		Timezone: routing.TimezoneName,
 	})
-
-	// Legacy path: resumable runtime is disabled via config flag.
-	if !r.fm.Config().Runtime.UseResumable.IMEnabled() {
-		flow.Route(conn.Context(), i, r)
-		r.teardown(conn, conv, cp, i)
-		return
-	}
 
 	// Channel-specific dispatch context decoration: legacy adapters need the
 	// connection in ctx, recv_message needs the connID for its SuspendKey.
