@@ -216,6 +216,11 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 		if err := parseJoinQueueTimers(t, node, id); err != nil {
 			return nil, err
 		}
+	case "function":
+		if err := parseFunctionDef(t, node, id); err != nil {
+			return nil, err
+		}
+		return nil, nil // function nodes are indexed but not executed inline
 	}
 
 	return node, nil
@@ -356,6 +361,35 @@ func parseJoinQueueTimers(t *Tree, node *Node, id string) error {
 		m["_children_idx"] = len(node.Children) - 1
 		delete(m, "actions")
 	}
+	return nil
+}
+
+// parseFunctionDef extracts a {"function": {"name": "…", "actions": […]}} node
+// into Tree.Functions so that the execute op can look up functions by name.
+// The function node itself is NOT added to parent.Children — it is indexed only.
+func parseFunctionDef(t *Tree, node *Node, id string) error {
+	name, _ := node.Args["name"].(string)
+	if name == "" {
+		return fmt.Errorf("tree: function at %s: name is required", id)
+	}
+
+	containerID := "function." + name
+	container := newContainer(containerID, t)
+
+	if rawActions, ok := node.Args["actions"]; ok {
+		schema, err := toSchema(rawActions)
+		if err != nil {
+			return fmt.Errorf("tree: function %q at %s: %w", name, id, err)
+		}
+		if err := parseApps(t, container, schema, containerID); err != nil {
+			return err
+		}
+	}
+
+	if t.Functions == nil {
+		t.Functions = make(map[string]*Node)
+	}
+	t.Functions[name] = container
 	return nil
 }
 

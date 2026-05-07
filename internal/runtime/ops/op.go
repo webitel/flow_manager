@@ -41,6 +41,10 @@ type OpInput struct {
 	// Nil when the schema declares no triggers.
 	Triggers map[string]*tree.Node
 
+	// Functions maps function names to their sub-tree root. Populated by the
+	// interpreter from tr.Functions. Nil when the schema declares no functions.
+	Functions map[string]*tree.Node
+
 	// Timezone is the IANA timezone name currently active for this flow
 	// (set by the "timezone" op). Empty means UTC / system default.
 	// Passed to date/time helpers in expression evaluation.

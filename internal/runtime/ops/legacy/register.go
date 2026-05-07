@@ -41,6 +41,7 @@ var nativeOps = map[string]bool{
 	"export":        true,
 
 	"httpRequest": true,
+	"execute":     true,
 
 	// contacts native ops
 	"getContact":            true,

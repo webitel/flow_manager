@@ -38,4 +38,8 @@ type Tree struct {
 	// their sub-tree root Node. Populated from the schema's top-level "triggers"
 	// element. Empty when schema declares no triggers.
 	Triggers map[string]*Node
+
+	// Functions maps function names declared via {"function": {"name": "…", "actions": […]}}
+	// to their sub-tree root Node. Empty when the schema declares no functions.
+	Functions map[string]*Node
 }

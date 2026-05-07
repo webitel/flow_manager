@@ -75,6 +75,7 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 			GlobalVar:     globalVar,
 			ResumePayload: payload,
 			Triggers:      tr.Triggers,
+			Functions:     tr.Functions,
 			Timezone:      es.Timezone,
 			RunBranch:     runBranch,
 		})
