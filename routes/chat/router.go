@@ -13,6 +13,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -43,11 +44,6 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		fr.Handlers(),
 		ApplicationsHandlers(router),
 	)
-
-	// Remove ops that Bootstrap registers natively so the legacy adapter does
-	// not shadow the builtin implementations.
-	delete(router.apps, "calendar")
-	delete(router.apps, "softSleep")
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:   deps,
@@ -173,15 +169,16 @@ func (r *Router) handle(conn model.Connection) {
 
 	if !r.fm.Config().Runtime.UseResumable.ChatEnabled() {
 		flow.Route(conn.Context(), i, r)
-		r.teardown(conn, conv, cp, i)
+		r.teardownLegacy(conn, conv, cp, i)
 		return
 	}
 
+	var activeRec *persistence.Record
 	decorator := func(ctx context.Context) context.Context {
 		return legacy.WithConnection(ctx, conv)
 	}
 	teardownFn := func() {
-		r.teardown(conn, conv, cp, i)
+		r.teardownNative(conn, conv, cp, tr, activeRec, decorator)
 	}
 
 	if _, createErr := runtimekit.RunSession(rec, runtimekit.HandleConfig{
@@ -198,13 +195,48 @@ func (r *Router) handle(conn model.Connection) {
 		SessionMgr:  r.sessionMgr,
 		Decorator:   decorator,
 		Teardown:    teardownFn,
+		OnRecord:    func(r *persistence.Record) { activeRec = r },
 		Log:         r.fm.Log(),
 	}); createErr != nil {
 		conv.Stop(model.NewAppError("Chat", "chat.runtime.create", nil, createErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
 	}
 }
 
-func (r *Router) teardown(conn model.Connection, conv model.Conversation, cp *session.Checkpoint, i *flow.Flow) {
+// teardownNative finalises a native-runtime chat session and fires the
+// disconnect trigger via the native driver (no legacy flow.Route).
+func (r *Router) teardownNative(
+	conn model.Connection,
+	conv model.Conversation,
+	cp *session.Checkpoint,
+	tr *tree.Tree,
+	rec *persistence.Record,
+	decorate func(context.Context) context.Context,
+) {
+	session.Update(r.fm.CheckpointRepo(), cp, conn)
+
+	if !conv.IsTransfer() {
+		conv.Stop(nil, proto.CloseConversationCause_flow_end)
+	}
+
+	if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+		var vars map[string]string
+		if rec != nil {
+			vars = rec.State.Variables
+		}
+		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+		defer cancel()
+		ctxDisc = decorate(ctxDisc)
+		if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, conv.DomainId(), conn.Id()); trigErr != nil {
+			r.fm.Log().Error(fmt.Sprintf("chat teardown: disconnect trigger conn=%s: %v", conn.Id(), trigErr))
+		}
+	}
+
+	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
+}
+
+// teardownLegacy finalises a legacy-path chat session using flow.Route for the
+// disconnect trigger.
+func (r *Router) teardownLegacy(conn model.Connection, conv model.Conversation, cp *session.Checkpoint, i *flow.Flow) {
 	session.Update(r.fm.CheckpointRepo(), cp, conn)
 
 	if !conv.IsTransfer() {

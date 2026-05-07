@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/webitel/wlog"
 
@@ -159,6 +160,59 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			rec.State = es
 			rec.Status = state.StatusFailed
 			return d.repo.Fail(ctx, rec.ID, reason)
+		}
+	}
+}
+
+// RunTrigger runs a named trigger sub-tree synchronously without persisting state.
+// ctx should already carry any channel-specific values the ops need (e.g. the
+// connection reference injected by the channel decorator). Returns nil when the
+// named trigger is absent in tr. Suspend actions are treated as done — triggers
+// are not resumable.
+func (d *Driver) RunTrigger(ctx context.Context, tr *tree.Tree, name string, vars map[string]string, domainID int64, connID string) error {
+	branch, ok := tr.Triggers[name]
+	if !ok {
+		return nil
+	}
+
+	var globalVar func(string) string
+	if d.globals != nil {
+		globalVar = func(gname string) string {
+			return d.globals(ctx, domainID, gname)
+		}
+	}
+
+	es := state.ExecState{
+		Variables: vars,
+		Stack:     []state.Frame{{NodeID: branch.ID, Position: 0}},
+	}
+	l := d.log.With(
+		wlog.String("conn", connID),
+		wlog.String("trigger", name),
+	)
+
+	runBranch := func(bCtx context.Context, node *tree.Node, bVars map[string]string) {
+		go d.runBranchAsync(bCtx, node, bVars, tr, domainID, connID, globalVar)
+	}
+
+	for {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, connID, globalVar, nil, runBranch)
+		es = next
+		switch action.Kind {
+		case ActionDone:
+			return nil
+		case ActionFail:
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("trigger %s failed: %s", name, action.FailReason)
+		case ActionSuspend:
+			return nil // triggers are not resumable
+		case ActionContinue, ActionBranchAsync:
+			// continue loop
 		}
 	}
 }

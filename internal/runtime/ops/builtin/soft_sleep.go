@@ -21,7 +21,7 @@ type softSleepOp struct{}
 
 // SoftSleep suspends the flow for a specified duration. It does not block the
 // goroutine — instead it emits a SuspendKey so the Driver persists the state
-// and exits. A timer worker (routes/im/timer.go) resumes the flow when the
+// and exits. A timer worker (internal/adapters/inbound/im/timer.go) resumes the flow when the
 // wake_at timestamp is reached.
 func SoftSleep() ops.Op { return softSleepOp{} }
 

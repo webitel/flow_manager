@@ -57,6 +57,10 @@ type HandleConfig struct {
 	Decorator sessionmgr.ContextDecorator
 	// Teardown is called exactly once when the session ends.
 	Teardown sessionmgr.TeardownFunc
+	// OnRecord, when non-nil, is called once with the active persistence.Record
+	// immediately after it is established (created fresh or confirmed from DB).
+	// Callers use this to capture the record pointer for use in Teardown.
+	OnRecord func(*persistence.Record)
 	// Log is required for warnings.
 	Log *wlog.Logger
 }
@@ -118,6 +122,10 @@ func RunSession(rec *persistence.Record, cfg HandleConfig) (watching bool, err e
 		if createErr := cfg.Repo.Create(ctx, rec); createErr != nil {
 			return false, createErr
 		}
+	}
+
+	if cfg.OnRecord != nil {
+		cfg.OnRecord(rec)
 	}
 
 	// Run the driver. Decorator provides the same enriched context used for

@@ -3,7 +3,6 @@ package im
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"time"
 
@@ -16,6 +15,7 @@ import (
 	imop "github.com/webitel/flow_manager/internal/runtime/ops/domain/im"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/state"
@@ -29,7 +29,9 @@ const imChannel int16 = 2
 
 type Router struct {
 	fm         ports.RouterDeps
-	apps       flow.ApplicationHandlers
+	// globalApps holds only the channel-agnostic (legacy) ops used by the
+	// legacy bridge for non-native ops such as httpRequest, setVariable, etc.
+	globalApps flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
@@ -39,16 +41,9 @@ type Dialog model.IMDialog
 
 func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) model.Router {
 	router := &Router{
-		fm: deps,
+		fm:         deps,
+		globalApps: fr.Handlers(),
 	}
-
-	router.apps = flow.UnionApplicationMap(
-		fr.Handlers(),
-		ApplicationsHandlers(router),
-	)
-
-	delete(router.apps, "calendar")
-	delete(router.apps, "softSleep")
 
 	// coord is captured by the ExtraOps closure below. Bootstrap calls ExtraOps
 	// synchronously before returning the kit, so coord is set after Bootstrap
@@ -58,7 +53,7 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:           deps,
 		Router:         router,
-		Apps:           router.apps,
+		Apps:           router.globalApps,
 		ContactsClient: contacts,
 		ExtraOps: func(reg *ops.Registry) {
 			reg.Register("recvMessage", messaging.New())
@@ -123,29 +118,31 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 	return nil
 }
 
+// Request is kept for global legacy ops (httpRequest, setVariable, etc.) that
+// go through the legacy bridge and call Router.Request. IM-specific ops are
+// all native and never reach this path.
+func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
+	if h, ok := r.globalApps[req.Id()]; ok {
+		if h.ArgsParser != nil {
+			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
+		}
+		return h.Handler(ctx, scope, req.Args())
+	}
+	return flow.Do(func(result *model.Result) {
+		result.Err = model.NewAppError("IM.Request", "im.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
+	})
+}
+
 func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
 	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-
 	for k, v := range apps {
-		r2.apps[k] = v
+		r2.globalApps[k] = v
 	}
-
 	return &r2
 }
 
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		} else {
-			return h.Handler(ctx, scope, req.Args())
-		}
-	} else {
-		return flow.Do(func(result *model.Result) {
-			result.Err = model.NewAppError("Chat.Request", "chat.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-		})
-	}
+func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
+	return scope.Decode(in, out)
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -200,15 +197,10 @@ func (r *Router) handle(conn model.Connection) {
 
 	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
 
-	// flow.New is needed for the disconnect trigger in teardown.
-	i := flow.New(r, flow.Config{
-		SchemaId: routing.SchemaId,
-		Name:     routing.Schema.Name,
-		Schema:   routing.Schema.Schema,
-		Handler:  r,
-		Conn:     conv,
-		Timezone: routing.TimezoneName,
-	})
+	// activeRec is set via OnRecord once the persistence.Record is established
+	// (either loaded from DB or freshly created). Teardown reads variables from
+	// it to pass to the disconnect trigger.
+	var activeRec *persistence.Record
 
 	// Channel-specific dispatch context decoration: legacy adapters need the
 	// connection in ctx, recv_message needs the connID for its SuspendKey.
@@ -218,7 +210,7 @@ func (r *Router) handle(conn model.Connection) {
 		return ctx
 	}
 	teardownFn := func() {
-		r.teardown(conn, conv, cp, i)
+		r.teardown(conn, conv, cp, tr, activeRec, decorator)
 	}
 	if _, createErr := runtimekit.RunSession(rec, runtimekit.HandleConfig{
 		ChannelName: "im",
@@ -234,6 +226,7 @@ func (r *Router) handle(conn model.Connection) {
 		SessionMgr:  r.sessionMgr,
 		Decorator:   decorator,
 		Teardown:    teardownFn,
+		OnRecord:    func(r *persistence.Record) { activeRec = r },
 		Log:         r.fm.Log(),
 	}); createErr != nil {
 		conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
@@ -241,25 +234,34 @@ func (r *Router) handle(conn model.Connection) {
 }
 
 // teardown finalises a completed or failed IM flow: updates the checkpoint,
-// stops the connection, fires the disconnect trigger, and closes the session.
-func (r *Router) teardown(conn model.Connection, conv Dialog, cp *session.Checkpoint, i *flow.Flow) {
+// stops the connection, fires the disconnect trigger via the native driver,
+// and closes the session.
+func (r *Router) teardown(
+	conn model.Connection,
+	conv Dialog,
+	cp *session.Checkpoint,
+	tr *tree.Tree,
+	rec *persistence.Record,
+	decorate func(context.Context) context.Context,
+) {
 	session.Update(r.fm.CheckpointRepo(), cp, conn)
 
 	if !conv.IsTransfer() {
 		conv.Stop(nil)
 	}
 
-	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		// TODO config
+	if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+		var vars map[string]string
+		if rec != nil {
+			vars = rec.State.Variables
+		}
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
-		flow.Route(ctxDisc, d, r)
-		<-ctxDisc.Done()
-		cancel()
+		defer cancel()
+		ctxDisc = decorate(ctxDisc)
+		if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, conv.DomainId(), conn.Id()); trigErr != nil {
+			r.fm.Log().Error(fmt.Sprintf("im teardown: disconnect trigger conn=%s: %v", conn.Id(), trigErr))
+		}
 	}
 
 	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
-}
-
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
 }

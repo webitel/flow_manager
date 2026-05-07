@@ -30,7 +30,7 @@ import (
 	"github.com/webitel/flow_manager/routes/chat"
 	"github.com/webitel/flow_manager/routes/email"
 	"github.com/webitel/flow_manager/routes/grpc"
-	"github.com/webitel/flow_manager/routes/im"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/im"
 	"github.com/webitel/flow_manager/routes/processing"
 	"github.com/webitel/flow_manager/routes/webhook"
 

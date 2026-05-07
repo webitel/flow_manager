@@ -15,6 +15,7 @@ var nativeOps = map[string]bool{
 	"break":         true,
 	"set":           true,
 	"log":           true,
+	"softSleep":     true,
 	"start":         true,
 	"string":        true,
 	"math":          true,
