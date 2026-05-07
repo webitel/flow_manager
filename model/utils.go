@@ -11,6 +11,8 @@ import (
 	"strings"
 
 	"github.com/pborman/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AppError struct {
@@ -141,4 +143,44 @@ func compatibleJSEncodeURIComponent(str string) string {
 	resultStr = strings.Replace(resultStr, "%29", ")", -1)
 	resultStr = strings.Replace(resultStr, "%2A", "*", -1)
 	return resultStr
+}
+
+func ExtractHTPPStatusCodeFromGRPC(err error) int {
+	if err == nil {
+		return http.StatusOK
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		return http.StatusInternalServerError
+	}
+
+	switch st.Code() {
+	case codes.OK:
+		return http.StatusOK
+	case codes.InvalidArgument, codes.FailedPrecondition, codes.OutOfRange:
+		return http.StatusBadRequest
+	case codes.Unauthenticated:
+		return http.StatusUnauthorized
+	case codes.PermissionDenied:
+		return http.StatusForbidden
+	case codes.NotFound:
+		return http.StatusNotFound
+	case codes.Aborted, codes.AlreadyExists:
+		return http.StatusConflict
+	case codes.ResourceExhausted:
+		return http.StatusTooManyRequests
+	case codes.Canceled:
+		return 499
+	case codes.Internal, codes.Unknown, codes.DataLoss:
+		return http.StatusInternalServerError
+	case codes.Unimplemented:
+		return http.StatusNotImplemented
+	case codes.Unavailable:
+		return http.StatusServiceUnavailable
+	case codes.DeadlineExceeded:
+		return http.StatusGatewayTimeout
+	default:
+		return http.StatusInternalServerError
+	}
 }

@@ -25,6 +25,7 @@ type IMDialog interface {
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
+	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
 }
 
 type ThreadMember struct {

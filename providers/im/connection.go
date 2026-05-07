@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/tidwall/gjson"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/webitel/wlog"
 
@@ -330,7 +332,7 @@ func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response,
 
 func (c *Connection) LastMessages(limit int) []model.ChatMessage {
 	c.RLock()
-	msgs := c.messages
+	msgs := slices.Clone(c.messages)
 	c.RUnlock()
 
 	if limit > 0 && len(msgs) > limit {
@@ -393,6 +395,161 @@ func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, m
 	//}
 	//c.saveMessages(msgs...)
 	return messageToText(msgs...), nil
+}
+
+func (connection *Connection) SendInteractive(ctx context.Context, interactive model.SendInteractiveRequest) (model.Response, *model.AppError) {
+	protoInteractive := convertToProtoInteractive(&interactive.Interactive)
+	if protoInteractive == nil {
+		return model.CallResponseError, model.NewRequestError("im.connection.send_interactive", "received nil pointer interactive proto after converting")
+	}
+
+	outCtx := metadata.NewOutgoingContext(ctx, connection.hdrs)
+	sendMD, _ := structpb.NewStruct(interactive.Metadata)
+	request := &p.SendInteractiveMessageRequest{
+		To: &p.Peer{
+			Kind: &p.Peer_Contact{
+				Contact: &p.PeerIdentity{
+					Sub: connection.msg.From.Sub,
+					Iss: connection.msg.From.Issuer,
+				},
+			},
+		},
+		Interactive: protoInteractive,
+		Body:        &interactive.Body,
+		Metadata:    sendMD,
+	}
+
+	if _, err := connection.srv.client.messageService.Api.SendInteractive(outCtx, request); err != nil {
+		return model.CallResponseError, model.NewAppError("connection.send_interactive", "im.connection.send_interactive", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
+	}
+
+	return model.CallResponseOK, nil
+}
+
+func convertToProtoInteractive(src *model.Interactive) *p.Interactive {
+	if src == nil {
+		return nil
+	}
+
+	dst := &p.Interactive{
+		SingleUse: src.SingleUse,
+	}
+
+	if src.Documents != nil {
+		dst.Attachments = &p.Interactive_Documents{
+			Documents: convertToProtoDocuments(src.Documents),
+		}
+	} else if src.Images != nil {
+		dst.Attachments = &p.Interactive_Images{
+			Images: convertToProtoImages(src.Images),
+		}
+	}
+
+	if src.Markup != nil {
+		dst.Kind = &p.Interactive_Markup{
+			Markup: convertToProtoMarkup(src.Markup),
+		}
+	} else if src.ListReply != nil {
+		dst.Kind = &p.Interactive_ListReply{
+			ListReply: convertoToProtoListReply(src.ListReply),
+		}
+	}
+
+	return dst
+}
+
+func convertToProtoImages(src *model.Images) *p.Images {
+	if src == nil {
+		return nil
+	}
+
+	imgs := make([]*p.ImageInput, len(src.Images))
+	for i, f := range src.Images {
+		imgs[i] = &p.ImageInput{
+			Id:       strconv.Itoa(f.Id),
+			Name:     f.Name,
+			MimeType: f.MimeType,
+		}
+	}
+	return &p.Images{Images: imgs}
+}
+
+func convertToProtoDocuments(src *model.Documents) *p.Documents {
+	if src == nil {
+		return nil
+	}
+	docs := make([]*p.DocumentInput, len(src.Documents))
+	for i, f := range src.Documents {
+		docs[i] = &p.DocumentInput{
+			Id:        strconv.Itoa(f.Id),
+			MimeType:  f.MimeType,
+			FileName:  f.Name,
+			SizeBytes: &f.Size,
+		}
+	}
+	return &p.Documents{Documents: docs}
+}
+
+func convertToProtoMarkup(src *model.KeyboardMarkup) *p.KeyboardMarkup {
+	if src == nil {
+		return nil
+	}
+	rows := make([]*p.KeyboardRow, len(src.Rows))
+	for i, r := range src.Rows {
+		rows[i] = &p.KeyboardRow{
+			Buttons: convertToProtoButtons(r.Buttons),
+		}
+	}
+	return &p.KeyboardMarkup{Rows: rows}
+}
+
+func convertoToProtoListReply(src *model.KeyboardListReply) *p.KeyboardListReply {
+	if src == nil {
+		return nil
+	}
+	sections := make([]*p.KeyboardRowWithSection, len(src.Sections))
+	for i, s := range src.Sections {
+		sections[i] = &p.KeyboardRowWithSection{
+			Section: s.Section,
+			Buttons: convertToProtoButtons(s.Buttons),
+		}
+	}
+	return &p.KeyboardListReply{
+		MainButtonTitle: src.MainButtonTitle,
+		Sections:        sections,
+	}
+}
+
+func convertToProtoButtons(src []model.KeyboardButton) []*p.KeyboardButton {
+	res := make([]*p.KeyboardButton, len(src))
+	for i, b := range src {
+		btn := &p.KeyboardButton{
+			Id:    b.ID,
+			Label: b.Label,
+		}
+
+		if b.Metadata != nil {
+			if m, err := structpb.NewStruct(b.Metadata); err == nil {
+				btn.Metadata = m
+			}
+		}
+
+		if b.URL != nil {
+			btn.Kind = &p.KeyboardButton_Url{
+				Url: &p.KeyboardButtonURL{Url: b.URL.URL},
+			}
+		} else if b.Callback != nil {
+			btn.Kind = &p.KeyboardButton_Callback{
+				Callback: &p.KeyboardButtonCallback{Data: b.Callback.Data},
+			}
+		} else if b.Request != nil {
+			btn.Kind = &p.KeyboardButton_Request{
+				Request: &p.KeyboardButtonRequest{Action: b.Request.Action},
+			}
+		}
+		res[i] = btn
+	}
+	return res
 }
 
 func (c *Connection) IsTransfer() bool {
