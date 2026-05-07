@@ -72,6 +72,7 @@ func Bootstrap(cfg Config) *Kit {
 	legacy.RegisterFromMap(reg, cfg.Router, cfg.Apps)
 
 	reg.Register("httpRequest", builtin.HTTPRequestOp(cfg.Deps))
+	reg.Register("global", builtin.GlobalOp(cfg.Deps))
 	reg.Register("list", builtin.ListOp(cfg.Deps))
 	reg.Register("listAdd", builtin.ListAddOp(cfg.Deps))
 	reg.Register("cache", builtin.CacheOp(cfg.Deps))

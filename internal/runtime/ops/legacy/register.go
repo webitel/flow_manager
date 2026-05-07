@@ -42,6 +42,7 @@ var nativeOps = map[string]bool{
 
 	"httpRequest": true,
 	"execute":     true,
+	"global":      true,
 	"list":        true,
 	"listAdd":     true,
 	"dump":        true,

@@ -89,6 +89,9 @@ type RouterDeps interface {
 	GetCookieCache(ctx context.Context, domainID int64, key string) (string, error)
 	SetCookieCache(ctx context.Context, domainID int64, key string, value string, ttlSecs int64) error
 
+	// global schema variables
+	SetGlobalVar(ctx context.Context, domainId int64, name string, value string, encrypt bool) error
+
 	// list
 	CheckList(domainId int64, number string, listId *int, listName *string) (bool, error)
 	AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error

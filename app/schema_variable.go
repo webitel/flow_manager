@@ -60,6 +60,16 @@ func (f *FlowManager) SetSchemaVariable(ctx context.Context, domainId int64, var
 	return nil
 }
 
+func (f *FlowManager) SetGlobalVar(ctx context.Context, domainId int64, name string, value string, encrypt bool) error {
+	appErr := f.SetSchemaVariable(ctx, domainId, map[string]*model.SchemaVariable{
+		name: {Value: []byte(value), Encrypt: encrypt},
+	})
+	if appErr != nil {
+		return appErr
+	}
+	return nil
+}
+
 func (f *FlowManager) schemaVariable(key string, domainId int64, name string) string {
 	sb, err := f.Store.Schema().GetVariable(domainId, name)
 	if err != nil {
