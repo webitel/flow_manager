@@ -55,6 +55,14 @@ func (fm *FlowManager) GeneratePreSignedResourceSignature(ctx context.Context, a
 
 }
 
+func (fm *FlowManager) GeneratePreSignedLink(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error) {
+	link, appErr := fm.GeneratePreSignedResourceSignature(ctx, action, source, fileId, domainId, query)
+	if appErr != nil {
+		return "", appErr
+	}
+	return link, nil
+}
+
 func (fm *FlowManager) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, *model.AppError) {
 	reqs := make([]domstorage.FileLinkRequest, len(files))
 	for i, f := range files {

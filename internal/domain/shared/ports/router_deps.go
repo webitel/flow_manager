@@ -92,6 +92,12 @@ type RouterDeps interface {
 	// global schema variables
 	SetGlobalVar(ctx context.Context, domainId int64, name string, value string, encrypt bool) error
 
+	// file links
+	GeneratePreSignedLink(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error)
+
+	// open link (send URL to agent browser via WebSocket)
+	PushOpenLink(domainId int64, sockId string, userId int64, message, url string) error
+
 	// list
 	CheckList(domainId int64, number string, listId *int, listName *string) (bool, error)
 	AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error

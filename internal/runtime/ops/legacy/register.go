@@ -40,13 +40,16 @@ var nativeOps = map[string]bool{
 	"unSet":         true,
 	"export":        true,
 
-	"httpRequest": true,
-	"execute":     true,
-	"global":      true,
-	"list":        true,
-	"listAdd":     true,
-	"dump":        true,
-	"cache":       true,
+	"httpRequest":  true,
+	"execute":      true,
+	"global":       true,
+	"list":         true,
+	"listAdd":      true,
+	"dump":         true,
+	"cache":        true,
+	"generateLink": true,
+	"openLink":     true,
+	"monoPay":      true,
 
 	// contacts native ops
 	"getContact":            true,

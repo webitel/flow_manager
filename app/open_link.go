@@ -15,6 +15,14 @@ const (
 	descTrackAppName = "desc_track"
 )
 
+func (fm *FlowManager) PushOpenLink(domainId int64, sockId string, userId int64, message, url string) error {
+	appErr := fm.OpenLink(domainId, sockId, userId, message, url)
+	if appErr != nil {
+		return appErr
+	}
+	return nil
+}
+
 func (fm *FlowManager) OpenLink(domainId int64, sockId string, userId int64, message string, url string) *model.AppError {
 	if sockId == "" {
 		sockSession, storeErr := fm.Store.SocketSession().Get(userId, domainId, descTrackAppName)

@@ -18,4 +18,5 @@ func Register(reg *ops.Registry) {
 	reg.Register("math", MathOp())
 	reg.Register("classifier", Classifier())
 	reg.Register("dump", Dump())
+	reg.Register("monoPay", MonopayOp())
 }

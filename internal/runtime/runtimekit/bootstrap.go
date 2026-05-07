@@ -76,6 +76,8 @@ func Bootstrap(cfg Config) *Kit {
 	reg.Register("list", builtin.ListOp(cfg.Deps))
 	reg.Register("listAdd", builtin.ListAddOp(cfg.Deps))
 	reg.Register("cache", builtin.CacheOp(cfg.Deps))
+	reg.Register("generateLink", builtin.GenerateLinkOp(cfg.Deps))
+	reg.Register("openLink", builtin.OpenLinkOp(cfg.Deps))
 	reg.Register("timezone", builtin.TimezoneOp(cfg.Deps.GetLocation))
 	reg.Register("calendar", calendar.New(func(ctx context.Context, domainID int64, id *int, name *string) (*calendar.Result, error) {
 		cal, err := cfg.Deps.GetStore().Calendar().Check(domainID, id, name)
