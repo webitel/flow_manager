@@ -100,6 +100,8 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		members = append(members, &cc.IMJoinToQueueRequest_MemberInfo{
 			Type: m.Type,
 			Name: m.Name,
+			Iss:  m.Iss,
+			Sub:  m.Sub,
 		})
 	}
 
