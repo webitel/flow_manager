@@ -13,6 +13,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
+	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
@@ -49,7 +50,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 			chatop.RegisterSTT(reg, deps)
 			chatop.RegisterQueue(reg, deps)
 			chatop.RegisterMisc(reg)
-			chatop.RegisterRecv(reg)
+			reg.Register("recvMessage", messaging.New())
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -157,7 +158,9 @@ func (r *Router) handle(conn model.Connection) {
 
 	var activeRec *persistence.Record
 	decorator := func(ctx context.Context) context.Context {
-		return legacy.WithConnection(ctx, conv)
+		ctx = legacy.WithConnection(ctx, conv)
+		ctx = messaging.WithConnID(ctx, conn.Id())
+		return ctx
 	}
 	teardownFn := func() {
 		r.teardownNative(conn, conv, cp, tr, activeRec, decorator)

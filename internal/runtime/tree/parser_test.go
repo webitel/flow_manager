@@ -414,6 +414,37 @@ func TestParse_TriggersOnly(t *testing.T) {
 	}
 }
 
+func TestParse_LegacyTriggerSingular(t *testing.T) {
+	// Legacy schemas use {"trigger": {...}} (singular). The parser must treat it
+	// identically to {"triggers": {...}} (plural).
+	const schema = `[
+		{"trigger": {
+			"disconnected": [{"log": {"message": "bye"}}],
+			"commands": {
+				"/cancel": [{"log": {"message": "cancelled"}}]
+			}
+		}},
+		{"sendText": "hello"}
+	]`
+
+	tr := mustParse(t, 16, schema)
+
+	// Trigger element must NOT appear as a child node.
+	if len(tr.Root.Children) != 1 {
+		t.Fatalf("Root.Children: got %d, want 1", len(tr.Root.Children))
+	}
+	if tr.Root.Children[0].OpName != "sendText" {
+		t.Errorf("root child: %q", tr.Root.Children[0].OpName)
+	}
+
+	if _, ok := tr.Triggers["disconnected"]; !ok {
+		t.Error("Triggers[disconnected] missing")
+	}
+	if _, ok := tr.Triggers["commands-/cancel"]; !ok {
+		t.Error("Triggers[commands-/cancel] missing")
+	}
+}
+
 func TestParse_JSONRoundTripOfArgs(t *testing.T) {
 	const schema = `[{"httpRequest": {"url": "https://example.com", "method": "GET", "timeout": 5000}}]`
 

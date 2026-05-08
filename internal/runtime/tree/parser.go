@@ -57,9 +57,14 @@ func ParseJSON(schemaID int, data []byte) (*Tree, error) {
 // and are not appended to parent.Children.
 func parseApps(t *Tree, parent *Node, apps Schema, prefix string) error {
 	for i, obj := range apps {
-		// Triggers element: {"triggers": {...}} — parse into Tree.Triggers and skip.
-		if raw, ok := obj["triggers"]; ok && len(obj) == 1 {
-			if err := parseTriggers(t, raw); err != nil {
+		// Triggers element: {"triggers": {...}} or legacy {"trigger": {...}}.
+		// Both formats share the same arg structure; only the key name differs.
+		rawTrig, isTrig := obj["triggers"]
+		if !isTrig {
+			rawTrig, isTrig = obj["trigger"]
+		}
+		if isTrig && len(obj) == 1 {
+			if err := parseTriggers(t, rawTrig); err != nil {
 				return fmt.Errorf("tree: triggers element at index %d: %w", i, err)
 			}
 			continue
