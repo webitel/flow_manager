@@ -31,6 +31,8 @@ type IMDialog interface {
 type ThreadMember struct {
 	Type string
 	Name string
+	Iss  string
+	Sub  string
 }
 
 type ThreadInfo struct {
