@@ -10,7 +10,6 @@ import (
 	"github.com/webitel/flow_manager/flow"
 	proto "github.com/webitel/flow_manager/gen/chat"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
-	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
@@ -31,21 +30,14 @@ type Router struct {
 	fm         ports.RouterDeps
 	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
-	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
 }
 
-type Conversation model.Conversation
-
 func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	router := &Router{
-		fm: deps,
+		fm:   deps,
+		apps: fr.Handlers(),
 	}
-
-	router.apps = flow.UnionApplicationMap(
-		fr.Handlers(),
-		ApplicationsHandlers(router),
-	)
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:   deps,
@@ -53,6 +45,11 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		Apps:   router.apps,
 		ExtraOps: func(reg *ops.Registry) {
 			chatop.Register(reg, deps)
+			chatop.RegisterSend(reg, deps)
+			chatop.RegisterSTT(reg, deps)
+			chatop.RegisterQueue(reg, deps)
+			chatop.RegisterMisc(reg)
+			chatop.RegisterRecv(reg)
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -70,7 +67,6 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 		},
 	})
 	router.driver = kit.Driver
-	router.coord = kit.Coord
 	router.sessionMgr = sessionmgr.New(kit.Coord, deps.RuntimeStateRepo(), deps.Log())
 
 	return router
@@ -88,11 +84,9 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
 	r2 := *r
 	r2.apps = maps.Clone(r.apps)
-
 	for k, v := range apps {
 		r2.apps[k] = v
 	}
-
 	return &r2
 }
 
@@ -100,14 +94,12 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 	if h, ok := r.apps[req.Id()]; ok {
 		if h.ArgsParser != nil {
 			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		} else {
-			return h.Handler(ctx, scope, req.Args())
 		}
-	} else {
-		return flow.Do(func(result *model.Result) {
-			result.Err = model.NewAppError("Chat.Request", "chat.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-		})
+		return h.Handler(ctx, scope, req.Args())
 	}
+	return flow.Do(func(result *model.Result) {
+		result.Err = model.NewAppError("Chat.Request", "chat.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
+	})
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -163,21 +155,6 @@ func (r *Router) handle(conn model.Connection) {
 
 	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
 
-	i := flow.New(r, flow.Config{
-		SchemaId: routing.SchemaId,
-		Name:     routing.Schema.Name,
-		Schema:   routing.Schema.Schema,
-		Handler:  r,
-		Conn:     conv,
-		Timezone: routing.TimezoneName,
-	})
-
-	if !r.fm.Config().Runtime.UseResumable.ChatEnabled() {
-		flow.Route(conn.Context(), i, r)
-		r.teardownLegacy(conn, conv, cp, i)
-		return
-	}
-
 	var activeRec *persistence.Record
 	decorator := func(ctx context.Context) context.Context {
 		return legacy.WithConnection(ctx, conv)
@@ -207,8 +184,6 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-// teardownNative finalises a native-runtime chat session and fires the
-// disconnect trigger via the native driver (no legacy flow.Route).
 func (r *Router) teardownNative(
 	conn model.Connection,
 	conv model.Conversation,
@@ -234,25 +209,6 @@ func (r *Router) teardownNative(
 		if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, conv.DomainId(), conn.Id()); trigErr != nil {
 			r.fm.Log().Error(fmt.Sprintf("chat teardown: disconnect trigger conn=%s: %v", conn.Id(), trigErr))
 		}
-	}
-
-	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
-}
-
-// teardownLegacy finalises a legacy-path chat session using flow.Route for the
-// disconnect trigger.
-func (r *Router) teardownLegacy(conn model.Connection, conv model.Conversation, cp *session.Checkpoint, i *flow.Flow) {
-	session.Update(r.fm.CheckpointRepo(), cp, conn)
-
-	if !conv.IsTransfer() {
-		conv.Stop(nil, proto.CloseConversationCause_flow_end)
-	}
-
-	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
-		flow.Route(ctxDisc, d, r)
-		<-ctxDisc.Done()
-		cancel()
 	}
 
 	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
