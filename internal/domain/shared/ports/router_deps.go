@@ -2,6 +2,7 @@ package ports
 
 import (
 	"context"
+	"io"
 	"time"
 
 	"github.com/webitel/wlog"
@@ -117,6 +118,11 @@ type RouterDeps interface {
 	// email
 	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
 	ReplyEmail(conn model.EmailConnection, text string) *model.AppError
+	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error)
+	SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, error)
+	GetFileMetadata(domainId int64, ids []int64) ([]model.File, error)
+	DownloadFile(domainId int64, id int64) (io.ReadCloser, error)
+	SaveEmail(domainId int64, email *model.Email) error
 
 	// processing / cases
 	LocateService(ctx context.Context, req *casespb.LocateServiceRequest, token string) (*casespb.LocateServiceResponse, error)

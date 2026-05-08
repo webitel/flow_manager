@@ -47,7 +47,6 @@ type GetEmailInfo struct {
 
 func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
 	var argv EmailArgs
-	var err *model.AppError
 
 	argv.Type = "text/html"
 
@@ -57,17 +56,14 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 
 	if argv.Message == "" {
 		return nil, ErrorRequiredParameter("sendEmail", "message")
-		// err
 	}
 	if argv.To == nil || len(argv.To) < 1 {
 		return nil, ErrorRequiredParameter("sendEmail", "to")
 	}
 
 	if argv.Profile != nil && (argv.Profile.Id != nil || argv.Profile.Name != nil) {
-		var settings *model.SmtSettings
-		settings, err = r.fm.SmtpSettings(conn.DomainId(), argv.Profile)
 		// TODO WTEL-5146
-		if err == nil {
+		if settings, smtpErr := r.fm.SmtpSettings(conn.DomainId(), argv.Profile); smtpErr == nil {
 			argv.Smtp = *settings
 		}
 	}
@@ -122,10 +118,11 @@ func (r *router) sendEmailFn(ctx context.Context, conn model.Connection, argv Em
 		for _, v := range argv.Attachment.Files {
 			ids = append(ids, int64(v.Id))
 		}
-		files, err = r.fm.GetFileMetadata(domainId, ids)
-		if err != nil {
-			wlog.Error(err.Error())
+		metaFiles, fileErr := r.fm.GetFileMetadata(domainId, ids)
+		if fileErr != nil {
+			wlog.Error(fileErr.Error())
 		} else {
+			files = metaFiles
 			r.attachToMail(domainId, mail, files)
 		}
 	}
@@ -133,9 +130,9 @@ func (r *router) sendEmailFn(ctx context.Context, conn model.Connection, argv Em
 	mail.SetBody(argv.Type, argv.Message)
 	var dialer *gomail.Dialer
 	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
-		var token string
-		token, err = r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
-		if err != nil {
+		token, tokenErr := r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
+		if tokenErr != nil {
+			err = model.NewAppError("sendEmailFn", "flow.email.oauth_token", nil, tokenErr.Error(), http.StatusInternalServerError)
 			return model.CallResponseError, err
 		}
 		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, "")

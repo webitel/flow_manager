@@ -27,6 +27,10 @@ func (f *FlowManager) ReplyEmail(conn model.EmailConnection, text string) *model
 	return nil
 }
 
+func (f *FlowManager) SaveEmail(domainId int64, email *model.Email) error {
+	return f.Store.Email().Save(domainId, email)
+}
+
 func (f *FlowManager) MailServer() *email.MailServer {
 	return f.mailServer.(*email.MailServer)
 }

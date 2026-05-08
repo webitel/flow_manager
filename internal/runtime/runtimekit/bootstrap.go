@@ -17,10 +17,11 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/calendar"
 	casesop "github.com/webitel/flow_manager/internal/runtime/ops/domain/cases"
 	contactsop "github.com/webitel/flow_manager/internal/runtime/ops/domain/contacts"
+	emailop "github.com/webitel/flow_manager/internal/runtime/ops/domain/email"
 	meetingop "github.com/webitel/flow_manager/internal/runtime/ops/domain/meeting"
 	memberop "github.com/webitel/flow_manager/internal/runtime/ops/domain/member"
-	queueop "github.com/webitel/flow_manager/internal/runtime/ops/domain/queue"
 	notifop "github.com/webitel/flow_manager/internal/runtime/ops/domain/notification"
+	queueop "github.com/webitel/flow_manager/internal/runtime/ops/domain/queue"
 	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -108,6 +109,7 @@ func Bootstrap(cfg Config) *Kit {
 	reg.Register("createMeeting", meetingop.New(cfg.Deps.Meeting()))
 	memberop.Register(reg, cfg.Deps.GetStore().Member())
 	queueop.Register(reg, cfg.Deps.GetStore().Queue())
+	emailop.Register(reg, cfg.Deps)
 	casesop.Register(reg, cfg.Deps.Cases())
 	if cfg.ContactsClient != nil {
 		contactsop.Register(reg, cfg.ContactsClient, cfg.Deps)

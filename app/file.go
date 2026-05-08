@@ -23,13 +23,8 @@ func (fm *FlowManager) SetupPublicFileUrl(file *model.File, domainId int64, serv
 	return file, nil
 }
 
-func (fm *FlowManager) DownloadFile(domainId int64, id int64) (io.ReadCloser, *model.AppError) {
-	reader, err := fm.storage.Download(context.TODO(), domainId, id)
-	if err != nil {
-		return nil, model.NewAppError("DownloadFile", "app.storage.download.app_err", nil, err.Error(), http.StatusInternalServerError)
-	}
-
-	return reader, nil
+func (fm *FlowManager) DownloadFile(domainId int64, id int64) (io.ReadCloser, error) {
+	return fm.storage.Download(context.TODO(), domainId, id)
 }
 
 func (fm *FlowManager) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError) {
@@ -42,10 +37,6 @@ func (fm *FlowManager) GetFileTranscription(ctx context.Context, fileId, domainI
 
 }
 
-func (fm *FlowManager) GetFileMetadata(domainId int64, ids []int64) ([]model.File, *model.AppError) {
-	files, err := fm.Store.File().GetMetadata(domainId, ids)
-	if err != nil {
-		return nil, model.NewAppError("GetFileMetadata", "store.file.get_metadata", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return files, nil
+func (fm *FlowManager) GetFileMetadata(domainId int64, ids []int64) ([]model.File, error) {
+	return fm.Store.File().GetMetadata(domainId, ids)
 }

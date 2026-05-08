@@ -11,7 +11,7 @@ import (
 
 var mailGroup singleflight.Group
 
-func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError) {
+func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error) {
 	key := fmt.Sprintf("%d-", domainId)
 	if search.Id != nil {
 		key += fmt.Sprintf("%d-", *search.Id)
@@ -31,12 +31,7 @@ func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (
 	})
 
 	if err != nil {
-		switch err.(type) {
-		case *model.AppError:
-			return nil, err.(*model.AppError)
-		default:
-			return nil, model.NewAppError("Queue", "mail.smtp.settings.get", nil, err.Error(), http.StatusInternalServerError)
-		}
+		return nil, err
 	}
 
 	return settings.(*model.SmtSettings), nil

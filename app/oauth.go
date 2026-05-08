@@ -14,7 +14,7 @@ import (
 
 var smtpOauth2Group singleflight.Group
 
-func (fm *FlowManager) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, *model.AppError) {
+func (fm *FlowManager) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, error) {
 	token, err, _ := smtpOauth2Group.Do(fmt.Sprintf("%v", settings.Id), func() (interface{}, error) {
 		token, err := fm.smtpSettingsOAuthToken(settings)
 		if err != nil {
@@ -25,12 +25,7 @@ func (fm *FlowManager) SmtpSettingsOAuthToken(settings *model.SmtSettings) (stri
 	})
 
 	if err != nil {
-		switch err.(type) {
-		case *model.AppError:
-			return "", err.(*model.AppError)
-		default:
-			return "", model.NewAppError("App", "app.smtp.oauth", nil, err.Error(), http.StatusInternalServerError)
-		}
+		return "", err
 	}
 
 	return token.(string), nil
