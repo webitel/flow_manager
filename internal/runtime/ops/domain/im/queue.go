@@ -228,7 +228,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		BucketId:      argv.Bucket.Id,
 		DomainId:      in.DomainID,
 		StickyAgentId: stickyAgentId,
-		Member: &genpb.IMJoinToQueueRequest_Member{
+		Thread: &genpb.IMJoinToQueueRequest_ThreadInfo{
 			From: &genpb.IMJoinToQueueRequest_Endpoint{
 				Name: from.Name,
 				Sub:  from.Sub,
@@ -237,12 +237,13 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 				Name: to.Name,
 				Sub:  to.Sub,
 			},
-			LastMsg: lastMsg.Text,
-			LastSub: lastMsg.From.Sub,
+			Subject:     lastMsg.Text,
+			Members:     nil, // TODO
+			LastMessage: lastMsg.Text,
 		},
 	})
 	if err != nil {
-		return ops.OpOutput{}, nil
+		return ops.OpOutput{}, err
 	}
 
 	attIDStr := strconv.FormatInt(attId, 10)

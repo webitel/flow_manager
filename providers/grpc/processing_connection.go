@@ -32,6 +32,11 @@ type processingConnection struct {
 
 	components map[string]any
 
+	// formActionHandlers is the native-runtime alternative to formAction channel.
+	// When formAction is nil (native suspendable path) FormAction() fires these.
+	formActionHandlers map[uint64]func(processing.FormAction)
+	nextHandlerID      uint64
+
 	ctx    context.Context
 	cancel context.CancelFunc
 	sync.RWMutex
@@ -143,15 +148,80 @@ func (c *processingConnection) PushForm(ctx context.Context, form processing.For
 }
 
 func (c *processingConnection) FormAction(action processing.FormAction) *model.AppError {
-	if c.formAction == nil {
-		return model.NewAppError("Processing.FillForm", "processing.form.fill.app_err", nil, "Not found active form", http.StatusInternalServerError)
+	c.Lock()
+	ch := c.formAction
+	handlers := make([]func(processing.FormAction), 0, len(c.formActionHandlers))
+	for _, h := range c.formActionHandlers {
+		handlers = append(handlers, h)
 	}
-	c.formAction <- action
-	close(c.formAction)
+	c.Unlock()
 
-	c.formAction = nil
-	c.setActiveFormId("")
-	return nil
+	if ch != nil {
+		// Legacy blocking path: unblock PushForm.
+		ch <- action
+		close(ch)
+		c.Lock()
+		c.formAction = nil
+		c.Unlock()
+		c.setActiveFormId("")
+		return nil
+	}
+
+	if len(handlers) > 0 {
+		// Native suspendable path: fire registered handlers.
+		c.setActiveFormId("")
+		for _, h := range handlers {
+			h(action)
+		}
+		return nil
+	}
+
+	return model.NewAppError("Processing.FillForm", "processing.form.fill.app_err", nil, "Not found active form", http.StatusInternalServerError)
+}
+
+// SendForm pushes a form to the client without blocking for a response.
+// Used by the native suspendable generateForm op; the response arrives via
+// OnFormAction when the agent submits the form.
+func (c *processingConnection) SendForm(ctx context.Context, form processing.FormElem) error {
+	c.Lock()
+	if c.formAction != nil {
+		c.Unlock()
+		return model.NewAppError("Processing.SendForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
+	}
+	c.Unlock()
+	c.setActiveFormId(form.Id)
+	select {
+	case c.forms <- form:
+		return nil
+	case <-ctx.Done():
+		c.setActiveFormId("")
+		return model.NewAppError("Processing.SendForm", "processing.form.push.cancel", nil, "context cancelled", http.StatusInternalServerError)
+	}
+}
+
+// OnFormAction registers a handler called when the agent submits a form action
+// and no legacy blocking channel is active (native suspendable path).
+// Returns an unregister function that must be called exactly once.
+func (c *processingConnection) OnFormAction(handler func(processing.FormAction)) (unregister func()) {
+	c.Lock()
+	if c.formActionHandlers == nil {
+		c.formActionHandlers = make(map[uint64]func(processing.FormAction))
+	}
+	id := c.nextHandlerID
+	c.nextHandlerID++
+	c.formActionHandlers[id] = handler
+	c.Unlock()
+	return func() {
+		c.Lock()
+		delete(c.formActionHandlers, id)
+		c.Unlock()
+	}
+}
+
+// OnInboundMessage satisfies sessionmgr.Connection. Processing does not use
+// text-message-based resume; form actions dispatch directly via OnFormAction.
+func (c *processingConnection) OnInboundMessage(_ func(string)) (unregister func()) {
+	return func() {}
 }
 
 func (c *processingConnection) activeFormId() string {
@@ -168,7 +238,7 @@ func (c *processingConnection) setActiveFormId(id string) {
 }
 
 func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId, action string, vars map[string]string, sync bool) *model.AppError {
-	if c.formAction == nil {
+	if c.activeFormId() == "" {
 		return model.NewInternalError("processing.form.app_err", "not found active form")
 	}
 
@@ -286,4 +356,20 @@ func (c *processingConnection) Variables() map[string]string {
 	return maps.Clone(c.variables)
 }
 
-// fixme
+// processingConnIface mirrors internal/runtime/ops/domain/processing.ProcessingConn.
+// Keep in sync when adding methods to either side so the runtime type assertion
+// in routes/processing/router.go does not silently fail.
+type processingConnIface interface {
+	Id() string
+	DomainId() int64
+	Get(key string) (string, bool)
+	Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError)
+	GetComponentByName(name string) any
+	SetComponent(name string, component any)
+	Export(ctx context.Context, vars []string)
+	DumpExportVariables() map[string]string
+	SendForm(ctx context.Context, form processing.FormElem) error
+	OnFormAction(handler func(processing.FormAction)) (unregister func())
+}
+
+var _ processingConnIface = (*processingConnection)(nil)

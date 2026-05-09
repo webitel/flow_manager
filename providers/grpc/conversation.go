@@ -573,6 +573,59 @@ func (c *conversation) Variables() map[string]string {
 	return c.variables.Data()
 }
 
+// StartWaiting signals the external chat server to forward the next inbound
+// message by calling WaitMessage (required by the chat delivery protocol).
+// When the message arrives it is delivered via fireInboundHandlers so the
+// native recvMessage op (suspended via OnInboundMessage) can resume.
+// Runs in a goroutine and uses the connection's own context so it survives
+// past the flow suspension point.
+func (c *conversation) StartWaiting(timeout int) {
+	go func() {
+		id := model.NewId()
+		ch := make(chan []*proto.Message, 1)
+		c.addConfirmationId(id, ch)
+		defer c.deleteConfirmationId(id)
+
+		ctx := c.ctx
+		res, err := c.client.api.WaitMessage(ctx, &proto.WaitMessageRequest{
+			ConversationId: c.id,
+			ConfirmationId: id,
+		})
+		if err != nil {
+			return
+		}
+
+		var msgs []*proto.Message
+		if len(res.Messages) > 0 {
+			msgs = res.Messages
+		} else {
+			waitSec := int(res.TimeoutSec)
+			if timeout > 0 {
+				waitSec = timeout
+			}
+			if waitSec <= 0 {
+				waitSec = 3600
+			}
+			t := time.After(time.Duration(waitSec) * time.Second)
+			select {
+			case <-ctx.Done():
+				return
+			case <-t:
+				c.fireInboundHandlers("")
+				return
+			case m, ok := <-ch:
+				if !ok {
+					return
+				}
+				msgs = m
+			}
+		}
+
+		text := strings.Join(messageToText(msgs...), " ")
+		c.fireInboundHandlers(text)
+	}()
+}
+
 // OnInboundMessage registers a handler called when the remote peer sends a
 // message while the runtime has no active WaitMessage subscription (e.g.
 // during a softSleep or a native recvMessage suspend). The handler must not

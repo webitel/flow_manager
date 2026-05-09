@@ -50,7 +50,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 			chatop.RegisterSTT(reg, deps)
 			chatop.RegisterQueue(reg, deps)
 			chatop.RegisterMisc(reg)
-			reg.Register("recvMessage", messaging.New())
+			chatop.RegisterRecv(reg)
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			routing, appErr := deps.GetChatRouteFromSchemaId(domainID, int32(schemaID))
@@ -160,6 +160,9 @@ func (r *Router) handle(conn model.Connection) {
 	decorator := func(ctx context.Context) context.Context {
 		ctx = legacy.WithConnection(ctx, conv)
 		ctx = messaging.WithConnID(ctx, conn.Id())
+		if cw, ok := conn.(chatop.ChatWaitable); ok {
+			ctx = chatop.WithChatWaitable(ctx, cw)
+		}
 		return ctx
 	}
 	teardownFn := func() {
