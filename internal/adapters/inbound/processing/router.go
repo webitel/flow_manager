@@ -46,10 +46,7 @@ type Connection interface {
 func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 	router := &Router{fm: deps}
 
-	router.apps = flow.UnionApplicationMap(
-		fr.Handlers(),
-		ApplicationsHandlers(router),
-	)
+	router.apps = fr.Handlers()
 
 	// coord is late-bound: nil when ExtraOps runs, set after Bootstrap returns.
 	var coord coordinator.Coordinator
@@ -67,6 +64,7 @@ func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
 			}))
 			procop.RegisterComponents(reg, deps)
 			procop.RegisterAttempt(reg, deps)
+			procop.RegisterFormTable(reg)
 		},
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			s, appErr := deps.GetSchemaById(domainID, schemaID)

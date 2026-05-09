@@ -221,6 +221,10 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 		if err := parseJoinQueueTimers(t, node, id); err != nil {
 			return nil, err
 		}
+	case "formTable":
+		if err := parseFormTableOutputs(t, node, id); err != nil {
+			return nil, err
+		}
 	case "list":
 		if err := parseListChildren(t, node, id); err != nil {
 			return nil, err
@@ -370,6 +374,42 @@ func parseJoinQueueTimers(t *Tree, node *Node, id string) error {
 		m["_children_idx"] = len(node.Children) - 1
 		delete(m, "actions")
 	}
+	return nil
+}
+
+// parseFormTableOutputs extracts the "outputs" map from a formTable node into
+// addressable child containers. Each output name maps to an app array;
+// the name→children-index mapping is stored in "_outputs_index" so the native
+// formTable op can look up branches by output name at runtime.
+func parseFormTableOutputs(t *Tree, node *Node, id string) error {
+	raw, ok := node.Args["outputs"]
+	if !ok {
+		return nil
+	}
+	delete(node.Args, "outputs")
+
+	outputs, ok := raw.(map[string]any)
+	if !ok {
+		return nil
+	}
+
+	index := make(map[string]int, len(outputs))
+	for _, name := range sortedKeys(outputs) {
+		schema, err := toSchema(outputs[name])
+		if err != nil {
+			return fmt.Errorf("tree: formTable.outputs[%s]: %w", name, err)
+		}
+		containerID := id + ".output." + name
+		container := newContainer(containerID, t)
+		linkContainer(container, node)
+		if err := parseApps(t, container, schema, containerID); err != nil {
+			return err
+		}
+		index[name] = len(node.Children)
+		node.Children = append(node.Children, container)
+	}
+
+	node.Args["_outputs_index"] = index
 	return nil
 }
 

@@ -358,7 +358,7 @@ func (c *processingConnection) Variables() map[string]string {
 
 // processingConnIface mirrors internal/runtime/ops/domain/processing.ProcessingConn.
 // Keep in sync when adding methods to either side so the runtime type assertion
-// in routes/processing/router.go does not silently fail.
+// in internal/adapters/inbound/processing/router.go does not silently fail.
 type processingConnIface interface {
 	Id() string
 	DomainId() int64

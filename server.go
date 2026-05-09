@@ -14,6 +14,8 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/im"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/processing"
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
 	outboundengine "github.com/webitel/flow_manager/internal/adapters/outbound/engine"
 	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
@@ -26,8 +28,6 @@ import (
 	"github.com/webitel/flow_manager/routes/chat"
 	"github.com/webitel/flow_manager/routes/email"
 	"github.com/webitel/flow_manager/routes/grpc"
-	"github.com/webitel/flow_manager/internal/adapters/inbound/im"
-	"github.com/webitel/flow_manager/routes/processing"
 	"github.com/webitel/flow_manager/routes/webhook"
 
 	_ "net/http/pprof"
