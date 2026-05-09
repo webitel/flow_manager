@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/internal/workers/runtime_recovery"
 	"github.com/webitel/flow_manager/internal/workers/session_recovery"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 )
 
 func (f *FlowManager) Listen() {
@@ -61,11 +62,6 @@ func (f *FlowManager) Listen() {
 	if f.channelServer != nil {
 		wg.Add(1)
 		go f.listenChannelConnection(f.stop, &wg, f.channelServer)
-	}
-
-	if f.httpServer != nil {
-		wg.Add(1)
-		go f.listenWebHookConnection(f.stop, &wg, f.httpServer)
 	}
 
 	if f.imServer != nil {
@@ -176,25 +172,6 @@ func (f *FlowManager) listenChannelConnection(stop chan struct{}, wg *sync.WaitG
 			}
 
 			if err := f.ChannelRouter.Handle(c); err != nil {
-				c.Log().Error(err.Error())
-			}
-		}
-	}
-}
-
-func (f *FlowManager) listenWebHookConnection(stop chan struct{}, wg *sync.WaitGroup, srv model.Server) {
-	defer wg.Done()
-	f.log.Info("listen web hook connections...")
-	for {
-		select {
-		case <-stop:
-			return
-		case c, ok := <-srv.Consume():
-			if !ok {
-				return
-			}
-
-			if err := f.WebHookRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}
 		}

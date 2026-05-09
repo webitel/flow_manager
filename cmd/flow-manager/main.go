@@ -32,7 +32,6 @@ import (
 	"github.com/webitel/flow_manager/routes/chat"
 	"github.com/webitel/flow_manager/routes/email"
 	"github.com/webitel/flow_manager/routes/grpc"
-	"github.com/webitel/flow_manager/routes/webhook"
 
 	_ "net/http/pprof"
 )
@@ -83,7 +82,6 @@ type appRouters struct {
 	Form    model.Router
 	Email   model.Router
 	Channel model.Router
-	WebHook model.Router
 	IM      model.Router
 }
 
@@ -100,7 +98,6 @@ func newAppRouters(
 		Form:    processing.Init(deps, router),
 		Email:   email.Init(deps, router, contacts),
 		Channel: channel.Init(deps, router),
-		WebHook: webhook.Init(deps, router),
 		IM:      im.Init(deps, router, contacts),
 	}
 }
@@ -112,7 +109,6 @@ func wireRouters(fm *app.FlowManager, routers *appRouters) {
 	fm.FormRouter = routers.Form
 	fm.EmailRouter = routers.Email
 	fm.ChannelRouter = routers.Channel
-	fm.WebHookRouter = routers.WebHook
 	fm.IMRouter = routers.IM
 }
 

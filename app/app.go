@@ -21,7 +21,6 @@ import (
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
-	fmhttp "github.com/webitel/flow_manager/providers/http"
 	"github.com/webitel/flow_manager/store"
 
 	// -------------------- plugin(s) -------------------- //
@@ -49,7 +48,6 @@ type FlowManager struct {
 	mailServer    model.Server
 	eslServer     model.Server
 	channelServer model.Server
-	httpServer    model.Server
 	imServer      model.Server
 
 	schemaCache model.ObjectCache
@@ -71,7 +69,6 @@ type FlowManager struct {
 	ChatRouter    model.Router
 	FormRouter    model.Router
 	ChannelRouter model.Router
-	WebHookRouter model.Router
 	IMRouter      model.Router
 
 	callWatcher *callWatcher
@@ -124,7 +121,6 @@ func NewFlowManager(
 		mailServer:       srvs.Mail,
 		channelServer:    srvs.Channel,
 		imServer:         srvs.Im,
-		httpServer:       srvs.Http,
 		schemaCache:      model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
 		stop:             make(chan struct{}),
 		stopped:          make(chan struct{}),
@@ -158,9 +154,7 @@ func (fm *FlowManager) Start() error {
 	if err := fm.grpcServer.Cluster(fm.cluster.discovery); err != nil {
 		return err
 	}
-	if len(fm.config.WebHook.Addr) > 1 {
-		fm.httpServer = fmhttp.NewServer(fm, fm.config.WebHook.Addr)
-	}
+
 	if err := fm.RegisterServers(); err != nil {
 		return err
 	}

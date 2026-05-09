@@ -3,9 +3,10 @@ package app
 import (
 	"fmt"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/model"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
-	"github.com/webitel/wlog"
 )
 
 // Servers groups all protocol-level servers so they can be injected into
@@ -20,7 +21,7 @@ type Servers struct {
 }
 
 func (f *FlowManager) RegisterServers() error {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.imServer}
 
 	for _, v := range servers {
 		if err := startServer(v); err != nil {
@@ -32,7 +33,7 @@ func (f *FlowManager) RegisterServers() error {
 }
 
 func (f *FlowManager) StopServers() {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.imServer}
 
 	for _, v := range servers {
 		stopServer(v)
