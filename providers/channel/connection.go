@@ -127,3 +127,9 @@ func toVariables(in map[string]json.RawMessage) map[string]string {
 
 	return vars
 }
+
+// OnInboundMessage satisfies sessionmgr.Connection. Channel connections are
+// ephemeral and never receive inbound messages after flow start.
+func (c *Connection) OnInboundMessage(_ func(string)) (unregister func()) {
+	return func() {}
+}

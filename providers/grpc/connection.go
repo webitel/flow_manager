@@ -168,6 +168,12 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	return res
 }
 
+// OnInboundMessage satisfies sessionmgr.Connection. GRPC connections are
+// ephemeral and never receive inbound messages after flow start.
+func (c *Connection) OnInboundMessage(_ func(string)) (unregister func()) {
+	return func() {}
+}
+
 // fixme
 func test() {
 	a := func(c model.GRPCConnection) {}

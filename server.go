@@ -14,6 +14,10 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/im"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/processing"
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
@@ -24,11 +28,6 @@ import (
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/routes/call"
-	"github.com/webitel/flow_manager/routes/channel"
-	"github.com/webitel/flow_manager/routes/chat"
-	"github.com/webitel/flow_manager/routes/email"
-	"github.com/webitel/flow_manager/routes/grpc"
-	"github.com/webitel/flow_manager/routes/webhook"
 
 	_ "net/http/pprof"
 )
@@ -81,7 +80,6 @@ func initRootRouters(fm *app.FlowManager, router flow.Router, contacts domaincon
 	processing.Init(fm, router)
 	email.Init(fm, router, contacts)
 	channel.Init(fm, router)
-	webhook.Init(fm, router)
 	im.Init(fm, router, contacts)
 }
 
