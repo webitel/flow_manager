@@ -125,10 +125,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.MarkIVR),
 	}
-	apps["cv"] = &flow.Application{
-		AllowNoConnect: false,
-		Handler:        callHandlerMiddleware(r.CV),
-	}
 	apps["joinAgent"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.joinAgent),
@@ -152,10 +148,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["pickup"] = &flow.Application{
 		AllowNoConnect: false,
 		Handler:        callHandlerMiddleware(r.pickup),
-	}
-	apps["speechAiV2"] = &flow.Application{
-		AllowNoConnect: false,
-		Handler:        callHandlerMiddleware(r.speechAiV2),
 	}
 	apps["backgroundPlayback"] = &flow.Application{
 		AllowNoConnect: false,
