@@ -3,13 +3,13 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/flow_manager/pkg/processing"
 	"net/http"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/gen/workflow"
-	"github.com/webitel/wlog"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/pkg/processing"
 )
 
 var (
@@ -46,7 +46,6 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 					wlog.Int("alternative_count", s.connections.Len()),
 				).Debug("remove connection")
 				return
-
 			}
 		}
 	}()

@@ -9,6 +9,7 @@ import (
 	"github.com/webitel/wlog"
 
 	_ "github.com/webitel/flow_manager/infra/resolver"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
@@ -20,7 +21,6 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/model"
-	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
 
 	// -------------------- plugin(s) -------------------- //
@@ -44,14 +44,14 @@ type FlowManager struct {
 	checkpointRepo   session.Repository
 	runtimeStateRepo persistence.Repository
 
-	grpcServer    *fmgrpc.Server
+	grpcServer    *grpc.Server
 	mailServer    model.Server
 	eslServer     model.Server
 	channelServer model.Server
 	imServer      model.Server
 
 	schemaCache model.ObjectCache
-	chatManager *fmgrpc.ChatManager
+	chatManager *grpc.ChatManager
 	storage     domstorage.Client
 	cases       *cases.Api
 
@@ -96,7 +96,7 @@ func NewFlowManager(
 	aiBots *aibridge.Client,
 	meetingClient domainmeeting.Client,
 	srvs Servers,
-	chatMgr *fmgrpc.ChatManager,
+	chatMgr *grpc.ChatManager,
 	ccMgr domcc.CCManager,
 	eventQueue ports.EventBus,
 	cb *CallbackResolver,

@@ -5,8 +5,8 @@ import (
 
 	"github.com/webitel/wlog"
 
+	fmgrpc "github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
 	"github.com/webitel/flow_manager/model"
-	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 )
 
 // Servers groups all protocol-level servers so they can be injected into
