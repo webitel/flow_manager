@@ -7,7 +7,7 @@ import (
 
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -22,9 +22,9 @@ func Register(reg *ops.Registry) {
 }
 
 // grpcConnFromContext retrieves model.GRPCConnection from the context stored
-// by legacy.WithConnection in the decorator.
+// by connctx.WithConnection in the decorator.
 func grpcConnFromContext(ctx context.Context) (model.GRPCConnection, bool) {
-	conn := legacy.ConnectionFromContext(ctx)
+	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}

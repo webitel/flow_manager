@@ -15,7 +15,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	callops "github.com/webitel/flow_manager/internal/runtime/ops/domain/call"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
@@ -238,7 +238,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	decorator := func(ctx context.Context) context.Context {
-		return legacy.WithConnection(ctx, call)
+		return connctx.WithConnection(ctx, call)
 	}
 
 	schemaId := routing.SchemaId

@@ -11,7 +11,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	emailop "github.com/webitel/flow_manager/internal/runtime/ops/domain/email"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -98,7 +98,7 @@ func (r *Router) handle(rawConn model.Connection) {
 	}
 
 	decorator := func(ctx context.Context) context.Context {
-		return legacy.WithConnection(ctx, conn)
+		return connctx.WithConnection(ctx, conn)
 	}
 
 	// Email is ephemeral: flows run to completion and never suspend.

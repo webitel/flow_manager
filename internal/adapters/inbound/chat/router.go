@@ -12,7 +12,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
@@ -131,7 +131,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	var activeRec *persistence.Record
 	decorator := func(ctx context.Context) context.Context {
-		ctx = legacy.WithConnection(ctx, conv)
+		ctx = connctx.WithConnection(ctx, conv)
 		ctx = messaging.WithConnID(ctx, conn.Id())
 		if cw, ok := conn.(chatop.ChatWaitable); ok {
 			ctx = chatop.WithChatWaitable(ctx, cw)

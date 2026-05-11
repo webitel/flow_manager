@@ -9,7 +9,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	procop "github.com/webitel/flow_manager/internal/runtime/ops/domain/processing"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -114,7 +114,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	decorator := func(ctx context.Context) context.Context {
-		ctx = legacy.WithConnection(ctx, conn)
+		ctx = connctx.WithConnection(ctx, conn)
 		if pc, ok := conn.(procop.ProcessingConn); ok {
 			ctx = procop.WithConn(ctx, pc)
 		}

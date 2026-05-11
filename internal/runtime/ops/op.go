@@ -1,5 +1,5 @@
 // Package ops defines the Op interface and the input/output types used by the
-// interpreter. Builtin ops live in ops/builtin; legacy adapters in ops/legacy.
+// interpreter. Builtin ops live in ops/builtin; connection ctx helpers in ops/connctx.
 package ops
 
 import (

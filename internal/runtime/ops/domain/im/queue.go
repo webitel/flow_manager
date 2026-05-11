@@ -11,7 +11,7 @@ import (
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
@@ -48,10 +48,10 @@ func Register(reg *ops.Registry, deps QueueDeps, coord QueueDispatcher) {
 	reg.Register("joinQueue", &joinQueueOp{deps: deps, coord: coord})
 }
 
-// dialogFromContext retrieves the IMDialog stored by legacy.WithConnection.
+// dialogFromContext retrieves the IMDialog stored by connctx.WithConnection.
 // Returns nil when no connection or the connection is not an IMDialog.
 func dialogFromContext(ctx context.Context) (model.IMDialog, bool) {
-	conn := legacy.ConnectionFromContext(ctx)
+	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}

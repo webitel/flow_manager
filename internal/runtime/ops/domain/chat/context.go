@@ -5,12 +5,12 @@ import (
 	"strings"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"
 )
 
 func conversationFromContext(ctx context.Context) (model.Conversation, bool) {
-	conn := legacy.ConnectionFromContext(ctx)
+	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}

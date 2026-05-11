@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -28,7 +28,7 @@ type replyArgs struct {
 }
 
 func (o *replyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
-	conn := legacy.ConnectionFromContext(ctx)
+	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return ops.OpOutput{}, fmt.Errorf("reply: no connection in context")
 	}

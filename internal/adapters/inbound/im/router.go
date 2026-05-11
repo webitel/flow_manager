@@ -13,7 +13,7 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	imop "github.com/webitel/flow_manager/internal/runtime/ops/domain/im"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
@@ -66,7 +66,7 @@ func Init(deps ports.RouterDeps, contacts domcontacts.Client) model.Router {
 				}
 				rec, _ := deps.RuntimeStateRepo().LoadByConnectionID(ctx, connID)
 				if rec == nil || (rec.Status != state.StatusRunning && rec.Status != state.StatusSuspended) {
-					if conn := legacy.ConnectionFromContext(ctx); conn != nil {
+					if conn := connctx.ConnectionFromContext(ctx); conn != nil {
 						if d, ok := conn.(model.IMDialog); ok {
 							d.Stop(nil)
 						}
@@ -171,7 +171,7 @@ func (r *Router) handle(conn model.Connection) {
 	// Channel-specific dispatch context decoration: legacy adapters need the
 	// connection in ctx, recv_message needs the connID for its SuspendKey.
 	decorator := func(ctx context.Context) context.Context {
-		ctx = legacy.WithConnection(ctx, conv)
+		ctx = connctx.WithConnection(ctx, conv)
 		ctx = messaging.WithConnID(ctx, conn.Id())
 		return ctx
 	}

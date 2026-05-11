@@ -7,7 +7,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 )
@@ -86,7 +86,7 @@ func (r *Router) resumeRecord(ctx context.Context, rec *persistence.Record) {
 	// require a connection (e.g. sending a message) will receive nil from
 	// ConnectionFromContext and must guard against it. Pure ops (log, set,
 	// soft_sleep, if, etc.) work correctly without a connection.
-	runCtx := legacy.WithConnection(ctx, nil)
+	runCtx := connctx.WithConnection(ctx, nil)
 	// recv_message reads connID from context to build its suspend key; inject
 	// it so that after a trigger's timeout the main op can re-suspend correctly.
 	runCtx = messaging.WithConnID(runCtx, rec.ConnectionID)

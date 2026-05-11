@@ -9,7 +9,7 @@ import (
 	pb "github.com/webitel/flow_manager/gen/contacts"
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -241,7 +241,7 @@ func (o *linkContactOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 		return ops.OpOutput{}, err
 	}
 
-	conn := legacy.ConnectionFromContext(ctx)
+	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return ops.OpOutput{}, fmt.Errorf("linkContact: no connection in context")
 	}
