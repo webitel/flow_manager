@@ -4,16 +4,17 @@ package email
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
+	"net/smtp"
 
 	"github.com/webitel/wlog"
 	"gopkg.in/gomail.v2"
 
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
-	emailprovider "github.com/webitel/flow_manager/providers/email"
 )
 
 // EmailDeps is the narrow interface required by the sendEmail op.
@@ -141,7 +142,7 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 			return fmt.Errorf("sendEmail: oauth token: %w", err)
 		}
 		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, "")
-		dialer.Auth = emailprovider.NewOAuth2Smtp(argv.Smtp.Auth.User, "Bearer", token)
+		dialer.Auth = newOAuth2Smtp(argv.Smtp.Auth.User, "Bearer", token)
 	} else {
 		dialer = gomail.NewDialer(argv.Smtp.Server, argv.Smtp.Port, argv.Smtp.Auth.User, argv.Smtp.Auth.Password)
 	}
@@ -235,3 +236,25 @@ func (o *sendEmailOp) attachToMail(domainID int64, mail *gomail.Message, files [
 // ensure interface
 var _ ops.Op = (*sendEmailOp)(nil)
 var _ ops.Documenter = (*sendEmailOp)(nil)
+
+// ── XOAUTH2 SMTP auth ─────────────────────────────────────────────────────────
+
+type oAuth2Smtp struct{ user, tokenType, token string }
+
+func newOAuth2Smtp(user, tokenType, token string) smtp.Auth {
+	return &oAuth2Smtp{user, tokenType, token}
+}
+
+func (a *oAuth2Smtp) Start(server *smtp.ServerInfo) (string, []byte, error) {
+	if !server.TLS {
+		return "", nil, errors.New("unencrypted connection")
+	}
+	return "XOAUTH2", []byte(fmt.Sprintf("user=%v\001auth=%v %v\001\001", a.user, "Bearer", a.token)), nil
+}
+
+func (a *oAuth2Smtp) Next(fromServer []byte, more bool) ([]byte, error) {
+	if more {
+		return nil, fmt.Errorf("unexpected server challenge: %s", fromServer)
+	}
+	return nil, nil
+}

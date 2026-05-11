@@ -12,8 +12,8 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/channel"
-	"github.com/webitel/flow_manager/providers/email"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
 	fmgrpc "github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/store"
 )

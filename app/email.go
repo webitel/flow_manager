@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/providers/email"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
 )
 
 func (f *FlowManager) GetEmailProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError) {
