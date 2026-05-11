@@ -33,6 +33,12 @@ func getOutboundReg(pattern, destination string) (map[string]string, *model.AppE
 	return out, nil
 }
 
+// OnInboundMessage satisfies sessionmgr.Connection. Call connections never
+// receive inbound text messages; resume is driven by ESL events, not messages.
+func (call *callParser) OnInboundMessage(_ func(string)) (unregister func()) {
+	return func() {}
+}
+
 func (call *callParser) ParseText(text string, ops ...model.ParseOption) string {
 	txt := model.ParseText(call, text, ops...)
 

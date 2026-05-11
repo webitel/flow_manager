@@ -221,6 +221,17 @@ func parseNode(t *Tree, obj map[string]any, id string) (*Node, error) {
 		if err := parseJoinQueueTimers(t, node, id); err != nil {
 			return nil, err
 		}
+		if err := parseHooks(t, node, id, "waiting", "offering", "bridged", "reporting"); err != nil {
+			return nil, err
+		}
+	case "bridge":
+		if err := parseHooks(t, node, id, "bridged"); err != nil {
+			return nil, err
+		}
+	case "joinAgent":
+		if err := parseHooks(t, node, id, "bridged"); err != nil {
+			return nil, err
+		}
 	case "formTable":
 		if err := parseFormTableOutputs(t, node, id); err != nil {
 			return nil, err
@@ -410,6 +421,47 @@ func parseFormTableOutputs(t *Tree, node *Node, id string) error {
 	}
 
 	node.Args["_outputs_index"] = index
+	return nil
+}
+
+// parseHooks extracts named sub-flow arrays (e.g. "bridged", "waiting") from a
+// node's Args into child container nodes. The mapping of hook name → children
+// index is stored in node.Args["_hooks_index"] so native ops can look them up
+// at runtime via in.Node.Children[idx]. Empty arrays are skipped.
+func parseHooks(t *Tree, node *Node, id string, hookNames ...string) error {
+	index := make(map[string]int, len(hookNames))
+	for _, name := range hookNames {
+		raw, ok := node.Args[name]
+		if !ok {
+			continue
+		}
+		delete(node.Args, name)
+		schema, err := toSchema(raw)
+		if err != nil {
+			return fmt.Errorf("tree: %s.%s at %s: %w", node.OpName, name, id, err)
+		}
+		if len(schema) == 0 {
+			continue
+		}
+		containerID := fmt.Sprintf("%s.%s", id, name)
+		container := newContainer(containerID, t)
+		linkContainer(container, node)
+		if err := parseApps(t, container, schema, containerID); err != nil {
+			return err
+		}
+		index[name] = len(node.Children)
+		node.Children = append(node.Children, container)
+	}
+	if len(index) > 0 {
+		existing, _ := node.Args["_hooks_index"].(map[string]int)
+		if existing == nil {
+			node.Args["_hooks_index"] = index
+		} else {
+			for k, v := range index {
+				existing[k] = v
+			}
+		}
+	}
 	return nil
 }
 

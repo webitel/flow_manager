@@ -14,6 +14,7 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
@@ -27,7 +28,6 @@ import (
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
-	"github.com/webitel/flow_manager/routes/call"
 
 	_ "net/http/pprof"
 )

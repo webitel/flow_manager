@@ -14,15 +14,28 @@ import (
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
+	"github.com/webitel/flow_manager/internal/runtime/interpreter"
+	"github.com/webitel/flow_manager/internal/runtime/ops"
+	callops "github.com/webitel/flow_manager/internal/runtime/ops/domain/call"
+	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
+	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
+	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
+	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
 )
 
+// callChannel is the channel discriminator stored in flow.runtime_state.
+// Matches model.ConnectionTypeCall (iota = 0).
+const callChannel = int16(model.ConnectionTypeCall)
+
 type Router struct {
-	fm               ports.RouterDeps
-	contacts         domaincontacts.Client
-	meeting          domainmeeting.Client
-	apps             flow.ApplicationHandlers
-	disconnectedApps flow.ApplicationHandlers
+	fm         ports.RouterDeps
+	contacts   domaincontacts.Client
+	meeting    domainmeeting.Client
+	apps       flow.ApplicationHandlers
+	driver     *interpreter.Driver
+	sessionMgr *sessionmgr.Manager
 }
 
 func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
@@ -32,12 +45,32 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client,
 		meeting:  meeting,
 	}
 
-	router.disconnectedApps = fr.Handlers()
+	router.apps = fr.Handlers()
 
-	router.apps = flow.UnionApplicationMap(
-		router.disconnectedApps,
-		ApplicationsHandlers(router),
-	)
+	kit := runtimekit.Bootstrap(runtimekit.Config{
+		Deps:   deps,
+		Router: router,
+		Apps:   router.apps,
+		ExtraOps: func(reg *ops.Registry) {
+			callops.Register(reg)
+			callops.RegisterFM(reg, deps)
+			callops.RegisterMedia(reg, deps)
+			callops.RegisterComplex(reg, deps)
+		},
+		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
+			s, appErr := deps.GetSchemaById(domainID, schemaID)
+			if appErr != nil {
+				return nil, appErr
+			}
+			rawSchema := make([]map[string]any, len(s.Schema))
+			for i, app := range s.Schema {
+				rawSchema[i] = map[string]any(app)
+			}
+			return tree.Parse(s.Id, rawSchema)
+		},
+	})
+	router.driver = kit.Driver
+	router.sessionMgr = sessionmgr.New(kit.Coord, deps.RuntimeStateRepo(), deps.Log())
 
 	return router
 }
@@ -68,14 +101,12 @@ func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.Call
 			call.Log().Err(err)
 		}
 		return nil
-	} else {
-		return in
 	}
+	return in
 }
 
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
-
 	return nil
 }
 
@@ -194,21 +225,13 @@ func (r *Router) handle(conn model.Connection) {
 
 	if routing == nil {
 		r.notFoundRoute(call)
-
 		return
 	}
 
 	call.timezoneName = routing.TimezoneName
-	call.SetDomainName(routing.DomainName) // fixme
-	i := flow.New(r, flow.Config{
-		SchemaId: routing.SchemaId,
-		Name:     routing.Schema.Name,
-		Schema:   routing.Schema.Schema,
-		Handler:  r,
-		Conn:     call,
-		Timezone: routing.TimezoneName,
-	})
-	if err = call.SetSchemaId(i.SchemaId()); err != nil {
+	call.SetDomainName(routing.DomainName)
+
+	if err = call.SetSchemaId(routing.SchemaId); err != nil {
 		call.Log().Err(err)
 	}
 
@@ -221,18 +244,72 @@ func (r *Router) handle(conn model.Connection) {
 		}
 	}
 
-	flow.Route(conn.Context(), i, r)
-	<-conn.Context().Done()
-
-	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		call.ClearExportVariables()
-
-		// TODO config
-		ctxDisc, cn := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
-		flow.Route(ctxDisc, d, r)
-		cn()
-		r.fm.StoreCallVariables(call.Id(), call.DumpExportVariables())
+	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
+	for i, app := range routing.Schema.Schema {
+		rawSchema[i] = map[string]any(app)
+	}
+	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	if parseErr != nil {
+		wlog.Error(fmt.Sprintf("call %s parse error: %s", call.Id(), parseErr.Error()))
+		return
 	}
 
-	r.fm.StoreLog(i.SchemaId(), conn.Id(), i.Logs())
+	tags := make(map[string]string, len(tr.ByTag))
+	for tag, node := range tr.ByTag {
+		tags[tag] = node.ID
+	}
+
+	decorator := func(ctx context.Context) context.Context {
+		return legacy.WithConnection(ctx, call)
+	}
+
+	schemaId := routing.SchemaId
+	var activeRec *persistence.Record
+
+	teardown := func() {
+		// Wait for the call to fully disconnect before running the trigger.
+		// If context is already done, this returns immediately.
+		<-conn.Context().Done()
+
+		if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+			call.ClearExportVariables()
+			var vars map[string]string
+			if activeRec != nil {
+				vars = activeRec.State.Variables
+			}
+			ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
+			defer cancel()
+			ctxDisc = decorator(ctxDisc)
+			if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, call.DomainId(), call.Id()); trigErr != nil {
+				call.Log().Error(fmt.Sprintf("call disconnect trigger: %v", trigErr))
+			}
+			r.fm.StoreCallVariables(call.Id(), call.DumpExportVariables())
+		}
+
+		r.fm.StoreLog(schemaId, conn.Id(), nil)
+	}
+
+	if _, createErr := runtimekit.RunSession(nil, runtimekit.HandleConfig{
+		ChannelName: "call",
+		ChannelType: callChannel,
+		Conn:        call,
+		Tr:          tr,
+		Tags:        tags,
+		SchemaID:    schemaId,
+		DomainID:    call.DomainId(),
+		AppID:       r.fm.AppID(),
+		Repo:        r.fm.RuntimeStateRepo(),
+		Driver:      r.driver,
+		SessionMgr:  r.sessionMgr,
+		Decorator:   decorator,
+		Teardown:    teardown,
+		OnRecord:    func(rec *persistence.Record) { activeRec = rec },
+		Log:         r.fm.Log(),
+	}); createErr != nil {
+		wlog.Error(fmt.Sprintf("call %s runtime error: %s", call.Id(), createErr.Error()))
+	}
+}
+
+func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
+	return scope.Decode(in, out)
 }

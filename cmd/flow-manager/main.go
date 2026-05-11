@@ -15,6 +15,7 @@ import (
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
+	"github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
@@ -31,7 +32,6 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/flow_manager/routes/call"
 
 	_ "net/http/pprof"
 )
