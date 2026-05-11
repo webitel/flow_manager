@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/webitel/flow_manager/flow"
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
@@ -29,9 +28,6 @@ const imChannel int16 = 2
 
 type Router struct {
 	fm         ports.RouterDeps
-	// globalApps holds only the channel-agnostic (legacy) ops used by the
-	// legacy bridge for non-native ops such as httpRequest, setVariable, etc.
-	globalApps flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
@@ -39,10 +35,9 @@ type Router struct {
 
 type Dialog model.IMDialog
 
-func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) model.Router {
+func Init(deps ports.RouterDeps, contacts domcontacts.Client) model.Router {
 	router := &Router{
-		fm:         deps,
-		globalApps: fr.Handlers(),
+		fm: deps,
 	}
 
 	// coord is captured by the ExtraOps closure below. Bootstrap calls ExtraOps
@@ -52,8 +47,6 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domcontacts.Client) mo
 	var coord coordinator.Coordinator
 	kit := runtimekit.Bootstrap(runtimekit.Config{
 		Deps:           deps,
-		Router:         router,
-		Apps:           router.globalApps,
 		ContactsClient: contacts,
 		ExtraOps: func(reg *ops.Registry) {
 			reg.Register("recvMessage", messaging.New())
@@ -116,33 +109,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
 	return nil
-}
-
-// Request is kept for global legacy ops (httpRequest, setVariable, etc.) that
-// go through the legacy bridge and call Router.Request. IM-specific ops are
-// all native and never reach this path.
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.globalApps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		}
-		return h.Handler(ctx, scope, req.Args())
-	}
-	return flow.Do(func(result *model.Result) {
-		result.Err = model.NewAppError("IM.Request", "im.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-	})
-}
-
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	for k, v := range apps {
-		r2.globalApps[k] = v
-	}
-	return &r2
-}
-
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -250,7 +216,7 @@ func (r *Router) teardown(
 		conv.Stop(nil)
 	}
 
-	if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+	if _, ok := tr.Triggers["disconnected"]; ok {
 		var vars map[string]string
 		if rec != nil {
 			vars = rec.State.Variables
@@ -258,7 +224,7 @@ func (r *Router) teardown(
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		defer cancel()
 		ctxDisc = decorate(ctxDisc)
-		if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, conv.DomainId(), conn.Id()); trigErr != nil {
+		if trigErr := r.driver.RunTrigger(ctxDisc, tr, "disconnected", vars, conv.DomainId(), conn.Id()); trigErr != nil {
 			r.fm.Log().Error(fmt.Sprintf("im teardown: disconnect trigger conn=%s: %v", conn.Id(), trigErr))
 		}
 	}

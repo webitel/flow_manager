@@ -3,14 +3,12 @@ package call
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/flow"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
@@ -33,24 +31,19 @@ type Router struct {
 	fm         ports.RouterDeps
 	contacts   domaincontacts.Client
 	meeting    domainmeeting.Client
-	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
+func Init(deps ports.RouterDeps, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
 	router := &Router{
 		fm:       deps,
 		contacts: contacts,
 		meeting:  meeting,
 	}
 
-	router.apps = fr.Handlers()
-
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: router,
-		Apps:   router.apps,
+		Deps:     deps,
 		ExtraOps: func(reg *ops.Registry) {
 			callops.Register(reg)
 			callops.RegisterFM(reg, deps)
@@ -75,23 +68,8 @@ func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client,
 	return router
 }
 
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-
-	for k, v := range apps {
-		r2.apps[k] = v
-	}
-
-	return &r2
-}
-
 func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
-}
-
-func (r *Router) Handlers() flow.ApplicationHandlers {
-	return r.apps
 }
 
 func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.CallEndpoint {
@@ -271,7 +249,7 @@ func (r *Router) handle(conn model.Connection) {
 		// If context is already done, this returns immediately.
 		<-conn.Context().Done()
 
-		if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+		if _, ok := tr.Triggers["disconnected"]; ok {
 			call.ClearExportVariables()
 			var vars map[string]string
 			if activeRec != nil {
@@ -280,7 +258,7 @@ func (r *Router) handle(conn model.Connection) {
 			ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(60*time.Second))
 			defer cancel()
 			ctxDisc = decorator(ctxDisc)
-			if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, call.DomainId(), call.Id()); trigErr != nil {
+			if trigErr := r.driver.RunTrigger(ctxDisc, tr, "disconnected", vars, call.DomainId(), call.Id()); trigErr != nil {
 				call.Log().Error(fmt.Sprintf("call disconnect trigger: %v", trigErr))
 			}
 			r.fm.StoreCallVariables(call.Id(), call.DumpExportVariables())
@@ -310,6 +288,3 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-func (r *Router) Decode(scope *flow.Flow, in interface{}, out interface{}) *model.AppError {
-	return scope.Decode(in, out)
-}

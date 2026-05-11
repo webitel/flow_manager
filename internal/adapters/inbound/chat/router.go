@@ -3,11 +3,9 @@ package chat
 import (
 	"context"
 	"fmt"
-	"maps"
 	"net/http"
 	"time"
 
-	"github.com/webitel/flow_manager/flow"
 	proto "github.com/webitel/flow_manager/gen/chat"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
@@ -29,21 +27,17 @@ const chatChannel int16 = 4
 
 type Router struct {
 	fm         ports.RouterDeps
-	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
+func Init(deps ports.RouterDeps) model.Router {
 	router := &Router{
-		fm:   deps,
-		apps: fr.Handlers(),
+		fm: deps,
 	}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: router,
-		Apps:   router.apps,
+		Deps:     deps,
 		ExtraOps: func(reg *ops.Registry) {
 			chatop.Register(reg, deps)
 			chatop.RegisterSend(reg, deps)
@@ -80,27 +74,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
 	return nil
-}
-
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-	for k, v := range apps {
-		r2.apps[k] = v
-	}
-	return &r2
-}
-
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		}
-		return h.Handler(ctx, scope, req.Args())
-	}
-	return flow.Do(func(result *model.Result) {
-		result.Err = model.NewAppError("Chat.Request", "chat.request.not_found", nil, fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-	})
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -204,7 +177,7 @@ func (r *Router) teardownNative(
 		conv.Stop(nil, proto.CloseConversationCause_flow_end)
 	}
 
-	if _, ok := tr.Triggers[flow.TriggerDisconnected]; ok {
+	if _, ok := tr.Triggers["disconnected"]; ok {
 		var vars map[string]string
 		if rec != nil {
 			vars = rec.State.Variables
@@ -212,7 +185,7 @@ func (r *Router) teardownNative(
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
 		defer cancel()
 		ctxDisc = decorate(ctxDisc)
-		if trigErr := r.driver.RunTrigger(ctxDisc, tr, flow.TriggerDisconnected, vars, conv.DomainId(), conn.Id()); trigErr != nil {
+		if trigErr := r.driver.RunTrigger(ctxDisc, tr, "disconnected", vars, conv.DomainId(), conn.Id()); trigErr != nil {
 			r.fm.Log().Error(fmt.Sprintf("chat teardown: disconnect trigger conn=%s: %v", conn.Id(), trigErr))
 		}
 	}
@@ -220,6 +193,3 @@ func (r *Router) teardownNative(
 	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
 }
 
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
-}

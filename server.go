@@ -13,7 +13,6 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
-	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
@@ -66,21 +65,20 @@ func main() {
 		fx.Provide(newRootContactsClient),
 		fx.Provide(newRootEngineClient),
 		fx.Provide(newRootMeetingClient),
-		fx.Provide(flow.NewRouter),
 		fx.Invoke(initRootRouters),
 		fx.Invoke(bsfx.RegisterStartupHooks),
 		fx.Invoke(registerRootLifecycle),
 	).Run()
 }
 
-func initRootRouters(fm *app.FlowManager, router flow.Router, contacts domaincontacts.Client, meetings domainmeeting.Client) {
-	call.Init(fm, router, contacts, meetings)
-	grpc.Init(fm, router)
-	chat.Init(fm, router)
-	processing.Init(fm, router)
-	email.Init(fm, router, contacts)
-	channel.Init(fm, router)
-	im.Init(fm, router, contacts)
+func initRootRouters(fm *app.FlowManager, contacts domaincontacts.Client, meetings domainmeeting.Client) {
+	call.Init(fm, contacts, meetings)
+	grpc.Init(fm)
+	chat.Init(fm)
+	processing.Init(fm)
+	email.Init(fm, contacts)
+	channel.Init(fm)
+	im.Init(fm, contacts)
 }
 
 func registerRootLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {

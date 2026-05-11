@@ -14,7 +14,6 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
-	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
@@ -67,7 +66,6 @@ func main() {
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
-		fx.Provide(flow.NewRouter),
 		fx.Provide(newAppRouters),
 		fx.Invoke(wireRouters),
 		fx.Invoke(bsfx.RegisterStartupHooks),
@@ -87,18 +85,17 @@ type appRouters struct {
 
 func newAppRouters(
 	deps ports.RouterDeps,
-	router flow.Router,
 	contacts domaincontacts.Client,
 	meetings domainmeeting.Client,
 ) *appRouters {
 	return &appRouters{
-		Call:    call.Init(deps, router, contacts, meetings),
-		GRPC:    grpc.Init(deps, router),
-		Chat:    chat.Init(deps, router),
-		Form:    processing.Init(deps, router),
-		Email:   email.Init(deps, router, contacts),
-		Channel: channel.Init(deps, router),
-		IM:      im.Init(deps, router, contacts),
+		Call:    call.Init(deps, contacts, meetings),
+		GRPC:    grpc.Init(deps),
+		Chat:    chat.Init(deps),
+		Form:    processing.Init(deps),
+		Email:   email.Init(deps, contacts),
+		Channel: channel.Init(deps),
+		IM:      im.Init(deps, contacts),
 	}
 }
 

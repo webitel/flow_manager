@@ -1,6 +1,5 @@
-// Package runtime implements a resumable flow interpreter for chat, IM, and
-// email channels. It runs alongside the legacy flow/ package (which handles
-// call/webhook/processing and continues unchanged).
+// Package runtime implements a resumable flow interpreter for all channels
+// (call, chat, IM, email, grpc, channel, processing).
 //
 // Mental model:
 //

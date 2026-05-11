@@ -3,10 +3,7 @@ package processing
 import (
 	"context"
 	"fmt"
-	"maps"
-	"net/http"
 
-	"github.com/webitel/flow_manager/flow"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
@@ -25,7 +22,6 @@ const processingChannel = int16(model.ConnectionTypeForm)
 
 type Router struct {
 	fm         ports.RouterDeps
-	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
@@ -43,18 +39,14 @@ type Connection interface {
 	DumpExportVariables() map[string]string
 }
 
-func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
+func Init(deps ports.RouterDeps) model.Router {
 	router := &Router{fm: deps}
-
-	router.apps = fr.Handlers()
 
 	// coord is late-bound: nil when ExtraOps runs, set after Bootstrap returns.
 	var coord coordinator.Coordinator
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: router,
-		Apps:   router.apps,
+		Deps:     deps,
 		ExtraOps: func(reg *ops.Registry) {
 			procop.Register(reg, procop.DispatchFunc(func(ctx context.Context, key string, payload map[string]string) error {
 				if coord == nil {
@@ -93,28 +85,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
 	return nil
-}
-
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-	for k, v := range apps {
-		r2.apps[k] = v
-	}
-	return &r2
-}
-
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		}
-		return h.Handler(ctx, scope, req.Args())
-	}
-	return flow.Do(func(result *model.Result) {
-		result.Err = model.NewAppError("Form.Request", "form.request.not_found", nil,
-			fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-	})
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -172,6 +142,3 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
-}

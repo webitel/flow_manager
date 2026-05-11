@@ -3,10 +3,7 @@ package channel
 import (
 	"context"
 	"fmt"
-	"maps"
-	"net/http"
 
-	"github.com/webitel/flow_manager/flow"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
@@ -28,19 +25,15 @@ type schemaConn interface {
 
 type Router struct {
 	fm         ports.RouterDeps
-	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, fr flow.Router) model.Router {
+func Init(deps ports.RouterDeps) model.Router {
 	r := &Router{fm: deps}
-	r.apps = fr.Handlers()
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: r,
-		Apps:   r.apps,
+		Deps:     deps,
 		LoadTree: func(ctx context.Context, domainID int64, schemaID int) (*tree.Tree, error) {
 			s, appErr := deps.GetSchemaById(domainID, schemaID)
 			if appErr != nil {
@@ -66,28 +59,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 func (r *Router) Handle(conn model.Connection) *model.AppError {
 	go r.handle(conn)
 	return nil
-}
-
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-	for k, v := range apps {
-		r2.apps[k] = v
-	}
-	return &r2
-}
-
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		}
-		return h.Handler(ctx, scope, req.Args())
-	}
-	return flow.Do(func(result *model.Result) {
-		result.Err = model.NewAppError("Channel.Request", "channel.request.not_found", nil,
-			fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-	})
 }
 
 func (r *Router) handle(conn model.Connection) {
@@ -146,6 +117,3 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
-}

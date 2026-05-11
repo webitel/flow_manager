@@ -3,11 +3,8 @@ package email
 import (
 	"context"
 	"fmt"
-	"maps"
-	"net/http"
 	"regexp"
 
-	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/gen/contacts"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
@@ -30,19 +27,15 @@ var compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 type Router struct {
 	fm         ports.RouterDeps
 	contacts   domaincontacts.Client
-	apps       flow.ApplicationHandlers
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, fr flow.Router, contacts domaincontacts.Client) model.Router {
+func Init(deps ports.RouterDeps, contacts domaincontacts.Client) model.Router {
 	r := &Router{fm: deps, contacts: contacts}
-	r.apps = fr.Handlers()
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:   deps,
-		Router: r,
-		Apps:   r.apps,
+		Deps:     deps,
 		ExtraOps: func(reg *ops.Registry) {
 			emailop.RegisterReply(reg, deps)
 		},
@@ -71,28 +64,6 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 func (r *Router) Handle(rawConn model.Connection) *model.AppError {
 	go r.handle(rawConn)
 	return nil
-}
-
-func (r *Router) AddApplications(apps flow.ApplicationHandlers) flow.Handler {
-	r2 := *r
-	r2.apps = maps.Clone(r.apps)
-	for k, v := range apps {
-		r2.apps[k] = v
-	}
-	return &r2
-}
-
-func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.ApplicationRequest) <-chan model.Result {
-	if h, ok := r.apps[req.Id()]; ok {
-		if h.ArgsParser != nil {
-			return h.Handler(ctx, scope, h.ArgsParser(scope.Connection, req.Args()))
-		}
-		return h.Handler(ctx, scope, req.Args())
-	}
-	return flow.Do(func(result *model.Result) {
-		result.Err = model.NewAppError("Email.Request", "email.request.not_found", nil,
-			fmt.Sprintf("appId=%v not found", req.Id()), http.StatusNotFound)
-	})
 }
 
 func (r *Router) handle(rawConn model.Connection) {
@@ -177,10 +148,6 @@ func (r *Router) linkContact(conn model.EmailConnection) {
 			conn.Log().Error("email mailSetContacts: " + appErr.Error())
 		}
 	}
-}
-
-func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
-	return scope.Decode(in, out)
 }
 
 // emailParser wraps model.EmailConnection and overrides ParseText so that

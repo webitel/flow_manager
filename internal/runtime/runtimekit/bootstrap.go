@@ -7,7 +7,6 @@ package runtimekit
 import (
 	"context"
 
-	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
@@ -23,9 +22,7 @@ import (
 	notifop "github.com/webitel/flow_manager/internal/runtime/ops/domain/notification"
 	queueop "github.com/webitel/flow_manager/internal/runtime/ops/domain/queue"
 	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
-	"github.com/webitel/flow_manager/internal/runtime/ops/legacy"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // Config holds the channel-specific inputs that Bootstrap needs to build the
@@ -33,16 +30,6 @@ import (
 type Config struct {
 	// Deps is the channel router's dependency bundle.
 	Deps ports.RouterDeps
-
-	// Router is the channel's model.Router implementation — passed to the
-	// legacy adapter so existing flow.ApplicationHandlers still work.
-	Router model.Router
-
-	// Apps is the merged ApplicationHandlers map for this channel (channel-
-	// specific handlers unioned with framework handlers). Bootstrap passes it
-	// to legacy.RegisterFromMap; callers must delete any op they override with
-	// a native implementation before calling Bootstrap.
-	Apps flow.ApplicationHandlers
 
 	// ContactsClient, when non-nil, enables the contacts native ops
 	// (getContact, findContact, addContact, updateContact, mergeContactPhones,
@@ -71,7 +58,6 @@ type Kit struct {
 func Bootstrap(cfg Config) *Kit {
 	reg := ops.NewRegistry()
 	builtin.Register(reg)
-	legacy.RegisterFromMap(reg, cfg.Router, cfg.Apps)
 
 	reg.Register("httpRequest", builtin.HTTPRequestOp(cfg.Deps))
 	reg.Register("global", builtin.GlobalOp(cfg.Deps))
