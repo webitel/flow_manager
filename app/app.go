@@ -1,9 +1,7 @@
 package app
 
 import (
-	"context"
 	"fmt"
-	"time"
 
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
@@ -27,6 +25,13 @@ import (
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
+	"github.com/webitel/flow_manager/internal/usecase/callback"
+	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
+	bsruntime "github.com/webitel/flow_manager/internal/bootstrap/runtime"
+	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
+	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
+	callWatcherPkg "github.com/webitel/flow_manager/internal/workers/call_watcher"
+	listWatcher "github.com/webitel/flow_manager/internal/workers/list_watcher"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 
@@ -47,52 +52,35 @@ type FlowManager struct {
 	*fileAdapter.FileAdapter
 	*eventAdapter.EventBusAdapter
 	*chatAdapter.ChatMgrAdapter
+	*bsruntime.Dispatcher
 
-	log              *wlog.Logger
-	id               string
-	config           *model.Config
-	cluster          *cluster
-	Store            store.Store
-	ExternalStore    *cache.ExternalStoreManager
-	checkpointRepo   session.Repository
-	runtimeStateRepo persistence.Repository
+	log    *wlog.Logger
+	id     string
+	config *model.Config
 
-	grpcServer    *grpc.Server
-	mailServer    model.Server
-	eslServer     model.Server
-	channelServer model.Server
-	imServer      model.Server
+	cluster *clusterPkg.Cluster
+	Store   store.Store
+
+	srvs       bootstrapServers.Servers
+	grpcServer *grpc.Server
 
 	chatManager *grpc.ChatManager
-	storage     domstorage.Client
 	cases       *cases.Api
 
-	timezoneList map[int]*time.Location
-	cc           domcc.CCManager
+	cc domcc.CCManager
 
 	stop    chan struct{}
 	stopped chan struct{}
 
 	eventQueue ports.EventBus
 
-	CallRouter    model.Router
-	GRPCRouter    model.Router
-	EmailRouter   model.Router
-	ChatRouter    model.Router
-	FormRouter    model.Router
-	ChannelRouter model.Router
-	IMRouter      model.Router
-
-	callWatcher *callWatcher
-	listWatcher *listWatcher
-
-	cacheStore cache.CacheStores
+	callWatcher *callWatcherPkg.Worker
+	listWatcher *listWatcher.Worker
 
 	AiBots  *aibridge.Client
 	meeting domainmeeting.Client
 
-	ctx context.Context
-	cbr *CallbackResolver
+	cbr *callback.Resolver
 }
 
 func NewFlowManager(
@@ -106,13 +94,19 @@ func NewFlowManager(
 	casesClient *cases.Api,
 	aiBots *aibridge.Client,
 	meetingClient domainmeeting.Client,
-	srvs Servers,
+	srvs bootstrapServers.Servers,
 	chatMgr *grpc.ChatManager,
 	ccMgr domcc.CCManager,
 	eventQueue ports.EventBus,
-	cb *CallbackResolver,
+	cb *callback.Resolver,
 ) (*FlowManager, error) {
 	schemaCache := model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, "")
+
+	stop := make(chan struct{})
+	stopped := make(chan struct{})
+
+	appID := fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id)
+
 	fm := &FlowManager{
 		Adapter:         storeAdapter.New(st),
 		CacheAdapter:    cacheAdapter.New(cacheStores, log),
@@ -121,41 +115,45 @@ func NewFlowManager(
 		FileAdapter:     fileAdapter.NewFileAdapter(storage),
 		EventBusAdapter: eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
 		ChatMgrAdapter:  chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
-		log:             log,
-		id:              fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
-		config:          cfg,
-		Store:           st,
-		checkpointRepo:  checkpointRepo,
-		runtimeStateRepo: runtimeStateRepo,
-		cacheStore:      cacheStores,
-		storage:         storage,
-		cases:           casesClient,
-		AiBots:          aiBots,
-		meeting:         meetingClient,
-		chatManager:     chatMgr,
-		cc:              ccMgr,
-		eventQueue:      eventQueue,
-		grpcServer:      srvs.Grpc,
-		eslServer:       srvs.Esl,
-		mailServer:      srvs.Mail,
-		channelServer:   srvs.Channel,
-		imServer:        srvs.Im,
-		stop:            make(chan struct{}),
-		stopped:         make(chan struct{}),
-		ctx:             context.Background(),
-		cbr:             cb,
+		Dispatcher: bsruntime.New(bsruntime.DispatcherConfig{
+			Log:              log,
+			ID:               appID,
+			GrpcServer:       srvs.Grpc,
+			EslServer:        srvs.Esl,
+			MailServer:       srvs.Mail,
+			ChannelServer:    srvs.Channel,
+			ImServer:         srvs.Im,
+			CheckpointRepo:   checkpointRepo,
+			RuntimeStateRepo: runtimeStateRepo,
+			Stop:             stop,
+			Stopped:          stopped,
+		}),
+		log:         log,
+		id:          appID,
+		config:      cfg,
+		Store:       st,
+		cases:       casesClient,
+		AiBots:      aiBots,
+		meeting:     meetingClient,
+		chatManager: chatMgr,
+		cc:          ccMgr,
+		eventQueue:  eventQueue,
+		srvs:        srvs,
+		grpcServer:  srvs.Grpc,
+		stop:        stop,
+		stopped:     stopped,
+		cbr:         cb,
 	}
 
 	if cfg.ExternalSql {
-		fm.ExternalStore = cache.NewExternalStoreManager()
+		fm.Adapter.SetExternalStore(cache.NewExternalStoreManager())
 	}
 
-	wlog.Info(fmt.Sprintf("version: %s", Version()))
+	wlog.Info(fmt.Sprintf("version: %s", bsversion.String()))
 	wlog.Info("server is initializing...")
 
-	fm.callWatcher = NewCallWatcher(fm)
-	fm.listWatcher = NewListWatcher(fm)
-	fm.cluster = NewCluster(fm)
+	fm.callWatcher = callWatcherPkg.New(st, fm, log)
+	fm.listWatcher = listWatcher.New(st, log)
 
 	return fm, nil
 }
@@ -163,16 +161,25 @@ func NewFlowManager(
 // Start runs all I/O-bound startup steps that must happen after the fx graph
 // is fully wired. Called from RegisterStartupHooks via fx.Lifecycle.OnStart.
 func (fm *FlowManager) Start() error {
+	// Start servers first so that grpcServer.Host()/Port() reflect the bound address.
+	if err := fm.srvs.Register(); err != nil {
+		return err
+	}
+
+	// Build cluster after servers are up so we advertise the real gRPC address.
+	fm.cluster = clusterPkg.New(
+		fm.id,
+		fm.config.DiscoverySettings.Url,
+		fm.grpcServer.Host(),
+		fm.grpcServer.Port(),
+	)
 	if err := fm.cluster.Start(); err != nil {
 		return err
 	}
-	if err := fm.chatManager.Start(fm.cluster.discovery); err != nil {
+	if err := fm.chatManager.Start(fm.cluster.Discovery); err != nil {
 		return err
 	}
-	if err := fm.grpcServer.Cluster(fm.cluster.discovery); err != nil {
-		return err
-	}
-	if err := fm.RegisterServers(); err != nil {
+	if err := fm.grpcServer.Cluster(fm.cluster.Discovery); err != nil {
 		return err
 	}
 	if fm.config.PreSignedCertificateLocation != "" {
@@ -210,15 +217,18 @@ func (f *FlowManager) Shutdown() {
 	}
 	close(f.stop)
 	<-f.stopped
-	f.StopServers()
+	f.srvs.Stop()
 }
 
-func (f *FlowManager) Log() *wlog.Logger         { return f.log }
-func (f *FlowManager) AppID() string              { return f.id }
-func (f *FlowManager) CheckpointRepo() session.Repository   { return f.checkpointRepo }
-func (f *FlowManager) RuntimeStateRepo() persistence.Repository { return f.runtimeStateRepo }
-func (f *FlowManager) Callback() *CallbackResolver { return f.cbr }
-func (f *FlowManager) GetStore() store.Store       { return f.Store }
-func (f *FlowManager) GetAiBots() *aibridge.Client { return f.AiBots }
-func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
-func (f *FlowManager) Cases() domcases.Client      { return f.cases }
+func (f *FlowManager) Log() *wlog.Logger             { return f.log }
+func (f *FlowManager) AppID() string                  { return f.id }
+func (f *FlowManager) Callback() *callback.Resolver   { return f.cbr }
+func (f *FlowManager) GetStore() store.Store           { return f.Store }
+func (f *FlowManager) GetAiBots() *aibridge.Client     { return f.AiBots }
+func (f *FlowManager) Meeting() domainmeeting.Client   { return f.meeting }
+func (f *FlowManager) Cases() domcases.Client          { return f.cases }
+
+// ConsumeCallEvent satisfies call_watcher.CallEventDeps; delegates to eventQueue.
+func (f *FlowManager) ConsumeCallEvent() <-chan model.CallActionData {
+	return f.eventQueue.ConsumeCallEvent()
+}

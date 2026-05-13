@@ -1,4 +1,6 @@
-package app
+// Package servers groups all protocol-level servers and manages their
+// start/stop lifecycle.
+package servers
 
 import (
 	"fmt"
@@ -9,8 +11,9 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-// Servers groups all protocol-level servers so they can be injected into
-// NewFlowManager as a single value, avoiding the fx same-type ambiguity.
+// Servers groups all protocol-level servers so they can be injected as a
+// single value, avoiding the fx same-type ambiguity for multiple model.Server
+// providers.
 type Servers struct {
 	Grpc    *fmgrpc.Server
 	Esl     model.Server
@@ -20,8 +23,9 @@ type Servers struct {
 	Http    model.Server // nil when WebHook.Addr is not configured
 }
 
-func (f *FlowManager) RegisterServers() error {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.imServer}
+// Register starts all non-nil servers in order.
+func (s Servers) Register() error {
+	servers := []model.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
 
 	for _, v := range servers {
 		if err := startServer(v); err != nil {
@@ -32,8 +36,9 @@ func (f *FlowManager) RegisterServers() error {
 	return nil
 }
 
-func (f *FlowManager) StopServers() {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.imServer}
+// Stop stops all non-nil servers in order.
+func (s Servers) Stop() {
+	servers := []model.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
 
 	for _, v := range servers {
 		stopServer(v)
@@ -59,5 +64,4 @@ func stopServer(s model.Server) {
 	s.Stop()
 
 	wlog.Info(fmt.Sprintf("stopped [%s] server", s.Name()))
-	return
 }

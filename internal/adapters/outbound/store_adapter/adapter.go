@@ -6,7 +6,9 @@ package store_adapter
 import (
 	"context"
 	"net/http"
+	"time"
 
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -15,7 +17,8 @@ import (
 // Embed *Adapter in FlowManager to promote all methods without re-declaring
 // them one by one in app/.
 type Adapter struct {
-	store store.Store
+	store         store.Store
+	externalStore *cache.ExternalStoreManager // optional; set via SetExternalStore
 }
 
 // New creates a new Adapter backed by s.
@@ -214,6 +217,28 @@ func (a *Adapter) GetChatMessagesByConversationId(ctx context.Context, domainId 
 }
 
 // ── List (store-only) ─────────────────────────────────────────────────────────
+
+// CheckList satisfies the builtin.ListDeps interface; delegates to ListCheckNumber.
+func (a *Adapter) CheckList(domainId int64, number string, listId *int, listName *string) (bool, error) {
+	ok, appErr := a.ListCheckNumber(domainId, number, listId, listName)
+	if appErr != nil {
+		return false, appErr
+	}
+	return ok, nil
+}
+
+// AddToList satisfies the builtin.ListDeps interface; delegates to ListAddCommunication.
+func (a *Adapter) AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error {
+	comm := &model.ListCommunication{
+		Destination: destination,
+		Description: description,
+	}
+	if expireAtMS > 0 {
+		t := time.UnixMilli(expireAtMS)
+		comm.ExpireAt = &t
+	}
+	return a.ListAddCommunication(domainId, &model.SearchEntity{Id: listId, Name: listName}, comm)
+}
 
 func (a *Adapter) ListCheckNumber(domainId int64, number string, listId *int, listName *string) (bool, *model.AppError) {
 	ok, err := a.store.List().CheckNumber(domainId, number, listId, listName)

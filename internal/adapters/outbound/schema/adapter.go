@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
@@ -28,9 +29,10 @@ var (
 // Adapter implements schema lookup, system settings, hook lookup,
 // and schema variable read/write.
 type SchemaAdapter struct {
-	store       store.Store
-	schemaCache model.ObjectCache
-	cert        presign.PreSign // optional; set via SetCert after Start()
+	store        store.Store
+	schemaCache  model.ObjectCache
+	cert         presign.PreSign // optional; set via SetCert after Start()
+	timezoneList map[int]*time.Location
 }
 
 func NewSchemaAdapter(st store.Store, schemaCache model.ObjectCache) *SchemaAdapter {
@@ -39,6 +41,32 @@ func NewSchemaAdapter(st store.Store, schemaCache model.ObjectCache) *SchemaAdap
 
 // SetCert wires the signing key after Start() creates it.
 func (a *SchemaAdapter) SetCert(c presign.PreSign) { a.cert = c }
+
+// ── timezones ─────────────────────────────────────────────────────────────────
+
+func (a *SchemaAdapter) InitCacheTimezones() *model.AppError {
+	list, storeErr := a.store.Calendar().GetTimezones()
+	if storeErr != nil {
+		return model.NewAppError("InitCacheTimezones", "store.calendar.get_timezones", nil, storeErr.Error(), http.StatusInternalServerError)
+	}
+
+	a.timezoneList = make(map[int]*time.Location, len(list))
+
+	for _, v := range list {
+		if loc, err := time.LoadLocation(v.SysName); err != nil {
+			wlog.Warn(fmt.Sprintf("bad database timezone name %s, skip cache", v.SysName))
+		} else {
+			a.timezoneList[v.Id] = loc
+		}
+	}
+
+	return nil
+}
+
+func (a *SchemaAdapter) GetLocation(id int) *time.Location {
+	loc, _ := a.timezoneList[id]
+	return loc
+}
 
 // ── schema ────────────────────────────────────────────────────────────────────
 
