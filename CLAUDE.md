@@ -9,7 +9,7 @@ Routing and execution engine for calls, chats, emails, webhooks, IM, and process
 | Role | File |
 |------|------|
 | Entrypoint | `cmd/flow-manager/main.go` (fx wiring) |
-| FlowManager shell | `app/app.go` — embeds 7 outbound adapters + `*Dispatcher` |
+| FlowManager | `internal/bootstrap/runtime/flow_manager.go` — embeds 7 outbound adapters + `*Dispatcher` |
 | Dispatch loop | `internal/bootstrap/runtime/dispatcher.go` |
 | Lifecycle hooks | `internal/bootstrap/fx/lifecycle.go` |
 | Config loading | `internal/bootstrap/config/` |
