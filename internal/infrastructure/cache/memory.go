@@ -3,12 +3,10 @@ package cache
 import (
 	"context"
 	"fmt"
-
-	"github.com/webitel/flow_manager/model"
 )
 
 type MemoryCache struct {
-	lruCache model.ObjectCache
+	lruCache ObjectCache
 }
 
 type MemoryCacheConfig struct {
@@ -17,7 +15,7 @@ type MemoryCacheConfig struct {
 }
 
 func NewMemoryCache(conf *MemoryCacheConfig) *MemoryCache {
-	return &MemoryCache{lruCache: model.NewLruWithParams(conf.Size, "memoryCache", int64(conf.DefaultExpiry), "")}
+	return &MemoryCache{lruCache: NewLruWithParams(conf.Size, "memoryCache", int64(conf.DefaultExpiry), "")}
 }
 
 func (m *MemoryCache) Get(_ context.Context, key string) (*CacheValue, error) {

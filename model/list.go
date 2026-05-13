@@ -1,9 +1,6 @@
 package model
 
-import "time"
+import "github.com/webitel/flow_manager/internal/domain/list"
 
-type ListCommunication struct {
-	Destination string     `json:"destination"`
-	Description *string    `json:"description"`
-	ExpireAt    *time.Time `json:"expire_at"`
-}
+// Re-export for backward compatibility.
+type ListCommunication = list.ListCommunication

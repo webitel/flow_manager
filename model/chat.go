@@ -2,8 +2,10 @@ package model
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 )
 
 const (
@@ -15,84 +17,25 @@ const (
 	BreakChatTransferCause = "TRANSFER"
 )
 
-type ChatAction string
+// Re-exports for backward compatibility.
+type ChatAction = chatdomain.ChatAction
+type ChatButton = chatdomain.ChatButton
+type ChatMenuArgs = chatdomain.ChatMenuArgs
+type ChatMessageOutbound = chatdomain.ChatMessageOutbound
+type BroadcastPeer = chatdomain.BroadcastPeer
+type BroadcastChat = chatdomain.BroadcastChat
+type BroadcastChatResponse = chatdomain.BroadcastChatResponse
+type FailedReceiver = chatdomain.FailedReceiver
+type ChatMessage = chatdomain.ChatMessage
 
 const (
-	ChatActionTyping ChatAction = "typing"
-	ChatActionCancel ChatAction = "cancel"
+	ChatActionTyping = chatdomain.ChatActionTyping
+	ChatActionCancel = chatdomain.ChatActionCancel
 )
 
-type ChatButton struct {
-	Caption string `json:"caption"`
-	Text    string `json:"text"`
-	Type    string `json:"type"`
-	Url     string `json:"url"`
-	Code    string `json:"code"`
-}
-
-type ChatMenuArgs struct {
-	Type    string         `json:"type"` // type
-	Buttons [][]ChatButton `json:"buttons"`
-	Inline  [][]ChatButton `json:"inline"`
-	Text    string         `json:"text"`
-	NoInput bool           `json:"noInput"`
-	Kind    string         `json:"kind"`
-}
-
-type ChatMessageOutbound struct {
-	Type    string
-	Text    string
-	File    *File
-	Server  string         `json:"server" db:"-"` // TODO
-	Buttons [][]ChatButton `json:"buttons"`
-	Inline  [][]ChatButton `json:"inline"`
-	NoInput bool           `json:"noInput"`
-	Kind    string         `json:"kind"`
-}
-
-type BroadcastPeer struct {
-	Id   string `json:"id,omitempty"`
-	Type string `json:"type,omitempty"`
-	Via  string `json:"via,omitempty"`
-}
-
-type BroadcastChat struct {
-	Type    any
-	Profile struct {
-		Id int
-	}
-	Peer    []any
-	Text    string
-	File    *File
-	Buttons [][]ChatButton `json:"buttons"`
-
-	Variables    map[string]string
-	DomainId     int64
-	ResponseCode string `json:"responseCode"`
-	// FailedReceivers used to set the variable name in which will be saved failed receivers. (if not set then info about failed receivers will not be saved)
-	FailedReceivers string `json:"failedReceivers"`
-	// Timeout determines how much time chat_manager is waiting (in secs) for the response from the host(telegram|whatsapp..) on our callback url.
-	Timeout int64 `json:"timeout"`
-}
-
-type BroadcastChatResponse struct {
-	Failed    []*FailedReceiver `json:"failed"`
-	Variables map[string]string
-}
-
-type FailedReceiver struct {
-	Id    string `json:"id,omitempty"`
-	Error string `json:"error,omitempty"`
-}
-
-type ChatMessage struct {
-	Text       string `json:"text,omitempty" db:"msg"`
-	CreatedAt  string `json:"created_at,omitempty" db:"created_at"`
-	Type       string `json:"type,omitempty" db:"type"`
-	User       string `json:"user,omitempty" db:"name"`
-	IsInternal bool   `json:"isInternal" db:"internal"`
-}
-
+// Conversation is the chat-specific connection interface.
+// Kept here (not aliased) because it references *AppError — moving it would
+// create an import cycle until AppError is extracted (Phase 5.2).
 type Conversation interface {
 	Connection
 	ProfileId() int64

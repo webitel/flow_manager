@@ -1,0 +1,42 @@
+package call
+
+// moved from model/endpoint.go — see model/endpoint.go for re-export alias
+
+import (
+	"fmt"
+	"strings"
+)
+
+// Endpoint describes a call destination (agent, user, external number, etc.).
+type Endpoint struct {
+	Id          *int              `json:"id" db:"id"`
+	Name        *string           `json:"name" db:"name"`
+	Idx         int               `json:"idx" db:"idx"`
+	TypeName    string            `json:"type_name" db:"type_name"`
+	Dnd         *bool             `json:"dnd" db:"dnd"`
+	Destination *string           `json:"destination" db:"destination"`
+	Number      *string           `json:"number" db:"-"`
+	Variables   []string          `json:"variables" db:"variables"`
+	Params      map[string]string `json:"parameters"`
+	HasPush     *bool             `json:"has_push" db:"has_push"`
+}
+
+func (e *Endpoint) ToStringVariables() string {
+	vars := make([]string, len(e.Variables), len(e.Variables)+3)
+	vars = e.Variables
+	if e.Id != nil {
+		vars = append(vars, fmt.Sprintf("wbt_to_id=%d", *e.Id))
+	}
+
+	if e.Name != nil {
+		vars = append(vars, fmt.Sprintf("wbt_to_name='%s'", *e.Name))
+	}
+
+	if e.Number != nil {
+		vars = append(vars, fmt.Sprintf("wbt_to_number='%s'", *e.Number))
+	} else if e.Destination != nil {
+		vars = append(vars, fmt.Sprintf("wbt_to_number='%s'", *e.Destination))
+	}
+
+	return fmt.Sprintf("wbt_to_type=%s,%s", e.TypeName, strings.Join(vars, ","))
+}

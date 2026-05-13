@@ -1,7 +1,20 @@
 package model
 
-import "context"
+import (
+	"context"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+)
+
+// Re-exports for backward compatibility.
+type CCQueueEvent = chatdomain.CCQueueEvent
+type MessageWrapper = chatdomain.MessageWrapper
+type Message = chatdomain.Message
+type ImEndpoint = chatdomain.ImEndpoint
+
+// IMDialog is the IM-specific connection interface.
+// Kept here (not aliased) because it references *AppError — moving it would
+// create an import cycle until AppError is extracted (Phase 5.2).
 type IMDialog interface {
 	Connection
 	ThreadId() string
@@ -23,39 +36,4 @@ type IMDialog interface {
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
-}
-
-type CCQueueEvent struct {
-	AttemptId int64  `json:"attempt_id"`
-	Event     string `json:"event"`
-	Result    string `json:"result"`
-}
-
-// MessageWrapper представляє кореневий об'єкт
-type MessageWrapper struct {
-	ID       string  `json:"id"`
-	Message  Message `json:"payload"`
-	UserID   string  `json:"user_id"`
-	DomainID int64   `json:"domain_id"`
-	Echo     bool    `json:"echo"`
-}
-
-// Message описує вкладений об'єкт повідомлення
-type Message struct {
-	ID        string       `json:"id"`
-	ThreadID  string       `json:"thread_id"`
-	DomainID  int          `json:"domain_id"`
-	From      ImEndpoint   `json:"from"`
-	To        []ImEndpoint `json:"to"`
-	Text      string       `json:"text"`
-	CreatedAt int64        `json:"created_at"` // Unix timestamp у мілісекундах
-}
-
-// From описує відправника
-type ImEndpoint struct {
-	ID     string `json:"id"`
-	Type   int    `json:"type"`
-	Sub    string `json:"sub"`
-	Issuer string `json:"issuer"`
-	Name   string `json:"name"`
 }

@@ -1,6 +1,6 @@
 package model
 
-type Scope struct {
-	Channel string
-	Id      string
-}
+import "github.com/webitel/flow_manager/internal/domain/flow"
+
+// Re-export for backward compatibility.
+type Scope = flow.Scope

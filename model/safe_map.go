@@ -1,49 +1,11 @@
 package model
 
-import (
-	"maps"
-	"sync"
-)
+import "github.com/webitel/flow_manager/internal/infrastructure/cache"
 
-type ThreadSafeStringMap struct {
-	sync.RWMutex
-	internal map[string]string
-}
+// Re-export for backward compatibility.
+type ThreadSafeStringMap = cache.ThreadSafeStringMap
 
+// NewThreadSafeStringMap creates a new ThreadSafeStringMap.
 func NewThreadSafeStringMap() *ThreadSafeStringMap {
-	return &ThreadSafeStringMap{
-		internal: make(map[string]string),
-	}
-}
-
-func (sm *ThreadSafeStringMap) Load(key string) (string, bool) {
-	sm.RLock()
-	result, ok := sm.internal[key]
-	sm.RUnlock()
-	return result, ok
-}
-
-func (sm *ThreadSafeStringMap) Delete(key string) {
-	sm.Lock()
-	delete(sm.internal, key)
-	sm.Unlock()
-}
-
-func (sm *ThreadSafeStringMap) Store(key, value string) {
-	sm.Lock()
-	sm.internal[key] = value
-	sm.Unlock()
-}
-
-func (sm *ThreadSafeStringMap) Data() map[string]string {
-	sm.RLock()
-	defer sm.RUnlock()
-
-	return maps.Clone(sm.internal)
-}
-
-func (sm *ThreadSafeStringMap) UnionMap(m map[string]string) {
-	sm.Lock()
-	maps.Copy(sm.internal, m)
-	sm.Unlock()
+	return cache.NewThreadSafeStringMap()
 }

@@ -7,21 +7,29 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
-type ConnectionType int8
+// Re-exports for backward compatibility.
+type ConnectionType = flow.ConnectionType
+type Result = flow.Result
+type ResultChannel = flow.ResultChannel
+type ChannelExec = flow.ChannelExec
 
 const (
-	ConnectionTypeCall ConnectionType = iota
-	ConnectionTypeGrpc
-	ConnectionTypeEmail
-	ConnectionTypeWebHook
-	ConnectionTypeChat
-	ConnectionTypeForm
-	ConnectionTypeChannel
-	ConnectionTypeIM
+	ConnectionTypeCall    = flow.ConnectionTypeCall
+	ConnectionTypeGrpc    = flow.ConnectionTypeGrpc
+	ConnectionTypeEmail   = flow.ConnectionTypeEmail
+	ConnectionTypeWebHook = flow.ConnectionTypeWebHook
+	ConnectionTypeChat    = flow.ConnectionTypeChat
+	ConnectionTypeForm    = flow.ConnectionTypeForm
+	ConnectionTypeChannel = flow.ConnectionTypeChannel
+	ConnectionTypeIM      = flow.ConnectionTypeIM
 )
 
+// Server is the interface implemented by each transport provider.
+// Kept here (not aliased) because its Consume() method returns model.Connection
+// which references *AppError — moving it would create an import cycle.
 type Server interface {
 	Name() string
 	Start() error
@@ -33,6 +41,9 @@ type Server interface {
 	Cluster(discovery discovery.ServiceDiscovery) error
 }
 
+// Connection is the core runtime context passed through a flow execution.
+// Kept here (not aliased) because Set() returns *AppError — moving it would
+// create an import cycle until AppError is extracted (Phase 5.2).
 type Connection interface {
 	Type() ConnectionType
 	Id() string
@@ -49,20 +60,9 @@ type Connection interface {
 	Log() *wlog.Logger
 }
 
-type Result struct {
-	Err error
-	Res Response
-}
-
-type ResultChannel chan Result
-
-type ChannelExec struct {
-	SchemaId  int                        `json:"schema_id"`
-	DomainId  int64                      `json:"domain_id"`
-	Variables map[string]json.RawMessage `json:"variables"`
-}
-
-func (v *Variables) ToJson() []byte {
+// VariablesToJson serialises a Variables map to JSON bytes.
+// Replaces the former *Variables.ToJson() method (cannot define methods on aliased types).
+func VariablesToJson(v *Variables) []byte {
 	if v == nil {
 		return nil
 	}
@@ -70,7 +70,9 @@ func (v *Variables) ToJson() []byte {
 	return d
 }
 
-func (v *Variables) ToString() *string {
+// VariablesToString serialises a Variables map to a JSON string pointer.
+// Replaces the former *Variables.ToString() method.
+func VariablesToString(v *Variables) *string {
 	if v == nil {
 		return nil
 	}

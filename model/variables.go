@@ -3,17 +3,19 @@ package model
 import (
 	"regexp"
 	"strings"
+
+	"github.com/webitel/flow_manager/internal/domain/flow"
+)
+
+// Re-exports for backward compatibility.
+type Variables = flow.Variables
+type ParseOption = flow.ParseOption
+
+const (
+	ParseOptionJson = flow.ParseOptionJson
 )
 
 var compileVar *regexp.Regexp
-
-type Variables map[string]interface{}
-
-type ParseOption uint
-
-const (
-	ParseOptionJson ParseOption = 1 << iota
-)
 
 func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)

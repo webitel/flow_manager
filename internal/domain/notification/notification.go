@@ -1,0 +1,27 @@
+package notification
+
+// moved from model/notification.go — see model/notification.go for re-export alias
+
+import "encoding/json"
+
+// Notification is a persistent notification sent to one or more users.
+type Notification struct {
+	Id          int64       `json:"id" db:"id"`
+	DomainId    int64       `json:"-" db:"domain_id"`
+	Action      string      `json:"action" db:"action"`
+	Timeout     *int64      `json:"timeout,omitempty" db:"timeout"`
+	CreatedAt   int64       `json:"created_at" db:"created_at"`
+	CreatedBy   *int64      `json:"created_by,omitempty" db:"created_by"`
+	AcceptedAt  *int64      `json:"accepted_at,omitempty" db:"accepted_at"`
+	AcceptedBy  *int64      `json:"accepted_by,omitempty" db:"accepted_by"`
+	ClosedAt    *int64      `json:"closed_at,omitempty" db:"closed_at"`
+	ForUsers    []int64     `json:"for_users" db:"for_users"`
+	Description string      `json:"description,omitempty" db:"description"`
+	Body        interface{} `json:"body,omitempty" db:"-"`
+	SockID      string      `json:"sock_id,omitempty" db:"sock_id"`
+}
+
+func (n *Notification) ToJson() []byte {
+	d, _ := json.Marshal(n)
+	return d
+}

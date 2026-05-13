@@ -1,7 +1,6 @@
 package model
 
-type StepLog struct {
-	Name  string `json:"name"`
-	Start int64  `json:"start"`
-	Stop  int64  `json:"stop"`
-}
+import "github.com/webitel/flow_manager/internal/domain/flow"
+
+// Re-export for backward compatibility.
+type StepLog = flow.StepLog
