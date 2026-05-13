@@ -1,11 +1,11 @@
 package model
 
-const (
-	SysAutoLinkCallToContact = "autolink_call_to_contact"
-	SysAutoLinkMailToContact = "autolink_mail_to_contact"
-)
+import "github.com/webitel/flow_manager/internal/bootstrap/config"
 
-type SysValue struct {
-	BoolValue   bool
-	StringValue string
-}
+// Re-exports for backward compatibility.
+type SysValue = config.SysValue
+
+const (
+	SysAutoLinkCallToContact = config.SysAutoLinkCallToContact
+	SysAutoLinkMailToContact = config.SysAutoLinkMailToContact
+)

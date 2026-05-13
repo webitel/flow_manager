@@ -1,13 +1,14 @@
 package model
 
-import "time"
+import "github.com/webitel/flow_manager/internal/bootstrap/config"
 
-var AppServiceName = "workflow"
+// Re-exports for backward compatibility.
+var AppServiceName = config.AppServiceName
 
-const HeaderFromServiceName = "From-Service"
-
-const SchemaCacheSize = 10000
-const SchemaCacheExpire = (60 * 60) * 24 // 24 hour
-
-const AppServiceTTL = time.Second * 30
-const AppDeregisterCriticalTTL = time.Second * 60
+const (
+	HeaderFromServiceName    = config.HeaderFromServiceName
+	SchemaCacheSize          = config.SchemaCacheSize
+	SchemaCacheExpire        = config.SchemaCacheExpire
+	AppServiceTTL            = config.AppServiceTTL
+	AppDeregisterCriticalTTL = config.AppDeregisterCriticalTTL
+)

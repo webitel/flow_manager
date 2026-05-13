@@ -8,14 +8,12 @@ import (
 	"os"
 
 	"github.com/BoRuDar/configuration/v4"
-
-	"github.com/webitel/flow_manager/model"
 )
 
-func Load() (*model.Config, error) {
-	var config model.Config
+func Load() (*Config, error) {
+	var cfg Config
 	configurator := configuration.New(
-		&config,
+		&cfg,
 		configuration.NewEnvProvider(),
 		configuration.NewFlagProvider(),
 		configuration.NewDefaultProvider(),
@@ -25,8 +23,8 @@ func Load() (*model.Config, error) {
 		// non-fatal: missing flags/envs use defaults
 	}
 
-	if config.ConfigFile != nil && *config.ConfigFile != "" {
-		f, err := os.OpenFile(*config.ConfigFile, os.O_RDONLY, 0o644)
+	if cfg.ConfigFile != nil && *cfg.ConfigFile != "" {
+		f, err := os.OpenFile(*cfg.ConfigFile, os.O_RDONLY, 0o644)
 		if err != nil {
 			return nil, err
 		}
@@ -35,30 +33,28 @@ func Load() (*model.Config, error) {
 		if err != nil {
 			return nil, err
 		}
-		if err = json.Unmarshal(body, &config); err != nil {
+		if err = json.Unmarshal(body, &cfg); err != nil {
 			return nil, err
 		}
 	}
 
-	if !config.Log.Console && !config.Log.Otel && len(config.Log.File) == 0 {
-		config.Log.Console = true
+	if !cfg.Log.Console && !cfg.Log.Otel && len(cfg.Log.File) == 0 {
+		cfg.Log.Console = true
 	}
 
-	return &config, nil
+	return &cfg, nil
 }
 
-func LoadTLSCreds(cfg model.TLSConfig) (*tls.Config, error) {
+func LoadTLSCreds(cfg TLSConfig) (*tls.Config, error) {
 	if len(cfg.CertPath) == 0 || len(cfg.KeyPath) == 0 || len(cfg.CAPath) == 0 {
 		return nil, nil
 	}
 
-	// Load client's certificate and private key
 	clientCert, err := tls.LoadX509KeyPair(cfg.CertPath, cfg.KeyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	// Load the CA certificate to verify server
 	caCert, err := os.ReadFile(cfg.CAPath)
 	if err != nil {
 		return nil, err
@@ -66,10 +62,9 @@ func LoadTLSCreds(cfg model.TLSConfig) (*tls.Config, error) {
 	caCertPool := x509.NewCertPool()
 	caCertPool.AppendCertsFromPEM(caCert)
 
-	// Configure TLS
 	return &tls.Config{
 		Certificates: []tls.Certificate{clientCert},
 		RootCAs:      caCertPool,
-		ServerName:   "im-gateway-service", // Common Name of the server cert
+		ServerName:   "im-gateway-service",
 	}, nil
 }
