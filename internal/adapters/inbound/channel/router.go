@@ -55,7 +55,7 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) *model.AppError {
+func (r *Router) Handle(conn model.Connection) error {
 	go r.handle(conn)
 	return nil
 }

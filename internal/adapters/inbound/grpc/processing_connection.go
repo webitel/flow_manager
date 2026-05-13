@@ -121,7 +121,7 @@ func (c *processingConnection) DumpExportVariables() map[string]string {
 	return res
 }
 
-func (c *processingConnection) PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, *model.AppError) {
+func (c *processingConnection) PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, error) {
 	if c.formAction != nil {
 		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
 	}
@@ -147,7 +147,7 @@ func (c *processingConnection) PushForm(ctx context.Context, form processing.For
 	return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "Form no send action", http.StatusInternalServerError)
 }
 
-func (c *processingConnection) FormAction(action processing.FormAction) *model.AppError {
+func (c *processingConnection) FormAction(action processing.FormAction) error {
 	c.Lock()
 	ch := c.formAction
 	handlers := make([]func(processing.FormAction), 0, len(c.formActionHandlers))
@@ -237,7 +237,7 @@ func (c *processingConnection) setActiveFormId(id string) {
 	c.Unlock()
 }
 
-func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId, action string, vars map[string]string, sync bool) *model.AppError {
+func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId, action string, vars map[string]string, sync bool) error {
 	if c.activeFormId() == "" {
 		return model.NewInternalError("processing.form.app_err", "not found active form")
 	}
@@ -269,7 +269,7 @@ func (c *processingConnection) ComponentAction(ctx context.Context, formId, comp
 	return nil
 }
 
-func (c *processingConnection) waitForm(timeSec int) (*processing.FormElem, *model.AppError) {
+func (c *processingConnection) waitForm(timeSec int) (*processing.FormElem, error) {
 	select {
 	case <-time.After(time.Second * time.Duration(timeSec)):
 		return nil, model.NewAppError("Processing", "processing.connection.form.timeout", nil, "Timeout", http.StatusBadRequest)
@@ -319,7 +319,7 @@ func (c *processingConnection) Type() model.ConnectionType {
 	return model.ConnectionTypeForm
 }
 
-func (c *processingConnection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *processingConnection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -363,7 +363,7 @@ type processingConnIface interface {
 	Id() string
 	DomainId() int64
 	Get(key string) (string, bool)
-	Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError)
+	Set(ctx context.Context, vars model.Variables) (model.Response, error)
 	GetComponentByName(name string) any
 	SetComponent(name string, component any)
 	Export(ctx context.Context, vars []string)

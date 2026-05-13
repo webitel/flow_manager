@@ -82,7 +82,7 @@ func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.Call
 	return in
 }
 
-func (r *Router) Handle(conn model.Connection) *model.AppError {
+func (r *Router) Handle(conn model.Connection) error {
 	go r.handle(conn)
 	return nil
 }
@@ -100,7 +100,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	var routing *model.Routing
-	var err *model.AppError
+	var err error
 
 	queueId := call.IVRQueueId()
 	transferSchemaId := call.TransferSchemaId()

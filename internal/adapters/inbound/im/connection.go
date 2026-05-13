@@ -137,7 +137,7 @@ func (c *Connection) LastMessage() model.Message {
 	return c.lastMsg
 }
 
-func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
 	var docs []*p.ImageInput
 
 	if msg.File != nil {
@@ -170,7 +170,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
+func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
 	_, err := c.srv.client.API.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendTextRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
@@ -188,7 +188,7 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
 	var images []*p.ImageInput
 	if msg.File != nil {
 		f := msg.File
@@ -212,7 +212,7 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
 	var docs []*p.DocumentInput
 	if msg.File != nil {
 		f := msg.File
@@ -236,7 +236,7 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, *model.AppError) {
+func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
 	var docs []*p.DocumentInput
 	if f != nil {
 		docs = append(docs, &p.DocumentInput{
@@ -259,7 +259,7 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
+func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, error) {
 	rows := buildKeyboardRows(menu.Buttons)
 	if menu.Type == "inline" {
 		rows = buildKeyboardRows(menu.Inline)
@@ -304,7 +304,7 @@ func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
 	return rows
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, error) {
 	exp := make(map[string]any)
 	for _, v := range vars {
 		tmp, _ := c.Get(v)
@@ -323,7 +323,7 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response, *model.AppError) {
+func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for _, k := range varKeys {
@@ -428,7 +428,7 @@ func (c *Connection) Get(key string) (string, bool) {
 	return v, ok
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 

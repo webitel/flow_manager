@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -184,10 +185,19 @@ const setErrorSQL = `update call_center.cc_email_profile
 set fetch_err = @Err
 where id = @Id`
 
-func (r *EmailRepository) SetError(profileId int, appErr *model.AppError) error {
+func (r *EmailRepository) SetError(profileId int, appErr error) error {
+	errMsg := ""
+	if appErr != nil {
+		var ae *model.AppError
+		if errors.As(appErr, &ae) {
+			errMsg = ae.DetailedError
+		} else {
+			errMsg = appErr.Error()
+		}
+	}
 	return r.db.Exec(context.Background(), setErrorSQL, pgx.NamedArgs{
 		"Id":  profileId,
-		"Err": appErr.DetailedError,
+		"Err": errMsg,
 	})
 }
 

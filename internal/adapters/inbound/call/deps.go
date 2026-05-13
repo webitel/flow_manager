@@ -15,18 +15,18 @@ type Deps interface {
 	AppID() string
 
 	// call routing
-	SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError)
-	SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, *model.AppError)
-	SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError)
-	TransferQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError)
-	TransferAgentRouting(domainId int64, agentId int) (*model.Routing, *model.AppError)
-	GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError)
-	SetBlindTransferNumber(domainId int64, callId, destination string) *model.AppError
+	SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, error)
+	SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, error)
+	SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, error)
+	TransferQueueRouting(domainId int64, queueId int) (*model.Routing, error)
+	TransferAgentRouting(domainId int64, agentId int) (*model.Routing, error)
+	GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, error)
+	SetBlindTransferNumber(domainId int64, callId, destination string) error
 
 	// settings / logging
-	GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError)
-	StoreCallVariables(id string, vars map[string]string) *model.AppError
-	StoreLog(schemaId int, connId string, log []*model.StepLog) *model.AppError
+	GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, error)
+	StoreCallVariables(id string, vars map[string]string) error
+	StoreLog(schemaId int, connId string, log []*model.StepLog) error
 
 	// ops registered via ExtraOps
 	callops.FMDeps

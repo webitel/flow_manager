@@ -52,7 +52,7 @@ func (a *EventBusAdapter) PushOpenLink(domainId int64, sockId string, userId int
 	return a.OpenLink(domainId, sockId, userId, message, url)
 }
 
-func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, message string, url string) *model.AppError {
+func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, message string, url string) error {
 	if sockId == "" {
 		sockSession, storeErr := a.store.SocketSession().Get(userId, domainId, descTrackAppName)
 		if storeErr != nil {
@@ -75,7 +75,7 @@ func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, 
 	return nil
 }
 
-func (a *EventBusAdapter) SendMQJson(exchange, key string, body []byte) *model.AppError {
+func (a *EventBusAdapter) SendMQJson(exchange, key string, body []byte) error {
 	if !a.config.AllowUseMQ {
 		return ErrAllowUseMQ
 	}

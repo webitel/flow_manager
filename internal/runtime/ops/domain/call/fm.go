@@ -13,10 +13,10 @@ import (
 
 // FMDeps is the narrow interface required by the FM call ops.
 type FMDeps interface {
-	SetCallGranteeId(domainId int64, id string, granteeId int64) *model.AppError
-	SetCallUserId(domainId int64, id string, userId int64) *model.AppError
-	UpdateCallFrom(id string, name, number, destination *string) *model.AppError
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
+	SetCallGranteeId(domainId int64, id string, granteeId int64) error
+	SetCallUserId(domainId int64, id string, userId int64) error
+	UpdateCallFrom(id string, name, number, destination *string) error
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
 	CallOutboundQueue(ctx context.Context, in *genpb.OutboundCallRequest) (*genpb.OutboundCallResponse, error)
 }
 

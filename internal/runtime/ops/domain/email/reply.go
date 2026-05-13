@@ -11,7 +11,7 @@ import (
 
 // ReplyDeps is the subset of  the reply op needs.
 type ReplyDeps interface {
-	ReplyEmail(conn model.EmailConnection, text string) *model.AppError
+	ReplyEmail(conn model.EmailConnection, text string) error
 }
 
 // RegisterReply adds the reply op to reg.

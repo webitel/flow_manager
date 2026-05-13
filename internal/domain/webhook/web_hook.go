@@ -1,8 +1,6 @@
 package webhook
 
 // moved from model/web_hook.go — see model/web_hook.go for re-export aliases
-// NOTE: WebHook.Authentication() is NOT moved here because it returns *model.AppError
-//       which would create an import cycle. It is kept as a standalone function in model/.
 
 import (
 	"encoding/json"

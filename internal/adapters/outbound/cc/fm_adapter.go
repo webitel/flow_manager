@@ -38,7 +38,7 @@ func (a *FMAdapter) JoinChatToInboundQueue(ctx context.Context, in *genpb.ChatJo
 	return a.cc.Member().JoinChatToQueue(ctx, in)
 }
 
-func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) *model.AppError {
+func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error {
 	if err := a.store.Member().CreateMember(domainId, queueId, holdSec, member); err != nil {
 		if ae, ok := err.(*model.AppError); ok {
 			return ae
@@ -56,7 +56,7 @@ func (a *FMAdapter) TaskJoinToAgent(ctx context.Context, in *genpb.TaskJoinToAge
 	return a.cc.Member().TaskJoinToAgent(ctx, in)
 }
 
-func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, extension string) *model.AppError {
+func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, extension string) error {
 	agentId, storeErr := a.store.User().GetAgentIdByExtension(domainId, extension)
 	if storeErr != nil {
 		return model.NewAppError("CancelUserDistribute", "store.user.get_agent_id", nil, storeErr.Error(), http.StatusInternalServerError)
@@ -76,7 +76,7 @@ func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, ex
 	return nil
 }
 
-func (a *FMAdapter) AttemptResult(result *model.AttemptResult) *model.AppError {
+func (a *FMAdapter) AttemptResult(result *model.AttemptResult) error {
 	req := &genpb.AttemptResultRequest{
 		AttemptId:                   result.Id,
 		Status:                      result.Status,
@@ -118,7 +118,7 @@ func (a *FMAdapter) LeavingIMToInboundQueue(attId int64) {
 	a.cc.UnSubscribeAttempt(attId)
 }
 
-func (a *FMAdapter) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) *model.AppError {
+func (a *FMAdapter) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error {
 	if err := a.cc.Member().CancelAttempt(ctx, att.AttemptId, result, att.AppId); err != nil {
 		return model.NewAppError("CancelAttempt", "app.attempt.cancel", nil, err.Error(), http.StatusInternalServerError)
 	}

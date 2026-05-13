@@ -44,7 +44,7 @@ type SessionStore interface {
 }
 
 type CacheStore interface {
-	Set(key, value any) *model.AppError
+	Set(key, value any) error
 }
 
 type UserStore interface {
@@ -57,7 +57,7 @@ type EmailStore interface {
 	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, error)
 	GetProfile(id int) (*model.EmailProfile, error)
 	GetProfileUpdatedAt(domainId int64, id int) (int64, error)
-	SetError(profileId int, appErr *model.AppError) error
+	SetError(profileId int, appErr error) error
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, error)
 	SetToken(id int, token *oauth2.Token) error

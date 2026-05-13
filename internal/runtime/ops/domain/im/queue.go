@@ -19,9 +19,9 @@ import (
 
 // QueueDeps is the subset of  the queue ops need.
 type QueueDeps interface {
-	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) *model.AppError
-	FindQueueByName(domainId int64, name string) (int32, *model.AppError)
-	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
+	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error
+	FindQueueByName(domainId int64, name string) (int32, error)
+	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinIMToInboundQueue(ctx context.Context, in *genpb.IMJoinToQueueRequest) (int64, <-chan domcc.QueueEvent, error)
 	LeavingIMToInboundQueue(attId int64)
 }

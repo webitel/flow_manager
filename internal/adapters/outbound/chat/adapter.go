@@ -26,14 +26,14 @@ func (a *ChatMgrAdapter) BroadcastChatMessage(ctx context.Context, domainId int6
 	return a.mgr.BroadcastMessage(ctx, domainId, req, peers)
 }
 
-func (a *ChatMgrAdapter) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError {
+func (a *ChatMgrAdapter) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error {
 	if err := a.mgr.SendAction(ctx, channelId, action); err != nil {
 		return model.NewAppError("Chat", "chat.send_action.error", nil, err.Error(), http.StatusInternalServerError)
 	}
 	return nil
 }
 
-func (a *ChatMgrAdapter) ContactLinkToChat(ctx context.Context, conversationId string, contactId string) *model.AppError {
+func (a *ChatMgrAdapter) ContactLinkToChat(ctx context.Context, conversationId string, contactId string) error {
 	if err := a.mgr.LinkContact(ctx, contactId, conversationId); err != nil {
 		return model.NewAppError("Chat", "chat.link_contact.error", nil, err.Error(), http.StatusInternalServerError)
 	}

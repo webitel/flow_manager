@@ -24,35 +24,35 @@ const (
 
 var fixNamePattern = regexp.MustCompile(`'|"|,`)
 
-func (c *Connection) Answer(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) Answer(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "answer", "")
 }
 
-func (c *Connection) PreAnswer(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) PreAnswer(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "pre_answer", "")
 }
 
-func (c *Connection) RingReady(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) RingReady(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "ring_ready", "")
 }
 
-func (c *Connection) Hangup(ctx context.Context, cause string) (model.Response, *model.AppError) {
+func (c *Connection) Hangup(ctx context.Context, cause string) (model.Response, error) {
 	return c.executeWithContext(ctx, "hangup", cause)
 }
 
-func (c *Connection) HangupNoRoute(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) HangupNoRoute(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "hangup", HANGUP_NO_ROUTE_DESTINATION)
 }
 
-func (c *Connection) HangupAppErr(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) HangupAppErr(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "hangup", HANGUP_NORMAL_TEMPORARY_FAILURE)
 }
 
-func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, *model.AppError) {
+func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, error) {
 	return c.executeWithContext(ctx, "sleep", fmt.Sprintf("%d", timeout))
 }
 
-func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, name string, volumeReduction int) (model.Response, *model.AppError) {
+func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, name string, volumeReduction int) (model.Response, error) {
 	s, ok := c.buildFileLink(file)
 	if !ok {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
@@ -71,7 +71,7 @@ func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.Playbac
 	return res, err
 }
 
-func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (model.Response, *model.AppError) {
+func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (model.Response, error) {
 	if len(name) > 10 {
 		name = name[0:10]
 	}
@@ -88,7 +88,7 @@ func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (m
 // FIXME GLOBAL VARS
 func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string,
 	endpoints []*model.Endpoint, codecs []string, hook chan struct{}, pickup string,
-) (model.Response, *model.AppError) {
+) (model.Response, error) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -184,7 +184,7 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 	return c.executeWithContext(ctx, "bridge", dialString)
 }
 
-func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *model.AppError) {
+func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, error) {
 	if delay == 0 {
 		return c.executeWithContext(ctx, "echo", "")
 	} else {
@@ -192,7 +192,7 @@ func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *mode
 	}
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, error) {
 	exp := make(map[string]any)
 	for _, v := range vars {
 		if v == "" {
@@ -210,7 +210,7 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Conference(ctx context.Context, name, profile, pin string, tags []string) (model.Response, *model.AppError) {
+func (c *Connection) Conference(ctx context.Context, name, profile, pin string, tags []string) (model.Response, error) {
 	data := fmt.Sprintf("%s_%d@%s", name, c.DomainId(), profile)
 	if pin != "" {
 		data += "+" + pin
@@ -222,7 +222,7 @@ func (c *Connection) Conference(ctx context.Context, name, profile, pin string, 
 	return c.executeWithContext(ctx, "conference", data)
 }
 
-func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, error) {
 	if c.resample != 0 && !c.IsSetResample() {
 		c.Set(ctx, model.Variables{
 			"record_sample_rate": c.resample,
@@ -239,7 +239,7 @@ type SpeechAiMessage struct {
 	Sender  string `json:"sender"`
 }
 
-func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, error) {
 	if c.resample != 0 && !c.IsSetResample() {
 		c.Set(ctx, model.Variables{
 			"record_sample_rate": c.resample,
@@ -325,7 +325,7 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
 }
 
-func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
+func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, error) {
 	// FIXME SET
 
 	vrs := map[string]any{
@@ -349,33 +349,33 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format))
 }
 
-func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {
+func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, error) {
 	return c.executeWithContext(ctx, "stop_record_session",
 		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
 }
 
-func (c *Connection) FlushDTMF(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) FlushDTMF(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "flush_dtmf", "")
 }
 
-func (c *Connection) StartDTMF(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) StartDTMF(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "start_dtmf", "")
 }
 
-func (c *Connection) StopDTMF(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) StopDTMF(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "stop_dtmf", "")
 }
 
-func (c *Connection) Queue(ctx context.Context, ringFile string) (model.Response, *model.AppError) {
+func (c *Connection) Queue(ctx context.Context, ringFile string) (model.Response, error) {
 	return c.executeWithContext(ctx, "wbt_queue", ringFile)
 }
 
-func (c *Connection) Intercept(ctx context.Context, id string) (model.Response, *model.AppError) {
+func (c *Connection) Intercept(ctx context.Context, id string) (model.Response, error) {
 	c.Api(fmt.Sprintf("uuid_transfer %s intercept:%s inline", c.Id(), id))
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (model.Response, *model.AppError) {
+func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (model.Response, error) {
 	req := fmt.Sprintf("%s@%s ", c.DomainName(), name)
 	if in {
 		req += "in"
@@ -386,11 +386,11 @@ func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lo
 	return c.executeWithContext(ctx, "valet_park", req)
 }
 
-func (c *Connection) Push(ctx context.Context, name, tag string) (model.Response, *model.AppError) {
+func (c *Connection) Push(ctx context.Context, name, tag string) (model.Response, error) {
 	return c.executeWithContext(ctx, "push", fmt.Sprintf("%s=%s", name, tag))
 }
 
-func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response, *model.AppError) {
+func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response, error) {
 	tmp := c.GetVariable("Caller-Channel-Answered-Time")
 
 	if tmp == "0" || tmp == "" {
@@ -401,7 +401,7 @@ func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response
 	return c.executeWithContext(ctx, tmp, strings.Join(uri, ","))
 }
 
-func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) (model.Response, *model.AppError) {
+func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) (model.Response, error) {
 	fileString, ok := c.getFileString(files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
@@ -410,7 +410,7 @@ func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) 
 	}
 }
 
-func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (model.Response, *model.AppError) {
+func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (model.Response, error) {
 	return c.Set(ctx, model.Variables{
 		"transfer_to_schema_id": fmt.Sprintf("%d", schemaId),
 		"transfer_after_bridge": fmt.Sprintf("%s:XML:default", c.Destination()),
@@ -461,7 +461,7 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 	return res
 }
 
-func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, error) {
 	var fs []string
 	var tmp string
 
@@ -482,7 +482,7 @@ func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings
 	}
 }
 
-func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, error) {
 	tmp := "http_cache://http://$${cdr_url}/sys/tts"
 
 	path += "&format=opus"
@@ -502,15 +502,15 @@ func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.Pla
 	}
 }
 
-func (c *Connection) PlaybackUrl(ctx context.Context, url string) (model.Response, *model.AppError) {
+func (c *Connection) PlaybackUrl(ctx context.Context, url string) (model.Response, error) {
 	return c.executeWithContext(ctx, "playback", url)
 }
 
-func (c *Connection) RefreshVars(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) RefreshVars(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "dump", "")
 }
 
-func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, *model.AppError) {
+func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, error) {
 	fileString, ok := c.getFileString(files)
 	if !ok {
 		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
@@ -519,7 +519,7 @@ func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.Pl
 	return c.PlaybackUrlAndGetDigits(ctx, fileString, params)
 }
 
-func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *model.PlaybackDigits) (model.Response, *model.AppError) {
+func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *model.PlaybackDigits) (model.Response, error) {
 	if params.Timeout == nil {
 		params.Timeout = model.NewInt(3000)
 	}
@@ -552,7 +552,7 @@ func (c *Connection) PlaybackUrlAndGetDigits(ctx context.Context, fileString str
 		*params.Tries, *params.Timeout, params.Terminators, fileString, *params.SetVar, *params.Regexp, dgTimeout))
 }
 
-func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, *model.AppError) {
+func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.Response, error) {
 	lang = strings.ToLower(lang)
 	s := strings.Split(lang, "_")
 
@@ -566,15 +566,15 @@ func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.R
 	})
 }
 
-func (c *Connection) UnSet(ctx context.Context, name string) (model.Response, *model.AppError) {
+func (c *Connection) UnSet(ctx context.Context, name string) (model.Response, error) {
 	return c.executeWithContext(ctx, "unset", name)
 }
 
-func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) (model.Response, *model.AppError) {
+func (c *Connection) ScheduleHangup(ctx context.Context, sec int, cause string) (model.Response, error) {
 	return c.executeWithContext(ctx, "sched_hangup", fmt.Sprintf("+%d %s", sec, cause))
 }
 
-func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, transfer *model.PlaybackFile) (model.Response, *model.AppError) {
+func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, transfer *model.PlaybackFile) (model.Response, error) {
 	vars := model.Variables{}
 	if call != nil {
 		if l, ok := c.buildFileLink(call); ok {
@@ -601,16 +601,16 @@ func (c *Connection) Ringback(ctx context.Context, export bool, call, hold, tran
 	return c.Set(ctx, vars)
 }
 
-func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model.Response, *model.AppError) {
+func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model.Response, error) {
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) Cv(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "cv_bug", "start zidx=0 debug=0 neighbors=1 skip=1 abs=9 scaleto=wh allclear png=igor.png ticker=#cccccc:#54d41e:/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed.ttf:4%:1:igor:'Hello test test' allflat")
 	// return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
 }
 
-func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, *model.AppError) {
+func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, error) {
 	if config.Lang == "" {
 		if config.Lang, _ = c.get("GOOGLE_SPEECH_LANG"); config.Lang == "" {
 			config.Lang = "en-US"
@@ -674,7 +674,7 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, error) {
 	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s stop", c.id)); err != nil {
 		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribeStop.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
 	}
@@ -686,7 +686,7 @@ func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, 
 StartRecognize(ctx context.Context, connection, dialogId string, rate int) error
 StopRecognize(ctx context.Context, dialogId string)
 */
-func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (model.Response, *model.AppError) {
+func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (model.Response, error) {
 	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s %d", c.id, connection, rate, dialogId, vadTimeout)
 
 	_, err := c.Api(args)
@@ -697,7 +697,7 @@ func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId st
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) StopRecognize(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) StopRecognize(ctx context.Context) (model.Response, error) {
 	args := fmt.Sprintf("uuid_wbt_stt %s stop", c.id)
 
 	_, err := c.Api(args)
@@ -708,7 +708,7 @@ func (c *Connection) StopRecognize(ctx context.Context) (model.Response, *model.
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) UpdateCid(ctx context.Context, name, number, destination *string) (res model.Response, err *model.AppError) {
+func (c *Connection) UpdateCid(ctx context.Context, name, number, destination *string) (res model.Response, err error) {
 	if name != nil {
 		if res, err = c.executeWithContext(ctx, "set_profile_var", fmt.Sprintf("caller_id_name=%s", *name)); err != nil {
 			return nil, err
@@ -736,16 +736,16 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number, destination *s
 	return res, err
 }
 
-func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, *model.AppError) {
+func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, error) {
 	return c.executeWithContext(ctx, "wbt_amd", strings.Join(params.Tags, ","))
 }
 
-func (c *Connection) Pickup(ctx context.Context, name string) (model.Response, *model.AppError) {
+func (c *Connection) Pickup(ctx context.Context, name string) (model.Response, error) {
 	return c.executeWithContext(ctx, "pickup", fmt.Sprintf("%s@%d", name, c.domainId))
 }
 
 // TODO
-func (c *Connection) Say(ctx context.Context, val string) (model.Response, *model.AppError) {
+func (c *Connection) Say(ctx context.Context, val string) (model.Response, error) {
 	return c.executeWithContext(ctx, "say", val)
 }
 
@@ -754,7 +754,7 @@ func (c *Connection) PickupHash(name string) string {
 	return fmt.Sprintf("%s@%d", name, c.domainId)
 }
 
-func (c *Connection) Bot(ctx context.Context, conn string, rate int, id string, vars map[string]string) (model.Response, *model.AppError) {
+func (c *Connection) Bot(ctx context.Context, conn string, rate int, id string, vars map[string]string) (model.Response, error) {
 	args := fmt.Sprintf("%s %d %s", conn, rate, id)
 
 	if vars != nil {
@@ -764,12 +764,12 @@ func (c *Connection) Bot(ctx context.Context, conn string, rate int, id string, 
 	return c.executeWithContext(ctx, "wbt_voice_bot", args)
 }
 
-func (c *Connection) Update(ctx context.Context) (model.Response, *model.AppError) {
+func (c *Connection) Update(ctx context.Context) (model.Response, error) {
 	return c.executeWithContext(ctx, "wbt_update_call", "")
 }
 
-func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
-	var err *model.AppError
+func (c *Connection) exportCallVariables(ctx context.Context, vars model.Variables) (model.Response, error) {
+	var err error
 	for k, v := range vars {
 		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf("%s=%s", k, v)); err != nil {
 			break

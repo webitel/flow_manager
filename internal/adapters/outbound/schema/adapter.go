@@ -44,7 +44,7 @@ func (a *SchemaAdapter) SetCert(c presign.PreSign) { a.cert = c }
 
 // ── timezones ─────────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) InitCacheTimezones() *model.AppError {
+func (a *SchemaAdapter) InitCacheTimezones() error {
 	list, storeErr := a.store.Calendar().GetTimezones()
 	if storeErr != nil {
 		return model.NewAppError("InitCacheTimezones", "store.calendar.get_timezones", nil, storeErr.Error(), http.StatusInternalServerError)
@@ -70,7 +70,7 @@ func (a *SchemaAdapter) GetLocation(id int) *time.Location {
 
 // ── schema ────────────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*model.Schema, *model.AppError) {
+func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*model.Schema, error) {
 	if v, ok := a.schemaCache.Get(id); ok {
 		s := v.(*model.Schema)
 		if s.UpdatedAt == updatedAt {
@@ -91,7 +91,7 @@ func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*mod
 	return s, nil
 }
 
-func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError) {
+func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, error) {
 	v, err, _ := requestGroup.Do(fmt.Sprintf("GetSchemaById-%d-%d", domainId, id), func() (interface{}, error) {
 		return a.store.Schema().GetUpdatedAt(domainId, id)
 	})
@@ -101,12 +101,12 @@ func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, *m
 	return a.GetSchema(domainId, id, v.(int64))
 }
 
-func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, error) {
 	routing, rErr := a.store.Schema().GetTransferredRouting(domainId, schemaId)
 	if rErr != nil {
 		return nil, toAppError("SearchTransferredRouting", rErr)
 	}
-	var schemaErr *model.AppError
+	var schemaErr error
 	routing.Schema, schemaErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	if schemaErr != nil {
 		return nil, schemaErr
@@ -116,7 +116,7 @@ func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (
 
 // ── system settings ───────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError) {
+func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, error) {
 	key := fmt.Sprintf("%d-%s", domainId, name)
 	if c, ok := systemCache.Get(key); ok {
 		return c.(model.SysValue), nil
@@ -149,7 +149,7 @@ func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, n
 
 // ── hook ──────────────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetHookById(key string) (model.WebHook, *model.AppError) {
+func (a *SchemaAdapter) GetHookById(key string) (model.WebHook, error) {
 	v, err, _ := hookGroup.Do(key, func() (interface{}, error) {
 		return a.store.WebHook().Get(key)
 	})
@@ -178,7 +178,7 @@ func (a *SchemaAdapter) SetGlobalVar(ctx context.Context, domainId int64, name, 
 	})
 }
 
-func (a *SchemaAdapter) SetSchemaVariable(ctx context.Context, domainId int64, vars map[string]*model.SchemaVariable) *model.AppError {
+func (a *SchemaAdapter) SetSchemaVariable(ctx context.Context, domainId int64, vars map[string]*model.SchemaVariable) error {
 	if len(vars) == 0 {
 		return nil
 	}
@@ -242,37 +242,37 @@ func removeQuote(text []byte) string {
 
 // ── call routing ──────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().FromGateway(domainId, gatewayId)
 	if err != nil {
 		return nil, toAppError("GetRoutingFromDestToGateway", err)
 	}
-	var appErr *model.AppError
+	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().SearchToDestination(domainId, dest)
 	if err != nil {
 		return nil, toAppError("SearchOutboundToDestinationRouting", err)
 	}
-	var appErr *model.AppError
+	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().FromQueue(domainId, queueId)
 	if err != nil {
 		return nil, toAppError("SearchOutboundFromQueueRouting", err)
 	}
-	var appErr *model.AppError
+	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*model.Routing, error) {
 	return &model.Routing{
 		DomainId: domainId,
 		Schema: &model.Schema{
@@ -287,7 +287,7 @@ func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*mode
 	}, nil
 }
 
-func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*model.Routing, error) {
 	return &model.Routing{
 		DomainId: domainId,
 		Schema: &model.Schema{
@@ -304,27 +304,27 @@ func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*mode
 
 // ── chat routing ──────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromProfile(domainId, profileId)
 	if err != nil {
 		return nil, model.NewAppError("GetChatRouteFromProfile", "store.chat.routing_from_profile", nil, err.Error(), http.StatusInternalServerError)
 	}
-	var appErr *model.AppError
+	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromSchemaId(domainId, schemaId)
 	if err != nil {
 		return nil, model.NewAppError("GetChatRouteFromSchemaId", "store.chat.routing_from_schema", nil, err.Error(), http.StatusInternalServerError)
 	}
-	var appErr *model.AppError
+	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, *model.AppError) {
+func (a *SchemaAdapter) GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, error) {
 	return &model.Routing{
 		DomainId: domainId,
 		Schema: &model.Schema{

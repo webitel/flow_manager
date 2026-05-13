@@ -15,9 +15,9 @@ import (
 
 // LinkDeps is the subset of RouterDeps that linkContact needs.
 type LinkDeps interface {
-	CallSetContactId(domainId int64, callId string, contactId int64) *model.AppError
-	ContactLinkToChat(ctx context.Context, conversationId string, contactId string) *model.AppError
-	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
+	CallSetContactId(domainId int64, callId string, contactId int64) error
+	ContactLinkToChat(ctx context.Context, conversationId string, contactId string) error
+	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) error
 }
 
 // Register adds all contacts ops to reg.
@@ -269,7 +269,7 @@ func (o *linkContactOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 		channel = model.ConnectionTypeChat
 	}
 
-	var linkErr *model.AppError
+	var linkErr error
 	switch channel {
 	case model.ConnectionTypeCall:
 		linkErr = o.deps.CallSetContactId(conn.DomainId(), sessionId, contactIds[0])

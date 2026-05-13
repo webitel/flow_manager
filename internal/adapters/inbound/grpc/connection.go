@@ -103,7 +103,7 @@ func (c *Connection) Type() model.ConnectionType {
 	return model.ConnectionTypeGrpc
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -141,7 +141,7 @@ func (c *Connection) Scope() model.Scope {
 	return c.scope
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for _, v := range vars {

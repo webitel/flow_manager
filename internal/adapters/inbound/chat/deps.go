@@ -13,9 +13,9 @@ type Deps interface {
 	runtimekit.BootstrapDeps
 	AppID() string
 	CheckpointRepo() session.Repository
-	GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, *model.AppError)
-	GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, *model.AppError)
-	GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, *model.AppError)
+	GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, error)
+	GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error)
+	GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, error)
 	chatop.ChatDeps
 	chatop.SendDeps
 	chatop.STTDeps

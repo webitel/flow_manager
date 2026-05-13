@@ -11,7 +11,7 @@ import (
 
 // AttemptDeps is the subset of  attempt ops need.
 type AttemptDeps interface {
-	AttemptResult(result *model.AttemptResult) *model.AppError
+	AttemptResult(result *model.AttemptResult) error
 	ResumeAttempt(ctx context.Context, attemptId, domainId int64) error
 }
 

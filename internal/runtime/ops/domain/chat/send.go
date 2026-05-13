@@ -11,10 +11,10 @@ import (
 
 // SendDeps is the subset of  the send ops need.
 type SendDeps interface {
-	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, *model.AppError)
-	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError)
-	SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError
-	GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType string, voice string, language string) (string, *model.AppError)
+	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, error)
+	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, error)
+	SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error
+	GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType string, voice string, language string) (string, error)
 }
 
 // RegisterSend registers sendMessage, sendText, sendFile, sendImage, sendAction, sendTts.
@@ -47,7 +47,7 @@ func (o *sendMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 			argv.File.Id = 1
 		} else {
 			server := resolveServer(argv.File.Server, argv.Server)
-			var appErr *model.AppError
+			var appErr error
 			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &model.SearchFile{
 				Id:   argv.File.Id,
 				Name: argv.File.Name,

@@ -66,7 +66,7 @@ type EmailAction struct {
 type EmailConnection interface {
 	Connection
 	SchemaId() int
-	Reply(text string) (*Email, *AppError)
+	Reply(text string) (*Email, error)
 	Email() *Email
 }
 

@@ -175,7 +175,7 @@ func (s *chatApi) TransferChatPlan(ctx context.Context, in *workflow.TransferCha
 	return &workflow.TransferChatPlanResponse{}, nil
 }
 
-func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {
+func (s *chatApi) getConversation(id string) (*conversation, error) {
 	conv, ok := s.conversations.Get(id)
 	if !ok {
 		return nil, model.NewAppError("Chat", "grpc.chat.conversation.not_found", nil,
@@ -185,15 +185,14 @@ func (s *chatApi) getConversation(id string) (*conversation, *model.AppError) {
 	return conv.(*conversation), nil
 }
 
-func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*conversation, *model.AppError) {
+func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*conversation, error) {
 	var conv *conversation
-	var appErr *model.AppError
 	var err error
 	var cli *ChatClientConnection
 
-	conv, appErr = s.getConversation(id)
-	if appErr != nil {
-		return nil, appErr
+	conv, err = s.getConversation(id)
+	if err != nil {
+		return nil, err
 	}
 
 	cli, err = s.getClientFromRequest(ctx)

@@ -38,7 +38,7 @@ type BootstrapDeps interface {
 	// direct calls
 	GetLocation(id int) *time.Location
 	GetStore() store.Store
-	GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError)
+	GetSchemaById(domainId int64, id int) (*model.Schema, error)
 	Meeting() domainmeeting.Client
 	Cases() domcases.Client
 	RuntimeStateRepo() persistence.Repository

@@ -324,7 +324,7 @@ func (c *Connection) SetDomainName(name string) {
 	c.domainName = name
 }
 
-func (c *Connection) SetSchemaId(id int) *model.AppError {
+func (c *Connection) SetSchemaId(id int) error {
 	_, err := c.Push(context.Background(), model.CallVariableSchemaIds, strconv.Itoa(id))
 	return err
 }
@@ -413,7 +413,7 @@ func (c *Connection) get(key string) (value string, ok bool) {
 	return value, ok
 }
 
-func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, error) {
 	m := make(map[string]string)
 	for k, v := range vars {
 		m[k] = fmt.Sprintf("%v", v)
@@ -440,7 +440,7 @@ func escapeFsMultiset(src string) string {
 	return res
 }
 
-func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars model.Variables) (model.Response, error) {
 	str := "^^"
 	for k, v := range vars {
 		str += fmt.Sprintf(`~'%s%s'=%v`, pref, k, escapeFsMultiset(fmt.Sprintf("%v", v)))
@@ -449,7 +449,7 @@ func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars 
 	return c.executeWithContext(ctx, "multiset", str)
 }
 
-func (c *Connection) setInternal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) setInternal(ctx context.Context, vars model.Variables) (model.Response, error) {
 	if c.Stopped() {
 		return nil, model.NewAppError("Call.setInternal", "call.app.set_internal.stopped", nil, "bad request", http.StatusBadRequest)
 	}
@@ -461,7 +461,7 @@ func (c *Connection) UserVariablePrefix(name string) string {
 	return UsrVarPrefix + name
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	if len(vars) == 0 {
 		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
 	}
@@ -473,8 +473,8 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	}
 }
 
-func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
-	var err *model.AppError
+func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Response, error) {
+	var err error
 	for k, v := range vars {
 		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`'%s'='%v'`, c.UserVariablePrefix(k), v)); err != nil {
 			return nil, err
@@ -503,8 +503,8 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	return res
 }
 
-func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
-	var err *model.AppError
+func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, error) {
+	var err error
 	for k, v := range vars {
 		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
 			return nil, err
@@ -630,7 +630,7 @@ func (c *Connection) HangupCause() string {
 	return c.hangupCause
 }
 
-func (c *Connection) executeWithContext(ctx context.Context, app string, args any) (model.Response, *model.AppError) {
+func (c *Connection) executeWithContext(ctx context.Context, app string, args any) (model.Response, error) {
 	if c.Stopped() {
 		return nil, errExecuteAfterHangup
 	}
@@ -670,7 +670,7 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args an
 	}
 }
 
-func (c *Connection) executeLoop(app, args string) *model.AppError {
+func (c *Connection) executeLoop(app, args string) error {
 	_, err := c.connection.SendMsg(eventsocket.MSG{
 		"call-command":     "execute",
 		"execute-app-name": app,
@@ -707,7 +707,7 @@ func (c *Connection) WaitForDisconnect1() {
 	<-c.disconnected
 }
 
-func (c *Connection) SendEvent(m map[string]string, name string) *model.AppError {
+func (c *Connection) SendEvent(m map[string]string, name string) error {
 	err := c.connection.SendEvent(m, name)
 	if err != nil {
 		return model.NewInternalError("send_event", err.Error())

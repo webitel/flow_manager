@@ -43,7 +43,7 @@ func (a *Adapter) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, e
 	return token.(string), nil
 }
 
-func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, *model.AppError) {
+func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, error) {
 	if settings.Params == nil || settings.Params.OAuth2 == nil {
 		return "", nil
 	}
@@ -66,7 +66,7 @@ func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, *model.Ap
 	return newToken.AccessToken, nil
 }
 
-func (a *Adapter) ReplyEmail(conn model.EmailConnection, text string) *model.AppError {
+func (a *Adapter) ReplyEmail(conn model.EmailConnection, text string) error {
 	replyEmail, err := conn.Reply(text)
 	if err != nil {
 		return err

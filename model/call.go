@@ -493,7 +493,7 @@ type Call interface {
 	Direction() CallDirection
 	Destination() string
 	SetDomainName(name string)
-	SetSchemaId(id int) *AppError
+	SetSchemaId(id int) error
 	DomainName() string
 	Dump()
 	IVRQueueId() *int
@@ -504,71 +504,71 @@ type Call interface {
 	SetTransferFromId()
 	MeetingId() string
 
-	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, *AppError)
+	SetTransferAfterBridge(ctx context.Context, schemaId int) (Response, error)
 
-	SetAll(ctx context.Context, vars Variables) (Response, *AppError)
-	SetNoLocal(ctx context.Context, vars Variables) (Response, *AppError)
-	UnSet(ctx context.Context, name string) (Response, *AppError)
+	SetAll(ctx context.Context, vars Variables) (Response, error)
+	SetNoLocal(ctx context.Context, vars Variables) (Response, error)
+	UnSet(ctx context.Context, name string) (Response, error)
 
-	RingReady(ctx context.Context) (Response, *AppError)
-	PreAnswer(ctx context.Context) (Response, *AppError)
-	Answer(ctx context.Context) (Response, *AppError)
-	Echo(ctx context.Context, delay int) (Response, *AppError)
-	Hangup(ctx context.Context, cause string) (Response, *AppError)
-	HangupNoRoute(ctx context.Context) (Response, *AppError)
-	HangupAppErr(ctx context.Context) (Response, *AppError)
-	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string, hook chan struct{}, pickup string) (Response, *AppError)
-	Sleep(ctx context.Context, delay int) (Response, *AppError)
-	// Voice(ctx context.Context, delay int) (Response, *AppError)
-	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
-	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
-	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
-	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
-	RecordSessionStop(ctx context.Context, name, format string) (Response, *AppError)
-	Export(ctx context.Context, vars []string) (Response, *AppError)
-	FlushDTMF(ctx context.Context) (Response, *AppError)
-	StartDTMF(ctx context.Context) (Response, *AppError)
-	StopDTMF(ctx context.Context) (Response, *AppError)
-	Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (Response, *AppError)
-	Playback(ctx context.Context, files []*PlaybackFile) (Response, *AppError)
-	Say(ctx context.Context, val string) (Response, *AppError)
-	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, *AppError)
-	PlaybackUrl(ctx context.Context, url string) (Response, *AppError)
-	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, *AppError)
+	RingReady(ctx context.Context) (Response, error)
+	PreAnswer(ctx context.Context) (Response, error)
+	Answer(ctx context.Context) (Response, error)
+	Echo(ctx context.Context, delay int) (Response, error)
+	Hangup(ctx context.Context, cause string) (Response, error)
+	HangupNoRoute(ctx context.Context) (Response, error)
+	HangupAppErr(ctx context.Context) (Response, error)
+	Bridge(ctx context.Context, call Call, strategy string, vars map[string]string, endpoints []*Endpoint, codec []string, hook chan struct{}, pickup string) (Response, error)
+	Sleep(ctx context.Context, delay int) (Response, error)
+	// Voice(ctx context.Context, delay int) (Response, error)
+	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, error)
+	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, error)
+	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, error)
+	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, error)
+	RecordSessionStop(ctx context.Context, name, format string) (Response, error)
+	Export(ctx context.Context, vars []string) (Response, error)
+	FlushDTMF(ctx context.Context) (Response, error)
+	StartDTMF(ctx context.Context) (Response, error)
+	StopDTMF(ctx context.Context) (Response, error)
+	Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (Response, error)
+	Playback(ctx context.Context, files []*PlaybackFile) (Response, error)
+	Say(ctx context.Context, val string) (Response, error)
+	PlaybackAndGetDigits(ctx context.Context, files []*PlaybackFile, params *PlaybackDigits) (Response, error)
+	PlaybackUrl(ctx context.Context, url string) (Response, error)
+	PlaybackUrlAndGetDigits(ctx context.Context, fileString string, params *PlaybackDigits) (Response, error)
 	PushSpeechMessage(msg SpeechMessage)
 	SpeechMessages(limit int) []SpeechMessage
 
-	TTS(ctx context.Context, path string, tts TTSSettings, digits *PlaybackDigits, timeout int) (Response, *AppError)
-	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
+	TTS(ctx context.Context, path string, tts TTSSettings, digits *PlaybackDigits, timeout int) (Response, error)
+	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, error)
 
-	Redirect(ctx context.Context, uri []string) (Response, *AppError)
-	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)
-	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, *AppError)
-	Ringback(ctx context.Context, export bool, call, hold, transfer *PlaybackFile) (Response, *AppError)
+	Redirect(ctx context.Context, uri []string) (Response, error)
+	SetSounds(ctx context.Context, lang, voice string) (Response, error)
+	ScheduleHangup(ctx context.Context, sec int, cause string) (Response, error)
+	Ringback(ctx context.Context, export bool, call, hold, transfer *PlaybackFile) (Response, error)
 
 	DumpExportVariables() map[string]string
 	ClearExportVariables()
 
-	Queue(ctx context.Context, ringFile string) (Response, *AppError)
-	Intercept(ctx context.Context, id string) (Response, *AppError)
+	Queue(ctx context.Context, ringFile string) (Response, error)
+	Intercept(ctx context.Context, id string) (Response, error)
 	GetVariable(string) string
 
-	Amd(ctx context.Context, params AmdParameters) (Response, *AppError)
-	AmdML(ctx context.Context, params AmdMLParameters) (Response, *AppError)
+	Amd(ctx context.Context, params AmdParameters) (Response, error)
+	AmdML(ctx context.Context, params AmdMLParameters) (Response, error)
 
-	Pickup(ctx context.Context, name string) (Response, *AppError)
+	Pickup(ctx context.Context, name string) (Response, error)
 	PickupHash(name string) string
 
-	StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (Response, *AppError)
-	StopRecognize(ctx context.Context) (Response, *AppError)
+	StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (Response, error)
+	StopRecognize(ctx context.Context) (Response, error)
 
-	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, *AppError)
-	GoogleTranscribeStop(ctx context.Context) (Response, *AppError)
-	RefreshVars(ctx context.Context) (Response, *AppError)
+	GoogleTranscribe(ctx context.Context, config *GetSpeech) (Response, error)
+	GoogleTranscribeStop(ctx context.Context) (Response, error)
+	RefreshVars(ctx context.Context) (Response, error)
 
-	UpdateCid(ctx context.Context, name, number, destination *string) (Response, *AppError)
-	Push(ctx context.Context, name, tag string) (Response, *AppError)
-	Cv(ctx context.Context) (Response, *AppError)
+	UpdateCid(ctx context.Context, name, number, destination *string) (Response, error)
+	Push(ctx context.Context, name, tag string) (Response, error)
+	Cv(ctx context.Context) (Response, error)
 	Stopped() bool
 
 	SetQueueCancel(cancel context.CancelFunc) bool
@@ -577,10 +577,10 @@ type Call interface {
 	HangupCause() string
 
 	GetContactId() int
-	BackgroundPlayback(ctx context.Context, file *PlaybackFile, name string, volumeReduction int) (Response, *AppError)
-	BackgroundPlaybackStop(ctx context.Context, name string) (Response, *AppError)
-	Bot(ctx context.Context, conn string, rate int, startMessage string, vars map[string]string) (Response, *AppError)
-	Update(ctx context.Context) (Response, *AppError)
+	BackgroundPlayback(ctx context.Context, file *PlaybackFile, name string, volumeReduction int) (Response, error)
+	BackgroundPlaybackStop(ctx context.Context, name string) (Response, error)
+	Bot(ctx context.Context, conn string, rate int, startMessage string, vars map[string]string) (Response, error)
+	Update(ctx context.Context) (Response, error)
 }
 
 type PlaybackFile struct {

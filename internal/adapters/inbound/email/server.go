@@ -2,6 +2,7 @@ package email
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -143,7 +144,7 @@ func (s *MailServer) listen() {
 	}
 }
 
-func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError) {
+func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, error) {
 	var pp *Profile
 	profile, ok := s.profiles.Get(id)
 	if ok {
@@ -163,12 +164,11 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 	})
 
 	if doErr != nil {
-		switch doErr.(type) {
-		case *model.AppError:
-			return nil, doErr.(*model.AppError)
-		default:
-			return nil, model.NewAppError("Email", "email.profile.create.app_err", nil, doErr.Error(), http.StatusInternalServerError)
+		var ae *model.AppError
+		if errors.As(doErr, &ae) {
+			return nil, ae
 		}
+		return nil, model.NewAppError("Email", "email.profile.create.app_err", nil, doErr.Error(), http.StatusInternalServerError)
 	}
 
 	pp = v.(*Profile)
@@ -200,7 +200,8 @@ retry:
 	var emails []*model.Email
 	emails, err = profile.Read()
 	if err != nil {
-		if err.DetailedError == "Not logged in" {
+		var ae *model.AppError
+		if errors.As(err, &ae) && ae.DetailedError == "Not logged in" {
 			if attempts == 0 {
 				attempts = attempts + 1
 				goto retry
@@ -229,7 +230,7 @@ retry:
 	}
 }
 
-func (s *MailServer) storeError(p *Profile, err *model.AppError) {
+func (s *MailServer) storeError(p *Profile, err error) {
 	saveErr := s.store.SetError(p.Id, err)
 	if saveErr != nil {
 		s.log.Err(saveErr)
@@ -244,15 +245,14 @@ func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
 	}
 }
 
-func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError {
-	var profile *Profile
-	var err *model.AppError
+func (s *MailServer) TestProfile(domainId int64, profileId int) error {
 	updatedAt, storeErr := s.store.GetProfileUpdatedAt(domainId, profileId)
 	if storeErr != nil {
 		return model.NewAppError("TestProfile", "store.email.get_profile_updated_at", nil, storeErr.Error(), http.StatusInternalServerError)
 	}
 
-	if profile, err = s.GetProfile(profileId, updatedAt); err != nil {
+	profile, err := s.GetProfile(profileId, updatedAt)
+	if err != nil {
 		return err
 	}
 

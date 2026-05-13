@@ -1,9 +1,6 @@
 package flow
 
 // moved from model/connection.go — see model/connection.go for re-export aliases
-// NOTE: Connection and Server interfaces are NOT moved here because they reference
-//       *model.AppError which would create an import cycle with model/.
-//       They remain defined in model/connection.go.
 
 import "encoding/json"
 

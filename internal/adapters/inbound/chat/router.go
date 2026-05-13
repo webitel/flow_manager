@@ -70,7 +70,7 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) *model.AppError {
+func (r *Router) Handle(conn model.Connection) error {
 	go r.handle(conn)
 	return nil
 }
@@ -78,7 +78,7 @@ func (r *Router) Handle(conn model.Connection) *model.AppError {
 func (r *Router) handle(conn model.Connection) {
 	conv := conn.(model.Conversation)
 	var routing *model.Routing
-	var err *model.AppError
+	var err error
 	shId := conv.SchemaId()
 
 	if shId > 0 {

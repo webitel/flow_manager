@@ -19,7 +19,7 @@ type callParser struct {
 	model.Call
 }
 
-func getOutboundReg(pattern, destination string) (map[string]string, *model.AppError) {
+func getOutboundReg(pattern, destination string) (map[string]string, error) {
 	r, err := regexp.Compile(pattern)
 	if err != nil {
 

@@ -133,7 +133,7 @@ func (c *conversation) Get(name string) (string, bool) {
 	return v, ok
 }
 
-func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	for k, v := range vars {
 		c.variables.Store(k, fmt.Sprintf("%v", v))
 	}
@@ -162,7 +162,7 @@ func (c *conversation) IsTransfer() bool {
 	return strings.EqualFold(c.breakCause, model.BreakChatTransferCause)
 }
 
-func (c *conversation) Break(cause string) *model.AppError {
+func (c *conversation) Break(cause string) error {
 	c.mx.Lock()
 	c.closeIfBreak()
 	c.breakCause = cause
@@ -199,7 +199,7 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
-func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
+func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -219,7 +219,7 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
+func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -254,7 +254,7 @@ func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRe
 	return nil
 }
 
-func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
+func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, error) {
 	req := &proto.Message{
 		Type:    "text",
 		Text:    menu.Text,
@@ -275,7 +275,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (model.Response, *model.AppError) {
+func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (model.Response, error) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -295,7 +295,7 @@ func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, ki
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, *model.AppError) {
+func (c *conversation) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -312,7 +312,7 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) proto(ctx context.Context, url, name, text string) (model.Response, *model.AppError) {
+func (c *conversation) proto(ctx context.Context, url, name, text string) (model.Response, error) {
 	err := c.sendMessage(ctx, &proto.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &proto.Message{
@@ -375,7 +375,7 @@ func (c *conversation) LastMessages(limit int) []model.ChatMessage {
 	return res
 }
 
-func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *model.AppError) {
+func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, error) {
 	msgs, err := c.receive(ctx, timeout)
 	if err != nil {
 		return nil, err
@@ -395,7 +395,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout,
 	return messageToText(msgs...), nil
 }
 
-func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Message, *model.AppError) {
+func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Message, error) {
 	id := model.NewId()
 
 	ch := make(chan []*proto.Message)
@@ -440,7 +440,7 @@ func (c *conversation) NodeName() string {
 	return c.NodeId()
 }
 
-func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCause) {
+func (c *conversation) Stop(err error, cause proto.CloseConversationCause) {
 	if err != nil {
 		c.log.Err(err)
 		cause = proto.CloseConversationCause_flow_err
@@ -468,7 +468,7 @@ func (c *conversation) Stop(err *model.AppError, cause proto.CloseConversationCa
 }
 
 // TODO transferVars
-func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
+func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, error) {
 	exp := make(map[string]any)
 	transferVars := make(map[string]string)
 	for _, v := range vars {
@@ -495,7 +495,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, *model.AppError) {
+func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, error) {
 	vars := model.Variables{}
 	req := &proto.SetVariablesRequest{
 		ChannelId: c.id,
@@ -516,7 +516,7 @@ func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Respo
 	return c.Set(ctx, vars)
 }
 
-func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) *model.AppError {
+func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) error {
 	if c.chBridge != nil {
 		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
 	}
@@ -679,7 +679,7 @@ func (c *conversation) GetQueueKey() *model.InQueueKey {
 	return c.queueKey
 }
 
-func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (model.Response, *model.AppError) {
+func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (model.Response, error) {
 	var res *ai_bots.ConverseResponse
 	stream, err := cli.Converse(ctx)
 	if err != nil {

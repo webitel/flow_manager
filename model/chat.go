@@ -39,25 +39,25 @@ const (
 type Conversation interface {
 	Connection
 	ProfileId() int64
-	Stop(err *AppError, cause proto.CloseConversationCause)
-	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
-	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
-	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, *AppError)
-	SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (Response, *AppError)
-	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, *AppError)
-	Bridge(ctx context.Context, userId int64, timeout int) *AppError
-	Export(ctx context.Context, vars []string) (Response, *AppError)
+	Stop(err error, cause proto.CloseConversationCause)
+	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, error)
+	SendTextMessage(ctx context.Context, text string) (Response, error)
+	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, error)
+	SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (Response, error)
+	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, error)
+	Bridge(ctx context.Context, userId int64, timeout int) error
+	Export(ctx context.Context, vars []string) (Response, error)
 	DumpExportVariables() map[string]string
 	NodeName() string
 	SchemaId() int32
 	UserId() int64
 	BreakCause() string
 	IsTransfer() bool
-	SendFile(ctx context.Context, text string, f *File, kind string) (Response, *AppError)
+	SendFile(ctx context.Context, text string, f *File, kind string) (Response, error)
 
 	SetQueue(*InQueueKey) bool
 	GetQueueKey() *InQueueKey
-	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	UnSet(ctx context.Context, varKeys []string) (Response, error)
 	LastMessages(limit int) []ChatMessage
-	Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (Response, *AppError)
+	Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (Response, error)
 }

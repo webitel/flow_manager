@@ -54,7 +54,7 @@ func Register(reg *ops.Registry) {
 }
 
 // syncOp wraps a no-args call method as an OpKindSync op.
-type syncOp func(ctx context.Context, call model.Call) (model.Response, *model.AppError)
+type syncOp func(ctx context.Context, call model.Call) (model.Response, error)
 
 func (f syncOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -69,16 +69,16 @@ func (f syncOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 	return ops.OpOutput{}, nil
 }
 
-func ringReadyFn(ctx context.Context, call model.Call) (model.Response, *model.AppError) {
+func ringReadyFn(ctx context.Context, call model.Call) (model.Response, error) {
 	return call.RingReady(ctx)
 }
-func preAnswerFn(ctx context.Context, call model.Call) (model.Response, *model.AppError) {
+func preAnswerFn(ctx context.Context, call model.Call) (model.Response, error) {
 	return call.PreAnswer(ctx)
 }
-func answerFn(ctx context.Context, call model.Call) (model.Response, *model.AppError) {
+func answerFn(ctx context.Context, call model.Call) (model.Response, error) {
 	return call.Answer(ctx)
 }
-func flushDtmfFn(ctx context.Context, call model.Call) (model.Response, *model.AppError) {
+func flushDtmfFn(ctx context.Context, call model.Call) (model.Response, error) {
 	return call.FlushDTMF(ctx)
 }
 

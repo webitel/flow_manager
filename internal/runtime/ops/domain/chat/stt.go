@@ -11,7 +11,7 @@ import (
 
 // STTDeps is the narrow interface required by the stt op.
 type STTDeps interface {
-	GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError)
+	GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error)
 }
 
 // RegisterSTT adds the stt op to reg.

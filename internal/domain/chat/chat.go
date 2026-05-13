@@ -1,8 +1,6 @@
 package chat
 
 // moved from model/chat.go — see model/chat.go for re-export aliases
-// NOTE: Conversation interface is NOT moved here because it references *model.AppError
-//       which would create an import cycle. It remains defined in model/chat.go.
 
 import "github.com/webitel/flow_manager/internal/domain/files"
 

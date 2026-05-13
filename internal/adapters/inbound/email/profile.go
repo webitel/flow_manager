@@ -92,24 +92,21 @@ func (p *Profile) String() string {
 	return fmt.Sprintf("%s <%s>", p.name, p.login)
 }
 
-func (p *Profile) Login() *model.AppError {
-	done := make(chan *model.AppError)
+func (p *Profile) Login() error {
+	done := make(chan error)
 	// TODO WTEL-4468
 	go func() {
 		done <- p.clientLogin()
 	}()
 	select {
 	case err := <-done:
-		if err != nil {
-			return err
-		}
-		return nil
+		return err
 	case <-time.After(time.Minute):
 		return model.NewAppError("Email", "email.login.timeout", nil, "Timeout", 500)
 	}
 }
 
-func (p *Profile) clientLogin() *model.AppError {
+func (p *Profile) clientLogin() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -183,7 +180,7 @@ func (p *Profile) clientLogin() *model.AppError {
 	return nil
 }
 
-func (p *Profile) Logout() *model.AppError {
+func (p *Profile) Logout() error {
 	p.Lock()
 	defer p.Unlock()
 
@@ -209,7 +206,7 @@ func (p *Profile) UpdatedAt() int64 {
 	return p.updatedAt
 }
 
-func (p *Profile) selectMailBox() *model.AppError {
+func (p *Profile) selectMailBox() error {
 	var err error
 	p.mbox, err = p.client.Select(p.Mailbox, false)
 	if err != nil {
@@ -219,7 +216,7 @@ func (p *Profile) selectMailBox() *model.AppError {
 	return nil
 }
 
-func (p *Profile) storeErr(err *model.AppError) {
+func (p *Profile) storeErr(err error) {
 	p.server.storeError(p, err)
 }
 
@@ -227,12 +224,11 @@ func (p *Profile) storeToken(token *oauth2.Token) {
 	p.server.storeToken(p, token)
 }
 
-func (p *Profile) Read() ([]*model.Email, *model.AppError) {
+func (p *Profile) Read() ([]*model.Email, error) {
 	if !p.logged {
 		if err := p.Login(); err != nil {
 			return nil, err
 		}
-		// return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
 	}
 	res := make([]*model.Email, 0)
 
@@ -285,7 +281,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	return res, nil
 }
 
-func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.AppError) {
+func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) {
 	id, err := model.GenerateMailID()
 	if err != nil {
 		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
@@ -354,7 +350,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	return rr, nil
 }
 
-func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
+func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, error) {
 	m := &model.Email{
 		ProfileId: p.Id,
 		Direction: "inbound", // TODO

@@ -13,7 +13,7 @@ import (
 type Deps interface {
 	runtimekit.BootstrapDeps
 	AppID() string
-	GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError)
-	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
+	GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, error)
+	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) error
 	emailop.ReplyDeps
 }

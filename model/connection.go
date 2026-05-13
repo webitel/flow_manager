@@ -28,8 +28,6 @@ const (
 )
 
 // Server is the interface implemented by each transport provider.
-// Kept here (not aliased) because its Consume() method returns model.Connection
-// which references *AppError — moving it would create an import cycle.
 type Server interface {
 	Name() string
 	Start() error
@@ -42,8 +40,6 @@ type Server interface {
 }
 
 // Connection is the core runtime context passed through a flow execution.
-// Kept here (not aliased) because Set() returns *AppError — moving it would
-// create an import cycle until AppError is extracted (Phase 5.2).
 type Connection interface {
 	Type() ConnectionType
 	Id() string
@@ -52,7 +48,7 @@ type Connection interface {
 
 	Context() context.Context
 	Get(key string) (string, bool)
-	Set(ctx context.Context, vars Variables) (Response, *AppError)
+	Set(ctx context.Context, vars Variables) (Response, error)
 	ParseText(text string, ops ...ParseOption) string
 
 	Close() error

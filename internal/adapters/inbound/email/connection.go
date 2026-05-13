@@ -106,11 +106,11 @@ func (c *connection) Get(name string) (string, bool) {
 	return fmt.Sprintf("%v", v), ok
 }
 
-func (c *connection) GetProfile() (*Profile, *model.AppError) {
+func (c *connection) GetProfile() (*Profile, error) {
 	return c.srv.GetProfile(c.pkey.Id, c.pkey.UpdatedAt)
 }
 
-func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for k, v := range vars {

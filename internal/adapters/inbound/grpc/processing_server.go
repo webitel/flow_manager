@@ -143,7 +143,7 @@ func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.Cance
 	return &workflow.CancelProcessingResponse{}, nil
 }
 
-func (s *processingApi) getProcessingById(id string) (*processingConnection, *model.AppError) {
+func (s *processingApi) getProcessingById(id string) (*processingConnection, error) {
 	obj, ok := s.connections.Get(id)
 	if !ok {
 		return nil, model.NewAppError("Processing.Get", "processing.form.get.not_found", nil, "Not found", http.StatusNotFound)

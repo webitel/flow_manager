@@ -1,8 +1,6 @@
 package chat
 
 // moved from model/im.go — see model/im.go for re-export aliases
-// NOTE: IMDialog interface is NOT moved here because it references *model.AppError
-//       which would create an import cycle. It remains defined in model/im.go.
 
 // CCQueueEvent is an event received from the call-centre queue.
 type CCQueueEvent struct {

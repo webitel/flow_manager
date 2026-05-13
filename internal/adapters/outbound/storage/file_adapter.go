@@ -20,7 +20,7 @@ func NewFileAdapter(s domstorage.Client) *FileAdapter {
 	return &FileAdapter{storage: s}
 }
 
-func (a *FileAdapter) GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType, voice, language string) (string, *model.AppError) {
+func (a *FileAdapter) GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType, voice, language string) (string, error) {
 	params := map[string]string{
 		"text":       text,
 		"profile_id": strconv.Itoa(profileId),
@@ -41,7 +41,7 @@ func (a *FileAdapter) GenerateTTSLink(ctx context.Context, text string, domainId
 	return resp, nil
 }
 
-func (a *FileAdapter) generateResourceSignature(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, *model.AppError) {
+func (a *FileAdapter) generateResourceSignature(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error) {
 	resp, err := a.storage.GenerateFileLink(ctx, fileId, domainId, source, action, query)
 	if err != nil {
 		return "", model.NewAppError("GeneratePreSignedLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
@@ -50,14 +50,10 @@ func (a *FileAdapter) generateResourceSignature(ctx context.Context, action, sou
 }
 
 func (a *FileAdapter) GeneratePreSignedLink(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error) {
-	link, appErr := a.generateResourceSignature(ctx, action, source, fileId, domainId, query)
-	if appErr != nil {
-		return "", appErr
-	}
-	return link, nil
+	return a.generateResourceSignature(ctx, action, source, fileId, domainId, query)
 }
 
-func (a *FileAdapter) SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError) {
+func (a *FileAdapter) SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, error) {
 	if source == "" {
 		source = "file"
 	}
@@ -74,7 +70,7 @@ func (a *FileAdapter) DownloadFile(domainId int64, id int64) (io.ReadCloser, err
 	return a.storage.Download(context.TODO(), domainId, id)
 }
 
-func (a *FileAdapter) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, *model.AppError) {
+func (a *FileAdapter) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
 	resp, err := a.storage.GetFileTranscription(ctx, fileId, domainId, profileId, language)
 	if err != nil {
 		return "", model.NewAppError("GetFileTranscription", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
@@ -82,7 +78,7 @@ func (a *FileAdapter) GetFileTranscription(ctx context.Context, fileId, domainId
 	return resp, nil
 }
 
-func (a *FileAdapter) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, *model.AppError) {
+func (a *FileAdapter) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, error) {
 	reqs := make([]domstorage.FileLinkRequest, len(files))
 	for i, f := range files {
 		reqs[i] = domstorage.FileLinkRequest{FileId: f.FileId, Action: f.Action, Source: f.Source}

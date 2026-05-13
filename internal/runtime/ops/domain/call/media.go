@@ -13,8 +13,8 @@ import (
 
 // MediaDeps is the narrow interface required by the playback and tts ops.
 type MediaDeps interface {
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
-	GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, *model.AppError)
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
+	GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, error)
 	GetAiBots() *aibridge.Client
 }
 
@@ -45,7 +45,7 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 		return ops.OpOutput{}, model.NewAppError("playback", "call.playback.valid.files", nil, "files required", 400)
 	}
 
-	var appErr *model.AppError
+	var appErr error
 	argv.Files, appErr = o.deps.GetMediaFiles(call.DomainId(), &argv.Files)
 	if appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -91,7 +91,7 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	return ops.OpOutput{}, nil
 }
 
-func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) *model.AppError {
+func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) error {
 	gs := argv.GetSpeech
 	if gs.SetVar == "" {
 		gs.SetVar = "wbt_stt_text"
@@ -134,7 +134,7 @@ func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv mode
 	return nil
 }
 
-func googleStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) *model.AppError {
+func googleStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) error {
 	if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 		return err
 	}
@@ -151,7 +151,7 @@ func googleStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) *m
 	return nil
 }
 
-func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleepTimeout, vStatus, vFinal string) *model.AppError {
+func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleepTimeout, vStatus, vFinal string) error {
 	if gs.Timeout <= 0 || !gs.BreakFinalOnTimeout {
 		return nil
 	}

@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -164,13 +165,11 @@ func unaryInterceptor(ctx context.Context,
 	if err != nil {
 		log.Err(err)
 
-		switch err.(type) {
-		case *model.AppError:
-			e := err.(*model.AppError)
-			return h, status.Error(httpCodeToGrpc(e.StatusCode), e.ToJson())
-		default:
-			return h, err
+		var appErr *model.AppError
+		if errors.As(err, &appErr) {
+			return h, status.Error(httpCodeToGrpc(appErr.StatusCode), appErr.ToJson())
 		}
+		return h, err
 	} else {
 		log.Debug(info.FullMethod + " - OK")
 	}

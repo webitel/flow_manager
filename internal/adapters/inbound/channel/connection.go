@@ -92,7 +92,7 @@ func (c *Connection) Get(key string) (string, bool) {
 	return v, ok
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
+func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 

@@ -17,7 +17,7 @@ type ProcessingConn interface {
 	Id() string
 	DomainId() int64
 	Get(key string) (string, bool)
-	Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError)
+	Set(ctx context.Context, vars model.Variables) (model.Response, error)
 	GetComponentByName(name string) any
 	SetComponent(name string, component any)
 	Export(ctx context.Context, vars []string)

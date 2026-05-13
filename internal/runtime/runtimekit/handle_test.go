@@ -38,7 +38,7 @@ func (c *fakeConn) Type() model.ConnectionType   { return 0 }
 func (c *fakeConn) NodeId() string               { return "" }
 func (c *fakeConn) DomainId() int64              { return 0 }
 func (c *fakeConn) Get(_ string) (string, bool)  { return "", false }
-func (c *fakeConn) Set(_ context.Context, _ model.Variables) (model.Response, *model.AppError) {
+func (c *fakeConn) Set(_ context.Context, _ model.Variables) (model.Response, error) {
 	return nil, nil
 }
 func (c *fakeConn) ParseText(text string, _ ...model.ParseOption) string { return text }

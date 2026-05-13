@@ -20,8 +20,8 @@ import (
 // ComplexDeps is the narrow interface required by bridge, joinQueue, and joinAgent ops.
 type ComplexDeps interface {
 	GetStore() store.Store
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
-	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
+	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinToInboundQueue(ctx context.Context, in *genpb.CallJoinToQueueRequest) (genpb.MemberService_CallJoinToQueueClient, error)
 	JoinToAgent(ctx context.Context, in *genpb.CallJoinToAgentRequest) (genpb.MemberService_CallJoinToAgentClient, error)
 }
@@ -177,7 +177,7 @@ func (o *bridgeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	return ops.OpOutput{}, nil
 }
 
-func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applications) ([]*model.Endpoint, *model.AppError) {
+func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applications) ([]*model.Endpoint, error) {
 	length := len(endpoints)
 	endp, storeErr := o.deps.GetStore().Endpoint().Get(int64(call.DomainId()), "NAME", "NUMBER", endpoints)
 	if storeErr != nil {
@@ -220,7 +220,7 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 
 // replaceBridgeEndpoints marshals endpoints to JSON, expands FS vars via
 // call.ParseText, then unmarshals back. Mirrors legacy replaceBridgeRequest.
-func replaceBridgeEndpoints(call model.Call, arr any) (model.Applications, *model.AppError) {
+func replaceBridgeEndpoints(call model.Call, arr any) (model.Applications, error) {
 	data, err := json.Marshal(arr)
 	if err != nil {
 		return nil, model.NewAppError("bridge", "call.bridge.valid.endpoints", nil, err.Error(), http.StatusBadRequest)
