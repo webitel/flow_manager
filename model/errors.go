@@ -1,14 +1,13 @@
 package model
 
-import (
-	"fmt"
-	"net/http"
-)
+import "errors"
 
-var (
-	ErrNotFoundRoute = NewAppError("Route", "app.route.not_found", nil, "not found route", http.StatusNotFound)
-)
+// ErrNotFoundRoute is returned when no routing record matches the call.
+// Callers use errors.Is to detect it.
+var ErrNotFoundRoute = errors.New("not found route")
 
-func ErrorRequiredParameter(appId string, param string) *AppError {
-	return NewAppError("Valid", "valid.app."+appId, nil, fmt.Sprintf("App=%s %s is required", appId, param), http.StatusBadRequest)
+// ErrorRequiredParameter returns a 400 Bad Request error for a missing parameter.
+// Deprecated: prefer apperrs.New(http.StatusBadRequest, ...) directly.
+func ErrorRequiredParameter(appId string, param string) error {
+	return errors.New("valid.app." + appId + ": App=" + appId + " " + param + " is required")
 }

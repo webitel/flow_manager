@@ -2,10 +2,12 @@ package event
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"
@@ -18,7 +20,7 @@ const (
 	refreshMissedNotification = "refresh_missed"
 )
 
-var ErrAllowUseMQ = model.NewAppError("App", "app.settings.mq.allow_use.disabled", nil, "Allow push message to MQ is disabled", http.StatusForbidden)
+var ErrAllowUseMQ = apperrs.New(http.StatusForbidden, "App: app.settings.mq.allow_use.disabled: Allow push message to MQ is disabled")
 
 // Adapter implements event-bus–backed Deps methods: notifications, open-link,
 // MQ publishing.
@@ -56,7 +58,7 @@ func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, 
 	if sockId == "" {
 		sockSession, storeErr := a.store.SocketSession().Get(userId, domainId, descTrackAppName)
 		if storeErr != nil {
-			return model.NewAppError("open_link", "store.open_link.error", nil, storeErr.Error(), http.StatusInternalServerError)
+			return fmt.Errorf("open_link: store.open_link.error: %w", storeErr)
 		}
 		sockId = sockSession.ID
 	}
@@ -70,7 +72,7 @@ func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, 
 	}
 	if pubErr := a.bus.Publish(context.Background(), engineExchange, "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson()); pubErr != nil {
 		wlog.Error(pubErr.Error())
-		return model.NewAppError("open_link", "mq.publish.err", nil, pubErr.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("open_link: mq.publish.err: %w", pubErr)
 	}
 	return nil
 }
@@ -80,7 +82,7 @@ func (a *EventBusAdapter) SendMQJson(exchange, key string, body []byte) error {
 		return ErrAllowUseMQ
 	}
 	if err := a.bus.Publish(context.Background(), exchange, key, body); err != nil {
-		return model.NewAppError("MQ", "mq.publish.err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("MQ: mq.publish.err: %w", err)
 	}
 	return nil
 }

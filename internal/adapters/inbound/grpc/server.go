@@ -2,7 +2,6 @@ package grpc
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/infra/discovery"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
@@ -165,11 +165,7 @@ func unaryInterceptor(ctx context.Context,
 	if err != nil {
 		log.Err(err)
 
-		var appErr *model.AppError
-		if errors.As(err, &appErr) {
-			return h, status.Error(httpCodeToGrpc(appErr.StatusCode), appErr.ToJson())
-		}
-		return h, err
+		return h, status.Error(httpCodeToGrpc(apperrs.CodeOf(err)), err.Error())
 	} else {
 		log.Debug(info.FullMethod + " - OK")
 	}

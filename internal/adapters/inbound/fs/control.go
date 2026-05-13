@@ -14,6 +14,7 @@ import (
 
 	"github.com/h2non/filetype"
 
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -55,7 +56,7 @@ func (c *Connection) Sleep(ctx context.Context, timeout int) (model.Response, er
 func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.PlaybackFile, name string, volumeReduction int) (model.Response, error) {
 	s, ok := c.buildFileLink(file)
 	if !ok {
-		return model.CallResponseError, model.NewAppError("FS", "fs.control.backgroundPlayback", nil, "bad file", http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("FS: fs.control.backgroundPlayback: bad file")
 	}
 
 	if len(name) > 10 {
@@ -286,7 +287,7 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 
 	cdrUrl, _ := c.Get("Application-Data")
 	if len(cdrUrl) < 15 {
-		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.cdr_url", nil, "not found Application-Data url", http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("FS: fs.control.ai.cdr_url: not found Application-Data url")
 	}
 	i := strings.Index(cdrUrl[13:], "/sys/recordings/ai")
 	if i > 1 {
@@ -295,20 +296,20 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 
 	res, err := http.DefaultClient.Get(cdrUrl + "/sys/recordings/ai/" + id + "/metadata")
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("FS: fs.control.ai.err: %w", err)
 	}
 
 	data, _ := io.ReadAll(res.Body)
 	res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, string(data), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("FS: fs.control.ai.err: %s", string(data))
 	}
 
 	var vars model.Variables
 	err = json.Unmarshal(data, &vars)
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.parse", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("FS: fs.control.ai.parse: %w", err)
 	}
 	r, e = c.Set(ctx, vars)
 	if e != nil {
@@ -404,7 +405,7 @@ func (c *Connection) Redirect(ctx context.Context, uri []string) (model.Response
 func (c *Connection) Playback(ctx context.Context, files []*model.PlaybackFile) (model.Response, error) {
 	fileString, ok := c.getFileString(files)
 	if !ok {
-		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "FS: fs.control.playback.err: not found file")
 	} else {
 		return c.executeWithContext(ctx, "playback", fileString)
 	}
@@ -513,7 +514,7 @@ func (c *Connection) RefreshVars(ctx context.Context) (model.Response, error) {
 func (c *Connection) PlaybackAndGetDigits(ctx context.Context, files []*model.PlaybackFile, params *model.PlaybackDigits) (model.Response, error) {
 	fileString, ok := c.getFileString(files)
 	if !ok {
-		return nil, model.NewAppError("FS", "fs.control.playback.err", nil, "not found file", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "FS: fs.control.playback.err: not found file")
 	}
 
 	return c.PlaybackUrlAndGetDigits(ctx, fileString, params)
@@ -557,7 +558,7 @@ func (c *Connection) SetSounds(ctx context.Context, lang, voice string) (model.R
 	s := strings.Split(lang, "_")
 
 	if len(s) < 1 {
-		return nil, model.NewAppError("FS", "fs.control.setSounds.err", nil, "bad lang parameter", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "FS: fs.control.setSounds.err: bad lang parameter")
 	}
 
 	return c.setInternal(ctx, model.Variables{
@@ -663,11 +664,11 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 			boolString(config.Enhanced) + " " + config.Hints
 
 		if _, err := c.Api(str); err != nil {
-			return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+			return nil, apperrs.New(http.StatusBadRequest, fmt.Sprintf("FS: fs.control.GoogleTranscribe.err: %s", err.Error()))
 		}
 	default:
 		if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s start %s interim", c.id, config.Lang)); err != nil {
-			return nil, model.NewAppError("FS", "fs.control.GoogleTranscribe.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+			return nil, apperrs.New(http.StatusBadRequest, fmt.Sprintf("FS: fs.control.GoogleTranscribe.err: %s", err.Error()))
 		}
 	}
 
@@ -676,7 +677,7 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 
 func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, error) {
 	if _, err := c.Api(fmt.Sprintf("uuid_google_transcribe %s stop", c.id)); err != nil {
-		return nil, model.NewAppError("FS", "fs.control.GoogleTranscribeStop.err", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, fmt.Sprintf("FS: fs.control.GoogleTranscribeStop.err: %s", err.Error()))
 	}
 
 	return model.CallResponseOK, nil
@@ -691,7 +692,7 @@ func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId st
 
 	_, err := c.Api(args)
 	if err != nil {
-		return nil, model.NewAppError("FS", "fs.control.stt.start", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, fmt.Sprintf("FS: fs.control.stt.start: %s", err.Error()))
 	}
 
 	return model.CallResponseOK, nil
@@ -702,7 +703,7 @@ func (c *Connection) StopRecognize(ctx context.Context) (model.Response, error) 
 
 	_, err := c.Api(args)
 	if err != nil {
-		return nil, model.NewAppError("FS", "fs.control.stt.stop", nil, fmt.Sprintf("%s", err.Error()), http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, fmt.Sprintf("FS: fs.control.stt.stop: %s", err.Error()))
 	}
 
 	return model.CallResponseOK, nil

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
 )
@@ -40,16 +41,16 @@ func (o *sttOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, err
 	}
 	if argv.FileId <= 0 {
-		return ops.OpOutput{}, model.NewAppError("stt", "chat_route.stt.check_args.error", nil, "file id invalid", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "stt: file id invalid")
 	}
 	if argv.ProfileId <= 0 {
-		return ops.OpOutput{}, model.NewAppError("stt", "chat_route.stt.check_args.error", nil, "profile id invalid", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "stt: profile id invalid")
 	}
 	if argv.Language == "" {
-		return ops.OpOutput{}, model.NewAppError("stt", "chat_route.stt.check_args.error", nil, "language empty", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "stt: language empty")
 	}
 	if argv.SetVar == "" {
-		return ops.OpOutput{}, model.NewAppError("stt", "chat_route.stt.check_args.error", nil, "set var empty", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "stt: set var empty")
 	}
 
 	text, appErr := o.deps.GetFileTranscription(ctx, argv.FileId, in.DomainID, argv.ProfileId, argv.Language)

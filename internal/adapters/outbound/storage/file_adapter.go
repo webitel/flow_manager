@@ -2,8 +2,8 @@ package storage
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"net/http"
 	"strconv"
 
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
@@ -36,7 +36,7 @@ func (a *FileAdapter) GenerateTTSLink(ctx context.Context, text string, domainId
 	}
 	resp, err := a.storage.GenerateFileLink(ctx, 0, domainId, "tts", "download", params)
 	if err != nil {
-		return "", model.NewAppError("GenerateTTSLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
+		return "", fmt.Errorf("GenerateTTSLink: app.cert.generate_tts_link.get_link.error: %w", err)
 	}
 	return resp, nil
 }
@@ -44,7 +44,7 @@ func (a *FileAdapter) GenerateTTSLink(ctx context.Context, text string, domainId
 func (a *FileAdapter) generateResourceSignature(ctx context.Context, action, source string, fileId, domainId int64, query map[string]string) (string, error) {
 	resp, err := a.storage.GenerateFileLink(ctx, fileId, domainId, source, action, query)
 	if err != nil {
-		return "", model.NewAppError("GeneratePreSignedLink", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
+		return "", fmt.Errorf("GeneratePreSignedLink: app.cert.generate_tts_link.get_link.error: %w", err)
 	}
 	return resp, nil
 }
@@ -73,7 +73,7 @@ func (a *FileAdapter) DownloadFile(domainId int64, id int64) (io.ReadCloser, err
 func (a *FileAdapter) GetFileTranscription(ctx context.Context, fileId, domainId int64, profileId int64, language string) (string, error) {
 	resp, err := a.storage.GetFileTranscription(ctx, fileId, domainId, profileId, language)
 	if err != nil {
-		return "", model.NewAppError("GetFileTranscription", "app.cert.generate_tts_link.get_link.error", nil, err.Error(), http.StatusInternalServerError)
+		return "", fmt.Errorf("GetFileTranscription: app.cert.generate_tts_link.get_link.error: %w", err)
 	}
 	return resp, nil
 }
@@ -85,7 +85,7 @@ func (a *FileAdapter) BulkGenerateFileLink(ctx context.Context, domainId int64, 
 	}
 	resp, err := a.storage.BulkGenerateFileLink(ctx, domainId, reqs)
 	if err != nil {
-		return nil, model.NewAppError("BulkGenerateFileLink", "app.cert.generate_file_link.bulk_link.error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("BulkGenerateFileLink: app.cert.generate_file_link.bulk_link.error: %w", err)
 	}
 	return resp, nil
 }

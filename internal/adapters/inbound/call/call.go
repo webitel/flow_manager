@@ -2,9 +2,11 @@ package call
 
 import (
 	"fmt"
-	"github.com/webitel/flow_manager/model"
 	"net/http"
 	"regexp"
+
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
+	"github.com/webitel/flow_manager/model"
 )
 
 var compileOutPattern *regexp.Regexp
@@ -22,8 +24,7 @@ type callParser struct {
 func getOutboundReg(pattern, destination string) (map[string]string, error) {
 	r, err := regexp.Compile(pattern)
 	if err != nil {
-
-		return nil, model.NewAppError("Call", "call.router.valid.outbound_pattern", nil, err.Error(), http.StatusBadRequest)
+		return nil, apperrs.Newf(http.StatusBadRequest, "Call: call.router.valid.outbound_pattern: %s", err.Error())
 	}
 
 	out := make(map[string]string)

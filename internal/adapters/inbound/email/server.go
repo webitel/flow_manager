@@ -2,10 +2,9 @@ package email
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -164,11 +163,7 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, error) {
 	})
 
 	if doErr != nil {
-		var ae *model.AppError
-		if errors.As(doErr, &ae) {
-			return nil, ae
-		}
-		return nil, model.NewAppError("Email", "email.profile.create.app_err", nil, doErr.Error(), http.StatusInternalServerError)
+		return nil, doErr
 	}
 
 	pp = v.(*Profile)
@@ -200,8 +195,7 @@ retry:
 	var emails []*model.Email
 	emails, err = profile.Read()
 	if err != nil {
-		var ae *model.AppError
-		if errors.As(err, &ae) && ae.DetailedError == "Not logged in" {
+		if strings.Contains(err.Error(), "Not logged in") {
 			if attempts == 0 {
 				attempts = attempts + 1
 				goto retry
@@ -248,7 +242,7 @@ func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
 func (s *MailServer) TestProfile(domainId int64, profileId int) error {
 	updatedAt, storeErr := s.store.GetProfileUpdatedAt(domainId, profileId)
 	if storeErr != nil {
-		return model.NewAppError("TestProfile", "store.email.get_profile_updated_at", nil, storeErr.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("TestProfile: store.email.get_profile_updated_at: %w", storeErr)
 	}
 
 	profile, err := s.GetProfile(profileId, updatedAt)

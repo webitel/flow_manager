@@ -3,10 +3,12 @@ package call
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
 )
@@ -42,7 +44,7 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	}
 
 	if argv.Files == nil {
-		return ops.OpOutput{}, model.NewAppError("playback", "call.playback.valid.files", nil, "files required", 400)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "playback: files required")
 	}
 
 	var appErr error
@@ -110,7 +112,7 @@ func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv mode
 		ExtraParams:       gs.ExtraParams,
 	})
 	if errGrpc != nil {
-		return model.NewAppError("stt", "stt.ai_bridge", nil, errGrpc.Error(), 500)
+		return fmt.Errorf("stt: stt.ai_bridge: %w", errGrpc)
 	}
 	con := res.GetConnected()
 	if _, err := call.StartRecognize(ctx, con.Connection, con.DialogId, int(con.InputRate), gs.VadTimeout); err != nil {
@@ -157,7 +159,7 @@ func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleep
 	}
 	wbtError, _ := call.Get("wbt_stt_error")
 	if wbtError != "" {
-		return model.NewAppError("Playback.Stt", "call.stt.error", nil, wbtError, 500)
+		return fmt.Errorf("Playback.Stt: call.stt.error: %s", wbtError)
 	}
 	call.Set(ctx, map[string]interface{}{vSleepTimeout: "true"}) //nolint:errcheck
 	isFinal, _ := call.Get(vStatus)
@@ -209,7 +211,7 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 	}
 
 	if argv.Text == "" {
-		return ops.OpOutput{}, model.NewAppError("tts", "call.tts.valid.text", nil, "text required", 400)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "tts: text required")
 	}
 
 	q := buildTTSQuery(argv.Provider, argv.Key, argv.Token, argv.Region)
@@ -239,7 +241,7 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		if argv.GetSpeech.Timeout > 0 && argv.GetSpeech.BreakFinalOnTimeout {
 			wbtError, _ := call.Get("wbt_stt_error")
 			if wbtError != "" {
-				return ops.OpOutput{}, model.NewAppError("tts.stt", "call.stt.error", nil, wbtError, 500)
+				return ops.OpOutput{}, fmt.Errorf("tts.stt: call.stt.error: %s", wbtError)
 			}
 			call.Set(ctx, map[string]interface{}{"google_play_sleep_timeout": "true"}) //nolint:errcheck
 			isFinal, _ := call.Get("google_final")

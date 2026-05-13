@@ -3,7 +3,6 @@ package store_adapter
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/webitel/flow_manager/model"
@@ -55,12 +54,12 @@ func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, error) {
 	ts := oauthConfig.TokenSource(context.Background(), settings.Token)
 	newToken, err := ts.Token()
 	if err != nil {
-		return "", model.NewAppError("SmtSettingsOAuthToken", "app.smtp.oauth.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return "", fmt.Errorf("SmtSettingsOAuthToken: app.smtp.oauth.app_err: %w", err)
 	}
 	if !t.Equal(newToken.Expiry) {
 		if err2 := a.store.Email().SetToken(settings.Id, newToken); err2 != nil {
 			wlog.Error(fmt.Sprintf("profile_id=%v, store token error: %s", settings.Id, err2.Error()))
-			return "", model.NewAppError("SmtpSettingsOAuthToken", "store.email.set_token", nil, err2.Error(), http.StatusInternalServerError)
+			return "", fmt.Errorf("SmtpSettingsOAuthToken: store.email.set_token: %w", err2)
 		}
 	}
 	return newToken.AccessToken, nil
@@ -72,7 +71,7 @@ func (a *Adapter) ReplyEmail(conn model.EmailConnection, text string) error {
 		return err
 	}
 	if storeErr := a.store.Email().Save(conn.DomainId(), replyEmail); storeErr != nil {
-		return model.NewAppError("ReplyEmail", "store.email.save", nil, storeErr.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("ReplyEmail: store.email.save: %w", storeErr)
 	}
 	return nil
 }

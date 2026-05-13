@@ -8,6 +8,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/gen/workflow"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/pkg/processing"
 )
@@ -146,7 +147,7 @@ func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.Cance
 func (s *processingApi) getProcessingById(id string) (*processingConnection, error) {
 	obj, ok := s.connections.Get(id)
 	if !ok {
-		return nil, model.NewAppError("Processing.Get", "processing.form.get.not_found", nil, "Not found", http.StatusNotFound)
+		return nil, apperrs.New(http.StatusNotFound, "Processing.Get: processing.form.get.not_found: Not found")
 	}
 
 	c, ok := obj.(*processingConnection)

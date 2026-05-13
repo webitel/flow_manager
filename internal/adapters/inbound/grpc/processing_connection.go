@@ -14,6 +14,7 @@ import (
 
 	"github.com/webitel/wlog"
 
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/pkg/processing"
 )
@@ -123,7 +124,7 @@ func (c *processingConnection) DumpExportVariables() map[string]string {
 
 func (c *processingConnection) PushForm(ctx context.Context, form processing.FormElem) (*processing.FormAction, error) {
 	if c.formAction != nil {
-		return nil, model.NewAppError("Processing.PushForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
+		return nil, fmt.Errorf("Processing.PushForm: processing.form.push.app_err: Not allow two form")
 	}
 
 	c.setActiveFormId(form.Id)
@@ -139,12 +140,12 @@ func (c *processingConnection) PushForm(ctx context.Context, form processing.For
 		}
 	case _, ok := <-ctx.Done():
 		if ok {
-			return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "context cancel", http.StatusInternalServerError)
+			return nil, fmt.Errorf("Processing.PushForm: processing.form.push.action: context cancel")
 		}
 
 	}
 
-	return nil, model.NewAppError("Processing.PushForm", "processing.form.push.action", nil, "Form no send action", http.StatusInternalServerError)
+	return nil, fmt.Errorf("Processing.PushForm: processing.form.push.action: Form no send action")
 }
 
 func (c *processingConnection) FormAction(action processing.FormAction) error {
@@ -176,7 +177,7 @@ func (c *processingConnection) FormAction(action processing.FormAction) error {
 		return nil
 	}
 
-	return model.NewAppError("Processing.FillForm", "processing.form.fill.app_err", nil, "Not found active form", http.StatusInternalServerError)
+	return fmt.Errorf("Processing.FillForm: processing.form.fill.app_err: Not found active form")
 }
 
 // SendForm pushes a form to the client without blocking for a response.
@@ -186,7 +187,7 @@ func (c *processingConnection) SendForm(ctx context.Context, form processing.For
 	c.Lock()
 	if c.formAction != nil {
 		c.Unlock()
-		return model.NewAppError("Processing.SendForm", "processing.form.push.app_err", nil, "Not allow two form", http.StatusInternalServerError)
+		return fmt.Errorf("Processing.SendForm: processing.form.push.app_err: Not allow two form")
 	}
 	c.Unlock()
 	c.setActiveFormId(form.Id)
@@ -195,7 +196,7 @@ func (c *processingConnection) SendForm(ctx context.Context, form processing.For
 		return nil
 	case <-ctx.Done():
 		c.setActiveFormId("")
-		return model.NewAppError("Processing.SendForm", "processing.form.push.cancel", nil, "context cancelled", http.StatusInternalServerError)
+		return fmt.Errorf("Processing.SendForm: processing.form.push.cancel: context cancelled")
 	}
 }
 
@@ -239,31 +240,31 @@ func (c *processingConnection) setActiveFormId(id string) {
 
 func (c *processingConnection) ComponentAction(ctx context.Context, formId, componentId, action string, vars map[string]string, sync bool) error {
 	if c.activeFormId() == "" {
-		return model.NewInternalError("processing.form.app_err", "not found active form")
+		return fmt.Errorf("processing.form.app_err: not found active form")
 	}
 
 	if c.activeFormId() != formId {
-		return model.NewInternalError("processing.form.app_err", "invalid form id")
+		return fmt.Errorf("processing.form.app_err: invalid form id")
 	}
 
 	cm := c.GetComponentByName(componentId)
 	if cm == nil {
-		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s not found", componentId))
+		return fmt.Errorf("processing.form.app_err: component %s not found", componentId)
 	}
 
 	cmp, ok := cm.(processing.FormTable)
 	if !ok {
-		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have outputs", componentId))
+		return fmt.Errorf("processing.form.app_err: component %s does not have outputs", componentId)
 	}
 
 	fn, ok := cmp.OutputsFn[action]
 	if !ok {
-		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("component %s does not have output %s", componentId, action))
+		return fmt.Errorf("processing.form.app_err: component %s does not have output %s", componentId, action)
 	}
 
 	err := fn(ctx, sync, model.VariablesFromStringMap(vars))
 	if err != nil {
-		return model.NewInternalError("processing.form.app_err", fmt.Sprintf("error processing form: %s", err.Error()))
+		return fmt.Errorf("processing.form.app_err: error processing form: %w", err)
 	}
 
 	return nil
@@ -272,14 +273,14 @@ func (c *processingConnection) ComponentAction(ctx context.Context, formId, comp
 func (c *processingConnection) waitForm(timeSec int) (*processing.FormElem, error) {
 	select {
 	case <-time.After(time.Second * time.Duration(timeSec)):
-		return nil, model.NewAppError("Processing", "processing.connection.form.timeout", nil, "Timeout", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "Processing: processing.connection.form.timeout: Timeout")
 	case <-c.finished:
 		return nil, nil
 	case <-c.Context().Done():
-		return nil, model.NewAppError("Processing", "processing.connection.form.cancel", nil, "Context cancel", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "Processing: processing.connection.form.cancel: Context cancel")
 	case f, ok := <-c.forms:
 		if !ok {
-			return nil, model.NewAppError("Processing", "processing.connection.form.close", nil, "Close", http.StatusBadRequest)
+			return nil, apperrs.New(http.StatusBadRequest, "Processing: processing.connection.form.close: Close")
 		}
 		return &f, nil
 	}

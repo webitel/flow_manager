@@ -25,6 +25,7 @@ import (
 	"github.com/webitel/wlog"
 
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 
 	_ "github.com/emersion/go-message/charset"
@@ -102,7 +103,7 @@ func (p *Profile) Login() error {
 	case err := <-done:
 		return err
 	case <-time.After(time.Minute):
-		return model.NewAppError("Email", "email.login.timeout", nil, "Timeout", 500)
+		return apperrs.New(http.StatusInternalServerError, "Email: email.login.timeout: Timeout")
 	}
 }
 
@@ -128,7 +129,7 @@ func (p *Profile) clientLogin() error {
 	dialer.Timeout = time.Second * 20
 	p.client, err = client.DialWithDialerTLS(dialer, fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
 	if err != nil {
-		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Email: email.dial.app_err: %w", err)
 	}
 
 	if p.server.debug {
@@ -139,15 +140,15 @@ func (p *Profile) clientLogin() error {
 		var ok bool
 		ok, err = p.client.SupportAuth(Xoauth2)
 		if err != nil {
-			return model.NewAppError("Email", "email.xoauth2.support", nil, err.Error(), http.StatusInternalServerError)
+			return fmt.Errorf("Email: email.xoauth2.support: %w", err)
 		}
 
 		if !ok {
-			return model.NewAppError("Email", "email.xoauth2.support", nil, "Not support", http.StatusInternalServerError)
+			return fmt.Errorf("Email: email.xoauth2.support: Not support")
 		}
 
 		if p.token == nil {
-			return model.NewAppError("Email", "email.xoauth2.support", nil, "Not found token", http.StatusInternalServerError)
+			return fmt.Errorf("Email: email.xoauth2.support: Not found token")
 		}
 
 		lastExpiry := p.token.Expiry
@@ -155,7 +156,7 @@ func (p *Profile) clientLogin() error {
 		ts := p.oauthConfig.TokenSource(context.Background(), p.token)
 		newToken, err := ts.Token()
 		if err != nil {
-			return model.NewAppError("Email", "email.login.token", nil, err.Error(), http.StatusUnauthorized)
+			return apperrs.New(http.StatusUnauthorized, fmt.Sprintf("Email: email.login.token: %s", err.Error()))
 		}
 
 		if !newToken.Expiry.Equal(lastExpiry) {
@@ -168,11 +169,11 @@ func (p *Profile) clientLogin() error {
 
 		err = p.client.Authenticate(saslClient)
 		if err != nil {
-			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
+			return apperrs.New(http.StatusUnauthorized, fmt.Sprintf("Email: email.login.unauthorized: %s", err.Error()))
 		}
 	} else {
 		if err = p.client.Login(p.login, p.password); err != nil {
-			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
+			return apperrs.New(http.StatusUnauthorized, fmt.Sprintf("Email: email.login.unauthorized: %s", err.Error()))
 		}
 	}
 	p.log.Debug("logged in")
@@ -190,7 +191,7 @@ func (p *Profile) Logout() error {
 
 	err := p.client.Logout()
 	if err != nil {
-		return model.NewAppError("Email", "email.logout.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Email: email.logout.app_err: %w", err)
 	}
 	p.logged = false
 	p.client.Close()
@@ -210,7 +211,7 @@ func (p *Profile) selectMailBox() error {
 	var err error
 	p.mbox, err = p.client.Select(p.Mailbox, false)
 	if err != nil {
-		return model.NewAppError("Email", "email.mailbox.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Email: email.mailbox.app_err: %w", err)
 	}
 
 	return nil
@@ -242,7 +243,7 @@ func (p *Profile) Read() ([]*model.Email, error) {
 
 	uids, err := p.client.UidSearch(criteria)
 	if err != nil {
-		appErr := model.NewAppError("Email", "email.mailbox.search.app_err", nil, err.Error(), http.StatusInternalServerError)
+		appErr := fmt.Errorf("Email: email.mailbox.search.app_err: %w", err)
 		p.storeErr(appErr)
 		return nil, appErr
 	}
@@ -284,7 +285,7 @@ func (p *Profile) Read() ([]*model.Email, error) {
 func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) {
 	id, err := model.GenerateMailID()
 	if err != nil {
-		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Email: email.reply.app_err: %w", err)
 	}
 
 	rr := &model.Email{
@@ -344,7 +345,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) 
 
 	err = dialer.DialAndSend(mail)
 	if err != nil {
-		return nil, model.NewAppError("Email", "email.reply.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Email: email.reply.app_err: %w", err)
 	}
 
 	return rr, nil
@@ -357,14 +358,12 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	}
 
 	if msg == nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message",
-			http.StatusInternalServerError)
+		return nil, fmt.Errorf("Email: email.message.app_err: Server didn't returned message")
 	}
 
 	r := msg.GetBody(section)
 	if r == nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message body",
-			http.StatusInternalServerError)
+		return nil, fmt.Errorf("Email: email.message.app_err: Server didn't returned message body")
 	}
 
 	m.Subject = msg.Envelope.Subject
@@ -389,8 +388,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	// Create a new mail reader
 	mr, err := mail.CreateReader(r)
 	if err != nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, err.Error(),
-			http.StatusInternalServerError)
+		return nil, fmt.Errorf("Email: email.message.app_err: %w", err)
 	}
 
 	var text []byte

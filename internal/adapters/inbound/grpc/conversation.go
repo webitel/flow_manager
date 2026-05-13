@@ -15,10 +15,11 @@ import (
 
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 )
 
-var ErrWaitMessageTimeout = model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
+var ErrWaitMessageTimeout = apperrs.New(http.StatusInternalServerError, "Conversation.WaitMessage: conv.timeout.msg: Timeout")
 
 type conversation struct {
 	id            string
@@ -213,7 +214,7 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 		},
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendMessage", "conv.send.any.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendMessage: conv.send.any.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -228,7 +229,7 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 		},
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendTextMessage: conv.send.text.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -246,7 +247,7 @@ func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRe
 			c.Break("error")
 		}
 
-		return model.NewAppError("Conversation.SendTextMessage", "conv.send_msg.app_err", nil, textErr, http.StatusInternalServerError)
+		return fmt.Errorf("Conversation.SendTextMessage: conv.send_msg.app_err: %s", textErr)
 	}
 
 	c.saveMessages(req.Message)
@@ -269,7 +270,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 		ConversationId: c.Id(),
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendMenu: conv.send.menu.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -289,7 +290,7 @@ func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, ki
 		},
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendImageMessage", "conv.send.image.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendImageMessage: conv.send.image.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -306,7 +307,7 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 		},
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendFile", "conv.send.file.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendFile: conv.send.file.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -326,7 +327,7 @@ func (c *conversation) proto(ctx context.Context, url, name, text string) (model
 		},
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.SendTextMessage", "conv.send.text.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.SendTextMessage: conv.send.text.app_err: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -408,7 +409,7 @@ func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Messa
 		ConfirmationId: id,
 	})
 	if err != nil {
-		return nil, model.NewAppError("Conversation.WaitMessage", "conv.wait.msg.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.WaitMessage: conv.wait.msg.app_err: %w", err)
 	}
 
 	if len(res.Messages) > 0 {
@@ -426,7 +427,7 @@ func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Messa
 	select {
 	case <-c.Context().Done():
 		c.log.Debug("cancel")
-		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Cancel", http.StatusInternalServerError)
+		return nil, fmt.Errorf("Conversation.WaitMessage: conv.timeout.msg.app_err: Cancel")
 	case <-t:
 		c.log.Debug("timeout")
 		return nil, ErrWaitMessageTimeout
@@ -518,7 +519,7 @@ func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Respo
 
 func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) error {
 	if c.chBridge != nil {
-		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, "Not allow two bridge", http.StatusInternalServerError)
+		return fmt.Errorf("Conversation.Bridge: conv.bridge.app_err: Not allow two bridge")
 	}
 	c.chBridge = make(chan struct{})
 
@@ -544,7 +545,7 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) er
 		ConversationId: c.id,
 	})
 	if err != nil {
-		return model.NewAppError("Conversation.Bridge", "conv.bridge.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Conversation.Bridge: conv.bridge.app_err: %w", err)
 	}
 
 	<-c.chBridge

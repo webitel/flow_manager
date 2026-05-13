@@ -3,7 +3,6 @@ package postgres
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -188,12 +187,7 @@ where id = @Id`
 func (r *EmailRepository) SetError(profileId int, appErr error) error {
 	errMsg := ""
 	if appErr != nil {
-		var ae *model.AppError
-		if errors.As(appErr, &ae) {
-			errMsg = ae.DetailedError
-		} else {
-			errMsg = appErr.Error()
-		}
+		errMsg = appErr.Error()
 	}
 	return r.db.Exec(context.Background(), setErrorSQL, pgx.NamedArgs{
 		"Id":  profileId,

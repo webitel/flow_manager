@@ -4,11 +4,13 @@ package cc
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/gen/engine"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -40,10 +42,7 @@ func (a *FMAdapter) JoinChatToInboundQueue(ctx context.Context, in *genpb.ChatJo
 
 func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error {
 	if err := a.store.Member().CreateMember(domainId, queueId, holdSec, member); err != nil {
-		if ae, ok := err.(*model.AppError); ok {
-			return ae
-		}
-		return model.NewAppError("App.CreateMember", "app.store_err", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("App.CreateMember: app.store_err: %w", err)
 	}
 	return nil
 }
@@ -59,7 +58,7 @@ func (a *FMAdapter) TaskJoinToAgent(ctx context.Context, in *genpb.TaskJoinToAge
 func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, extension string) error {
 	agentId, storeErr := a.store.User().GetAgentIdByExtension(domainId, extension)
 	if storeErr != nil {
-		return model.NewAppError("CancelUserDistribute", "store.user.get_agent_id", nil, storeErr.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("CancelUserDistribute: store.user.get_agent_id: %w", storeErr)
 	}
 
 	if agentId == nil {
@@ -70,7 +69,7 @@ func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, ex
 		AgentId: *agentId,
 	})
 	if perr != nil {
-		return model.NewAppError("App", "CancelUserDistribute", nil, perr.Error(), http.StatusNotFound)
+		return apperrs.Newf(http.StatusNotFound, "App.CancelUserDistribute: %s", perr.Error())
 	}
 
 	return nil
@@ -100,7 +99,7 @@ func (a *FMAdapter) AttemptResult(result *model.AttemptResult) error {
 	req.AddCommunications = ccCommunications(result.AddCommunications)
 
 	if err := a.cc.Member().AttemptResult(req); err != nil {
-		return model.NewAppError("AttemptResult", "app.attempt.result", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("AttemptResult: app.attempt.result: %w", err)
 	}
 	return nil
 }
@@ -120,7 +119,7 @@ func (a *FMAdapter) LeavingIMToInboundQueue(attId int64) {
 
 func (a *FMAdapter) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error {
 	if err := a.cc.Member().CancelAttempt(ctx, att.AttemptId, result, att.AppId); err != nil {
-		return model.NewAppError("CancelAttempt", "app.attempt.cancel", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("CancelAttempt: app.attempt.cancel: %w", err)
 	}
 	return nil
 }

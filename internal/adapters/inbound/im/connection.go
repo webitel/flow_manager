@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -164,7 +163,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("SendMessage: conv.msg: %w", err)
 	}
 
 	return model.CallResponseOK, nil
@@ -183,7 +182,7 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 		Body: text,
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendTextMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("SendTextMessage: conv.msg: %w", err)
 	}
 	return model.CallResponseOK, nil
 }
@@ -207,7 +206,7 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 		Image: &p.ImageRequest{Images: images, Body: msg.Text},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("SendImageMessage: conv.msg: %w", err)
 	}
 	return model.CallResponseOK, nil
 }
@@ -231,7 +230,7 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 		Document: &p.DocumentRequest{Documents: docs, Body: msg.Text},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendDocumentMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("SendDocumentMessage: conv.msg: %w", err)
 	}
 	return model.CallResponseOK, nil
 }
@@ -254,7 +253,7 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 		Document: &p.DocumentRequest{Documents: docs, Body: text},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendFile", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("SendFile: conv.msg: %w", err)
 	}
 	return model.CallResponseOK, nil
 }
@@ -278,7 +277,7 @@ func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (mo
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("Connection.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, fmt.Errorf("Connection.SendMenu: conv.send.menu.app_err: %w", err)
 	}
 	return model.CallResponseOK, nil
 }

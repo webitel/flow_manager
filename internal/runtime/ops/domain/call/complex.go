@@ -11,6 +11,7 @@ import (
 	"github.com/webitel/wlog"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
@@ -98,11 +99,11 @@ func (o *bridgeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 
 	props, ok2 := in.Node.RawArgs.(map[string]any)
 	if !ok2 {
-		return ops.OpOutput{}, model.NewAppError("bridge", "call.bridge.valid.args", nil, "bad arguments", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "bridge: bad arguments")
 	}
 
 	if _, ok2 = props["endpoints"]; !ok2 {
-		return ops.OpOutput{}, model.NewAppError("bridge", "call.bridge.valid.endpoints", nil, "endpoints required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "bridge: endpoints required")
 	}
 
 	endpoints, appErr := replaceBridgeEndpoints(call, props["endpoints"])
@@ -110,7 +111,7 @@ func (o *bridgeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 		return ops.OpOutput{}, appErr
 	}
 	if len(endpoints) == 0 {
-		return ops.OpOutput{}, model.NewAppError("bridge", "call.bridge.valid.endpoints", nil, "no endpoints", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "bridge: no endpoints")
 	}
 
 	codecs, _ := arrayStrings(props["codecs"])
@@ -181,7 +182,7 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 	length := len(endpoints)
 	endp, storeErr := o.deps.GetStore().Endpoint().Get(int64(call.DomainId()), "NAME", "NUMBER", endpoints)
 	if storeErr != nil {
-		return nil, model.NewAppError("getRemoteEndpoints", "store.endpoint.get", nil, storeErr.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("getRemoteEndpoints: store.endpoint.get: %w", storeErr)
 	}
 	for key, e := range endp {
 		if key > length {
@@ -223,11 +224,11 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 func replaceBridgeEndpoints(call model.Call, arr any) (model.Applications, error) {
 	data, err := json.Marshal(arr)
 	if err != nil {
-		return nil, model.NewAppError("bridge", "call.bridge.valid.endpoints", nil, err.Error(), http.StatusBadRequest)
+		return nil, apperrs.Newf(http.StatusBadRequest, "bridge: call.bridge.valid.endpoints: %s", err.Error())
 	}
 	var res model.Applications
 	if err = json.Unmarshal([]byte(call.ParseText(string(data))), &res); err != nil {
-		return nil, model.NewAppError("bridge", "call.bridge.valid.endpoints", nil, err.Error(), http.StatusBadRequest)
+		return nil, apperrs.Newf(http.StatusBadRequest, "bridge: call.bridge.valid.endpoints: %s", err.Error())
 	}
 	return res, nil
 }
@@ -325,7 +326,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, fmt.Errorf("joinQueue: no call connection in context")
 	}
 	if call.InQueue() {
-		return ops.OpOutput{}, model.NewInternalError("call.queue.in_queue", "call is in queue")
+		return ops.OpOutput{}, fmt.Errorf("call.queue.in_queue: call is in queue")
 	}
 
 	var q joinQueueArgs
@@ -526,7 +527,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, err
 	}
 	if argv.Agent == nil {
-		return ops.OpOutput{}, model.NewAppError("joinAgent", "call.join_agent.valid.agent", nil, "agent required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "joinAgent: agent required")
 	}
 
 	var agentId *int32
@@ -536,7 +537,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		agentId = argv.Agent.Id
 	}
 	if agentId == nil {
-		return ops.OpOutput{}, model.NewAppError("joinAgent", "call.join_agent.valid.agent", nil, "agent not found", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "joinAgent: agent not found")
 	}
 
 	t := call.GetVariable("variable_transfer_history")

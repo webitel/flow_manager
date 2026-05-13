@@ -3,7 +3,6 @@ package im
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
@@ -123,7 +122,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if routing == nil {
-		err = model.NewAppError("IM", "im.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
+		err = fmt.Errorf("IM: im.routing.not_found: Not found routing schema")
 	}
 	if err != nil {
 		conv.Stop(err)
@@ -141,7 +140,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
 	if parseErr != nil {
-		conv.Stop(model.NewAppError("IM", "im.schema.parse", nil, parseErr.Error(), http.StatusInternalServerError))
+		conv.Stop(fmt.Errorf("IM: im.schema.parse: %w", parseErr))
 		return
 	}
 
@@ -156,7 +155,7 @@ func (r *Router) handle(conn model.Connection) {
 	// Check for an existing active record (process restart recovery).
 	rec, loadErr := r.fm.RuntimeStateRepo().LoadByConnectionID(ctx, conn.Id())
 	if loadErr != nil {
-		conv.Stop(model.NewAppError("IM", "im.runtime.load", nil, loadErr.Error(), http.StatusInternalServerError))
+		conv.Stop(fmt.Errorf("IM: im.runtime.load: %w", loadErr))
 		return
 	}
 
@@ -194,7 +193,7 @@ func (r *Router) handle(conn model.Connection) {
 		OnRecord:    func(r *persistence.Record) { activeRec = r },
 		Log:         r.fm.Log(),
 	}); createErr != nil {
-		conv.Stop(model.NewAppError("IM", "im.runtime.create", nil, createErr.Error(), http.StatusInternalServerError))
+		conv.Stop(fmt.Errorf("IM: im.runtime.create: %w", createErr))
 	}
 }
 

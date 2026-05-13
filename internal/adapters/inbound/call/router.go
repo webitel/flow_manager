@@ -2,8 +2,8 @@ package call
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -178,7 +178,7 @@ func (r *Router) handle(conn model.Connection) {
 			}
 
 		default:
-			err = model.NewAppError("Call.Handle", "call.router.valid.direction", nil, fmt.Sprintf("no handler direction %s", call.Direction()), http.StatusInternalServerError)
+			err = fmt.Errorf("Call.Handle: call.router.valid.direction: no handler direction %s", call.Direction())
 		}
 	}
 
@@ -188,7 +188,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if err != nil {
-		if err == model.ErrNotFoundRoute {
+		if errors.Is(err, model.ErrNotFoundRoute) {
 			r.notFoundRoute(call)
 		} else {
 			call.Log().Err(err)

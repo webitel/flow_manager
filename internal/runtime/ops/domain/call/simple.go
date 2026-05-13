@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"
@@ -154,8 +155,7 @@ func (setAllOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 	}
 	vars, ok2 := in.Node.RawArgs.(map[string]any)
 	if !ok2 {
-		return ops.OpOutput{}, model.NewAppError("setAll", "call.set_all.valid.args", nil,
-			fmt.Sprintf("bad arguments %v", in.Node.RawArgs), http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.Newf(http.StatusBadRequest, "setAll: bad arguments %v", in.Node.RawArgs)
 	}
 	if _, appErr := call.SetAll(ctx, vars); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -176,8 +176,7 @@ func (setNoLocalOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 	}
 	vars, ok2 := in.Node.RawArgs.(map[string]any)
 	if !ok2 {
-		return ops.OpOutput{}, model.NewAppError("setNoLocal", "call.set_no_local.valid.args", nil,
-			fmt.Sprintf("bad arguments %v", in.Node.RawArgs), http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.Newf(http.StatusBadRequest, "setNoLocal: bad arguments %v", in.Node.RawArgs)
 	}
 	if _, appErr := call.SetNoLocal(ctx, vars); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -201,7 +200,7 @@ func (unSetOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error
 		return ops.OpOutput{}, err
 	}
 	if len(argv) == 0 {
-		return ops.OpOutput{}, model.NewAppError("unSet", "call.unset.valid", nil, "value required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "unSet: value required")
 	}
 	for _, v := range argv {
 		if _, appErr := call.UnSet(ctx, v); appErr != nil {
@@ -275,10 +274,10 @@ func (parkOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error)
 		return ops.OpOutput{}, err
 	}
 	if argv.Name == "" {
-		return ops.OpOutput{}, model.NewAppError("park", "call.park.valid", nil, "name required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "park: name required")
 	}
 	if argv.Lot == "" {
-		return ops.OpOutput{}, model.NewAppError("park", "call.park.valid", nil, "lot required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "park: lot required")
 	}
 	lots := strings.SplitN(argv.Lot, "-", 2)
 	from, to := lots[0], ""
@@ -309,7 +308,7 @@ func (pickupOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, err
 	}
 	if argv.Name == "" {
-		return ops.OpOutput{}, model.NewAppError("pickup", "call.pickup.valid", nil, "name required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "pickup: name required")
 	}
 	if _, appErr := call.Pickup(ctx, argv.Name); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -357,7 +356,7 @@ func (markIVROp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, err
 		return ops.OpOutput{}, err
 	}
 	if argv.Name == "" || argv.Value == "" {
-		return ops.OpOutput{}, model.NewAppError("markIVR", "call.mark_ivr.valid", nil, "name and value required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "markIVR: name and value required")
 	}
 	key := fmt.Sprintf("usr_%s", strings.ReplaceAll(argv.Name, "'", ""))
 	if _, appErr := call.Push(ctx, key, argv.Value); appErr != nil {
@@ -385,10 +384,10 @@ func (setSoundsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 		return ops.OpOutput{}, err
 	}
 	if argv.Lang == "" {
-		return ops.OpOutput{}, model.NewAppError("setSounds", "call.set_sounds.valid", nil, "lang required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "setSounds: lang required")
 	}
 	if argv.Voice == "" {
-		return ops.OpOutput{}, model.NewAppError("setSounds", "call.set_sounds.valid", nil, "voice required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "setSounds: voice required")
 	}
 	if _, appErr := call.SetSounds(ctx, argv.Lang, argv.Voice); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -485,7 +484,7 @@ func (voiceBotOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, er
 		return ops.OpOutput{}, err
 	}
 	if argv.Connection == "" {
-		return ops.OpOutput{}, model.NewAppError("voiceBot", "call.voice_bot.valid", nil, "connection required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "voiceBot: connection required")
 	}
 	rate := 0
 	switch argv.Rate {
@@ -512,7 +511,7 @@ func (updateOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, fmt.Errorf("update: no call connection in context")
 	}
 	if call.UserId() == 0 {
-		return ops.OpOutput{}, model.NewRequestError("update", "this call is not an outbound")
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "update: this call is not an outbound")
 	}
 	var argv struct {
 		Variables model.Variables `json:"variables"`

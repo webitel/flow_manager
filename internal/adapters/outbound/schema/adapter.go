@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/webitel/engine/pkg/presign"
@@ -47,7 +46,7 @@ func (a *SchemaAdapter) SetCert(c presign.PreSign) { a.cert = c }
 func (a *SchemaAdapter) InitCacheTimezones() error {
 	list, storeErr := a.store.Calendar().GetTimezones()
 	if storeErr != nil {
-		return model.NewAppError("InitCacheTimezones", "store.calendar.get_timezones", nil, storeErr.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("InitCacheTimezones: store.calendar.get_timezones: %w", storeErr)
 	}
 
 	a.timezoneList = make(map[int]*time.Location, len(list))
@@ -82,7 +81,7 @@ func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*mod
 		return a.store.Schema().Get(domainId, id)
 	})
 	if doErr != nil {
-		return nil, toAppError("GetSchema", doErr)
+		return nil, toError("GetSchema", doErr)
 	}
 
 	s := v.(*model.Schema)
@@ -96,7 +95,7 @@ func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, er
 		return a.store.Schema().GetUpdatedAt(domainId, id)
 	})
 	if err != nil {
-		return nil, toAppError("GetSchemaById", err)
+		return nil, toError("GetSchemaById", err)
 	}
 	return a.GetSchema(domainId, id, v.(int64))
 }
@@ -104,7 +103,7 @@ func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, er
 func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, error) {
 	routing, rErr := a.store.Schema().GetTransferredRouting(domainId, schemaId)
 	if rErr != nil {
-		return nil, toAppError("SearchTransferredRouting", rErr)
+		return nil, toError("SearchTransferredRouting", rErr)
 	}
 	var schemaErr error
 	routing.Schema, schemaErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -139,7 +138,7 @@ func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, n
 		return s, nil
 	})
 	if err != nil {
-		return model.SysValue{}, toAppError("GetSystemSettings", err)
+		return model.SysValue{}, toError("GetSystemSettings", err)
 	}
 	if !share {
 		systemCache.AddWithDefaultExpires(key, v.(model.SysValue))
@@ -154,7 +153,7 @@ func (a *SchemaAdapter) GetHookById(key string) (model.WebHook, error) {
 		return a.store.WebHook().Get(key)
 	})
 	if err != nil {
-		return model.WebHook{}, toAppError("GetHookById", err)
+		return model.WebHook{}, toError("GetHookById", err)
 	}
 	return v.(model.WebHook), nil
 }
@@ -186,7 +185,7 @@ func (a *SchemaAdapter) SetSchemaVariable(ctx context.Context, domainId int64, v
 		if v.Encrypt && a.cert != nil {
 			enc, err := a.cert.EncryptBytes(v.Value)
 			if err != nil {
-				return model.NewAppError("SetSchemaVariable", "app.", nil, err.Error(), 500)
+				return fmt.Errorf("SetSchemaVariable: app.encrypt: %w", err)
 			}
 			v.Value = enc
 		}
@@ -245,7 +244,7 @@ func removeQuote(text []byte) string {
 func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().FromGateway(domainId, gatewayId)
 	if err != nil {
-		return nil, toAppError("GetRoutingFromDestToGateway", err)
+		return nil, toError("GetRoutingFromDestToGateway", err)
 	}
 	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -255,7 +254,7 @@ func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId in
 func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().SearchToDestination(domainId, dest)
 	if err != nil {
-		return nil, toAppError("SearchOutboundToDestinationRouting", err)
+		return nil, toError("SearchOutboundToDestinationRouting", err)
 	}
 	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -265,7 +264,7 @@ func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest 
 func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, error) {
 	routing, err := a.store.CallRouting().FromQueue(domainId, queueId)
 	if err != nil {
-		return nil, toAppError("SearchOutboundFromQueueRouting", err)
+		return nil, toError("SearchOutboundFromQueueRouting", err)
 	}
 	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -307,7 +306,7 @@ func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*mode
 func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromProfile(domainId, profileId)
 	if err != nil {
-		return nil, model.NewAppError("GetChatRouteFromProfile", "store.chat.routing_from_profile", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("GetChatRouteFromProfile: store.chat.routing_from_profile: %w", err)
 	}
 	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -317,7 +316,7 @@ func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*mod
 func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromSchemaId(domainId, schemaId)
 	if err != nil {
-		return nil, model.NewAppError("GetChatRouteFromSchemaId", "store.chat.routing_from_schema", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("GetChatRouteFromSchemaId: store.chat.routing_from_schema: %w", err)
 	}
 	var appErr error
 	routing.Schema, appErr = a.GetSchema(domainId, routing.SchemaId, routing.SchemaUpdatedAt)
@@ -336,14 +335,11 @@ func (a *SchemaAdapter) GetChatRouteFromUserId(domainId int64, userId int64) (*m
 	}, nil
 }
 
-// ── timezone ──────────────────────────────────────────────────────────────────
+// ── helpers ── (continued) ────────────────────────────────────────────────────
 
-func toAppError(op string, err error) *model.AppError {
+func toError(op string, err error) error {
 	if err == nil {
 		return nil
 	}
-	if ae, ok := err.(*model.AppError); ok {
-		return ae
-	}
-	return model.NewAppError(op, "app.store_err", nil, err.Error(), http.StatusInternalServerError)
+	return fmt.Errorf("%s: %w", op, err)
 }

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
 )
@@ -48,7 +49,7 @@ func (o *setGranteeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 		return ops.OpOutput{}, err
 	}
 	if argv.Id < 1 {
-		return ops.OpOutput{}, model.NewAppError("setGrantee", "call.set_grantee.valid.id", nil, "id required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "setGrantee: id required")
 	}
 	if appErr := o.deps.SetCallGranteeId(call.DomainId(), call.Id(), argv.Id); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -77,7 +78,7 @@ func (o *setUserOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 		return ops.OpOutput{}, err
 	}
 	if argv.Id == 0 {
-		return ops.OpOutput{}, model.NewAppError("setUser", "call.set_user.valid.id", nil, "id required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "setUser: id required")
 	}
 	if appErr := o.deps.SetCallUserId(call.DomainId(), call.Id(), argv.Id); appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -105,7 +106,7 @@ func (o *updateCidOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, err
 	}
 	if argv.Name == "" && argv.Number == "" && argv.Destination == "" {
-		return ops.OpOutput{}, model.NewAppError("updateCid", "call.update_cid.valid", nil, "name or number or destination required", http.StatusBadRequest)
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "updateCid: name or number or destination required")
 	}
 	var name, number, destination *string
 	if argv.Name != "" {
@@ -199,10 +200,10 @@ func (o *ccOutboundOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 		return ops.OpOutput{}, fmt.Errorf("ccOutbound: no call connection in context")
 	}
 	if call.Direction() != model.CallDirectionOutbound {
-		return ops.OpOutput{}, model.NewRequestError("call.cc_outbound", "this call is not an outbound")
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "call.cc_outbound: this call is not an outbound")
 	}
 	if call.UserId() == 0 {
-		return ops.OpOutput{}, model.NewRequestError("call.cc_outbound", "call originated from a non-user source")
+		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "call.cc_outbound: call originated from a non-user source")
 	}
 	var argv struct {
 		QueueName        string                        `json:"queueName"`

@@ -3,7 +3,6 @@ package chat
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	proto "github.com/webitel/flow_manager/gen/chat"
@@ -92,7 +91,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if routing == nil {
-		err = model.NewAppError("Chat", "chat.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
+		err = fmt.Errorf("Chat: chat.routing.not_found: Not found routing schema")
 	}
 	if err != nil {
 		conv.Stop(err, proto.CloseConversationCause_flow_err)
@@ -109,7 +108,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
 	if parseErr != nil {
-		conv.Stop(model.NewAppError("Chat", "chat.schema.parse", nil, parseErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+		conv.Stop(fmt.Errorf("Chat: chat.schema.parse: %w", parseErr), proto.CloseConversationCause_flow_err)
 		return
 	}
 
@@ -122,7 +121,7 @@ func (r *Router) handle(conn model.Connection) {
 
 	rec, loadErr := r.fm.RuntimeStateRepo().LoadByConnectionID(ctx, conn.Id())
 	if loadErr != nil {
-		conv.Stop(model.NewAppError("Chat", "chat.runtime.load", nil, loadErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+		conv.Stop(fmt.Errorf("Chat: chat.runtime.load: %w", loadErr), proto.CloseConversationCause_flow_err)
 		return
 	}
 
@@ -158,7 +157,7 @@ func (r *Router) handle(conn model.Connection) {
 		OnRecord:    func(r *persistence.Record) { activeRec = r },
 		Log:         r.fm.Log(),
 	}); createErr != nil {
-		conv.Stop(model.NewAppError("Chat", "chat.runtime.create", nil, createErr.Error(), http.StatusInternalServerError), proto.CloseConversationCause_flow_err)
+		conv.Stop(fmt.Errorf("Chat: chat.runtime.create: %w", createErr), proto.CloseConversationCause_flow_err)
 	}
 }
 

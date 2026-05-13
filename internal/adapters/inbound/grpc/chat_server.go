@@ -12,6 +12,7 @@ import (
 	"github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/infra/discovery"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"google.golang.org/grpc/metadata"
 )
@@ -178,8 +179,7 @@ func (s *chatApi) TransferChatPlan(ctx context.Context, in *workflow.TransferCha
 func (s *chatApi) getConversation(id string) (*conversation, error) {
 	conv, ok := s.conversations.Get(id)
 	if !ok {
-		return nil, model.NewAppError("Chat", "grpc.chat.conversation.not_found", nil,
-			fmt.Sprintf("Conversation %s not found", id), http.StatusNotFound)
+		return nil, apperrs.Newf(http.StatusNotFound, "Chat: grpc.chat.conversation.not_found: Conversation %s not found", id)
 	}
 
 	return conv.(*conversation), nil
@@ -197,8 +197,7 @@ func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*c
 
 	cli, err = s.getClientFromRequest(ctx)
 	if err != nil {
-		return nil, model.NewAppError("Chat", "grpc.chat.client.not_found", nil,
-			err.Error(), http.StatusNotFound)
+		return nil, apperrs.Newf(http.StatusNotFound, "Chat: grpc.chat.client.not_found: %s", err.Error())
 	}
 
 	conv.actualizeClient(cli)

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"net/http"
 
 	html "html/template"
 
@@ -28,14 +27,14 @@ func (a *ChatMgrAdapter) BroadcastChatMessage(ctx context.Context, domainId int6
 
 func (a *ChatMgrAdapter) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error {
 	if err := a.mgr.SendAction(ctx, channelId, action); err != nil {
-		return model.NewAppError("Chat", "chat.send_action.error", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Chat: chat.send_action.error: %w", err)
 	}
 	return nil
 }
 
 func (a *ChatMgrAdapter) ContactLinkToChat(ctx context.Context, conversationId string, contactId string) error {
 	if err := a.mgr.LinkContact(ctx, contactId, conversationId); err != nil {
-		return model.NewAppError("Chat", "chat.link_contact.error", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("Chat: chat.link_contact.error: %w", err)
 	}
 	return nil
 }

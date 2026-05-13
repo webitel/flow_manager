@@ -14,6 +14,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/adapters/inbound/fs/eventsocket"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -47,7 +48,7 @@ const (
 	UsrVarPrefix = ""
 )
 
-var errExecuteAfterHangup = model.NewAppError("FreeSWITCH", "provider.fs.execute.after_hangup", nil, "not allow after hangup", http.StatusBadRequest)
+var errExecuteAfterHangup = apperrs.New(http.StatusBadRequest, "FreeSWITCH: provider.fs.execute.after_hangup: not allow after hangup")
 
 type Connection struct {
 	id               string
@@ -451,7 +452,7 @@ func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars 
 
 func (c *Connection) setInternal(ctx context.Context, vars model.Variables) (model.Response, error) {
 	if c.Stopped() {
-		return nil, model.NewAppError("Call.setInternal", "call.app.set_internal.stopped", nil, "bad request", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "Call.setInternal: call.app.set_internal.stopped: bad request")
 	}
 
 	return c.setChannelVariables(ctx, "", vars)
@@ -463,7 +464,7 @@ func (c *Connection) UserVariablePrefix(name string) string {
 
 func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
 	if len(vars) == 0 {
-		return nil, model.NewAppError("Call.Set", "call.app.set.valid.args", nil, "bad request", http.StatusBadRequest)
+		return nil, apperrs.New(http.StatusBadRequest, "Call.Set: call.app.set.valid.args: bad request")
 	}
 
 	if c.Stopped() {
@@ -642,7 +643,7 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args an
 
 	guid, err := uuid.NewV4()
 	if err != nil {
-		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.gen_uuid", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("FreeSWITCH: provider.fs.execute.gen_uuid: %w", err)
 	}
 
 	e := make(chan *eventsocket.Event, 1)
@@ -659,14 +660,14 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args an
 		"Event-UUID":       guid.String(),
 	}, "", "")
 	if err != nil {
-		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return nil, fmt.Errorf("FreeSWITCH: provider.fs.execute.app_error: %w", err)
 	}
 
 	select {
 	case <-e:
 		return model.CallResponseOK, nil
 	case <-ctx.Done():
-		return nil, model.NewAppError("FreeSWITCH", "provider.fs.execute.app_error", nil, "cancel", http.StatusInternalServerError)
+		return nil, fmt.Errorf("FreeSWITCH: provider.fs.execute.app_error: cancel")
 	}
 }
 
@@ -679,7 +680,7 @@ func (c *Connection) executeLoop(app, args string) error {
 		"loop":             "-1",
 	}, "", "")
 	if err != nil {
-		return model.NewAppError("FreeSWITCH", "provider.fs.execute_loop.app_error", nil, err.Error(), http.StatusInternalServerError)
+		return fmt.Errorf("FreeSWITCH: provider.fs.execute_loop.app_error: %w", err)
 	}
 
 	return nil
@@ -710,7 +711,7 @@ func (c *Connection) WaitForDisconnect1() {
 func (c *Connection) SendEvent(m map[string]string, name string) error {
 	err := c.connection.SendEvent(m, name)
 	if err != nil {
-		return model.NewInternalError("send_event", err.Error())
+		return fmt.Errorf("send_event: %w", err)
 	}
 	return nil
 }
