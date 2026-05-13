@@ -1,9 +1,7 @@
 package app
 
 import (
-	"context"
 	"fmt"
-	"net/http"
 
 	"github.com/webitel/flow_manager/model"
 	"golang.org/x/sync/singleflight"
@@ -37,9 +35,3 @@ func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (
 	return settings.(*model.SmtSettings), nil
 }
 
-func (f *FlowManager) MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError {
-	if err := f.Store.Email().SetContact(ctx, domainId, id, contactIds); err != nil {
-		return model.NewAppError("MailSetContacts", "store.email.set_contact", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return nil
-}

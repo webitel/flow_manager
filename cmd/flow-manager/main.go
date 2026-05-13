@@ -90,7 +90,7 @@ func newAppRouters(
 		Call:    call.Init(fm, contacts, meetings),
 		GRPC:    grpc.Init(fm),
 		Chat:    chat.Init(fm),
-		Form:    processing.Init(fm),
+		Form:    processing.Init(fm, fm.Cases()),
 		Email:   email.Init(fm, contacts),
 		Channel: channel.Init(fm),
 		IM:      im.Init(fm, contacts),

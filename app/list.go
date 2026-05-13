@@ -3,7 +3,6 @@ package app
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"sync"
 	"time"
 
@@ -59,21 +58,6 @@ func (c *listWatcher) cleanExpiredNumbers() {
 	if count > 0 {
 		c.log.Debug(fmt.Sprintf("removed %d expired numbers", count))
 	}
-}
-
-func (fm *FlowManager) ListCheckNumber(domainId int64, number string, listId *int, listName *string) (bool, *model.AppError) {
-	ok, err := fm.Store.List().CheckNumber(domainId, number, listId, listName)
-	if err != nil {
-		return false, model.NewAppError("ListCheckNumber", "store.list.check_number", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return ok, nil
-}
-
-func (fm *FlowManager) ListAddCommunication(domainId int64, search *model.SearchEntity, comm *model.ListCommunication) *model.AppError {
-	if err := fm.Store.List().AddDestination(domainId, search, comm); err != nil {
-		return model.NewAppError("ListAddCommunication", "store.list.add_destination", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return nil
 }
 
 func (fm *FlowManager) CheckList(domainId int64, number string, listId *int, listName *string) (bool, error) {

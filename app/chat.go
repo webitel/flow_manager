@@ -26,13 +26,6 @@ func (fm *FlowManager) GetChatRouteFromProfile(domainId, profileId int64) (*mode
 	return routing, nil
 }
 
-func (fm *FlowManager) GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, error) {
-	messages, storeErr := fm.Store.Chat().GetMessagesByConversation(ctx, domainId, conversationId, limit)
-	if storeErr != nil {
-		return nil, storeErr
-	}
-	return &messages, nil
-}
 
 // ParseChatMessages converts all chat message models to the given output type.
 // All the available templates for these messages filtered by output type are lying in the message_templates folder.
@@ -123,17 +116,6 @@ func (fm *FlowManager) BroadcastChatMessage(ctx context.Context, domainId int64,
 	return fm.chatManager.BroadcastMessage(ctx, domainId, req, peers)
 }
 
-func (c *FlowManager) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
-	vars, err := c.Store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
-	if err != nil {
-		return nil, model.NewAppError("LastBridgedChat", "store.chat.last_bridged", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return vars, nil
-}
-
-func (c *FlowManager) ChatProfileType(domainId int64, profileId int) (string, error) {
-	return c.Store.Chat().ProfileType(domainId, profileId)
-}
 
 func (fm *FlowManager) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) *model.AppError {
 	err := fm.chatManager.SendAction(ctx, channelId, action)

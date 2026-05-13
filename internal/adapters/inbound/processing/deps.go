@@ -10,6 +10,5 @@ import (
 type Deps interface {
 	runtimekit.BootstrapDeps
 	AppID() string
-	procop.ComponentDeps
 	procop.AttemptDeps
 }

@@ -11,7 +11,10 @@ import (
 	_ "github.com/webitel/flow_manager/infra/resolver"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
+	cacheAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/cache_adapter"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
+	ccAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
+	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
@@ -33,6 +36,10 @@ import (
 )
 
 type FlowManager struct {
+	*storeAdapter.Adapter
+	*cacheAdapter.CacheAdapter
+	*ccAdapter.FMAdapter
+
 	log              *wlog.Logger
 	id               string
 	config           *model.Config
@@ -100,7 +107,10 @@ func NewFlowManager(
 	cb *CallbackResolver,
 ) (*FlowManager, error) {
 	fm := &FlowManager{
-		log:              log,
+		Adapter:      storeAdapter.New(st),
+		CacheAdapter: cacheAdapter.New(cacheStores, log),
+		FMAdapter:    ccAdapter.NewFMAdapter(ccMgr, st),
+		log:          log,
 		id:               fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
 		config:           cfg,
 		Store:            st,

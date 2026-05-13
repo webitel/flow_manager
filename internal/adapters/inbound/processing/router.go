@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -38,7 +39,7 @@ type Connection interface {
 	DumpExportVariables() map[string]string
 }
 
-func Init(deps Deps) model.Router {
+func Init(deps Deps, casesClient domcases.Client) model.Router {
 	router := &Router{fm: deps}
 
 	// coord is late-bound: nil when ExtraOps runs, set after Bootstrap returns.
@@ -53,7 +54,7 @@ func Init(deps Deps) model.Router {
 				}
 				return coord.Dispatch(ctx, key, payload)
 			}))
-			procop.RegisterComponents(reg, deps)
+			procop.RegisterComponents(reg, casesClient)
 			procop.RegisterAttempt(reg, deps)
 			procop.RegisterFormTable(reg)
 		},
