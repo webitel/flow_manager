@@ -14,6 +14,10 @@ import (
 	cacheAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/cache_adapter"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	ccAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
+	chatAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/chat"
+	eventAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/event"
+	schemaAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/schema"
+	fileAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
@@ -39,6 +43,10 @@ type FlowManager struct {
 	*storeAdapter.Adapter
 	*cacheAdapter.CacheAdapter
 	*ccAdapter.FMAdapter
+	*schemaAdapter.SchemaAdapter
+	*fileAdapter.FileAdapter
+	*eventAdapter.EventBusAdapter
+	*chatAdapter.ChatMgrAdapter
 
 	log              *wlog.Logger
 	id               string
@@ -55,7 +63,6 @@ type FlowManager struct {
 	channelServer model.Server
 	imServer      model.Server
 
-	schemaCache model.ObjectCache
 	chatManager *grpc.ChatManager
 	storage     domstorage.Client
 	cases       *cases.Api
@@ -77,7 +84,6 @@ type FlowManager struct {
 	IMRouter      model.Router
 
 	callWatcher *callWatcher
-	cert        presign.PreSign
 	listWatcher *listWatcher
 
 	cacheStore cache.CacheStores
@@ -106,34 +112,38 @@ func NewFlowManager(
 	eventQueue ports.EventBus,
 	cb *CallbackResolver,
 ) (*FlowManager, error) {
+	schemaCache := model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, "")
 	fm := &FlowManager{
-		Adapter:      storeAdapter.New(st),
-		CacheAdapter: cacheAdapter.New(cacheStores, log),
-		FMAdapter:    ccAdapter.NewFMAdapter(ccMgr, st),
-		log:          log,
-		id:               fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
-		config:           cfg,
-		Store:            st,
-		checkpointRepo:   checkpointRepo,
+		Adapter:         storeAdapter.New(st),
+		CacheAdapter:    cacheAdapter.New(cacheStores, log),
+		FMAdapter:       ccAdapter.NewFMAdapter(ccMgr, st),
+		SchemaAdapter:   schemaAdapter.NewSchemaAdapter(st, schemaCache),
+		FileAdapter:     fileAdapter.NewFileAdapter(storage),
+		EventBusAdapter: eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
+		ChatMgrAdapter:  chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
+		log:             log,
+		id:              fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id),
+		config:          cfg,
+		Store:           st,
+		checkpointRepo:  checkpointRepo,
 		runtimeStateRepo: runtimeStateRepo,
-		cacheStore:       cacheStores,
-		storage:          storage,
-		cases:            casesClient,
-		AiBots:           aiBots,
-		meeting:          meetingClient,
-		chatManager:      chatMgr,
-		cc:               ccMgr,
-		eventQueue:       eventQueue,
-		grpcServer:       srvs.Grpc,
-		eslServer:        srvs.Esl,
-		mailServer:       srvs.Mail,
-		channelServer:    srvs.Channel,
-		imServer:         srvs.Im,
-		schemaCache:      model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, ""),
-		stop:             make(chan struct{}),
-		stopped:          make(chan struct{}),
-		ctx:              context.Background(),
-		cbr:              cb,
+		cacheStore:      cacheStores,
+		storage:         storage,
+		cases:           casesClient,
+		AiBots:          aiBots,
+		meeting:         meetingClient,
+		chatManager:     chatMgr,
+		cc:              ccMgr,
+		eventQueue:      eventQueue,
+		grpcServer:      srvs.Grpc,
+		eslServer:       srvs.Esl,
+		mailServer:      srvs.Mail,
+		channelServer:   srvs.Channel,
+		imServer:        srvs.Im,
+		stop:            make(chan struct{}),
+		stopped:         make(chan struct{}),
+		ctx:             context.Background(),
+		cbr:             cb,
 	}
 
 	if cfg.ExternalSql {
@@ -162,7 +172,6 @@ func (fm *FlowManager) Start() error {
 	if err := fm.grpcServer.Cluster(fm.cluster.discovery); err != nil {
 		return err
 	}
-
 	if err := fm.RegisterServers(); err != nil {
 		return err
 	}
@@ -171,7 +180,7 @@ func (fm *FlowManager) Start() error {
 		if err != nil {
 			return err
 		}
-		fm.cert = cert
+		fm.SchemaAdapter.SetCert(cert)
 	}
 	if err := fm.InitCacheTimezones(); err != nil {
 		return err
@@ -184,64 +193,32 @@ func (f *FlowManager) Shutdown() {
 	if f.cluster != nil {
 		f.cluster.Stop()
 	}
-
 	if f.callWatcher != nil {
 		f.callWatcher.Stop()
 	}
-
 	if f.listWatcher != nil {
 		f.listWatcher.Stop()
 	}
-
 	if f.cc != nil {
 		f.cc.Stop()
 	}
-
 	if f.chatManager != nil {
 		f.chatManager.Stop()
 	}
-
 	if f.AiBots != nil {
 		f.AiBots.Stop()
 	}
-
 	close(f.stop)
 	<-f.stopped
 	f.StopServers()
 }
 
-func (f *FlowManager) Log() *wlog.Logger {
-	return f.log
-}
-
-func (f *FlowManager) AppID() string {
-	return f.id
-}
-
-func (f *FlowManager) CheckpointRepo() session.Repository {
-	return f.checkpointRepo
-}
-
-func (f *FlowManager) RuntimeStateRepo() persistence.Repository {
-	return f.runtimeStateRepo
-}
-
-func (f *FlowManager) Callback() *CallbackResolver {
-	return f.cbr
-}
-
-func (f *FlowManager) GetStore() store.Store {
-	return f.Store
-}
-
-func (f *FlowManager) GetAiBots() *aibridge.Client {
-	return f.AiBots
-}
-
-func (f *FlowManager) Meeting() domainmeeting.Client {
-	return f.meeting
-}
-
-func (f *FlowManager) Cases() domcases.Client {
-	return f.cases
-}
+func (f *FlowManager) Log() *wlog.Logger         { return f.log }
+func (f *FlowManager) AppID() string              { return f.id }
+func (f *FlowManager) CheckpointRepo() session.Repository   { return f.checkpointRepo }
+func (f *FlowManager) RuntimeStateRepo() persistence.Repository { return f.runtimeStateRepo }
+func (f *FlowManager) Callback() *CallbackResolver { return f.cbr }
+func (f *FlowManager) GetStore() store.Store       { return f.Store }
+func (f *FlowManager) GetAiBots() *aibridge.Client { return f.AiBots }
+func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
+func (f *FlowManager) Cases() domcases.Client      { return f.cases }
