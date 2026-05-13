@@ -1,0 +1,509 @@
+[
+  {
+    "if": {
+      "then": [
+        {
+          "tag": "416-schema-custom-tag",
+          "break": true,
+          "schema": {
+            "id": "20",
+            "name": "Chat (new2) TEST BPM",
+            "async": false
+          }
+        }
+      ],
+      "expression": "${user} == '491659777'"
+    },
+    "tag": "415-if-custom-tag",
+    "break": false
+  },
+  {
+    "tag": "40-httpRequest-custom-tag",
+    "break": false,
+    "httpRequest": {
+      "url": "http://crm.hq.paynet.uz/ServiceModel/AuthService.svc/Login",
+      "data": {
+        "UserName": "x",
+        "UserPassword": "x"
+      },
+      "path": {},
+      "method": "POST",
+      "parser": "application/json",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "timeout": 5000,
+      "cacheCookie": false,
+      "exportCookie": "my_cookie",
+      "responseCode": "http_response_code1",
+      "exportVariables": {},
+      "insecureSkipVerify": true
+    }
+  },
+  {
+    "js": {
+      "data": "return ${my_cookie}.replace(/.*BPMCSRF=([-._A-Za-z0-9/]{198});.*/, '$1')",
+      "setVar": "BPMCSRF"
+    },
+    "tag": "41-js-custom-tag",
+    "break": false
+  },
+  {
+    "tag": "42-httpRequest-custom-tag",
+    "break": false,
+    "httpRequest": {
+      "url": "http://t.uz/rest/x/Identificate",
+      "data": {
+        "external_id": "${user}",
+        "messenger_code": "telegram"
+      },
+      "path": {},
+      "method": "POST",
+      "parser": "application/json",
+      "headers": {
+        "Cookie": "${my_cookie}",
+        "accept": "application/json",
+        "BPMCSRF": "${BPMCSRF}",
+        "Content-Type": "application/json"
+      },
+      "timeout": 5000,
+      "cacheCookie": false,
+      "exportCookie": "my-cookie",
+      "responseCode": "http_response_code2",
+      "exportVariables": {
+        "Id": "Contact.Id",
+        "Name": "Contact.Region.Name",
+        "Type": "Contact.Type.Id",
+        "this": "@this",
+        "Region": "Contact.Region.Id",
+        "case_id": "Contact.LatestActiveCase.Id",
+        "LastChat": "Contact.LastChat.IsActiveOrRecentlyClosed",
+        "LanguageCode": "Contact.LanguageCode",
+        "client_phone": "Contact.MobilePhone",
+        "OwnerExtension": "Contact.LatestActiveCase.OwnerExtension"
+      },
+      "insecureSkipVerify": true
+    }
+  },
+  {
+    "if": {
+      "else": [
+        {
+          "if": {
+            "else": [
+              {
+                "if": {
+                  "else": [
+                    {
+                      "tag": "182-goto-custom-tag",
+                      "goto": "60-if-custom-tag",
+                      "break": false
+                    }
+                  ],
+                  "then": [
+                    {
+                      "tag": "243-goto-custom-tag",
+                      "goto": "352-menu-custom-tag",
+                      "break": false
+                    }
+                  ],
+                  "expression": "!${client_phone}"
+                },
+                "tag": "242-if-custom-tag",
+                "break": false
+              }
+            ],
+            "then": [
+              {
+                "tag": "52-sendText-custom-tag",
+                "break": false,
+                "limit": {
+                  "max": 5,
+                  "failover": ""
+                },
+                "sendText": "Assalomu aleykum! Paynet chatbotidan foydalanganingiz uchun tashakkur! Bot sizga murojaat mavzusini tanlashda yordam beradi va sizni mas'ul mutaxassisga yo'naltiradi\nIltimos, ismingizni kiriting\n\nЗдравствуйте! Благодарим вас за использование чат-бота компании Paynet! Бот поможет вам определиться с темой обращения и направит вас ответственному специалисту.\nПожалуйста, введите Ваше имя\n\n"
+              },
+              {
+                "tag": "53-recvMessage-custom-tag",
+                "break": false,
+                "recvMessage": {
+                  "set": "client_name",
+                  "timeout": 7200
+                }
+              },
+              {
+                "if": {
+                  "else": [
+                    {
+                      "log": "",
+                      "tag": "318-log-custom-tag",
+                      "break": false,
+                      "limit": {
+                        "max": 2,
+                        "failover": "319-log-custom-tag"
+                      }
+                    },
+                    {
+                      "tag": "55-goto-custom-tag",
+                      "goto": "52-sendText-custom-tag",
+                      "break": false
+                    }
+                  ],
+                  "then": [
+                    {
+                      "tag": "352-menu-custom-tag",
+                      "menu": {
+                        "set": "${onClick.Menu}",
+                        "text": "Telefon raqamingizni aniqlay olmadik, uni 998********* formatida kiriting.\nМы не смогли определить ваш номер телефона, пожалуйста, введите его в формате 998*********",
+                        "buttons": [
+                          [
+                            {
+                              "text": "Поделится номером",
+                              "type": "contact"
+                            }
+                          ]
+                        ]
+                      },
+                      "break": false
+                    },
+                    {
+                      "tag": "57-recvMessage-custom-tag",
+                      "break": false,
+                      "recvMessage": {
+                        "set": "client_phone",
+                        "timeout": 7200
+                      }
+                    },
+                    {
+                      "tag": "58-httpRequest-custom-tag",
+                      "break": false,
+                      "httpRequest": {
+                        "url": "http://c.uz/rest/x/Identificate",
+                        "data": {
+                          "phone": "${client_phone}",
+                          "external_id": "${user}",
+                          "messenger_code": "telegram"
+                        },
+                        "path": {},
+                        "method": "POST",
+                        "parser": "application/json",
+                        "headers": {
+                          "Cookie": "${my_cookie}",
+                          "accept": "application/json",
+                          "BPMCSRF": "${BPMCSRF}",
+                          "Content-Type": "application/json"
+                        },
+                        "timeout": 2000,
+                        "cacheCookie": false,
+                        "exportCookie": "my-cookie",
+                        "responseCode": "http_response_code222",
+                        "exportVariables": {
+                          "Id": "Contact.Id",
+                          "Name": "Contact.Region.Name",
+                          "Type": "Contact.Type.Id",
+                          "this": "@this",
+                          "Region": "Contact.Region.Id",
+                          "case_id": "Contact.LatestActiveCase.Id",
+                          "LastChat": "Contact.LastChat.IsActiveOrRecentlyClosed",
+                          "LanguageCode": "Contact.LanguageCode",
+                          "OwnerExtension": "Contact.LatestActiveCase.OwnerExtension"
+                        },
+                        "insecureSkipVerify": true
+                      }
+                    },
+                    {
+                      "if": {
+                        "else": [
+                          {
+                            "if": {
+                              "then": [
+                                {
+                                  "tag": "59-menu-custom-tag",
+                                  "menu": {
+                                    "set": "${onClick.Menu}",
+                                    "text": "Выберите язык",
+                                    "buttons": [
+                                      [
+                                        {
+                                          "code": "Русский",
+                                          "text": "Русский",
+                                          "type": "reply"
+                                        },
+                                        {
+                                          "code": "Узбекский",
+                                          "text": "O'zbekcha",
+                                          "type": "reply"
+                                        }
+                                      ]
+                                    ]
+                                  },
+                                  "break": false
+                                },
+                                {
+                                  "tag": "61-recvMessage-custom-tag",
+                                  "break": false,
+                                  "recvMessage": {
+                                    "set": "Language",
+                                    "timeout": 7200
+                                  }
+                                },
+                                {
+                                  "tag": "62-switch-custom-tag",
+                                  "break": false,
+                                  "switch": {
+                                    "case": {
+                                      "Русский": [
+                                        {
+                                          "set": {
+                                            "client_language_code": "ru-RU"
+                                          },
+                                          "tag": "63-set-custom-tag",
+                                          "break": false
+                                        },
+                                        {
+                                          "if": {
+                                            "then": [
+                                              {
+                                                "tag": "340-goto-custom-tag",
+                                                "goto": "175-export-custom-tag",
+                                                "break": false
+                                              }
+                                            ],
+                                            "expression": "${OwnerExtension}"
+                                          },
+                                          "tag": "331-if-custom-tag",
+                                          "break": false
+                                        },
+                                        {
+                                          "if": {
+                                            "else": [
+                                              {
+                                                "tag": "66-menu-custom-tag",
+                                                "menu": {
+                                                  "set": "${onClick.Menu}",
+                                                  "text": "Выберите из какого региона обращаетесь",
+                                                  "buttons": [
+                                                    [
+                                                      {
+                                                        "code": "Ташкент",
+                                                        "text": "Ташкент",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Самарканд",
+                                                        "text": "Самарканд",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Джиззах",
+                                                        "text": "Джиззах",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Бухара",
+                                                        "text": "Бухара",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Наманган",
+                                                        "text": "Наманган",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Навои",
+                                                        "text": "Навои",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Сурхандарья",
+                                                        "text": "Сурхандарья",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Хорезм",
+                                                        "text": "Хорезм",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Андижан",
+                                                        "text": "Андижан",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Сырдарья",
+                                                        "text": "Сырдарья",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Кашкадарья",
+                                                        "text": "Кашкадарья",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Фергана",
+                                                        "text": "Фергана",
+                                                        "type": "reply"
+                                                      }
+                                                    ],
+                                                    [
+                                                      {
+                                                        "code": "Каракалпакстан",
+                                                        "text": "Каракалпакстан",
+                                                        "type": "reply"
+                                                      },
+                                                      {
+                                                        "code": "Ташкентская область",
+                                                        "text": "Ташкентская область",
+                                                        "type": "reply"
+                                                      }
+                                                    ]
+                                                  ]
+                                                },
+                                                "break": false
+                                              }
+                                            ],
+                                            "then": [
+                                              {
+                                                "if": {
+                                                  "else": [
+                                                    {
+                                                      "tag": "501-goto-custom-tag",
+                                                      "goto": "504-log-custom-tag",
+                                                      "break": false
+                                                    }
+                                                  ],
+                                                  "then": [
+                                                    {
+                                                      "tag": "355-switch-custom-tag",
+                                                      "break": false,
+                                                      "switch": {
+                                                        "case": {
+                                                          "default": [
+                                                            {
+                                                              "tag": "358-goto-custom-tag",
+                                                              "goto": "367-if-custom-tag",
+                                                              "break": false
+                                                            }
+                                                          ],
+                                                          "00783ef6-f36b-1410-a883-16d83cab0980": [
+                                                            {
+                                                              "tag": "356-goto-custom-tag",
+                                                              "goto": "118-set-custom-tag",
+                                                              "break": false
+                                                            }
+                                                          ],
+                                                          "d7ae3f65-0063-4f41-9389-3a4d5f154d09": [
+                                                            {
+                                                              "tag": "357-goto-custom-tag",
+                                                              "goto": "119-set-custom-tag",
+                                                              "break": false
+                                                            }
+                                                          ]
+                                                        },
+                                                        "variable": "${Type}"
+                                                      }
+                                                    }
+                                                  ],
+                                                  "expression": "${Type}"
+                                                },
+                                                "tag": "353-if-custom-tag",
+                                                "break": false
+                                              }
+                                            ],
+                                            "expression": "${Region}"
+                                          },
+                                          "tag": "101-if-custom-tag",
+                                          "break": false
+                                        }
+                                      ]
+                                    },
+                                    "variable": "${Language}"
+                                  }
+                                }
+                              ],
+                              "expression": "!${LanguageCode}"
+                            },
+                            "tag": "60-if-custom-tag",
+                            "break": false
+                          },
+                          {
+                            "tag": "113-switch-custom-tag",
+                            "break": false,
+                            "switch": {
+                              "case": {
+                                "ru-RU": [
+                                  {
+                                    "tag": "112-goto-custom-tag",
+                                    "goto": "331-if-custom-tag",
+                                    "break": false
+                                  }
+                                ]
+                              },
+                              "variable": "${LanguageCode}"
+                            }
+                          }
+                        ],
+                        "then": [
+                          {
+                            "tag": "376-goto-custom-tag",
+                            "goto": "374-switch-custom-tag",
+                            "break": false
+                          }
+                        ],
+                        "expression": "${LastChat} == 'true'"
+                      },
+                      "tag": "377-if-custom-tag",
+                      "break": false
+                    }
+                  ],
+                  "expression": "${client_name}"
+                },
+                "tag": "54-if-custom-tag",
+                "break": false
+              }
+            ],
+            "expression": "!${Id}"
+          },
+          "tag": "51-if-custom-tag",
+          "break": false
+        }
+      ],
+      "then": [
+        {
+          "tag": "374-switch-custom-tag",
+          "break": false,
+          "switch": {
+            "case": {
+              "ru-RU": [
+                {
+                  "tag": "373-goto-custom-tag",
+                  "goto": "328-export-custom-tag",
+                  "break": false
+                }
+              ]
+            },
+            "variable": "${LanguageCode}"
+          }
+        },
+        {
+          "tag": "394-goto-custom-tag",
+          "goto": "328-export-custom-tag",
+          "break": false
+        }
+      ],
+      "expression": "${LastChat} == 'true'"
+    },
+    "tag": "372-if-custom-tag",
+    "break": false
+  }
+]

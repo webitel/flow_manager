@@ -1,0 +1,423 @@
+[
+  {
+    "tag": "51-calendar-custom-tag",
+    "async": false,
+    "break": false,
+    "calendar": {
+      "id": "75",
+      "name": "Обробка чатів",
+      "setVar": "worktime",
+      "extended": false
+    }
+  },
+  {
+    "if": {
+      "then": [
+        {
+          "tag": "56-sendText-custom-tag",
+          "async": false,
+          "break": false,
+          "sendText": "Залюбки відповімо на всі ваші запитання.\n\nНаразі наші менеджери недоступні. Ми зв’яжемося з вами, у робочий час."
+        },
+        {
+          "tag": "55-sendText-custom-tag",
+          "async": false,
+          "break": false,
+          "sendText": "Коротко опишіть ваше питання.\n"
+        },
+        {
+          "tag": "58-recvMessage-custom-tag",
+          "async": false,
+          "break": false,
+          "recvMessage": {
+            "set": "question",
+            "timeout": 26000
+          }
+        },
+        {
+          "tag": "53-sendText-custom-tag",
+          "async": false,
+          "break": false,
+          "sendText": "Будь ласка, вкажіть ваш контактний номер телефону, щоб ми могли зв’язатися з вами."
+        },
+        {
+          "tag": "60-recvMessage-custom-tag",
+          "async": false,
+          "break": false,
+          "recvMessage": {
+            "set": "phone",
+            "timeout": 26000
+          }
+        },
+        {
+          "tag": "62-httpRequest-custom-tag",
+          "async": false,
+          "break": false,
+          "httpRequest": {
+            "url": "https://x.terrasoft.ua/ServiceModel/AuthService.svc/Login",
+            "data": {
+              "UserName": "x",
+              "UserPassword": "x"
+            },
+            "path": {},
+            "method": "POST",
+            "parser": "application/json",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "timeout": 3000,
+            "exportCookie": "my_cookie",
+            "responseCode": "http_response_code",
+            "exportVariables": {},
+            "insecureSkipVerify": false
+          }
+        },
+        {
+          "js": {
+            "data": "return ${my_cookie}.replace(/.*BPMCSRF=([-._A-Za-z0-9/]{22});.*/, '$1')",
+            "setVar": "BPMCSRF"
+          },
+          "tag": "63-js-custom-tag",
+          "async": false,
+          "break": false
+        },
+        {
+          "tag": "61-httpRequest-custom-tag",
+          "async": false,
+          "break": false,
+          "httpRequest": {
+            "url": "https://x.terrasoft.ua/0/dataservice/json/reply/InsertQuery",
+            "data": {
+              "ColumnValues": {
+                "Items": {
+                  "Type": {
+                    "Parameter": {
+                      "Value": "E1831DEC-CFC0-DF11-B00F-001D60E938C6",
+                      "DataValueType": 0
+                    },
+                    "ExpressionType": 2
+                  },
+                  "Title": {
+                    "Parameter": {
+                      "Value": "Chat from: ${phone} \n Question: ${question}",
+                      "DataValueType": 1
+                    },
+                    "ExpressionType": 2
+                  },
+                  "RemindToOwner": {
+                    "Parameter": {
+                      "Value": true,
+                      "DataValueType": 12
+                    },
+                    "ExpressionType": 2
+                  },
+                  "ActivityCategory": {
+                    "Parameter": {
+                      "Value": "ac7c1796-4125-4d66-b85f-559e32da6d77",
+                      "DataValueType": 0
+                    },
+                    "ExpressionType": 2
+                  }
+                }
+              },
+              "OperationType": 1,
+              "RootSchemaName": "Activity"
+            },
+            "path": {},
+            "method": "POST",
+            "parser": "application/json",
+            "headers": {
+              "Accept": "application/json;odata=verbose",
+              "Cookie": "${my_cookie}",
+              "BPMCSRF": "${BPMCSRF}",
+              "Content-Type": "application/json"
+            },
+            "timeout": 3000,
+            "exportCookie": "my-cookie",
+            "responseCode": "http_response_code",
+            "exportVariables": {},
+            "insecureSkipVerify": false
+          }
+        },
+        {
+          "tag": "84-sendText-custom-tag",
+          "async": false,
+          "break": true,
+          "sendText": "Дякуємо за ваш запит. Наш менеджер зв'яжеться з вами у робочий час!\n\n"
+        }
+      ],
+      "expression": "${worktime} == 'false'"
+    },
+    "tag": "52-if-custom-tag",
+    "async": false,
+    "break": false
+  },
+  {
+    "tag": "54-sendText-custom-tag",
+    "async": false,
+    "break": false,
+    "sendText": "Доброго дня👋\n\nЗалюбки відповімо на всі ваші запитання."
+  },
+  {
+    "tag": "64-sendText-custom-tag",
+    "async": false,
+    "break": false,
+    "sendText": "Давайте знайомитися! Вкажіть, будь ласка, ваше ім'я.\n"
+  },
+  {
+    "tag": "59-recvMessage-custom-tag",
+    "async": false,
+    "break": false,
+    "recvMessage": {
+      "set": "name",
+      "timeout": 6000
+    }
+  },
+  {
+    "tag": "65-sendText-custom-tag",
+    "async": false,
+    "break": false,
+    "sendText": "Надайте ваш контактний номер телефону 📞"
+  },
+  {
+    "tag": "57-recvMessage-custom-tag",
+    "async": false,
+    "break": false,
+    "recvMessage": {
+      "set": "phone",
+      "timeout": 6000
+    }
+  },
+  {
+    "js": {
+      "data": "var re = /^\\+?\\d+$/;\nreturn re.test(${phone}); ",
+      "setVar": "isphonevalid"
+    },
+    "tag": "80-js-custom-tag",
+    "async": false,
+    "break": false
+  },
+  {
+    "if": {
+      "then": [
+        {
+          "tag": "66-sendText-custom-tag",
+          "async": false,
+          "break": false,
+          "sendText": "Вкажіть, будь ласка, ваш email ✉️"
+        },
+        {
+          "tag": "67-recvMessage-custom-tag",
+          "async": false,
+          "break": false,
+          "recvMessage": {
+            "set": "mail",
+            "timeout": 6000
+          }
+        },
+        {
+          "js": {
+            "data": "var re = /\\S+@\\S+\\.\\S+/;\nreturn re.test(${mail}); ",
+            "setVar": "isEmailValid"
+          },
+          "tag": "76-js-custom-tag",
+          "async": false,
+          "break": false
+        },
+        {
+          "if": {
+            "then": [
+              {
+                "tag": "96-sendText-custom-tag",
+                "break": false,
+                "sendText": "Як ми можемо вам допомогти?"
+              },
+              {
+                "tag": "97-recvMessage-custom-tag",
+                "break": false,
+                "recvMessage": {
+                  "set": "how",
+                  "timeout": 6000
+                }
+              },
+              {
+                "set": {
+                  "client_name": "${name}",
+                  "ClientNumber": "${phone}",
+                  "client_email": "${mail}",
+                  "client_phone": "${phone}"
+                },
+                "tag": "94-set-custom-tag",
+                "break": false
+              },
+              {
+                "tag": "95-export-custom-tag",
+                "break": false,
+                "export": [
+                  "ClientNumber",
+                  "client_name",
+                  "client_phone",
+                  "client_email"
+                ]
+              },
+              {
+                "tag": "68-joinQueue-custom-tag",
+                "async": false,
+                "break": false,
+                "joinQueue": {
+                  "agent": {
+                    "extension": ""
+                  },
+                  "queue": {
+                    "id": "168",
+                    "name": "Чати онлайн філіал",
+                    "team": {},
+                    "type": 0,
+                    "active": 0,
+                    "enabled": false,
+                    "waiting": 0,
+                    "calendar": {},
+                    "priority": "0"
+                  },
+                  "bucket": {},
+                  "timers": [],
+                  "priority": 100,
+                  "ringtone": {},
+                  "transferAfterBridge": {}
+                }
+              },
+              {
+                "tag": "70-menu-custom-tag",
+                "menu": {
+                  "set": "${onClick.Menu}",
+                  "text": "Оцініть якість обслуговування.\n",
+                  "buttons": [
+                    [
+                      {
+                        "code": "5",
+                        "text": "👍🏻 Задоволений",
+                        "type": "reply"
+                      },
+                      {
+                        "code": "1",
+                        "text": "Не задоволений 👎🏻",
+                        "type": "reply"
+                      }
+                    ]
+                  ]
+                },
+                "async": false,
+                "break": false
+              },
+              {
+                "tag": "71-recvMessage-custom-tag",
+                "async": false,
+                "break": false,
+                "recvMessage": {
+                  "set": "satisfaction",
+                  "timeout": 6000
+                }
+              },
+              {
+                "tag": "73-httpRequest-custom-tag",
+                "async": false,
+                "break": false,
+                "httpRequest": {
+                  "url": "https://x.terrasoft.ua/ServiceModel/AuthService.svc/Login",
+                  "data": {
+                    "UserName": "x",
+                    "UserPassword": "x"
+                  },
+                  "path": {},
+                  "method": "POST",
+                  "parser": "application/json",
+                  "headers": {
+                    "Content-Type": "application/json"
+                  },
+                  "timeout": 3000,
+                  "exportCookie": "my_cookie",
+                  "responseCode": "http_response_code",
+                  "exportVariables": {},
+                  "insecureSkipVerify": false
+                }
+              },
+              {
+                "js": {
+                  "data": "return ${my_cookie}.replace(/.*BPMCSRF=([-._A-Za-z0-9/]{22});.*/, '$1')",
+                  "setVar": "BPMCSRF"
+                },
+                "tag": "75-js-custom-tag",
+                "async": false,
+                "break": false
+              },
+              {
+                "tag": "74-httpRequest-custom-tag",
+                "async": false,
+                "break": true,
+                "httpRequest": {
+                  "url": "https://s.terrasoft.ua/0/rest/WtelChatRestService/ChatRating/SetRating",
+                  "data": {
+                    "id": "${uuid}",
+                    "rating": "${satisfaction}"
+                  },
+                  "path": {},
+                  "method": "POST",
+                  "parser": "application/json",
+                  "headers": {
+                    "Accept": "application/json;odata=verbose",
+                    "Cookie": "${my_cookie}",
+                    "BPMCSRF": "${BPMCSRF}",
+                    "Content-Type": "application/json"
+                  },
+                  "timeout": 3000,
+                  "exportCookie": "my-cookie",
+                  "responseCode": "http_response_code",
+                  "exportVariables": {},
+                  "insecureSkipVerify": false
+                }
+              },
+              {
+                "tag": "85-sendText-custom-tag",
+                "async": false,
+                "break": false,
+                "sendText": "${uuid}\n${http_response_code}\n${satisfaction}"
+              }
+            ],
+            "expression": "${isEmailValid} == 'true'"
+          },
+          "tag": "77-if-custom-tag",
+          "async": false,
+          "break": false
+        },
+        {
+          "tag": "78-sendText-custom-tag",
+          "async": false,
+          "break": false,
+          "sendText": "Будь ласка вкажіть дійсну адресу електронної пошти.\nПриклад: \nemail@gmail.com"
+        },
+        {
+          "tag": "79-goto-custom-tag",
+          "goto": "67-recvMessage-custom-tag",
+          "async": false,
+          "break": false
+        }
+      ],
+      "expression": "${isphonevalid} == 'true'"
+    },
+    "tag": "81-if-custom-tag",
+    "async": false,
+    "break": false
+  },
+  {
+    "tag": "82-sendText-custom-tag",
+    "async": false,
+    "break": false,
+    "sendText": "Просимо надати телефон у міжнародному форматі.\nПриклад:\n+380XXXXXXXXX"
+  },
+  {
+    "tag": "83-goto-custom-tag",
+    "goto": "57-recvMessage-custom-tag",
+    "async": false,
+    "break": false
+  }
+]

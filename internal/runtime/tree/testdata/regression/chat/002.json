@@ -1,0 +1,75 @@
+[
+  {
+    "tag": "64-sendText-custom-tag",
+    "break": false,
+    "sendText": "Я допоможу вам з вибором у нашому кафе.\nЩо вас цікавить?"
+  },
+  {
+    "tag": "66-while-custom-tag",
+    "break": false,
+    "while": {
+      "do": [
+        {
+          "tag": "40-recvMessage-custom-tag",
+          "break": false,
+          "recvMessage": {
+            "set": "req",
+            "timeout": 60
+          }
+        },
+        {
+          "if": {
+            "then": [
+              {
+                "js": {
+                  "data": "var postBody = {\n  \"model\": \"ft:gpt-3.5-turbo-0613:personal::g-Ik5sUPd3K\",\n  \"messages\":  [{\"role\": \"system\", \"content\": \"Ти асистент мережі ОККО і консультуєш клієнтів щодо їжі та напоїв на заправках\"}]\n}\nvar myObject = {\n  role: \"user\",\n  content: ${req}\n};\npostBody.messages.push(myObject)\nreturn JSON.stringify(postBody)",
+                  "setVar": "requestTxt"
+                },
+                "tag": "49-js-custom-tag",
+                "break": false
+              },
+              {
+                "tag": "57-customCode-custom-tag",
+                "break": false,
+                "httpRequest": {
+                  "url": "https://api.openai.com/v1/chat/completions",
+                  "data": "${requestTxt}",
+                  "method": "POST",
+                  "parser": "application/json",
+                  "headers": {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer sk-"
+                  },
+                  "timeout": 60000,
+                  "responseCode": "http_response_code",
+                  "exportVariables": {
+                    "chatgpt": "choices.0.message.content"
+                  },
+                  "insecureSkipVerify": true
+                }
+              },
+              {
+                "js": {
+                  "data": "var postBody = JSON.parse(${requestTxt});\nvar myObject = {\n  role: \"assistant\",\n  content: \"${chatgpt}\"\n};\npostBody.messages.push(myObject)\nreturn JSON.stringify(postBody)",
+                  "setVar": "requestTxt"
+                },
+                "tag": "54-js-custom-tag",
+                "break": false
+              },
+              {
+                "tag": "47-sendText-custom-tag",
+                "break": false,
+                "sendText": "${chatgpt}"
+              }
+            ],
+            "expression": "${req}"
+          },
+          "tag": "44-if-custom-tag",
+          "break": false
+        }
+      ],
+      "maxSteps": "4",
+      "condition": "true"
+    }
+  }
+]
