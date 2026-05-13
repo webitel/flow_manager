@@ -2,7 +2,14 @@ package flow
 
 // moved from model/connection.go — see model/connection.go for re-export aliases
 
-import "encoding/json"
+import (
+	"context"
+	"encoding/json"
+
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/infra/discovery"
+)
 
 // ConnectionType identifies the transport type of a flow connection.
 type ConnectionType int8
@@ -32,4 +39,33 @@ type ChannelExec struct {
 	SchemaId  int                        `json:"schema_id"`
 	DomainId  int64                      `json:"domain_id"`
 	Variables map[string]json.RawMessage `json:"variables"`
+}
+
+// Server is the interface implemented by each transport provider.
+type Server interface {
+	Name() string
+	Start() error
+	Stop()
+	Host() string
+	Port() int
+	Consume() <-chan Connection
+	Type() ConnectionType
+	Cluster(discovery discovery.ServiceDiscovery) error
+}
+
+// Connection is the core runtime context passed through a flow execution.
+type Connection interface {
+	Type() ConnectionType
+	Id() string
+	NodeId() string
+	DomainId() int64
+
+	Context() context.Context
+	Get(key string) (string, bool)
+	Set(ctx context.Context, vars Variables) (Response, error)
+	ParseText(text string, ops ...ParseOption) string
+
+	Close() error
+	Variables() map[string]string
+	Log() *wlog.Logger
 }

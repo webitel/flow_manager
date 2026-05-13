@@ -1,14 +1,8 @@
 package model
 
-import (
-	"context"
-	"encoding/json"
+import "encoding/json"
 
-	"github.com/webitel/wlog"
-
-	"github.com/webitel/flow_manager/infra/discovery"
-	"github.com/webitel/flow_manager/internal/domain/flow"
-)
+import "github.com/webitel/flow_manager/internal/domain/flow"
 
 // Re-exports for backward compatibility.
 type ConnectionType = flow.ConnectionType
@@ -27,34 +21,9 @@ const (
 	ConnectionTypeIM      = flow.ConnectionTypeIM
 )
 
-// Server is the interface implemented by each transport provider.
-type Server interface {
-	Name() string
-	Start() error
-	Stop()
-	Host() string
-	Port() int
-	Consume() <-chan Connection
-	Type() ConnectionType
-	Cluster(discovery discovery.ServiceDiscovery) error
-}
-
-// Connection is the core runtime context passed through a flow execution.
-type Connection interface {
-	Type() ConnectionType
-	Id() string
-	NodeId() string
-	DomainId() int64
-
-	Context() context.Context
-	Get(key string) (string, bool)
-	Set(ctx context.Context, vars Variables) (Response, error)
-	ParseText(text string, ops ...ParseOption) string
-
-	Close() error
-	Variables() map[string]string
-	Log() *wlog.Logger
-}
+// Re-export interfaces for backward compatibility.
+type Server = flow.Server
+type Connection = flow.Connection
 
 // VariablesToJson serialises a Variables map to JSON bytes.
 // Replaces the former *Variables.ToJson() method (cannot define methods on aliased types).

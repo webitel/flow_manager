@@ -7,3 +7,9 @@ type ApplicationRequest interface {
 	Id() string
 	Args() interface{}
 }
+
+// Router dispatches a Connection through a domain-specific flow.
+type Router interface {
+	Handle(conn Connection) error
+	GlobalVariable(domainId int64, name string) string
+}
