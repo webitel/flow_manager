@@ -29,7 +29,7 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 // BootstrapDeps is the set of dependencies that Bootstrap consumes directly
@@ -37,7 +37,7 @@ import (
 type BootstrapDeps interface {
 	// direct calls
 	GetLocation(id int) *time.Location
-	GetStore() store.Store
+	GetStore() storage.Store
 	GetSchemaById(domainId int64, id int) (*routing.Schema, error)
 	Meeting() domainmeeting.Client
 	Cases() domcases.Client

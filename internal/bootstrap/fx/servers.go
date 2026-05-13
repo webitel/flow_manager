@@ -15,7 +15,7 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/usecase/callback"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 func NewCallbackResolver() *callback.Resolver {
@@ -39,7 +39,7 @@ func NewServers(
 	cm *grpc.ChatManager,
 	cb *callback.Resolver,
 	storage domstorage.Client,
-	s store.Store,
+	s storage.Store,
 	eventQueue ports.EventBus,
 	log *wlog.Logger,
 	tlsCfg *tls.Config,

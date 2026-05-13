@@ -11,11 +11,11 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 // New registers all member ops on reg using the provided MemberStore.
-func Register(reg *ops.Registry, s store.MemberStore) {
+func Register(reg *ops.Registry, s storage.MemberStore) {
 	reg.Register("ccPosition", &ccPositionOp{store: s})
 	reg.Register("memberInfo", &memberInfoOp{store: s})
 	reg.Register("patchMembers", &patchMembersOp{store: s})
@@ -25,7 +25,7 @@ func Register(reg *ops.Registry, s store.MemberStore) {
 
 // ── ccPosition ────────────────────────────────────────────────────────────────
 
-type ccPositionOp struct{ store store.MemberStore }
+type ccPositionOp struct{ store storage.MemberStore }
 
 func (o *ccPositionOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -50,7 +50,7 @@ func (o *ccPositionOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 
 // ── memberInfo ────────────────────────────────────────────────────────────────
 
-type memberInfoOp struct{ store store.MemberStore }
+type memberInfoOp struct{ store storage.MemberStore }
 
 func (o *memberInfoOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -83,7 +83,7 @@ func (o *memberInfoOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 
 // ── patchMembers ──────────────────────────────────────────────────────────────
 
-type patchMembersOp struct{ store store.MemberStore }
+type patchMembersOp struct{ store storage.MemberStore }
 
 func (o *patchMembersOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -117,7 +117,7 @@ func (o *patchMembersOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOut
 
 // ── ewt ───────────────────────────────────────────────────────────────────────
 
-type ewtOp struct{ store store.MemberStore }
+type ewtOp struct{ store storage.MemberStore }
 
 func (o *ewtOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -149,7 +149,7 @@ func (o *ewtOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 
 // ── callbackQueue ─────────────────────────────────────────────────────────────
 
-type callbackQueueOp struct{ store store.MemberStore }
+type callbackQueueOp struct{ store storage.MemberStore }
 
 func (o *callbackQueueOp) Kind() ops.OpKind { return ops.OpKindSync }
 

@@ -16,7 +16,7 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/domain/webhook"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 var (
@@ -32,13 +32,13 @@ var (
 // Adapter implements schema lookup, system settings, hook lookup,
 // and schema variable read/write.
 type SchemaAdapter struct {
-	store        store.Store
+	store        storage.Store
 	schemaCache  cache.ObjectCache
 	cert         presign.PreSign // optional; set via SetCert after Start()
 	timezoneList map[int]*time.Location
 }
 
-func NewSchemaAdapter(st store.Store, schemaCache cache.ObjectCache) *SchemaAdapter {
+func NewSchemaAdapter(st storage.Store, schemaCache cache.ObjectCache) *SchemaAdapter {
 	return &SchemaAdapter{store: st, schemaCache: schemaCache}
 }
 

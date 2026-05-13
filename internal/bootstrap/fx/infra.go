@@ -20,7 +20,7 @@ import (
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 // AppID is a distinct named type so fx can inject it unambiguously.
@@ -75,7 +75,7 @@ func NewLogger(lc fx.Lifecycle, cfg *bscfg.Config, id AppID) (*wlog.Logger, erro
 	return log, nil
 }
 
-func NewStore(db infraSql.Store) store.Store {
+func NewStore(db infraSql.Store) storage.Store {
 	return postgresStorage.NewStore(db)
 }
 

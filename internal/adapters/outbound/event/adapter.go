@@ -12,7 +12,7 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/infrastructure/utils"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 	"github.com/webitel/wlog"
 )
 
@@ -29,11 +29,11 @@ var ErrAllowUseMQ = apperrs.New(http.StatusForbidden, "App: app.settings.mq.allo
 // MQ publishing.
 type EventBusAdapter struct {
 	bus    ports.EventBus
-	store  store.Store
+	store  storage.Store
 	config *bscfg.Config
 }
 
-func NewEventBusAdapter(bus ports.EventBus, st store.Store, cfg *bscfg.Config) *EventBusAdapter {
+func NewEventBusAdapter(bus ports.EventBus, st storage.Store, cfg *bscfg.Config) *EventBusAdapter {
 	return &EventBusAdapter{bus: bus, store: st, config: cfg}
 }
 

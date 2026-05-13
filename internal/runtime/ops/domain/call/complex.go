@@ -19,12 +19,12 @@ import (
 	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 // ComplexDeps is the narrow interface required by bridge, joinQueue, and joinAgent ops.
 type ComplexDeps interface {
-	GetStore() store.Store
+	GetStore() storage.Store
 	GetMediaFiles(domainId int64, req *[]*calldomain.PlaybackFile) ([]*calldomain.PlaybackFile, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error)

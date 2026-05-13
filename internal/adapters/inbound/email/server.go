@@ -18,7 +18,7 @@ import (
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 )
 
 type MailServer struct {
-	store           store.EmailStore
+	store           storage.EmailStore
 	storage         StorageApi
 	profiles        *cache.LRUCache
 	didFinishListen chan struct{}
@@ -45,7 +45,7 @@ type StorageApi interface {
 	Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata domstorage.File) (domstorage.File, error)
 }
 
-func New(storageApi StorageApi, s store.EmailStore, debug bool) flow.Server {
+func New(storageApi StorageApi, s storage.EmailStore, debug bool) flow.Server {
 	return &MailServer{
 		store:           s,
 		profiles:        cache.NewLru(SizeCache),

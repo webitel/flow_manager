@@ -34,7 +34,7 @@ import (
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 
 	// -------------------- plugin(s) -------------------- //
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
@@ -60,7 +60,7 @@ type FlowManager struct {
 	config *bscfg.Config
 
 	cluster *clusterPkg.Cluster
-	Store   store.Store
+	Store   storage.Store
 
 	srvs       bootstrapServers.Servers
 	grpcServer *grpc.Server
@@ -87,7 +87,7 @@ type FlowManager struct {
 func NewFlowManager(
 	cfg *bscfg.Config,
 	log *wlog.Logger,
-	st store.Store,
+	st storage.Store,
 	checkpointRepo session.Repository,
 	runtimeStateRepo persistence.Repository,
 	cacheStores cache.CacheStores,
@@ -224,7 +224,7 @@ func (f *FlowManager) Shutdown() {
 func (f *FlowManager) Log() *wlog.Logger             { return f.log }
 func (f *FlowManager) AppID() string                 { return f.id }
 func (f *FlowManager) Callback() *callback.Resolver  { return f.cbr }
-func (f *FlowManager) GetStore() store.Store         { return f.Store }
+func (f *FlowManager) GetStore() storage.Store         { return f.Store }
 func (f *FlowManager) GetAiBots() *aibridge.Client   { return f.AiBots }
 func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
 func (f *FlowManager) Cases() domcases.Client        { return f.cases }

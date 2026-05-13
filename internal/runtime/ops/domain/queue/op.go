@@ -9,11 +9,11 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	queuedomain "github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 // Register adds getQueueMetrics, getQueueInfo, and getQueueAgents to reg.
-func Register(reg *ops.Registry, s store.QueueStore) {
+func Register(reg *ops.Registry, s storage.QueueStore) {
 	reg.Register("getQueueMetrics", &getQueueMetricsOp{store: s})
 	reg.Register("getQueueInfo", &getQueueInfoOp{store: s})
 	reg.Register("getQueueAgents", &getQueueAgentsOp{store: s})
@@ -21,7 +21,7 @@ func Register(reg *ops.Registry, s store.QueueStore) {
 
 // ── getQueueMetrics ───────────────────────────────────────────────────────────
 
-type getQueueMetricsOp struct{ store store.QueueStore }
+type getQueueMetricsOp struct{ store storage.QueueStore }
 
 func (o *getQueueMetricsOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -73,7 +73,7 @@ func (o *getQueueMetricsOp) Execute(ctx context.Context, in ops.OpInput) (ops.Op
 
 // ── getQueueInfo ──────────────────────────────────────────────────────────────
 
-type getQueueInfoOp struct{ store store.QueueStore }
+type getQueueInfoOp struct{ store storage.QueueStore }
 
 func (o *getQueueInfoOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -108,7 +108,7 @@ func (o *getQueueInfoOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOut
 
 // ── getQueueAgents ────────────────────────────────────────────────────────────
 
-type getQueueAgentsOp struct{ store store.QueueStore }
+type getQueueAgentsOp struct{ store storage.QueueStore }
 
 func (o *getQueueAgentsOp) Kind() ops.OpKind { return ops.OpKindSync }
 

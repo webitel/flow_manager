@@ -1,4 +1,4 @@
-// Package store_adapter wraps store.Store and exposes the thin delegating
+// Package store_adapter wraps storage.Store and exposes the thin delegating
 // methods that used to live in app/.
 package store_adapter
 
@@ -17,19 +17,19 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/domain/user"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
-// Adapter wraps a store.Store and provides thin delegating methods.
+// Adapter wraps a storage.Store and provides thin delegating methods.
 // Embed *Adapter in FlowManager to promote all methods without re-declaring
 // them one by one in app/.
 type Adapter struct {
-	store         store.Store
+	store         storage.Store
 	externalStore *cache.ExternalStoreManager // optional; set via SetExternalStore
 }
 
 // New creates a new Adapter backed by s.
-func New(s store.Store) *Adapter {
+func New(s storage.Store) *Adapter {
 	return &Adapter{store: s}
 }
 

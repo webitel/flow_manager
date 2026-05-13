@@ -13,19 +13,19 @@ import (
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
-// FMAdapter wraps a CCManager and a store.Store, exposing the higher-level
+// FMAdapter wraps a CCManager and a storage.Store, exposing the higher-level
 // helper methods that used to live in app/cc.go.
 // Embed *FMAdapter in FlowManager to promote all methods.
 type FMAdapter struct {
 	cc    domcc.CCManager
-	store store.Store
+	store storage.Store
 }
 
 // NewFMAdapter creates a new FMAdapter.
-func NewFMAdapter(cc domcc.CCManager, st store.Store) *FMAdapter {
+func NewFMAdapter(cc domcc.CCManager, st storage.Store) *FMAdapter {
 	return &FMAdapter{cc: cc, store: st}
 }
 
