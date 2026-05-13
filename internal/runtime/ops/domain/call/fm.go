@@ -7,13 +7,21 @@ import (
 	"net/http"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
 )
 
-// RegisterFM adds call ops that need RouterDeps to reg.
-func RegisterFM(reg *ops.Registry, deps ports.RouterDeps) {
+// FMDeps is the narrow interface required by the FM call ops.
+type FMDeps interface {
+	SetCallGranteeId(domainId int64, id string, granteeId int64) *model.AppError
+	SetCallUserId(domainId int64, id string, userId int64) *model.AppError
+	UpdateCallFrom(id string, name, number, destination *string) *model.AppError
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
+	CallOutboundQueue(ctx context.Context, in *genpb.OutboundCallRequest) (*genpb.OutboundCallResponse, error)
+}
+
+// RegisterFM adds call ops that need FMDeps to reg.
+func RegisterFM(reg *ops.Registry, deps FMDeps) {
 	reg.Register("setGrantee", &setGranteeOp{deps: deps})
 	reg.Register("setUser", &setUserOp{deps: deps})
 	reg.Register("updateCid", &updateCidOp{deps: deps})
@@ -24,7 +32,7 @@ func RegisterFM(reg *ops.Registry, deps ports.RouterDeps) {
 
 // ── setGrantee ────────────────────────────────────────────────────────────────
 
-type setGranteeOp struct{ deps ports.RouterDeps }
+type setGranteeOp struct{ deps FMDeps }
 
 func (setGranteeOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -53,7 +61,7 @@ func (o *setGranteeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 
 // ── setUser ───────────────────────────────────────────────────────────────────
 
-type setUserOp struct{ deps ports.RouterDeps }
+type setUserOp struct{ deps FMDeps }
 
 func (setUserOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -79,7 +87,7 @@ func (o *setUserOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 
 // ── updateCid ─────────────────────────────────────────────────────────────────
 
-type updateCidOp struct{ deps ports.RouterDeps }
+type updateCidOp struct{ deps FMDeps }
 
 func (updateCidOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -120,7 +128,7 @@ func (o *updateCidOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 
 // ── ringback ──────────────────────────────────────────────────────────────────
 
-type ringbackOp struct{ deps ports.RouterDeps }
+type ringbackOp struct{ deps FMDeps }
 
 func (ringbackOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -151,7 +159,7 @@ func (o *ringbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 
 // ── backgroundPlayback ────────────────────────────────────────────────────────
 
-type backgroundPlaybackOp struct{ deps ports.RouterDeps }
+type backgroundPlaybackOp struct{ deps FMDeps }
 
 func (backgroundPlaybackOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -181,7 +189,7 @@ func (o *backgroundPlaybackOp) Execute(ctx context.Context, in ops.OpInput) (ops
 
 // ── ccOutbound ────────────────────────────────────────────────────────────────
 
-type ccOutboundOp struct{ deps ports.RouterDeps }
+type ccOutboundOp struct{ deps FMDeps }
 
 func (ccOutboundOp) Kind() ops.OpKind { return ops.OpKindSync }
 

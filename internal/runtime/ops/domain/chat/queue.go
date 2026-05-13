@@ -13,7 +13,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-// QueueDeps is the subset of ports.RouterDeps that the queue ops need.
+// QueueDeps is the subset of  the queue ops need.
 type QueueDeps interface {
 	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) *model.AppError
 	FindQueueByName(domainId int64, name string) (int32, *model.AppError)

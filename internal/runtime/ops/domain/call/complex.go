@@ -11,14 +11,23 @@ import (
 	"github.com/webitel/wlog"
 
 	genpb "github.com/webitel/flow_manager/gen/cc"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/store"
 )
 
+// ComplexDeps is the narrow interface required by bridge, joinQueue, and joinAgent ops.
+type ComplexDeps interface {
+	GetStore() store.Store
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
+	GetAgentIdByExtension(domainId int64, extension string) (*int32, *model.AppError)
+	JoinToInboundQueue(ctx context.Context, in *genpb.CallJoinToQueueRequest) (genpb.MemberService_CallJoinToQueueClient, error)
+	JoinToAgent(ctx context.Context, in *genpb.CallJoinToAgentRequest) (genpb.MemberService_CallJoinToAgentClient, error)
+}
+
 // RegisterComplex adds call ops that use sub-flows or blocking gRPC streams.
-func RegisterComplex(reg *ops.Registry, deps ports.RouterDeps) {
+func RegisterComplex(reg *ops.Registry, deps ComplexDeps) {
 	reg.Register("bridge", &bridgeOp{deps: deps})
 	reg.Register("joinQueue", &joinQueueOp{deps: deps})
 	reg.Register("joinAgent", &joinAgentOp{deps: deps})
@@ -77,7 +86,7 @@ func runHook(ctx context.Context, in ops.OpInput, name string, extraVars map[str
 
 // ── bridge ────────────────────────────────────────────────────────────────────
 
-type bridgeOp struct{ deps ports.RouterDeps }
+type bridgeOp struct{ deps ComplexDeps }
 
 func (bridgeOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -277,7 +286,7 @@ func replaceQuotes(s string) string {
 
 // ── joinQueue (call) ──────────────────────────────────────────────────────────
 
-type joinQueueOp struct{ deps ports.RouterDeps }
+type joinQueueOp struct{ deps ComplexDeps }
 
 func (joinQueueOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -492,7 +501,7 @@ func callRunTimer(ctx context.Context, t callTimerArg, branch *tree.Node, varSna
 
 // ── joinAgent ─────────────────────────────────────────────────────────────────
 
-type joinAgentOp struct{ deps ports.RouterDeps }
+type joinAgentOp struct{ deps ComplexDeps }
 
 func (joinAgentOp) Kind() ops.OpKind { return ops.OpKindSync }
 

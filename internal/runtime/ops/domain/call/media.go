@@ -6,20 +6,27 @@ import (
 	"strconv"
 
 	"github.com/webitel/flow_manager/gen/ai_bots"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
+	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"
 )
 
+// MediaDeps is the narrow interface required by the playback and tts ops.
+type MediaDeps interface {
+	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, *model.AppError)
+	GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, *model.AppError)
+	GetAiBots() *aibridge.Client
+}
+
 // RegisterMedia adds playback and tts ops to reg.
-func RegisterMedia(reg *ops.Registry, deps ports.RouterDeps) {
+func RegisterMedia(reg *ops.Registry, deps MediaDeps) {
 	reg.Register("playback", &playbackOp{deps: deps})
 	reg.Register("tts", &ttsOp{deps: deps})
 }
 
 // ── playback ──────────────────────────────────────────────────────────────────
 
-type playbackOp struct{ deps ports.RouterDeps }
+type playbackOp struct{ deps MediaDeps }
 
 func (playbackOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -174,7 +181,7 @@ func setSttVar(ctx context.Context, varName string, call model.Call) {
 
 // ── tts ───────────────────────────────────────────────────────────────────────
 
-type ttsOp struct{ deps ports.RouterDeps }
+type ttsOp struct{ deps MediaDeps }
 
 func (ttsOp) Kind() ops.OpKind { return ops.OpKindSync }
 

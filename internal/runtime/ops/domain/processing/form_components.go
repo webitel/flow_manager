@@ -10,7 +10,7 @@ import (
 	procpkg "github.com/webitel/flow_manager/pkg/processing"
 )
 
-// ComponentDeps is the subset of ports.RouterDeps that component ops need.
+// ComponentDeps is the subset of  component ops need.
 type ComponentDeps interface {
 	LocateService(ctx context.Context, req *casespb.LocateServiceRequest, token string) (*casespb.LocateServiceResponse, error)
 	LocateCatalog(ctx context.Context, req *casespb.LocateCatalogRequest, token string) (*casespb.LocateCatalogResponse, error)

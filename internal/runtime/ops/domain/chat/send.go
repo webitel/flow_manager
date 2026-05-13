@@ -9,7 +9,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-// SendDeps is the subset of ports.RouterDeps that the send ops need.
+// SendDeps is the subset of  the send ops need.
 type SendDeps interface {
 	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, *model.AppError)
 	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, *model.AppError)

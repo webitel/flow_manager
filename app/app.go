@@ -32,8 +32,6 @@ import (
 	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/stdout"
 )
 
-var _ ports.RouterDeps = (*FlowManager)(nil)
-
 type FlowManager struct {
 	log              *wlog.Logger
 	id               string

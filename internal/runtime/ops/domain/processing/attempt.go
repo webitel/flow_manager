@@ -9,7 +9,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-// AttemptDeps is the subset of ports.RouterDeps that attempt ops need.
+// AttemptDeps is the subset of  attempt ops need.
 type AttemptDeps interface {
 	AttemptResult(result *model.AttemptResult) *model.AppError
 	ResumeAttempt(ctx context.Context, attemptId, domainId int64) error

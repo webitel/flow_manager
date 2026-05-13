@@ -11,7 +11,6 @@ import (
 
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	callops "github.com/webitel/flow_manager/internal/runtime/ops/domain/call"
@@ -28,14 +27,14 @@ import (
 const callChannel = int16(model.ConnectionTypeCall)
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	contacts   domaincontacts.Client
 	meeting    domainmeeting.Client
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
+func Init(deps Deps, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
 	router := &Router{
 		fm:       deps,
 		contacts: contacts,

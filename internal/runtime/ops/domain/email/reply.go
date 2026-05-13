@@ -9,7 +9,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-// ReplyDeps is the subset of ports.RouterDeps that the reply op needs.
+// ReplyDeps is the subset of  the reply op needs.
 type ReplyDeps interface {
 	ReplyEmail(conn model.EmailConnection, text string) *model.AppError
 }
