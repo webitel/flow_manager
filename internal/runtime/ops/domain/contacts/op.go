@@ -8,9 +8,9 @@ import (
 
 	contacts2 "github.com/webitel/flow_manager/api/gen/contacts"
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
-	"github.com/webitel/flow_manager/model"
 )
 
 // LinkDeps is the subset of RouterDeps that linkContact needs.
@@ -262,20 +262,20 @@ func (o *linkContactOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 	channel := conn.Type()
 	switch argv.Channel {
 	case "call":
-		channel = model.ConnectionTypeCall
+		channel = flow.ConnectionTypeCall
 	case "email":
-		channel = model.ConnectionTypeEmail
+		channel = flow.ConnectionTypeEmail
 	case "chat":
-		channel = model.ConnectionTypeChat
+		channel = flow.ConnectionTypeChat
 	}
 
 	var linkErr error
 	switch channel {
-	case model.ConnectionTypeCall:
+	case flow.ConnectionTypeCall:
 		linkErr = o.deps.CallSetContactId(conn.DomainId(), sessionId, contactIds[0])
-	case model.ConnectionTypeChat:
+	case flow.ConnectionTypeChat:
 		linkErr = o.deps.ContactLinkToChat(ctx, sessionId, fmt.Sprintf("%v", contactIds[0]))
-	case model.ConnectionTypeEmail:
+	case flow.ConnectionTypeEmail:
 		linkErr = o.deps.MailSetContacts(ctx, conn.DomainId(), sessionId, contactIds)
 	default:
 		return ops.OpOutput{}, fmt.Errorf("linkContact: unsupported channel type %v", channel)

@@ -4,59 +4,62 @@ import (
 	"strconv"
 
 	"github.com/webitel/flow_manager/api/gen/contacts"
-	"github.com/webitel/flow_manager/model"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/notification"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
-func (r *Router) linkContact(call model.Call) {
-	if c := call.GetContactId(); c != 0 {
+func (r *Router) linkContact(c calldomain.Call) {
+	if ct := c.GetContactId(); ct != 0 {
 		return
 	}
 
 	var dest string
-	if call.Direction() == model.CallDirectionOutbound {
-		dest = call.Destination()
-	} else if call.From() != nil {
-		dest = *call.From().GetNumber()
+	if c.Direction() == calldomain.CallDirectionOutbound {
+		dest = c.Destination()
+	} else if c.From() != nil {
+		dest = *c.From().GetNumber()
 	} else {
 		return
 	}
 
-	list, err := r.contacts.SearchNA(call.Context(), &contacts.SearchContactsNARequest{
-		DomainId: call.DomainId(),
+	list, err := r.contacts.SearchNA(c.Context(), &contacts.SearchContactsNARequest{
+		DomainId: c.DomainId(),
 		Qin:      []string{"phones"},
 		Q:        dest,
 		Size:     2,
 		Fields:   []string{"id"},
 	})
 	if err != nil {
-		call.Log().Error("listContact error:" + err.Error())
+		c.Log().Error("listContact error:" + err.Error())
 		return
 	}
 
-	userIdStr, _ := call.Get("sip_h_X-Webitel-User-Id")
+	userIdStr, _ := c.Get("sip_h_X-Webitel-User-Id")
 	userId, _ := strconv.Atoi(userIdStr)
 	var contactId *int
 
 	if len(list.Data) == 1 {
-		call.Set(call.Context(), model.Variables{
+		c.Set(c.Context(), flow.Variables{
 			"wbt_contact_id": list.Data[0].Id,
 		})
 
 		cId, _ := strconv.Atoi(list.Data[0].Id)
 		contactId = &cId
-		r.fm.CallSetContactId(call.DomainId(), call.Id(), int64(cId))
+		r.fm.CallSetContactId(c.DomainId(), c.Id(), int64(cId))
 	}
 
 	if userId > 0 {
-		n := model.Notification{
-			DomainId:  call.DomainId(),
+		n := notification.Notification{
+			DomainId:  c.DomainId(),
 			Action:    "set_contact", // TODO
-			CreatedAt: model.GetMillis(),
+			CreatedAt: utils.GetMillis(),
 			ForUsers:  []int64{int64(userId)},
 			Body: map[string]any{
-				"id":         call.Id(),
+				"id":         c.Id(),
 				"contact_id": contactId,
-				"channel":    model.CallExchange,
+				"channel":    calldomain.CallExchange,
 			},
 		}
 

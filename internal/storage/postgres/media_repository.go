@@ -6,8 +6,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/files"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -26,8 +27,8 @@ type fileRow struct {
 	MimeType string `db:"mime_type"`
 }
 
-func toFile(r fileRow) *model.File {
-	return &model.File{Id: r.Id, Name: r.Name, Size: r.Size, MimeType: r.MimeType}
+func toFile(r fileRow) *files.File {
+	return &files.File{Id: r.Id, Name: r.Name, Size: r.Size, MimeType: r.MimeType}
 }
 
 const getFileSQL = `
@@ -35,7 +36,7 @@ SELECT f.id, f.name, f.size, f.mime_type
   FROM storage.media_files f
  WHERE f.domain_id = @domain_id AND f.id = @id`
 
-func (r *MediaRepository) Get(domainId int64, id int) (*model.File, error) {
+func (r *MediaRepository) Get(domainId int64, id int) (*files.File, error) {
 	var row fileRow
 	if err := r.db.Get(context.Background(), &row, getFileSQL, pgx.NamedArgs{
 		"domain_id": domainId,
@@ -52,7 +53,7 @@ SELECT f.id, f.name, f.size, f.mime_type
  WHERE f.domain_id = @domain_id AND (f.id = @id OR f.name = @name)
  LIMIT 1`
 
-func (r *MediaRepository) SearchOne(domainId int64, search *model.SearchFile) (*model.File, error) {
+func (r *MediaRepository) SearchOne(domainId int64, search *files.SearchFile) (*files.File, error) {
 	var row fileRow
 	if err := r.db.Get(context.Background(), &row, searchOneSQL, pgx.NamedArgs{
 		"domain_id": domainId,
@@ -89,7 +90,7 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) m ON TRUE`
 
-func (r *MediaRepository) GetFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error) {
+func (r *MediaRepository) GetFiles(domainId int64, req *[]*call.PlaybackFile) ([]*call.PlaybackFile, error) {
 	pgIds := make([]pgtype.Int4, len(*req))
 	pgNames := make([]pgtype.Text, len(*req))
 
@@ -128,7 +129,7 @@ SELECT 0 AS idx, m.id, m.mime_type AS type
    AND (m.id = @id OR m.name = @name)
  LIMIT 1`
 
-func (r *MediaRepository) GetPlaybackFile(domainId int64, req *model.PlaybackFile) (*model.PlaybackFile, error) {
+func (r *MediaRepository) GetPlaybackFile(domainId int64, req *call.PlaybackFile) (*call.PlaybackFile, error) {
 	var row playbackRow
 	if err := r.db.Get(context.Background(), &row, getPlaybackFileSQL, pgx.NamedArgs{
 		"domain_id": domainId,

@@ -8,8 +8,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -54,8 +55,8 @@ type memberInfoOp struct{ store store.MemberStore }
 func (o *memberInfoOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type memberInfoArgs struct {
-	Member *model.SearchMember `json:"member"`
-	Set    model.Variables     `json:"set"`
+	Member *queue.SearchMember `json:"member"`
+	Set    flow.Variables     `json:"set"`
 }
 
 func (o *memberInfoOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
@@ -87,8 +88,8 @@ type patchMembersOp struct{ store store.MemberStore }
 func (o *patchMembersOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type patchMembersArgs struct {
-	Member *model.SearchMember `json:"member"`
-	Patch  *model.PatchMember  `json:"patch"`
+	Member *queue.SearchMember `json:"member"`
+	Patch  *queue.PatchMember  `json:"patch"`
 }
 
 func (o *patchMembersOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
@@ -162,7 +163,7 @@ func (o *callbackQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOu
 	if err := ops.DecodeArgs(in, &params); err != nil {
 		return ops.OpOutput{}, fmt.Errorf("callbackQueue: %w", err)
 	}
-	var member model.CallbackMember
+	var member queue.CallbackMember
 	if err := ops.DecodeArgs(in, &member); err != nil {
 		return ops.OpOutput{}, fmt.Errorf("callbackQueue: %w", err)
 	}

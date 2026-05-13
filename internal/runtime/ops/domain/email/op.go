@@ -13,17 +13,19 @@ import (
 	"github.com/webitel/wlog"
 	"gopkg.in/gomail.v2"
 
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/files"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // EmailDeps is the narrow interface required by the sendEmail op.
 type EmailDeps interface {
-	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error)
-	SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, error)
-	GetFileMetadata(domainId int64, ids []int64) ([]model.File, error)
+	SmtpSettings(domainId int64, search *queue.SearchEntity) (*emaildomain.SmtSettings, error)
+	SmtpSettingsOAuthToken(settings *emaildomain.SmtSettings) (string, error)
+	GetFileMetadata(domainId int64, ids []int64) ([]files.File, error)
 	DownloadFile(domainId int64, id int64) (io.ReadCloser, error)
-	SaveEmail(domainId int64, email *model.Email) error
+	SaveEmail(domainId int64, email *emaildomain.Email) error
 }
 
 // Register adds sendEmail to reg.
@@ -43,15 +45,15 @@ type emailArgs struct {
 	Message    string              `json:"message"`
 	ReplyToId  string              `json:"replyToId"`
 	Type       string              `json:"type"`
-	Profile    *model.SearchEntity `json:"profile"`
-	Smtp       model.SmtSettings   `json:"smtp"`
+	Profile    *queue.SearchEntity `json:"profile"`
+	Smtp       emaildomain.SmtSettings   `json:"smtp"`
 	Subject    string              `json:"subject"`
 	To         []string            `json:"to"`
 	ContactIds []int64             `json:"contactIds"`
 	OwnerId    *int64              `json:"ownerId"`
 	Async      bool                `json:"async"`
 	Attachment struct {
-		Files []model.File `json:"files"`
+		Files []files.File `json:"files"`
 	} `json:"attachment"`
 	RetryCount int               `json:"retryCount"`
 	Store      bool              `json:"store"`
@@ -119,7 +121,7 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 		mail.SetHeader("Cc", argv.Cc...)
 	}
 
-	var attachedFiles []model.File
+	var attachedFiles []files.File
 	if len(argv.Attachment.Files) != 0 {
 		ids := make([]int64, 0, len(argv.Attachment.Files))
 		for _, f := range argv.Attachment.Files {
@@ -136,7 +138,7 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 	mail.SetBody(argv.Type, argv.Message)
 
 	var dialer *gomail.Dialer
-	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
+	if argv.Smtp.AuthType == emaildomain.MailAuthTypeOAuth2 {
 		token, err := o.deps.SmtpSettingsOAuthToken(&argv.Smtp)
 		if err != nil {
 			return fmt.Errorf("sendEmail: oauth token: %w", err)
@@ -151,7 +153,7 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 		dialer.TLSConfig = &tls.Config{InsecureSkipVerify: true} //nolint:gosec
 	}
 
-	id, genErr := model.GenerateMailID()
+	id, genErr := emaildomain.GenerateMailID()
 	if genErr != nil {
 		return fmt.Errorf("sendEmail: generate mail id: %w", genErr)
 	}
@@ -177,7 +179,7 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 	}
 
 	if argv.Store && argv.Smtp.Id > 0 {
-		rr := &model.Email{
+		rr := &emaildomain.Email{
 			Direction:   "outbound",
 			MessageId:   id,
 			Subject:     argv.Subject,
@@ -215,8 +217,8 @@ func (o *sendEmailOp) sendFn(ctx context.Context, domainID int64, argv emailArgs
 	return nil
 }
 
-func (o *sendEmailOp) attachToMail(domainID int64, mail *gomail.Message, files []model.File) {
-	attachFn := func(f model.File) func(w io.Writer) error {
+func (o *sendEmailOp) attachToMail(domainID int64, mail *gomail.Message, fileList []files.File) {
+	attachFn := func(f files.File) func(w io.Writer) error {
 		return func(w io.Writer) error {
 			reader, err := o.deps.DownloadFile(domainID, int64(f.Id))
 			if err != nil {
@@ -228,7 +230,7 @@ func (o *sendEmailOp) attachToMail(domainID int64, mail *gomail.Message, files [
 			return cErr
 		}
 	}
-	for _, file := range files {
+	for _, file := range fileList {
 		mail.Attach(mime.QEncoding.Encode("UTF-8", file.GetViewName()), gomail.SetCopyFunc(attachFn(file)))
 	}
 }

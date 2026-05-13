@@ -6,9 +6,12 @@ import (
 	"net/http"
 	"strconv"
 
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/notification"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/store"
 	"github.com/webitel/wlog"
 )
@@ -27,26 +30,26 @@ var ErrAllowUseMQ = apperrs.New(http.StatusForbidden, "App: app.settings.mq.allo
 type EventBusAdapter struct {
 	bus    ports.EventBus
 	store  store.Store
-	config *model.Config
+	config *bscfg.Config
 }
 
-func NewEventBusAdapter(bus ports.EventBus, st store.Store, cfg *model.Config) *EventBusAdapter {
+func NewEventBusAdapter(bus ports.EventBus, st store.Store, cfg *bscfg.Config) *EventBusAdapter {
 	return &EventBusAdapter{bus: bus, store: st, config: cfg}
 }
 
-func (a *EventBusAdapter) UserNotification(n model.Notification) {
+func (a *EventBusAdapter) UserNotification(n notification.Notification) {
 	if err := a.bus.Publish(context.Background(), engineExchange, "notification."+strconv.Itoa(int(n.DomainId)), n.ToJson()); err != nil {
 		wlog.Error(err.Error())
 	}
 }
 
-func (a *EventBusAdapter) NotificationMissedCalls(call model.MissedCall) {
-	a.UserNotification(model.Notification{
-		DomainId:  call.DomainId,
+func (a *EventBusAdapter) NotificationMissedCalls(c call.MissedCall) {
+	a.UserNotification(notification.Notification{
+		DomainId:  c.DomainId,
 		Action:    refreshMissedNotification,
-		CreatedAt: model.GetMillis(),
-		ForUsers:  []int64{call.UserId},
-		Body:      map[string]interface{}{"call_id": call.Id},
+		CreatedAt: utils.GetMillis(),
+		ForUsers:  []int64{c.UserId},
+		Body:      map[string]interface{}{"call_id": c.Id},
 	})
 }
 
@@ -62,10 +65,10 @@ func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, 
 		}
 		sockId = sockSession.ID
 	}
-	n := model.Notification{
+	n := notification.Notification{
 		DomainId:  domainId,
 		Action:    actionOpenLink,
-		CreatedAt: model.GetMillis(),
+		CreatedAt: utils.GetMillis(),
 		ForUsers:  []int64{userId},
 		SockID:    sockId,
 		Body:      map[string]interface{}{"url": url, "message": message},

@@ -5,7 +5,8 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/model"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 // Dispatcher routes inbound MQ messages to the correct Connection.
@@ -16,12 +17,12 @@ type Dispatcher struct {
 	appID        string
 	connStore    *ConnectionStore
 	sessionStore SessionStore
-	consume      chan<- model.Connection
+	consume      chan<- flow.Connection
 	log          *wlog.Logger
 	srv          *server
 }
 
-func newDispatcher(appID string, store *ConnectionStore, ss SessionStore, consume chan<- model.Connection, log *wlog.Logger, srv *server) *Dispatcher {
+func newDispatcher(appID string, store *ConnectionStore, ss SessionStore, consume chan<- flow.Connection, log *wlog.Logger, srv *server) *Dispatcher {
 	return &Dispatcher{
 		appID:        appID,
 		connStore:    store,
@@ -55,7 +56,7 @@ func (d *Dispatcher) Unregister(c *Connection) {
 }
 
 // Handle processes one inbound message. It is safe for concurrent use.
-func (d *Dispatcher) Handle(msg model.MessageWrapper) error {
+func (d *Dispatcher) Handle(msg chatdomain.MessageWrapper) error {
 	if msg.Message.From.Issuer == "bot" {
 		return nil
 	}

@@ -8,16 +8,16 @@ import (
 	"fmt"
 	"time"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // ChatDeps is the narrow interface required by all chat native ops.
 type ChatDeps interface {
 	ChatProfileType(domainId int64, profileId int) (string, error)
-	BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, error)
-	GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, error)
-	ParseChatMessages(messages *[]model.ChatMessage, format string) (string, error)
+	BroadcastChatMessage(ctx context.Context, domainId int64, req chatdomain.BroadcastChat, peers []chatdomain.BroadcastPeer) (*chatdomain.BroadcastChatResponse, error)
+	GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]chatdomain.ChatMessage, error)
+	ParseChatMessages(messages *[]chatdomain.ChatMessage, format string) (string, error)
 }
 
 // Register adds broadcastChatMessage and chatHistory to reg.
@@ -33,7 +33,7 @@ type broadcastChatMessageOp struct{ deps ChatDeps }
 func (o *broadcastChatMessageOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 func (o *broadcastChatMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
-	var argv model.BroadcastChat
+	var argv chatdomain.BroadcastChat
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, fmt.Errorf("broadcastChatMessage: %w", err)
 	}
@@ -50,11 +50,11 @@ func (o *broadcastChatMessageOp) Execute(ctx context.Context, in ops.OpInput) (o
 		}
 	}
 
-	peer := make([]model.BroadcastPeer, 0, len(argv.Peer))
+	peer := make([]chatdomain.BroadcastPeer, 0, len(argv.Peer))
 	for _, v := range argv.Peer {
 		switch p := v.(type) {
 		case string:
-			peer = append(peer, model.BroadcastPeer{
+			peer = append(peer, chatdomain.BroadcastPeer{
 				Id:   p,
 				Type: typeProfile,
 				Via:  fmt.Sprintf("%d", argv.Profile.Id),
@@ -64,7 +64,7 @@ func (o *broadcastChatMessageOp) Execute(ctx context.Context, in ops.OpInput) (o
 				s, _ := p[key].(string)
 				return ops.ExpandStr(s, in.Variables, in.GlobalVar)
 			}
-			peer = append(peer, model.BroadcastPeer{
+			peer = append(peer, chatdomain.BroadcastPeer{
 				Id:   expand("id"),
 				Type: expand("type"),
 				Via:  expand("via"),

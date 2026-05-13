@@ -5,9 +5,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/state"
-	"github.com/webitel/flow_manager/model"
 	procpkg "github.com/webitel/flow_manager/pkg/processing"
 )
 
@@ -17,7 +17,7 @@ type ProcessingConn interface {
 	Id() string
 	DomainId() int64
 	Get(key string) (string, bool)
-	Set(ctx context.Context, vars model.Variables) (model.Response, error)
+	Set(ctx context.Context, vars flow.Variables) (flow.Response, error)
 	GetComponentByName(name string) any
 	SetComponent(name string, component any)
 	Export(ctx context.Context, vars []string)

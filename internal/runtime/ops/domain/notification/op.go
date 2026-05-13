@@ -3,15 +3,16 @@ package notification
 import (
 	"context"
 
+	"github.com/webitel/flow_manager/internal/domain/notification"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 const notificationAction = "show_message"
 
 // Deps is the subset of RouterDeps that the notification op needs.
 type Deps interface {
-	UserNotification(n model.Notification)
+	UserNotification(n notification.Notification)
 }
 
 type notificationArgs struct {
@@ -33,10 +34,10 @@ func (o *notificationOp) Execute(_ context.Context, in ops.OpInput) (ops.OpOutpu
 		return ops.OpOutput{}, err
 	}
 
-	o.deps.UserNotification(model.Notification{
+	o.deps.UserNotification(notification.Notification{
 		DomainId:  in.DomainID,
 		Action:    notificationAction,
-		CreatedAt: model.GetMillis(),
+		CreatedAt: utils.GetMillis(),
 		ForUsers:  argv.UserIds,
 		Body: map[string]interface{}{
 			"message": argv.Message,

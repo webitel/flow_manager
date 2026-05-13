@@ -1,8 +1,8 @@
 package email
 
-import "github.com/webitel/flow_manager/model"
+import emaildomain "github.com/webitel/flow_manager/internal/domain/email"
 
-func (c *connection) Reply(text string) (*model.Email, error) {
+func (c *connection) Reply(text string) (*emaildomain.Email, error) {
 	p, err := c.GetProfile()
 	if err != nil {
 		return nil, err

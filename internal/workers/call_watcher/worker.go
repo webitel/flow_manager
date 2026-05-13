@@ -8,8 +8,8 @@ import (
 
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -22,9 +22,9 @@ const (
 // CallEventDeps is the narrow interface required by the call-event listener.
 type CallEventDeps interface {
 	// ConsumeCallEvent returns a channel of incoming call-action events.
-	ConsumeCallEvent() <-chan model.CallActionData
+	ConsumeCallEvent() <-chan call.CallActionData
 	// NotificationMissedCalls sends a missed-call notification.
-	NotificationMissedCalls(call model.MissedCall)
+	NotificationMissedCalls(c call.MissedCall)
 }
 
 // Worker owns both the periodic history-flush watcher and the call-event
@@ -76,7 +76,7 @@ func (c *Worker) listenCallEvents(stop chan struct{}) {
 				return
 			}
 
-			if ev.DomainId == 0 && ev.CallAction.Event != model.CallActionStatsName {
+			if ev.DomainId == 0 && ev.CallAction.Event != call.CallActionStatsName {
 				c.log.Error("bad domain", wlog.Namespace("call"),
 					wlog.Int64("domain_id", ev.DomainId),
 					wlog.String("call_id", ev.Id),
@@ -90,7 +90,7 @@ func (c *Worker) listenCallEvents(stop chan struct{}) {
 	}
 }
 
-func (c *Worker) handleCallAction(data model.CallActionData) {
+func (c *Worker) handleCallAction(data call.CallActionData) {
 	action := data.GetEvent()
 
 	log := c.log.With(
@@ -101,25 +101,25 @@ func (c *Worker) handleCallAction(data model.CallActionData) {
 	)
 
 	switch call := action.(type) {
-	case *model.CallActionRinging:
+	case *call.CallActionRinging:
 		if err := c.store.Call().Save(call); err != nil {
 			log.Error(err.Error())
 		}
-	case *model.CallActionBridge:
+	case *call.CallActionBridge:
 		if err := c.store.Call().SetBridged(call); err != nil {
 			log.Error(err.Error())
 		}
 
-	case *model.CallActionTranscript:
+	case *call.CallActionTranscript:
 		if err := c.store.Call().SaveTranscript(call); err != nil {
 			log.Error(err.Error())
 		}
 
-	case *model.CallActionHeartbeat:
+	case *call.CallActionHeartbeat:
 		if err := c.store.Call().SetHeartbeat(call.Id); err != nil {
 			log.Error(err.Error())
 		}
-	case *model.CallActionHangup:
+	case *call.CallActionHangup:
 		if call.CDR != nil && !*call.CDR {
 			if err := c.store.Call().Delete(call.Id); err != nil {
 				log.Error(err.Error())
@@ -129,7 +129,7 @@ func (c *Worker) handleCallAction(data model.CallActionData) {
 				log.Error(err.Error())
 			}
 		}
-	case *model.CallActionMediaStats:
+	case *call.CallActionMediaStats:
 		err := c.store.Call().SaveMediaStats(call)
 		if err != nil {
 			log.Error(err.Error())

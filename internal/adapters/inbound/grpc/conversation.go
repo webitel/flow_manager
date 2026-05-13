@@ -15,8 +15,14 @@ import (
 
 	ai_bots2 "github.com/webitel/flow_manager/api/gen/ai_bots"
 	chat2 "github.com/webitel/flow_manager/api/gen/chat"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/files"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	infraCache "github.com/webitel/flow_manager/internal/infrastructure/cache"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
 var ErrWaitMessageTimeout = apperrs.New(http.StatusInternalServerError, "Conversation.WaitMessage: conv.timeout.msg: Timeout")
@@ -26,7 +32,7 @@ type conversation struct {
 	profileId     int64
 	schemaId      int32
 	domainId      int64
-	variables     *model.ThreadSafeStringMap
+	variables     *infraCache.ThreadSafeStringMap
 	client        *ChatClientConnection
 	mx            sync.RWMutex
 	ctx           context.Context
@@ -39,7 +45,7 @@ type conversation struct {
 	exportVariables []string
 	nodeId          string
 	userId          int64
-	queueKey        *model.InQueueKey
+	queueKey        *queue.InQueueKey
 	messages        []*chat2.Message
 
 	inboundHandlers map[uint64]func(text string)
@@ -57,7 +63,7 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		profileId:     profileId,
 		schemaId:      schemaId,
 		domainId:      domainId,
-		variables:     model.NewThreadSafeStringMap(),
+		variables:     infraCache.NewThreadSafeStringMap(),
 		client:        cli,
 		chBridge:      nil,
 		mx:            sync.RWMutex{},
@@ -98,8 +104,8 @@ func (c *conversation) BreakCause() string {
 	return c.breakCause
 }
 
-func (c *conversation) Type() model.ConnectionType {
-	return model.ConnectionTypeChat
+func (c *conversation) Type() flow.ConnectionType {
+	return flow.ConnectionTypeChat
 }
 
 func (c *conversation) Id() string {
@@ -134,15 +140,15 @@ func (c *conversation) Get(name string) (string, bool) {
 	return v, ok
 }
 
-func (c *conversation) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *conversation) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	for k, v := range vars {
 		c.variables.Store(k, fmt.Sprintf("%v", v))
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *conversation) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *conversation) Close() error {
@@ -160,7 +166,7 @@ func (c *conversation) IsTransfer() bool {
 	if c.breakCause == "" {
 		return false
 	}
-	return strings.EqualFold(c.breakCause, model.BreakChatTransferCause)
+	return strings.EqualFold(c.breakCause, chatdomain.BreakChatTransferCause)
 }
 
 func (c *conversation) Break(cause string) error {
@@ -186,11 +192,11 @@ func (c *conversation) setTransferVariable() {
 			ChannelId: c.id,
 			Variables: vars,
 		})
-		c.Set(context.TODO(), model.Variables{
+		c.Set(context.TODO(), flow.Variables{
 			"chat_transferred": "false",
 		})
 	} else {
-		c.Set(context.TODO(), model.Variables{
+		c.Set(context.TODO(), flow.Variables{
 			"chat_transferred": "false",
 		})
 	}
@@ -200,7 +206,7 @@ func (c *conversation) ProfileId() int64 {
 	return c.profileId
 }
 
-func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
+func (c *conversation) SendMessage(ctx context.Context, msg chatdomain.ChatMessageOutbound) (flow.Response, error) {
 	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &chat2.Message{
@@ -217,10 +223,10 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 		return nil, fmt.Errorf("Conversation.SendMessage: conv.send.any.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
+func (c *conversation) SendTextMessage(ctx context.Context, text string) (flow.Response, error) {
 	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &chat2.Message{
@@ -232,7 +238,7 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 		return nil, fmt.Errorf("Conversation.SendTextMessage: conv.send.text.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *conversation) sendMessage(ctx context.Context, req *chat2.SendMessageRequest) error {
@@ -255,7 +261,7 @@ func (c *conversation) sendMessage(ctx context.Context, req *chat2.SendMessageRe
 	return nil
 }
 
-func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, error) {
+func (c *conversation) SendMenu(ctx context.Context, menu *chatdomain.ChatMenuArgs) (flow.Response, error) {
 	req := &chat2.Message{
 		Type:    "text",
 		Text:    menu.Text,
@@ -273,10 +279,10 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 		return nil, fmt.Errorf("Conversation.SendMenu: conv.send.menu.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (model.Response, error) {
+func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (flow.Response, error) {
 	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &chat2.Message{
@@ -293,10 +299,10 @@ func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, ki
 		return nil, fmt.Errorf("Conversation.SendImageMessage: conv.send.image.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
+func (c *conversation) SendFile(ctx context.Context, text string, f *files.File, kind string) (flow.Response, error) {
 	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &chat2.Message{
@@ -310,10 +316,10 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 		return nil, fmt.Errorf("Conversation.SendFile: conv.send.file.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) proto(ctx context.Context, url, name, text string) (model.Response, error) {
+func (c *conversation) proto(ctx context.Context, url, name, text string) (flow.Response, error) {
 	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
 		Message: &chat2.Message{
@@ -330,7 +336,7 @@ func (c *conversation) proto(ctx context.Context, url, name, text string) (model
 		return nil, fmt.Errorf("Conversation.SendTextMessage: conv.send.text.app_err: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *conversation) addConfirmationId(id string, ch chan []*chat2.Message) {
@@ -358,7 +364,7 @@ func (c *conversation) countMessages() int {
 	return cnt
 }
 
-func (c *conversation) LastMessages(limit int) []model.ChatMessage {
+func (c *conversation) LastMessages(limit int) []chatdomain.ChatMessage {
 	cnt := c.countMessages()
 	if cnt == 0 {
 		return nil
@@ -367,7 +373,7 @@ func (c *conversation) LastMessages(limit int) []model.ChatMessage {
 	if cnt < limit {
 		limit = cnt
 	}
-	res := make([]model.ChatMessage, 0, limit)
+	res := make([]chatdomain.ChatMessage, 0, limit)
 	c.mx.Lock()
 	for _, v := range c.messages[(cnt - limit):] {
 		res = append(res, pettyMessage(v))
@@ -397,7 +403,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout,
 }
 
 func (c *conversation) receive(ctx context.Context, timeout int) ([]*chat2.Message, error) {
-	id := model.NewId()
+	id := utils.NewId()
 
 	ch := make(chan []*chat2.Message)
 	c.addConfirmationId(id, ch)
@@ -469,7 +475,7 @@ func (c *conversation) Stop(err error, cause chat2.CloseConversationCause) {
 }
 
 // TODO transferVars
-func (c *conversation) Export(ctx context.Context, vars []string) (model.Response, error) {
+func (c *conversation) Export(ctx context.Context, vars []string) (flow.Response, error) {
 	exp := make(map[string]any)
 	transferVars := make(map[string]string)
 	for _, v := range vars {
@@ -493,11 +499,11 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 		return c.Set(ctx, exp)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, error) {
-	vars := model.Variables{}
+func (c *conversation) UnSet(ctx context.Context, varKeys []string) (flow.Response, error) {
+	vars := flow.Variables{}
 	req := &chat2.SetVariablesRequest{
 		ChannelId: c.id,
 		Variables: make(map[string]string),
@@ -582,7 +588,7 @@ func (c *conversation) Variables() map[string]string {
 // past the flow suspension point.
 func (c *conversation) StartWaiting(timeout int) {
 	go func() {
-		id := model.NewId()
+		id := utils.NewId()
 		ch := make(chan []*chat2.Message, 1)
 		c.addConfirmationId(id, ch)
 		defer c.deleteConfirmationId(id)
@@ -661,7 +667,7 @@ func (c *conversation) fireInboundHandlers(text string) {
 	}
 }
 
-func (c *conversation) SetQueue(key *model.InQueueKey) bool {
+func (c *conversation) SetQueue(key *queue.InQueueKey) bool {
 	c.mx.Lock()
 	defer c.mx.Unlock()
 
@@ -673,18 +679,18 @@ func (c *conversation) SetQueue(key *model.InQueueKey) bool {
 	return true
 }
 
-func (c *conversation) GetQueueKey() *model.InQueueKey {
+func (c *conversation) GetQueueKey() *queue.InQueueKey {
 	c.mx.RLock()
 	defer c.mx.RUnlock()
 
 	return c.queueKey
 }
 
-func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClient, id string) (model.Response, error) {
+func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClient, id string) (flow.Response, error) {
 	var res *ai_bots2.ConverseResponse
 	stream, err := cli.Converse(ctx)
 	if err != nil {
-		return model.CallResponseError, nil
+		return calldomain.CallResponseError, nil
 	}
 
 	defer stream.CloseSend()
@@ -700,7 +706,7 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClie
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, nil
+		return calldomain.CallResponseError, nil
 	}
 
 	go func() {
@@ -728,7 +734,7 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClie
 	for {
 		res, err = stream.Recv()
 		if err != nil {
-			return model.CallResponseError, nil
+			return calldomain.CallResponseError, nil
 		}
 
 		if res.TextData != "" {
@@ -744,7 +750,7 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClie
 		}
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *conversation) actualizeClient(cli *ChatClientConnection) {
@@ -756,7 +762,7 @@ func (c *conversation) actualizeClient(cli *ChatClientConnection) {
 	}
 }
 
-func getChatButtons(buttons [][]model.ChatButton) []*chat2.Buttons {
+func getChatButtons(buttons [][]chatdomain.ChatButton) []*chat2.Buttons {
 	l := len(buttons)
 
 	if l == 0 {
@@ -784,7 +790,7 @@ func getChatButtons(buttons [][]model.ChatButton) []*chat2.Buttons {
 	return res
 }
 
-func getFile(f *model.File) *chat2.File {
+func getFile(f *files.File) *chat2.File {
 	if f == nil {
 		return nil
 	}

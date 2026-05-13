@@ -8,9 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -56,38 +57,38 @@ on conflict (id)
         destination_name = EXCLUDED.destination_name,
         contact_id = EXCLUDED.contact_id`
 
-func (r *CallRepository) Save(call *model.CallActionRinging) error {
+func (r *CallRepository) Save(c *call.CallActionRinging) error {
 	return r.db.Exec(context.Background(), saveCallSQL, pgx.NamedArgs{
-		"DomainId":        call.DomainId,
-		"Id":              call.Id,
-		"Direction":       call.Direction,
-		"Destination":     call.Destination,
-		"ParentId":        call.ParentId,
-		"Timestamp":       call.Timestamp,
-		"State":           call.Event,
-		"AppId":           call.AppId,
-		"CreatedAt":       call.Timestamp,
-		"FromType":        call.GetFrom().GetType(),
-		"FromName":        call.GetFrom().GetName(),
-		"FromNumber":      call.GetFrom().GetNumber(),
-		"FromId":          call.GetFrom().GetId(),
-		"ToType":          call.GetTo().GetType(),
-		"ToName":          call.GetTo().GetName(),
-		"ToNumber":        call.GetTo().GetNumber(),
-		"ToId":            call.GetTo().GetId(),
-		"GatewayId":       call.GatewayId,
-		"UserId":          call.UserId,
-		"QueueId":         call.GetQueueId(),
-		"AgentId":         call.GetAgentId(),
-		"TeamId":          call.GetTeamId(),
-		"AttemptId":       call.GetAttemptId(),
-		"MemberId":        call.GetMemberIdId(),
-		"GranteeId":       call.GranteeId,
+		"DomainId":        c.DomainId,
+		"Id":              c.Id,
+		"Direction":       c.Direction,
+		"Destination":     c.Destination,
+		"ParentId":        c.ParentId,
+		"Timestamp":       c.Timestamp,
+		"State":           c.Event,
+		"AppId":           c.AppId,
+		"CreatedAt":       c.Timestamp,
+		"FromType":        c.GetFrom().GetType(),
+		"FromName":        c.GetFrom().GetName(),
+		"FromNumber":      c.GetFrom().GetNumber(),
+		"FromId":          c.GetFrom().GetId(),
+		"ToType":          c.GetTo().GetType(),
+		"ToName":          c.GetTo().GetName(),
+		"ToNumber":        c.GetTo().GetNumber(),
+		"ToId":            c.GetTo().GetId(),
+		"GatewayId":       c.GatewayId,
+		"UserId":          c.UserId,
+		"QueueId":         c.GetQueueId(),
+		"AgentId":         c.GetAgentId(),
+		"TeamId":          c.GetTeamId(),
+		"AttemptId":       c.GetAttemptId(),
+		"MemberId":        c.GetMemberIdId(),
+		"GranteeId":       c.GranteeId,
 		"Payload":         nil,
-		"Params":          call.GetParams(),
-		"Hb":              call.Heartbeat,
-		"DestinationName": call.DestinationName,
-		"ContactId":       call.ContactId,
+		"Params":          c.GetParams(),
+		"Hb":              c.Heartbeat,
+		"DestinationName": c.DestinationName,
+		"ContactId":       c.ContactId,
 	})
 }
 
@@ -98,13 +99,13 @@ on conflict (id) where timestamp < to_timestamp(@Timestamp::double precision /10
       state = EXCLUDED.state,
       timestamp = EXCLUDED.timestamp`
 
-func (r *CallRepository) SetState(call *model.CallAction) error {
+func (r *CallRepository) SetState(c *call.CallAction) error {
 	return r.db.Exec(context.Background(), setStateSQL, pgx.NamedArgs{
-		"Id":        call.Id,
-		"State":     call.Event,
-		"Timestamp": call.Timestamp,
-		"AppId":     call.AppId,
-		"DomainId":  call.DomainId,
+		"Id":        c.Id,
+		"State":     c.Event,
+		"Timestamp": c.Timestamp,
+		"AppId":     c.AppId,
+		"DomainId":  c.DomainId,
 	})
 }
 
@@ -133,42 +134,42 @@ on conflict (id) where timestamp <= to_timestamp(@Timestamp::double precision / 
       hangup_phrase = EXCLUDED.hangup_phrase,
       transfer_from = coalesce(call_center.cc_calls.transfer_from, EXCLUDED.transfer_from)`
 
-func (r *CallRepository) SetHangup(call *model.CallActionHangup) error {
+func (r *CallRepository) SetHangup(c *call.CallActionHangup) error {
 	return r.db.Exec(context.Background(), setHangupSQL, pgx.NamedArgs{
-		"Id":             call.Id,
-		"State":          call.Event,
-		"Timestamp":      call.Timestamp,
-		"AppId":          call.AppId,
-		"DomainId":       call.DomainId,
-		"Cause":          call.Cause,
-		"SipCode":        call.SipCode,
-		"HangupBy":       call.HangupBy,
-		"AmdResult":      call.AmdResult,
-		"TalkSec":        call.TalkSec,
-		"Tags":           call.Tags,
-		"Variables":      call.VariablesToJson(),
-		"Params":         call.Parameters(),
-		"AmdAiResult":    call.AmdAiResult,
-		"AmdAiResultLog": call.AmdAiResultLog,
-		"AmdAiPositive":  call.AmdAiPositive,
-		"SchemaIds":      call.SchemaIds,
-		"HangupPhrase":   call.HangupPhrase,
-		"TransferFrom":   call.TransferFrom,
+		"Id":             c.Id,
+		"State":          c.Event,
+		"Timestamp":      c.Timestamp,
+		"AppId":          c.AppId,
+		"DomainId":       c.DomainId,
+		"Cause":          c.Cause,
+		"SipCode":        c.SipCode,
+		"HangupBy":       c.HangupBy,
+		"AmdResult":      c.AmdResult,
+		"TalkSec":        c.TalkSec,
+		"Tags":           c.Tags,
+		"Variables":      c.VariablesToJson(),
+		"Params":         c.Parameters(),
+		"AmdAiResult":    c.AmdAiResult,
+		"AmdAiResultLog": c.AmdAiResultLog,
+		"AmdAiPositive":  c.AmdAiPositive,
+		"SchemaIds":      c.SchemaIds,
+		"HangupPhrase":   c.HangupPhrase,
+		"TransferFrom":   c.TransferFrom,
 	})
 }
 
 const setBridgedSQL = `call call_center.cc_call_set_bridged(@Id::uuid, @State::varchar, to_timestamp(@Timestamp::double precision /1000), @AppId::varchar,
     @DomainId::int8, @BridgedId::uuid, @ToName::varchar)`
 
-func (r *CallRepository) SetBridged(call *model.CallActionBridge) error {
+func (r *CallRepository) SetBridged(c *call.CallActionBridge) error {
 	return r.db.Exec(context.Background(), setBridgedSQL, pgx.NamedArgs{
-		"Id":        call.Id,
-		"State":     call.Event,
-		"Timestamp": call.Timestamp,
-		"AppId":     call.AppId,
-		"DomainId":  call.DomainId,
-		"BridgedId": call.BridgedId,
-		"ToName":    call.To.Name,
+		"Id":        c.Id,
+		"State":     c.Event,
+		"Timestamp": c.Timestamp,
+		"AppId":     c.AppId,
+		"DomainId":  c.DomainId,
+		"BridgedId": c.BridgedId,
+		"ToName":    c.To.Name,
 	})
 }
 
@@ -323,8 +324,8 @@ select id::text, user_id, domain_id
 from ins
 where bridged_id isnull and parent_id notnull and user_id notnull`
 
-func (r *CallRepository) MoveToHistory() ([]model.MissedCall, error) {
-	var out []model.MissedCall
+func (r *CallRepository) MoveToHistory() ([]call.MissedCall, error) {
+	var out []call.MissedCall
 	if err := r.db.Select(context.Background(), &out, moveToHistorySQL, pgx.NamedArgs{}); err != nil {
 		return nil, err
 	}
@@ -354,7 +355,7 @@ from (
     select @R::jsonb as j
 ) x`
 
-func (r *CallRepository) SaveTranscript(transcribe *model.CallActionTranscript) error {
+func (r *CallRepository) SaveTranscript(transcribe *call.CallActionTranscript) error {
 	raw, _ := json.Marshal(transcribe.Transcript)
 	return r.db.Exec(context.Background(), saveTranscriptSQL, pgx.NamedArgs{
 		"CallId": transcribe.Id,
@@ -366,7 +367,7 @@ type lastBridgedRow struct {
 	Variables json.RawMessage `db:"variables"`
 }
 
-func (r *CallRepository) LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, error) {
+func (r *CallRepository) LastBridged(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes flow.Variables) (flow.Variables, error) {
 	fields := make([]string, 0, len(mapRes))
 	for k, v := range mapRes {
 		var col string
@@ -468,7 +469,7 @@ from (select ` + strings.Join(fields, ", ") + `
 		return nil, err
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}
@@ -566,7 +567,7 @@ from (
 where t.id notnull
 limit 1`
 
-func (r *CallRepository) SetVariables(id string, vars *model.CallVariables) error {
+func (r *CallRepository) SetVariables(id string, vars *call.CallVariables) error {
 	return r.db.Exec(context.Background(), setVariablesSQL, pgx.NamedArgs{
 		"Id":   id,
 		"Vars": vars.ToMapJson(),
@@ -589,7 +590,7 @@ values (now(), @SipId, @DomainId, @UserId, @MosAvg, @MosMin, @MosMinAt, @MosMax,
         @JitterMinAt, @JitterMax, @JitterMaxAt, @PacketlossAvg, @PacketlossMin, @PacketlossMinAt, @PacketlossMax, @PacketlossMaxAt,
         @RoundtripAvg, @RoundtripMax, @RoundtripMaxAt, @RoundtripMin, @RoundtripMinAt)`
 
-func (r *CallRepository) SaveMediaStats(stats *model.CallActionMediaStats) error {
+func (r *CallRepository) SaveMediaStats(stats *call.CallActionMediaStats) error {
 	return r.db.Exec(context.Background(), saveMediaStatsSQL, pgx.NamedArgs{
 		"DomainId":        stats.DomainId,
 		"SipId":           stats.SipId,

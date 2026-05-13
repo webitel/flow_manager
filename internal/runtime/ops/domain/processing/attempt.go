@@ -5,13 +5,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // AttemptDeps is the subset of  attempt ops need.
 type AttemptDeps interface {
-	AttemptResult(result *model.AttemptResult) error
+	AttemptResult(result *call.AttemptResult) error
 	ResumeAttempt(ctx context.Context, attemptId, domainId int64) error
 }
 
@@ -33,7 +33,7 @@ func (o *attemptResultOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOu
 		return ops.OpOutput{}, fmt.Errorf("attemptResult: no processing connection in context")
 	}
 
-	var argv model.AttemptResult
+	var argv call.AttemptResult
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}

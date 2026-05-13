@@ -8,9 +8,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -122,7 +123,7 @@ func (r *MemberRepository) EWTPuzzle(domainId int64, callId string, min int, que
 	return row.Awt, nil
 }
 
-func (r *MemberRepository) GetProperties(domainId int64, req *model.SearchMember, mapRes model.Variables) (model.Variables, error) {
+func (r *MemberRepository) GetProperties(domainId int64, req *queue.SearchMember, mapRes flow.Variables) (flow.Variables, error) {
 	fields := make([]string, 0, len(mapRes))
 	for k, v := range mapRes {
 		var col string
@@ -184,7 +185,7 @@ from (
 		return nil, err
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}
@@ -228,7 +229,7 @@ const patchMembersSQL = `with m as (
 select count(*)
 from m`
 
-func (r *MemberRepository) PatchMembers(domainId int64, req *model.SearchMember, patch *model.PatchMember) (int, error) {
+func (r *MemberRepository) PatchMembers(domainId int64, req *queue.SearchMember, patch *queue.PatchMember) (int, error) {
 	var row patchMembersRow
 	if err := r.db.Get(context.Background(), &row, patchMembersSQL, pgx.NamedArgs{
 		"DomainId":    domainId,
@@ -245,7 +246,7 @@ func (r *MemberRepository) PatchMembers(domainId int64, req *model.SearchMember,
 		"UBucketId":      patch.Bucket.GetId(),
 		"UReadyAt":       patch.ReadyAt,
 		"UStopCause":     patch.StopCause,
-		"UVariables":     model.VariablesToString(patch.Variables),
+		"UVariables":     flow.VariablesToString(patch.Variables),
 		"UQueueId":       patch.QueueId,
 		"Communications": patch.CommunicationsToJson(),
 	}); err != nil {
@@ -280,7 +281,7 @@ from call_center.cc_queue q
     inner join flow.calendar_timezones tz on tz.id = c.timezone_id
 where q.id = @QueueId::int4 and q.domain_id = @DomainId::int8`
 
-func (r *MemberRepository) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error {
+func (r *MemberRepository) CreateMember(domainId int64, queueId, holdSec int, member *queue.CallbackMember) error {
 	return r.db.Exec(context.Background(), createMemberSQL, pgx.NamedArgs{
 		"DomainId":              domainId,
 		"QueueId":               queueId,
@@ -288,7 +289,7 @@ func (r *MemberRepository) CreateMember(domainId int64, queueId, holdSec int, me
 		"TypeId":                member.Communication.Type.GetId(),
 		"Name":                  member.Name,
 		"HoldSec":               holdSec,
-		"Variables":             model.VariablesToString(member.Variables),
+		"Variables":             flow.VariablesToString(member.Variables),
 		"TimezoneId":            member.Timezone.Id,
 		"Priority":              member.Priority,
 		"BucketId":              member.Bucket.Id,

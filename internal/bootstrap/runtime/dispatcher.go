@@ -9,11 +9,11 @@ import (
 
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/workers/runtime_recovery"
 	"github.com/webitel/flow_manager/internal/workers/session_recovery"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
-	"github.com/webitel/flow_manager/model"
 )
 
 // Dispatcher connects inbound transport servers to domain routers and manages
@@ -22,19 +22,19 @@ type Dispatcher struct {
 	log *wlog.Logger
 	id  string
 
-	eslServer     model.Server
-	mailServer    model.Server
-	channelServer model.Server
-	imServer      model.Server
+	eslServer     flow.Server
+	mailServer    flow.Server
+	channelServer flow.Server
+	imServer      flow.Server
 	grpcServer    grpcServer
 
-	CallRouter    model.Router
-	GRPCRouter    model.Router
-	ChatRouter    model.Router
-	FormRouter    model.Router
-	EmailRouter   model.Router
-	ChannelRouter model.Router
-	IMRouter      model.Router
+	CallRouter    flow.Router
+	GRPCRouter    flow.Router
+	ChatRouter    flow.Router
+	FormRouter    flow.Router
+	EmailRouter   flow.Router
+	ChannelRouter flow.Router
+	IMRouter      flow.Router
 
 	checkpointRepo   session.Repository
 	runtimeStateRepo persistence.Repository
@@ -46,7 +46,7 @@ type Dispatcher struct {
 // grpcServer is the minimal interface we need from the gRPC server in the
 // dispatcher (just Consume).
 type grpcServer interface {
-	Consume() <-chan model.Connection
+	Consume() <-chan flow.Connection
 }
 
 // DispatcherConfig carries all dependencies for the dispatcher.
@@ -55,10 +55,10 @@ type DispatcherConfig struct {
 	ID  string
 
 	GrpcServer    grpcServer
-	EslServer     model.Server
-	MailServer    model.Server
-	ChannelServer model.Server
-	ImServer      model.Server
+	EslServer     flow.Server
+	MailServer    flow.Server
+	ChannelServer flow.Server
+	ImServer      flow.Server
 
 	CheckpointRepo   session.Repository
 	RuntimeStateRepo persistence.Repository
@@ -147,7 +147,7 @@ func (f *Dispatcher) Listen() {
 	wg.Wait()
 }
 
-func (f *Dispatcher) listenImConnection(wg *sync.WaitGroup, srv model.Server) {
+func (f *Dispatcher) listenImConnection(wg *sync.WaitGroup, srv flow.Server) {
 	defer wg.Done()
 	f.log.Info("listen im connections...")
 	for {
@@ -165,7 +165,7 @@ func (f *Dispatcher) listenImConnection(wg *sync.WaitGroup, srv model.Server) {
 	}
 }
 
-func (f *Dispatcher) listenCallConnection(wg *sync.WaitGroup, srv model.Server) {
+func (f *Dispatcher) listenCallConnection(wg *sync.WaitGroup, srv flow.Server) {
 	defer wg.Done()
 	f.log.Info("listen call connections...")
 	for {
@@ -197,11 +197,11 @@ func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcServer) {
 			}
 
 			switch c.Type() {
-			case model.ConnectionTypeChat:
+			case flow.ConnectionTypeChat:
 				if err := f.ChatRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
-			case model.ConnectionTypeForm:
+			case flow.ConnectionTypeForm:
 				if err := f.FormRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
@@ -214,7 +214,7 @@ func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcServer) {
 	}
 }
 
-func (f *Dispatcher) listenInboundEmail(wg *sync.WaitGroup, srv model.Server) {
+func (f *Dispatcher) listenInboundEmail(wg *sync.WaitGroup, srv flow.Server) {
 	defer wg.Done()
 	wlog.Info(fmt.Sprintf("listen inbound email connections..."))
 	for {
@@ -233,7 +233,7 @@ func (f *Dispatcher) listenInboundEmail(wg *sync.WaitGroup, srv model.Server) {
 	}
 }
 
-func (f *Dispatcher) listenChannelConnection(wg *sync.WaitGroup, srv model.Server) {
+func (f *Dispatcher) listenChannelConnection(wg *sync.WaitGroup, srv flow.Server) {
 	defer wg.Done()
 	wlog.Info(fmt.Sprintf("listen channel connections..."))
 	for {

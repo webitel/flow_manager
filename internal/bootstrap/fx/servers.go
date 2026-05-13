@@ -15,7 +15,6 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/usecase/callback"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -23,7 +22,7 @@ func NewCallbackResolver() *callback.Resolver {
 	return callback.New()
 }
 
-func NewTLSConfig(cfg *model.Config) (*tls.Config, error) {
+func NewTLSConfig(cfg *bscfg.Config) (*tls.Config, error) {
 	return bscfg.LoadTLSCreds(cfg.Tls)
 }
 
@@ -35,7 +34,7 @@ func NewChatManager() *grpc.ChatManager {
 // bootstrapServers.Servers value avoids the fx same-type ambiguity for multiple
 // model.Server providers.
 func NewServers(
-	cfg *model.Config,
+	cfg *bscfg.Config,
 	id AppID,
 	cm *grpc.ChatManager,
 	cb *callback.Resolver,

@@ -5,22 +5,22 @@ import (
 
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/model"
 )
 
 type server struct {
-	receiver        <-chan model.ChannelExec
-	consume         chan model.Connection
+	receiver        <-chan flow.ChannelExec
+	consume         chan flow.Connection
 	didFinishListen chan struct{}
 	stopped         chan struct{}
 	startOnce       sync.Once
 }
 
-func New(receiver <-chan model.ChannelExec) model.Server {
+func New(receiver <-chan flow.ChannelExec) flow.Server {
 	return &server{
 		receiver:        receiver,
-		consume:         make(chan model.Connection, 100),
+		consume:         make(chan flow.Connection, 100),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
 	}
@@ -50,12 +50,12 @@ func (s *server) Port() int {
 	return 0
 }
 
-func (s *server) Consume() <-chan model.Connection {
+func (s *server) Consume() <-chan flow.Connection {
 	return s.consume
 }
 
-func (s *server) Type() model.ConnectionType {
-	return model.ConnectionTypeCall
+func (s *server) Type() flow.ConnectionType {
+	return flow.ConnectionTypeCall
 }
 
 func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {

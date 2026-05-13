@@ -9,8 +9,8 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/adapters/inbound/fs/eventsocket"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/model"
 )
 
 const (
@@ -29,7 +29,7 @@ type Config struct {
 type server struct {
 	cfg             *Config
 	didFinishListen chan struct{}
-	consume         chan model.Connection
+	consume         chan flow.Connection
 	listener        net.Listener
 	stopped         bool
 	sync.RWMutex
@@ -37,11 +37,11 @@ type server struct {
 	log *wlog.Logger
 }
 
-func NewServer(cfg *Config) model.Server {
+func NewServer(cfg *Config) flow.Server {
 	return &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
-		consume:         make(chan model.Connection),
+		consume:         make(chan flow.Connection),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "fs server"),
@@ -57,8 +57,8 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 
-func (s server) Type() model.ConnectionType {
-	return model.ConnectionTypeCall
+func (s server) Type() flow.ConnectionType {
+	return flow.ConnectionTypeCall
 }
 
 func (s *server) Start() error {
@@ -121,7 +121,7 @@ func (s *server) getAddress() string {
 	return fmt.Sprintf("%s:%d", s.cfg.Host, s.cfg.Port)
 }
 
-func (s *server) Consume() <-chan model.Connection {
+func (s *server) Consume() <-chan flow.Connection {
 	return s.consume
 }
 

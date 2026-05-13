@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"strings"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/files"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // SendDeps is the subset of  the send ops need.
 type SendDeps interface {
-	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, error)
-	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, error)
-	SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error
+	SearchMediaFile(domainId int64, search *files.SearchFile) (*files.File, error)
+	SetupPublicFileUrl(file *files.File, domainId int64, server, source string, expire int64) (*files.File, error)
+	SenChatAction(ctx context.Context, channelId string, action chatdomain.ChatAction) error
 }
 
 // RegisterSend registers sendMessage, sendText, sendImage, sendFile, sendAction.
@@ -37,7 +38,7 @@ func (o *sendMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 		return ops.OpOutput{}, fmt.Errorf("sendMessage: no IMDialog in context")
 	}
 
-	var argv model.ChatMessageOutbound
+	var argv chatdomain.ChatMessageOutbound
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -48,7 +49,7 @@ func (o *sendMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 		} else {
 			server := resolveServer(argv.File.Server, argv.Server)
 			var appErr error
-			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &model.SearchFile{
+			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &files.SearchFile{
 				Id:   argv.File.Id,
 				Name: argv.File.Name,
 			})
@@ -102,7 +103,7 @@ func (o *sendImageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		return ops.OpOutput{}, fmt.Errorf("sendImage: no IMDialog in context")
 	}
 
-	var argv model.ChatMessageOutbound
+	var argv chatdomain.ChatMessageOutbound
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -113,7 +114,7 @@ func (o *sendImageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		} else {
 			server := resolveServer(argv.File.Server, argv.Server)
 			var appErr error
-			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &model.SearchFile{
+			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &files.SearchFile{
 				Id:   argv.File.Id,
 				Name: argv.File.Name,
 			})
@@ -145,7 +146,7 @@ func (o *sendFileOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 		return ops.OpOutput{}, fmt.Errorf("sendFile: no IMDialog in context")
 	}
 
-	var argv model.ChatMessageOutbound
+	var argv chatdomain.ChatMessageOutbound
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -156,7 +157,7 @@ func (o *sendFileOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 		} else {
 			server := resolveServer(argv.File.Server, argv.Server)
 			var appErr error
-			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &model.SearchFile{
+			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &files.SearchFile{
 				Id:   argv.File.Id,
 				Name: argv.File.Name,
 			})
@@ -183,7 +184,7 @@ type sendActionOp struct{ deps SendDeps }
 func (o *sendActionOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type sendActionArgs struct {
-	Action model.ChatAction `json:"action"`
+	Action chatdomain.ChatAction `json:"action"`
 }
 
 func (o *sendActionOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {

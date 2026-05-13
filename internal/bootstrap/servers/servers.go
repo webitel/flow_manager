@@ -8,24 +8,24 @@ import (
 	"github.com/webitel/wlog"
 
 	fmgrpc "github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 // Servers groups all protocol-level servers so they can be injected as a
-// single value, avoiding the fx same-type ambiguity for multiple model.Server
+// single value, avoiding the fx same-type ambiguity for multiple flow.Server
 // providers.
 type Servers struct {
 	Grpc    *fmgrpc.Server
-	Esl     model.Server
-	Mail    model.Server
-	Channel model.Server
-	Im      model.Server
-	Http    model.Server // nil when WebHook.Addr is not configured
+	Esl     flow.Server
+	Mail    flow.Server
+	Channel flow.Server
+	Im      flow.Server
+	Http    flow.Server // nil when WebHook.Addr is not configured
 }
 
 // Register starts all non-nil servers in order.
 func (s Servers) Register() error {
-	servers := []model.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
+	servers := []flow.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
 
 	for _, v := range servers {
 		if err := startServer(v); err != nil {
@@ -38,14 +38,14 @@ func (s Servers) Register() error {
 
 // Stop stops all non-nil servers in order.
 func (s Servers) Stop() {
-	servers := []model.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
+	servers := []flow.Server{s.Grpc, s.Esl, s.Mail, s.Channel, s.Im}
 
 	for _, v := range servers {
 		stopServer(v)
 	}
 }
 
-func startServer(s model.Server) error {
+func startServer(s flow.Server) error {
 	if s == nil {
 		return nil
 	}
@@ -57,7 +57,7 @@ func startServer(s model.Server) error {
 	return nil
 }
 
-func stopServer(s model.Server) {
+func stopServer(s flow.Server) {
 	if s == nil {
 		return
 	}

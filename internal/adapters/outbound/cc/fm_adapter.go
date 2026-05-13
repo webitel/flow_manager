@@ -9,9 +9,10 @@ import (
 
 	cc2 "github.com/webitel/flow_manager/api/gen/cc"
 	"github.com/webitel/flow_manager/api/gen/engine"
+	"github.com/webitel/flow_manager/internal/domain/call"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -40,7 +41,7 @@ func (a *FMAdapter) JoinChatToInboundQueue(ctx context.Context, in *cc2.ChatJoin
 	return a.cc.Member().JoinChatToQueue(ctx, in)
 }
 
-func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error {
+func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *queue.CallbackMember) error {
 	if err := a.store.Member().CreateMember(domainId, queueId, holdSec, member); err != nil {
 		return fmt.Errorf("App.CreateMember: app.store_err: %w", err)
 	}
@@ -75,7 +76,7 @@ func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, ex
 	return nil
 }
 
-func (a *FMAdapter) AttemptResult(result *model.AttemptResult) error {
+func (a *FMAdapter) AttemptResult(result *call.AttemptResult) error {
 	req := &cc2.AttemptResultRequest{
 		AttemptId:                   result.Id,
 		Status:                      result.Status,
@@ -117,7 +118,7 @@ func (a *FMAdapter) LeavingIMToInboundQueue(attId int64) {
 	a.cc.UnSubscribeAttempt(attId)
 }
 
-func (a *FMAdapter) CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error {
+func (a *FMAdapter) CancelAttempt(ctx context.Context, att queue.InQueueKey, result string) error {
 	if err := a.cc.Member().CancelAttempt(ctx, att.AttemptId, result, att.AppId); err != nil {
 		return fmt.Errorf("CancelAttempt: app.attempt.cancel: %w", err)
 	}
@@ -128,7 +129,7 @@ func (a *FMAdapter) ResumeAttempt(ctx context.Context, attemptId, domainId int64
 	return a.cc.Member().ResumeAttempt(ctx, attemptId, domainId)
 }
 
-func ccCommunications(r []model.CallbackCommunication) []*cc2.MemberCommunicationCreateRequest {
+func ccCommunications(r []queue.CallbackCommunication) []*cc2.MemberCommunicationCreateRequest {
 	l := len(r)
 	if l == 0 {
 		return nil

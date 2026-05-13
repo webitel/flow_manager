@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -13,12 +14,11 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // processingChannel is the channel discriminator stored in flow.runtime_state.
 // Matches model.ConnectionTypeForm (iota = 5).
-const processingChannel = int16(model.ConnectionTypeForm)
+const processingChannel = int16(flow.ConnectionTypeForm)
 
 type Router struct {
 	fm         Deps
@@ -31,7 +31,7 @@ type Router struct {
 // PushForm is intentionally absent: the native generateForm op uses
 // ProcessingConn.SendForm instead; legacy generate_form.go has been deleted.
 type Connection interface {
-	model.Connection
+	flow.Connection
 	SchemaId() int
 	SetComponent(name string, component any)
 	GetComponentByName(name string) any
@@ -39,7 +39,7 @@ type Connection interface {
 	DumpExportVariables() map[string]string
 }
 
-func Init(deps Deps, casesClient domcases.Client) model.Router {
+func Init(deps Deps, casesClient domcases.Client) flow.Router {
 	router := &Router{fm: deps}
 
 	// coord is late-bound: nil when ExtraOps runs, set after Bootstrap returns.
@@ -82,12 +82,12 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (r *Router) handle(conn model.Connection) {
+func (r *Router) handle(conn flow.Connection) {
 	c := conn.(Connection)
 
 	s, appErr := r.fm.GetSchemaById(conn.DomainId(), c.SchemaId())

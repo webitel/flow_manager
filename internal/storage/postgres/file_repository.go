@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/files"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -23,13 +23,13 @@ const getFileMetadataSQL = `select f.id, f.name, f.size, f.mime_type, f.view_nam
 from storage.files f
 where f.domain_id = @DomainId and f.id = any(@Ids::int8[])`
 
-func (r *FileRepository) GetMetadata(domainId int64, ids []int64) ([]model.File, error) {
-	var files []model.File
-	if err := r.db.Select(context.Background(), &files, getFileMetadataSQL, pgx.NamedArgs{
+func (r *FileRepository) GetMetadata(domainId int64, ids []int64) ([]files.File, error) {
+	var result []files.File
+	if err := r.db.Select(context.Background(), &result, getFileMetadataSQL, pgx.NamedArgs{
 		"DomainId": domainId,
 		"Ids":      ids,
 	}); err != nil {
 		return nil, fmt.Errorf("domainId=%v: %w", domainId, err)
 	}
-	return files, nil
+	return result, nil
 }

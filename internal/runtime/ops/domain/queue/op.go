@@ -6,8 +6,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	queuedomain "github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -25,8 +26,8 @@ type getQueueMetricsOp struct{ store store.QueueStore }
 func (o *getQueueMetricsOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getQueueMetricsArgs struct {
-	Queue       *model.SearchEntity `json:"queue"`
-	Bucket      *model.SearchEntity `json:"bucket"`
+	Queue       *queuedomain.SearchEntity `json:"queue"`
+	Bucket      *queuedomain.SearchEntity `json:"bucket"`
 	Set         string              `json:"set"`
 	Metric      string              `json:"metric"`
 	Field       string              `json:"field"`
@@ -49,7 +50,7 @@ func (o *getQueueMetricsOp) Execute(ctx context.Context, in ops.OpInput) (ops.Op
 
 	var res float64
 	if argv.Calls == "complete" && argv.Metric != "count" {
-		req := &model.SearchQueueCompleteStatistics{
+		req := &queuedomain.SearchQueueCompleteStatistics{
 			QueueId:     argv.Queue.Id,
 			QueueName:   argv.Queue.Name,
 			LastMinutes: argv.LastMinutes,
@@ -77,8 +78,8 @@ type getQueueInfoOp struct{ store store.QueueStore }
 func (o *getQueueInfoOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getQueueInfoArgs struct {
-	Queue *model.SearchEntity `json:"queue"`
-	Set   model.Variables     `json:"set"`
+	Queue *queuedomain.SearchEntity `json:"queue"`
+	Set   flow.Variables     `json:"set"`
 }
 
 func (o *getQueueInfoOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
@@ -112,9 +113,9 @@ type getQueueAgentsOp struct{ store store.QueueStore }
 func (o *getQueueAgentsOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getQueueAgentsArgs struct {
-	Queue   *model.SearchEntity `json:"queue"`
+	Queue   *queuedomain.SearchEntity `json:"queue"`
 	Channel string              `json:"channel"`
-	Set     model.Variables     `json:"set"`
+	Set     flow.Variables     `json:"set"`
 }
 
 func (o *getQueueAgentsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {

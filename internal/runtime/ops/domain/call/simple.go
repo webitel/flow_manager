@@ -7,23 +7,24 @@ import (
 	"net/http"
 	"strings"
 
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
-	"github.com/webitel/flow_manager/model"
 )
 
-// callConnFromContext retrieves model.Call from the context decorator.
-func callConnFromContext(ctx context.Context) (model.Call, bool) {
+// callConnFromContext retrieves calldomain.Call from the context decorator.
+func callConnFromContext(ctx context.Context) (calldomain.Call, bool) {
 	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}
-	c, ok := conn.(model.Call)
+	c, ok := conn.(calldomain.Call)
 	return c, ok
 }
 
-// Register adds all simple call ops (no RouterDeps beyond model.Call) to reg.
+// Register adds all simple call ops (no RouterDeps beyond calldomain.Call) to reg.
 func Register(reg *ops.Registry) {
 	reg.Register("ringReady", syncOp(ringReadyFn))
 	reg.Register("preAnswer", syncOp(preAnswerFn))
@@ -55,7 +56,7 @@ func Register(reg *ops.Registry) {
 }
 
 // syncOp wraps a no-args call method as an OpKindSync op.
-type syncOp func(ctx context.Context, call model.Call) (model.Response, error)
+type syncOp func(ctx context.Context, call calldomain.Call) (flow.Response, error)
 
 func (f syncOp) Kind() ops.OpKind { return ops.OpKindSync }
 
@@ -70,16 +71,16 @@ func (f syncOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 	return ops.OpOutput{}, nil
 }
 
-func ringReadyFn(ctx context.Context, call model.Call) (model.Response, error) {
+func ringReadyFn(ctx context.Context, call calldomain.Call) (flow.Response, error) {
 	return call.RingReady(ctx)
 }
-func preAnswerFn(ctx context.Context, call model.Call) (model.Response, error) {
+func preAnswerFn(ctx context.Context, call calldomain.Call) (flow.Response, error) {
 	return call.PreAnswer(ctx)
 }
-func answerFn(ctx context.Context, call model.Call) (model.Response, error) {
+func answerFn(ctx context.Context, call calldomain.Call) (flow.Response, error) {
 	return call.Answer(ctx)
 }
-func flushDtmfFn(ctx context.Context, call model.Call) (model.Response, error) {
+func flushDtmfFn(ctx context.Context, call calldomain.Call) (flow.Response, error) {
 	return call.FlushDTMF(ctx)
 }
 
@@ -430,7 +431,7 @@ func (amdMLOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("amdML: no call connection in context")
 	}
-	var argv model.AmdMLParameters
+	var argv calldomain.AmdMLParameters
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -514,13 +515,13 @@ func (updateOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "update: this call is not an outbound")
 	}
 	var argv struct {
-		Variables model.Variables `json:"variables"`
+		Variables flow.Variables `json:"variables"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
 	if len(argv.Variables) > 0 {
-		cp := make(model.Variables, len(argv.Variables))
+		cp := make(flow.Variables, len(argv.Variables))
 		for k, v := range argv.Variables {
 			if strings.HasPrefix(fmt.Sprintf("%v", k), "wbt_") {
 				cp[k] = v
@@ -679,7 +680,7 @@ func (cancelQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("cancelQueue: no call connection in context")
 	}
-	if _, appErr := call.Set(ctx, model.Variables{
+	if _, appErr := call.Set(ctx, flow.Variables{
 		"cc_cancel": fmt.Sprintf("%v", call.CancelQueue()),
 	}); appErr != nil {
 		return ops.OpOutput{}, appErr

@@ -26,9 +26,9 @@ import (
 	notifop "github.com/webitel/flow_manager/internal/runtime/ops/domain/notification"
 	queueop "github.com/webitel/flow_manager/internal/runtime/ops/domain/queue"
 	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -38,7 +38,7 @@ type BootstrapDeps interface {
 	// direct calls
 	GetLocation(id int) *time.Location
 	GetStore() store.Store
-	GetSchemaById(domainId int64, id int) (*model.Schema, error)
+	GetSchemaById(domainId int64, id int) (*routing.Schema, error)
 	Meeting() domainmeeting.Client
 	Cases() domcases.Client
 	RuntimeStateRepo() persistence.Repository

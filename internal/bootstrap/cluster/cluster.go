@@ -4,8 +4,8 @@ package cluster
 import (
 	"fmt"
 
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/model"
 )
 
 // Cluster manages Consul service registration for this node.
@@ -40,11 +40,11 @@ func (c *Cluster) Start() error {
 
 	c.Discovery = sd
 
-	if err = sd.RegisterService(model.AppServiceName, c.host, c.port, model.AppServiceTTL, model.AppDeregisterCriticalTTL); err != nil {
+	if err = sd.RegisterService(bscfg.AppServiceName, c.host, c.port, bscfg.AppServiceTTL, bscfg.AppDeregisterCriticalTTL); err != nil {
 		return err
 	}
 
-	c.connection = fmt.Sprintf("%s-%s", model.AppServiceName, c.id)
+	c.connection = fmt.Sprintf("%s-%s", bscfg.AppServiceName, c.id)
 
 	return nil
 }

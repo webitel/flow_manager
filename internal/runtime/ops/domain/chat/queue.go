@@ -8,14 +8,15 @@ import (
 	"time"
 
 	"github.com/webitel/flow_manager/api/gen/cc"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // QueueDeps is the subset of  the queue ops need.
 type QueueDeps interface {
-	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error
+	CancelAttempt(ctx context.Context, att queue.InQueueKey, result string) error
 	FindQueueByName(domainId int64, name string) (int32, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error)
@@ -150,7 +151,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 
 		switch e := msg.Data.(type) {
 		case *cc.QueueEvent_Joined:
-			conv.SetQueue(&model.InQueueKey{
+			conv.SetQueue(&queue.InQueueKey{
 				AttemptId: e.Joined.GetAttemptId(),
 				AppId:     e.Joined.GetAppId(),
 			})
@@ -158,12 +159,12 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		case *cc.QueueEvent_Offering:
 			name := e.Offering.GetAgentName()
 			id := strconv.Itoa(int(e.Offering.GetAgentId()))
-			_, _ = conv.Set(ctx, model.Variables{"cc_agent_name": name, "cc_agent_id": id})
+			_, _ = conv.Set(ctx, flow.Variables{"cc_agent_name": name, "cc_agent_id": id})
 			setVars["cc_agent_name"] = name
 			setVars["cc_agent_id"] = id
 
 		case *cc.QueueEvent_Missed:
-			_, _ = conv.Set(ctx, model.Variables{"cc_agent_name": "", "cc_agent_id": ""})
+			_, _ = conv.Set(ctx, flow.Variables{"cc_agent_name": "", "cc_agent_id": ""})
 			setVars["cc_agent_name"] = ""
 			setVars["cc_agent_id"] = ""
 
@@ -172,7 +173,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 
 		case *cc.QueueEvent_Leaving:
 			result := e.Leaving.GetResult()
-			_, _ = conv.Set(ctx, model.Variables{"cc_result": result})
+			_, _ = conv.Set(ctx, flow.Variables{"cc_result": result})
 			setVars["cc_result"] = result
 			return ops.OpOutput{SetVars: setVars}, nil
 		}

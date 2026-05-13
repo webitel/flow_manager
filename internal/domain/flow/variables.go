@@ -1,6 +1,7 @@
 package flow
 
 import (
+	"encoding/json"
 	"regexp"
 	"strings"
 
@@ -52,4 +53,32 @@ func hasOption(o ParseOption, ops ...ParseOption) bool {
 		}
 	}
 	return false
+}
+
+// VariablesToJson serialises a Variables map to JSON bytes.
+func VariablesToJson(v *Variables) []byte {
+	if v == nil {
+		return nil
+	}
+	d, _ := json.Marshal(v)
+	return d
+}
+
+// VariablesToString serialises a Variables map to a JSON string pointer.
+func VariablesToString(v *Variables) *string {
+	if v == nil {
+		return nil
+	}
+	d, _ := json.Marshal(v)
+	s := string(d)
+	return &s
+}
+
+// VariablesFromStringMap creates a Variables map from a string map.
+func VariablesFromStringMap(m map[string]string) Variables {
+	vars := make(Variables)
+	for k, v := range m {
+		vars[k] = v
+	}
+	return vars
 }

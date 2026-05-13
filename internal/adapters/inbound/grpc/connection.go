@@ -11,7 +11,9 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/model"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	domgrpc "github.com/webitel/flow_manager/internal/domain/grpc"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 type Connection struct {
@@ -26,7 +28,7 @@ type Connection struct {
 	result          chan interface{}
 	cancel          context.CancelFunc
 	exportVariables []string
-	scope           model.Scope
+	scope           flow.Scope
 
 	request interface{}
 
@@ -70,8 +72,8 @@ func (c *Connection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *Connection) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Result(result interface{}) {
@@ -99,11 +101,11 @@ func (c *Connection) DomainId() int64 {
 	return c.domainId
 }
 
-func (c *Connection) Type() model.ConnectionType {
-	return model.ConnectionTypeGrpc
+func (c *Connection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeGrpc
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -111,7 +113,7 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 		c.variables[k] = fmt.Sprintf("%v", v) // TODO
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *Connection) Get(name string) (string, bool) {
@@ -137,11 +139,11 @@ func (c *Connection) Variables() map[string]string {
 	return maps.Clone(c.variables)
 }
 
-func (c *Connection) Scope() model.Scope {
+func (c *Connection) Scope() flow.Scope {
 	return c.scope
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, error) {
+func (c *Connection) Export(ctx context.Context, vars []string) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for _, v := range vars {
@@ -151,7 +153,7 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 		c.exportVariables = append(c.exportVariables, v)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *Connection) DumpExportVariables() map[string]string {
@@ -176,6 +178,6 @@ func (c *Connection) OnInboundMessage(_ func(string)) (unregister func()) {
 
 // fixme
 func test() {
-	a := func(c model.GRPCConnection) {}
+	a := func(c domgrpc.GRPCConnection) {}
 	a(&Connection{})
 }

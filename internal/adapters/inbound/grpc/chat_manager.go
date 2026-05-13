@@ -10,9 +10,10 @@ import (
 
 	proto "github.com/webitel/flow_manager/api/gen/chat"
 	messages2 "github.com/webitel/flow_manager/api/gen/chat/messages"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/files"
 	discovery2 "github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
-	"github.com/webitel/flow_manager/model"
 )
 
 type ChatManager struct {
@@ -133,7 +134,7 @@ func (cm *ChatManager) wakeUp() {
 	cm.poolConnections.RecheckConnections(list.Ids())
 }
 
-func inputFile(f *model.File) *messages2.InputFile {
+func inputFile(f *files.File) *messages2.InputFile {
 	if f == nil {
 		return nil
 	}
@@ -153,7 +154,7 @@ func inputFile(f *model.File) *messages2.InputFile {
 	}
 }
 
-func inputKeyboard(btns [][]model.ChatButton) *messages2.InputKeyboard {
+func inputKeyboard(btns [][]chatdomain.ChatButton) *messages2.InputKeyboard {
 	l := len(btns)
 	if l == 0 {
 		return nil
@@ -189,7 +190,7 @@ func inputKeyboard(btns [][]model.ChatButton) *messages2.InputKeyboard {
 	return keyboard
 }
 
-func inputPeers(ps []model.BroadcastPeer) []*messages2.InputPeer {
+func inputPeers(ps []chatdomain.BroadcastPeer) []*messages2.InputPeer {
 	peers := make([]*messages2.InputPeer, 0, len(ps))
 
 	for _, v := range ps {
@@ -203,7 +204,7 @@ func inputPeers(ps []model.BroadcastPeer) []*messages2.InputPeer {
 	return peers
 }
 
-func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, error) {
+func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req chatdomain.BroadcastChat, peers []chatdomain.BroadcastPeer) (*chatdomain.BroadcastChatResponse, error) {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return nil, e
@@ -233,12 +234,12 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		return nil, e
 	}
 
-	res := model.BroadcastChatResponse{
-		Failed: make([]*model.FailedReceiver, 0),
+	res := chatdomain.BroadcastChatResponse{
+		Failed: make([]*chatdomain.FailedReceiver, 0),
 	}
 
 	for _, peer := range broadcastResponse.GetFailure() {
-		res.Failed = append(res.Failed, &model.FailedReceiver{Id: peer.PeerId, Error: peer.Error.Message})
+		res.Failed = append(res.Failed, &chatdomain.FailedReceiver{Id: peer.PeerId, Error: peer.Error.Message})
 	}
 	res.Variables = broadcastResponse.Variables
 	return &res, nil
@@ -259,7 +260,7 @@ func (cc *ChatManager) LinkContact(ctx context.Context, contactId, conversationI
 	return nil
 }
 
-func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action model.ChatAction) error {
+func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action chatdomain.ChatAction) error {
 	c, e := cc.getRandCli()
 	if e != nil {
 		return e
@@ -268,7 +269,7 @@ func (cc *ChatManager) SendAction(ctx context.Context, channelId string, action 
 	var a proto.UserAction = proto.UserAction_Typing
 
 	switch action {
-	case model.ChatActionCancel:
+	case chatdomain.ChatActionCancel:
 		a = proto.UserAction_Cancel
 	}
 

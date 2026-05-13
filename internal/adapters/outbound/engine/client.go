@@ -8,8 +8,8 @@ import (
 	"github.com/webitel/wlog"
 
 	engine2 "github.com/webitel/flow_manager/api/gen/engine"
+	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
-	"github.com/webitel/flow_manager/model"
 )
 
 const serviceName = "engine"
@@ -40,7 +40,7 @@ func (c *Client) Start() error {
 
 func (c *Client) Stop() {}
 
-func (c *Client) MakeCall(ctx context.Context, req model.OutboundCallRequest) (string, error) {
+func (c *Client) MakeCall(ctx context.Context, req call.OutboundCallRequest) (string, error) {
 	protoReq := &engine2.CreateCallRequest{
 		Destination: req.Destination,
 		DomainId:    req.DomainID,

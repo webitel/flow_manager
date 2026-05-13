@@ -6,7 +6,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -23,7 +23,7 @@ const saveLogSQL = `insert into flow.scheme_log (schema_id, log, conn_id) values
 func (r *LogRepository) Save(schemaId int, connId string, log any) error {
 	return r.db.Exec(context.Background(), saveLogSQL, pgx.NamedArgs{
 		"SchemaId": schemaId,
-		"Log":      model.InterfaceToJson(log),
+		"Log":      utils.InterfaceToJson(log),
 		"ConnId":   connId,
 	})
 }

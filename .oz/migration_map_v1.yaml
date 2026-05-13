@@ -1,0 +1,149 @@
+version: 1
+name: flow-manager-gradual-migration
+goals:
+  - Introduce fx-based composition root without breaking current runtime behavior.
+  - Prepare persistent session recovery after process restart.
+  - Migrate structure incrementally without big-bang package moves.
+strategy:
+  migration_mode: strangler
+  compatibility_rules:
+    - Keep old package API stable while moving internals in phases.
+    - Prefer wrappers/adapters before moving business logic.
+    - Move one vertical slice at a time (call, chat, email, etc.).
+current_to_target:
+  - source: server.go
+    target: cmd/flow-manager/main.go
+    phase: 1
+    note: Keep temporary delegating main until fx startup is fully wired.
+  - source: app/
+    target: internal/bootstrap + internal/usecase + internal/adapters/outbound + internal/platform
+    phase: 1-3
+    split:
+      - from: app/config.go
+        to: internal/bootstrap/config/
+      - from: app/app.go
+        to: internal/bootstrap/runtime/flow_manager.go
+      - from: app/server.go
+        to: internal/bootstrap/runtime/servers.go
+      - from: app/listener.go
+        to: internal/bootstrap/runtime/dispatcher.go
+      - from: app/*_cli.go
+        to: internal/adapters/outbound/clients/
+      - from: app/callback.go
+        to: internal/usecase/callback/
+  - source: flow/
+    target: internal/domain/flow + internal/usecase/flow
+    phase: 2
+    split:
+      - from: flow/flow.go
+        to: internal/domain/flow/runtime/flow.go
+      - from: flow/handler.go
+        to: internal/usecase/flow/executor.go
+      - from: flow/parser.go
+        to: internal/domain/flow/parser/parser.go
+      - from: flow/applications.go
+        to: internal/domain/flow/apps/registry.go
+      - from: flow/{if.go,while.go,switch.go,goto.go,break.go}
+        to: internal/domain/flow/runtime/control/
+  - source: routes/
+    target: internal/adapters/inbound/
+    phase: 2
+    split:
+      - from: routes/call/
+        to: internal/adapters/inbound/call/
+      - from: routes/chat/
+        to: internal/adapters/inbound/chat/
+      - from: routes/email/
+        to: internal/adapters/inbound/email/
+      - from: routes/grpc/
+        to: internal/adapters/inbound/grpc/
+      - from: routes/im/
+        to: internal/adapters/inbound/im/
+      - from: routes/channel/
+        to: internal/adapters/inbound/channel/
+      - from: routes/webhook/
+        to: internal/adapters/inbound/webhook/
+      - from: routes/processing/
+        to: internal/adapters/inbound/processing/
+  - source: providers/
+    target: internal/adapters/inbound/transports/
+    phase: 2
+    split:
+      - from: providers/fs/
+        to: internal/adapters/inbound/transports/fs/
+      - from: providers/grpc/
+        to: internal/adapters/inbound/transports/grpc/
+      - from: providers/email/
+        to: internal/adapters/inbound/transports/email/
+      - from: providers/http/
+        to: internal/adapters/inbound/transports/http/
+      - from: providers/im/
+        to: internal/adapters/inbound/transports/im/
+      - from: providers/channel/
+        to: internal/adapters/inbound/transports/channel/
+  - source: store/
+    target: internal/adapters/outbound/storage/
+    phase: 3
+    split:
+      - from: store/pg_store/
+        to: internal/adapters/outbound/storage/postgres/
+      - from: store/cachelayer/
+        to: internal/adapters/outbound/storage/cache/
+      - from: store/store.go
+        to: internal/domain/shared/ports/storage.go
+  - source: mq/
+    target: internal/adapters/outbound/mq/
+    phase: 3
+  - source: model/
+    target: internal/domain/shared/ + internal/domain/*/entity + internal/domain/*/ports
+    phase: 2-4
+    note: Move gradually; keep model package as compatibility layer during transition.
+  - source: cases/
+    target: internal/adapters/outbound/cases/
+    phase: 3
+  - source: pkg/processing/
+    target: internal/domain/processing/
+    phase: 3
+  - source: gen/
+    target: api/gen/
+    phase: 4
+fx_introduction_plan:
+  phase_1_bootstrap:
+    - Add internal/bootstrap/fx with modules for config, logger, store, mq, providers, routers.
+    - Build fx lifecycle hooks for Start/Stop servers (replacement for RegisterServers/StopServers).
+    - Wire current FlowManager as a provided runtime component first, then reduce responsibilities.
+  phase_2_router_provider_binding:
+    - Bind provider consume loops via fx invokes instead of manual goroutine spawning in main.
+    - Keep existing router logic unchanged while moving package boundaries.
+session_recovery_plan:
+  existing_assets:
+    - store/pg_store/session.go
+    - store/pg_store/socket_session.go
+    - model/socket_session.go
+    - providers/im/server.go (session touch/remove integration)
+    - routes/* uses DumpExportVariables and disconnected triggers
+  target_components:
+    - internal/domain/session/entity/session_state.go
+    - internal/domain/session/ports/repository.go
+    - internal/usecase/session/checkpoint.go
+    - internal/usecase/session/restore.go
+    - internal/workers/session_recovery/worker.go
+    - internal/adapters/outbound/storage/postgres/session_repository.go
+  recovery_flow:
+    - On flow start, create session checkpoint with connection id, schema id, channel, variables snapshot.
+    - On meaningful state transitions, update checkpoint (position/tag/exports/ttl).
+    - On graceful finish, mark checkpoint closed and persist final export variables.
+    - On process start, recovery worker restores active checkpoints and reschedules recovery actions.
+iteration_1_recommended_changes:
+  scope:
+    - Create cmd/flow-manager/main.go (delegating to existing startup).
+    - Create internal/bootstrap/fx skeleton modules without moving business logic.
+    - Move only configuration/provider startup wiring behind fx.
+  no_touch_yet:
+    - flow runtime semantics
+    - routing resolution in routes/call/router.go
+    - provider protocol internals
+verification_baseline:
+  - go test ./...
+  - smoke check call/chat/email flow startup
+  - verify disconnected trigger path for call and chat

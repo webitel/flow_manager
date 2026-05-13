@@ -8,15 +8,16 @@ import (
 
 	"github.com/webitel/flow_manager/api/gen/ai_bots"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // MediaDeps is the narrow interface required by the playback and tts ops.
 type MediaDeps interface {
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
-	GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, error)
+	GetMediaFiles(domainId int64, req *[]*calldomain.PlaybackFile) ([]*calldomain.PlaybackFile, error)
+	GetPlaybackFile(domainId int64, search *calldomain.PlaybackFile) (*calldomain.PlaybackFile, error)
 	GetAiBots() *aibridge.Client
 }
 
@@ -38,7 +39,7 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 		return ops.OpOutput{}, fmt.Errorf("playback: no call connection in context")
 	}
 
-	var argv model.PlaybackArgs
+	var argv calldomain.PlaybackArgs
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -57,15 +58,15 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 		bg := argv.GetSpeech.Background
 		if bg != nil && bg.File != nil {
 			bg.File, _ = o.deps.GetPlaybackFile(call.DomainId(), bg.File)
-			bg.Name = model.NewId()[:6]
+			bg.Name = utils.NewId()[:6]
 			call.BackgroundPlayback(ctx, bg.File, bg.Name, bg.VolumeReduction) //nolint:errcheck
 			defer call.BackgroundPlaybackStop(ctx, bg.Name)                    //nolint:errcheck
 		}
 
 		if argv.GetSpeech.Timeout > 0 && !argv.GetSpeech.BreakFinalOnTimeout {
-			argv.Files = append(argv.Files, &model.PlaybackFile{
-				Type: model.NewString("silence"),
-				Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
+			argv.Files = append(argv.Files, &calldomain.PlaybackFile{
+				Type: utils.NewString("silence"),
+				Name: utils.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
 			})
 		}
 
@@ -93,7 +94,7 @@ func (o *playbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	return ops.OpOutput{}, nil
 }
 
-func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) error {
+func (o *playbackOp) aiBridgeStt(ctx context.Context, call calldomain.Call, argv calldomain.PlaybackArgs) error {
 	gs := argv.GetSpeech
 	if gs.SetVar == "" {
 		gs.SetVar = "wbt_stt_text"
@@ -136,7 +137,7 @@ func (o *playbackOp) aiBridgeStt(ctx context.Context, call model.Call, argv mode
 	return nil
 }
 
-func googleStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) error {
+func googleStt(ctx context.Context, call calldomain.Call, argv calldomain.PlaybackArgs) error {
 	if _, err := call.GoogleTranscribe(ctx, argv.GetSpeech); err != nil {
 		return err
 	}
@@ -153,7 +154,7 @@ func googleStt(ctx context.Context, call model.Call, argv model.PlaybackArgs) er
 	return nil
 }
 
-func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleepTimeout, vStatus, vFinal string) error {
+func doStopStt(ctx context.Context, call calldomain.Call, gs *calldomain.GetSpeech, vSleepTimeout, vStatus, vFinal string) error {
 	if gs.Timeout <= 0 || !gs.BreakFinalOnTimeout {
 		return nil
 	}
@@ -164,9 +165,9 @@ func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleep
 	call.Set(ctx, map[string]any{vSleepTimeout: "true"}) //nolint:errcheck
 	isFinal, _ := call.Get(vStatus)
 	if isFinal != vFinal {
-		if _, err := call.Playback(ctx, []*model.PlaybackFile{{
-			Type: model.NewString("silence"),
-			Name: model.NewString(strconv.Itoa(gs.Timeout)),
+		if _, err := call.Playback(ctx, []*calldomain.PlaybackFile{{
+			Type: utils.NewString("silence"),
+			Name: utils.NewString(strconv.Itoa(gs.Timeout)),
 		}}); err != nil {
 			return err
 		}
@@ -174,7 +175,7 @@ func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleep
 	return nil
 }
 
-func setSttVar(ctx context.Context, varName string, call model.Call) {
+func setSttVar(ctx context.Context, varName string, call calldomain.Call) {
 	if varName == "" {
 		varName = "google_refresh_vars"
 	}
@@ -194,14 +195,14 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 	}
 
 	var argv struct {
-		model.TTSSettings
+		calldomain.TTSSettings
 		Provider   string                `json:"provider"`
 		Key        string                `json:"key"`
 		Token      string                `json:"token"`
 		Region     string                `json:"region"`
 		Terminator string                `json:"terminator"`
-		GetDigits  *model.PlaybackDigits `json:"getDigits"`
-		GetSpeech  *model.GetSpeech      `json:"getSpeech"`
+		GetDigits  *calldomain.PlaybackDigits `json:"getDigits"`
+		GetSpeech  *calldomain.GetSpeech      `json:"getSpeech"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
@@ -220,7 +221,7 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		bg := argv.GetSpeech.Background
 		if bg != nil && bg.File != nil {
 			bg.File, _ = o.deps.GetPlaybackFile(call.DomainId(), bg.File)
-			bg.Name = model.NewId()[:6]
+			bg.Name = utils.NewId()[:6]
 			call.BackgroundPlayback(ctx, bg.File, bg.Name, bg.VolumeReduction) //nolint:errcheck
 			defer call.BackgroundPlaybackStop(ctx, bg.Name)                    //nolint:errcheck
 		}
@@ -246,9 +247,9 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 			call.Set(ctx, map[string]any{"google_play_sleep_timeout": "true"}) //nolint:errcheck
 			isFinal, _ := call.Get("google_final")
 			if isFinal != "true" {
-				if _, err := call.Playback(ctx, []*model.PlaybackFile{{
-					Type: model.NewString("silence"),
-					Name: model.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
+				if _, err := call.Playback(ctx, []*calldomain.PlaybackFile{{
+					Type: utils.NewString("silence"),
+					Name: utils.NewString(strconv.Itoa(argv.GetSpeech.Timeout)),
 				}}); err != nil {
 					return ops.OpOutput{}, err
 				}
@@ -263,7 +264,7 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 
 		answer := call.GetVariable("variable_google_transcript")
 		if argv.GetSpeech.Question != "" {
-			call.PushSpeechMessage(model.SpeechMessage{
+			call.PushSpeechMessage(calldomain.SpeechMessage{
 				Question: argv.GetSpeech.Question,
 				Answer:   answer,
 			})
@@ -301,10 +302,10 @@ func buildTTSQuery(provider, key, token, region string) string {
 	}
 	q := provider
 	if key != "" {
-		q += "&key=" + model.UrlEncoded(key)
+		q += "&key=" + utils.UrlEncoded(key)
 	}
 	if token != "" {
-		q += "&token=" + model.UrlEncoded(token)
+		q += "&token=" + utils.UrlEncoded(token)
 	}
 	if region != "" {
 		q += "&region=" + region

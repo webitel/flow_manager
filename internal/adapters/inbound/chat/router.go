@@ -6,6 +6,9 @@ import (
 	"time"
 
 	proto "github.com/webitel/flow_manager/api/gen/chat"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
@@ -16,7 +19,6 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
-	"github.com/webitel/flow_manager/model"
 )
 
 // chatChannel is the channel discriminator stored in flow.runtime_state.
@@ -29,7 +31,7 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps Deps) model.Router {
+func Init(deps Deps) flow.Router {
 	router := &Router{
 		fm: deps,
 	}
@@ -69,28 +71,28 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (r *Router) handle(conn model.Connection) {
-	conv := conn.(model.Conversation)
-	var routing *model.Routing
+func (r *Router) handle(conn flow.Connection) {
+	conv := conn.(chatdomain.Conversation)
+	var rt *routing.Routing
 	var err error
 	shId := conv.SchemaId()
 
 	if shId > 0 {
-		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), shId)
+		rt, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), shId)
 	} else if conv.UserId() > 0 {
-		routing, _ = r.fm.GetChatRouteFromUserId(conv.DomainId(), conv.UserId())
+		rt, _ = r.fm.GetChatRouteFromUserId(conv.DomainId(), conv.UserId())
 	} else if conv.ProfileId() > 0 {
-		routing, err = r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
+		rt, err = r.fm.GetChatRouteFromProfile(conv.DomainId(), conv.ProfileId())
 	} else {
 		// TODO ERROR
 	}
 
-	if routing == nil {
+	if rt == nil {
 		err = fmt.Errorf("Chat: chat.routing.not_found: Not found routing schema")
 	}
 	if err != nil {
@@ -99,14 +101,14 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	conn.Set(conn.Context(), map[string]any{
-		model.FlowSchemaNameVariable: routing.Schema.Name,
+		routing.FlowSchemaNameVariable: rt.Schema.Name,
 	})
 
-	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
-	for i, app := range routing.Schema.Schema {
+	rawSchema := make([]map[string]any, len(rt.Schema.Schema))
+	for i, app := range rt.Schema.Schema {
 		rawSchema[i] = map[string]any(app)
 	}
-	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	tr, parseErr := tree.Parse(rt.SchemaId, rawSchema)
 	if parseErr != nil {
 		conv.Stop(fmt.Errorf("Chat: chat.schema.parse: %w", parseErr), proto.CloseConversationCause_flow_err)
 		return
@@ -125,7 +127,7 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
+	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, rt.SchemaId)
 
 	var activeRec *persistence.Record
 	decorator := func(ctx context.Context) context.Context {
@@ -146,7 +148,7 @@ func (r *Router) handle(conn model.Connection) {
 		Conn:        conn,
 		Tr:          tr,
 		Tags:        tags,
-		SchemaID:    routing.SchemaId,
+		SchemaID:    rt.SchemaId,
 		DomainID:    conv.DomainId(),
 		AppID:       r.fm.AppID(),
 		Repo:        r.fm.RuntimeStateRepo(),
@@ -162,8 +164,8 @@ func (r *Router) handle(conn model.Connection) {
 }
 
 func (r *Router) teardownNative(
-	conn model.Connection,
-	conv model.Conversation,
+	conn flow.Connection,
+	conv chatdomain.Conversation,
 	cp *session.Checkpoint,
 	tr *tree.Tree,
 	rec *persistence.Record,

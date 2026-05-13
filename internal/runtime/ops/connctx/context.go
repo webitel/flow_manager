@@ -3,16 +3,16 @@ package connctx
 import (
 	"context"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 type contextKey struct{}
 
-func WithConnection(ctx context.Context, conn model.Connection) context.Context {
+func WithConnection(ctx context.Context, conn flow.Connection) context.Context {
 	return context.WithValue(ctx, contextKey{}, conn)
 }
 
-func ConnectionFromContext(ctx context.Context) model.Connection {
-	conn, _ := ctx.Value(contextKey{}).(model.Connection)
+func ConnectionFromContext(ctx context.Context) flow.Connection {
+	conn, _ := ctx.Value(contextKey{}).(flow.Connection)
 	return conn
 }

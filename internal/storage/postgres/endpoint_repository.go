@@ -6,8 +6,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -91,13 +92,13 @@ from endpoints e
  ) res on true
 order by e.idx`
 
-func (r *EndpointRepository) Get(domainId int64, _, _ string, endpoints model.Applications) ([]*model.Endpoint, error) {
+func (r *EndpointRepository) Get(domainId int64, _, _ string, endpoints flow.Applications) ([]*call.Endpoint, error) {
 	request, err := json.Marshal(endpoints)
 	if err != nil {
 		return nil, err
 	}
 
-	var res []*model.Endpoint
+	var res []*call.Endpoint
 	if err := r.db.Select(context.Background(), &res, getEndpointSQL, pgx.NamedArgs{
 		"DomainId": domainId,
 		"Request":  request,

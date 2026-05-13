@@ -6,6 +6,9 @@ import (
 	"regexp"
 
 	"github.com/webitel/flow_manager/api/gen/contacts"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -14,12 +17,11 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // emailChannel is the channel discriminator stored in flow.runtime_state.
 // Matches model.ConnectionTypeEmail (iota = 2).
-const emailChannel = int16(model.ConnectionTypeEmail)
+const emailChannel = int16(flow.ConnectionTypeEmail)
 
 var compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 
@@ -30,7 +32,7 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps Deps, contacts domaincontacts.Client) model.Router {
+func Init(deps Deps, contacts domaincontacts.Client) flow.Router {
 	r := &Router{fm: deps, contacts: contacts}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
@@ -60,15 +62,15 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(rawConn model.Connection) error {
+func (r *Router) Handle(rawConn flow.Connection) error {
 	go r.handle(rawConn)
 	return nil
 }
 
-func (r *Router) handle(rawConn model.Connection) {
+func (r *Router) handle(rawConn flow.Connection) {
 	// emailParser wraps EmailConnection to override ParseText for ${var} expansion
 	// used by legacy global ops (httpRequest, set, etc.) via scope.Decode.
-	conn := &emailParser{EmailConnection: rawConn.(model.EmailConnection)}
+	conn := &emailParser{EmailConnection: rawConn.(emaildomain.EmailConnection)}
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), conn.SchemaId())
 	if err != nil {
@@ -76,7 +78,7 @@ func (r *Router) handle(rawConn model.Connection) {
 		return
 	}
 
-	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkMailToContact)
+	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), bscfg.SysAutoLinkMailToContact)
 	if autoLink.BoolValue {
 		r.linkContact(conn)
 	}
@@ -123,7 +125,7 @@ func (r *Router) handle(rawConn model.Connection) {
 	}
 }
 
-func (r *Router) linkContact(conn model.EmailConnection) {
+func (r *Router) linkContact(conn emaildomain.EmailConnection) {
 	email := conn.Email()
 	if email == nil || len(email.From) == 0 {
 		return
@@ -140,7 +142,7 @@ func (r *Router) linkContact(conn model.EmailConnection) {
 		return
 	}
 	if len(list.Data) == 1 {
-		conn.Set(conn.Context(), model.Variables{"wbt_contact_id": list.Data[0].Id})
+		conn.Set(conn.Context(), flow.Variables{"wbt_contact_id": list.Data[0].Id})
 		cId := int64(0)
 		fmt.Sscanf(list.Data[0].Id, "%d", &cId)
 		if appErr := r.fm.MailSetContacts(conn.Context(), conn.DomainId(), conn.Id(), []int64{cId}); appErr != nil {
@@ -149,14 +151,14 @@ func (r *Router) linkContact(conn model.EmailConnection) {
 	}
 }
 
-// emailParser wraps model.EmailConnection and overrides ParseText so that
+// emailParser wraps emaildomain.EmailConnection and overrides ParseText so that
 // legacy ops (via scope.Decode) can interpolate ${varName} from the email's
 // connection variables.
 type emailParser struct {
-	model.EmailConnection
+	emaildomain.EmailConnection
 }
 
-func (e *emailParser) ParseText(text string, _ ...model.ParseOption) string {
+func (e *emailParser) ParseText(text string, _ ...flow.ParseOption) string {
 	return compileVar.ReplaceAllStringFunc(text, func(varName string) string {
 		r := compileVar.FindStringSubmatch(varName)
 		if len(r) > 0 {

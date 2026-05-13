@@ -11,7 +11,11 @@ import (
 	"github.com/webitel/wlog"
 	"golang.org/x/sync/singleflight"
 
-	"github.com/webitel/flow_manager/model"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/routing"
+	"github.com/webitel/flow_manager/internal/domain/webhook"
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -21,20 +25,20 @@ var (
 	hookGroup     singleflight.Group
 	variableGroup singleflight.Group
 
-	systemCache   = model.NewLruWithParams(300, "system_settings", 60, "")
-	variableCache = model.NewLruWithParams(10000, "variable", 10, "")
+	systemCache   = cache.NewLruWithParams(300, "system_settings", 60, "")
+	variableCache = cache.NewLruWithParams(10000, "variable", 10, "")
 )
 
 // Adapter implements schema lookup, system settings, hook lookup,
 // and schema variable read/write.
 type SchemaAdapter struct {
 	store        store.Store
-	schemaCache  model.ObjectCache
+	schemaCache  cache.ObjectCache
 	cert         presign.PreSign // optional; set via SetCert after Start()
 	timezoneList map[int]*time.Location
 }
 
-func NewSchemaAdapter(st store.Store, schemaCache model.ObjectCache) *SchemaAdapter {
+func NewSchemaAdapter(st store.Store, schemaCache cache.ObjectCache) *SchemaAdapter {
 	return &SchemaAdapter{store: st, schemaCache: schemaCache}
 }
 
@@ -69,9 +73,9 @@ func (a *SchemaAdapter) GetLocation(id int) *time.Location {
 
 // ── schema ────────────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*model.Schema, error) {
+func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*routing.Schema, error) {
 	if v, ok := a.schemaCache.Get(id); ok {
-		s := v.(*model.Schema)
+		s := v.(*routing.Schema)
 		if s.UpdatedAt == updatedAt {
 			return s, nil
 		}
@@ -84,13 +88,13 @@ func (a *SchemaAdapter) GetSchema(domainId int64, id int, updatedAt int64) (*mod
 		return nil, toError("GetSchema", doErr)
 	}
 
-	s := v.(*model.Schema)
+	s := v.(*routing.Schema)
 	wlog.Debug(fmt.Sprintf("add schema \"%s\" [%d] to cache", s.Name, s.Id))
 	a.schemaCache.AddWithDefaultExpires(id, s)
 	return s, nil
 }
 
-func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, error) {
+func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*routing.Schema, error) {
 	v, err, _ := requestGroup.Do(fmt.Sprintf("GetSchemaById-%d-%d", domainId, id), func() (interface{}, error) {
 		return a.store.Schema().GetUpdatedAt(domainId, id)
 	})
@@ -100,7 +104,7 @@ func (a *SchemaAdapter) GetSchemaById(domainId int64, id int) (*model.Schema, er
 	return a.GetSchema(domainId, id, v.(int64))
 }
 
-func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (*model.Routing, error) {
+func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (*routing.Routing, error) {
 	routing, rErr := a.store.Schema().GetTransferredRouting(domainId, schemaId)
 	if rErr != nil {
 		return nil, toError("SearchTransferredRouting", rErr)
@@ -115,19 +119,19 @@ func (a *SchemaAdapter) SearchTransferredRouting(domainId int64, schemaId int) (
 
 // ── system settings ───────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, error) {
+func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, name string) (bscfg.SysValue, error) {
 	key := fmt.Sprintf("%d-%s", domainId, name)
 	if c, ok := systemCache.Get(key); ok {
-		return c.(model.SysValue), nil
+		return c.(bscfg.SysValue), nil
 	}
 
 	v, err, share := systemGroup.Do(key, func() (interface{}, error) {
 		res, err := a.store.SystemcSettings().Get(ctx, domainId, name)
 		if err != nil {
-			return model.SysValue{}, err
+			return bscfg.SysValue{}, err
 		}
 		var val interface{}
-		var s model.SysValue
+		var s bscfg.SysValue
 		json.Unmarshal(res, &val) //nolint:errcheck
 		switch b := val.(type) {
 		case bool:
@@ -138,24 +142,24 @@ func (a *SchemaAdapter) GetSystemSettings(ctx context.Context, domainId int64, n
 		return s, nil
 	})
 	if err != nil {
-		return model.SysValue{}, toError("GetSystemSettings", err)
+		return bscfg.SysValue{}, toError("GetSystemSettings", err)
 	}
 	if !share {
-		systemCache.AddWithDefaultExpires(key, v.(model.SysValue))
+		systemCache.AddWithDefaultExpires(key, v.(bscfg.SysValue))
 	}
-	return v.(model.SysValue), nil
+	return v.(bscfg.SysValue), nil
 }
 
 // ── hook ──────────────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetHookById(key string) (model.WebHook, error) {
+func (a *SchemaAdapter) GetHookById(key string) (webhook.WebHook, error) {
 	v, err, _ := hookGroup.Do(key, func() (interface{}, error) {
 		return a.store.WebHook().Get(key)
 	})
 	if err != nil {
-		return model.WebHook{}, toError("GetHookById", err)
+		return webhook.WebHook{}, toError("GetHookById", err)
 	}
-	return v.(model.WebHook), nil
+	return v.(webhook.WebHook), nil
 }
 
 // ── schema variables ──────────────────────────────────────────────────────────
@@ -172,12 +176,12 @@ func (a *SchemaAdapter) SchemaVariable(ctx context.Context, domainId int64, name
 }
 
 func (a *SchemaAdapter) SetGlobalVar(ctx context.Context, domainId int64, name, value string, encrypt bool) error {
-	return a.SetSchemaVariable(ctx, domainId, map[string]*model.SchemaVariable{
+	return a.SetSchemaVariable(ctx, domainId, map[string]*routing.SchemaVariable{
 		name: {Value: []byte(value), Encrypt: encrypt},
 	})
 }
 
-func (a *SchemaAdapter) SetSchemaVariable(ctx context.Context, domainId int64, vars map[string]*model.SchemaVariable) error {
+func (a *SchemaAdapter) SetSchemaVariable(ctx context.Context, domainId int64, vars map[string]*routing.SchemaVariable) error {
 	if len(vars) == 0 {
 		return nil
 	}
@@ -241,7 +245,7 @@ func removeQuote(text []byte) string {
 
 // ── call routing ──────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*model.Routing, error) {
+func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId int) (*routing.Routing, error) {
 	routing, err := a.store.CallRouting().FromGateway(domainId, gatewayId)
 	if err != nil {
 		return nil, toError("GetRoutingFromDestToGateway", err)
@@ -251,7 +255,7 @@ func (a *SchemaAdapter) GetRoutingFromDestToGateway(domainId int64, gatewayId in
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest string) (*model.Routing, error) {
+func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest string) (*routing.Routing, error) {
 	routing, err := a.store.CallRouting().SearchToDestination(domainId, dest)
 	if err != nil {
 		return nil, toError("SearchOutboundToDestinationRouting", err)
@@ -261,7 +265,7 @@ func (a *SchemaAdapter) SearchOutboundToDestinationRouting(domainId int64, dest 
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*model.Routing, error) {
+func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId int) (*routing.Routing, error) {
 	routing, err := a.store.CallRouting().FromQueue(domainId, queueId)
 	if err != nil {
 		return nil, toError("SearchOutboundFromQueueRouting", err)
@@ -271,12 +275,12 @@ func (a *SchemaAdapter) SearchOutboundFromQueueRouting(domainId int64, queueId i
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*model.Routing, error) {
-	return &model.Routing{
+func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*routing.Routing, error) {
+	return &routing.Routing{
 		DomainId: domainId,
-		Schema: &model.Schema{
+		Schema: &routing.Schema{
 			DomainId: domainId, Name: "transfer queue",
-			Schema: model.Applications{
+			Schema: flow.Applications{
 				{"sleep": 500},
 				{"unSet": []any{"wbt_bt_queue_id", "wbt_bt_queue"}},
 				{"joinQueue": map[string]any{"queue": map[string]any{"id": queueId}}},
@@ -286,12 +290,12 @@ func (a *SchemaAdapter) TransferQueueRouting(domainId int64, queueId int) (*mode
 	}, nil
 }
 
-func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*model.Routing, error) {
-	return &model.Routing{
+func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*routing.Routing, error) {
+	return &routing.Routing{
 		DomainId: domainId,
-		Schema: &model.Schema{
+		Schema: &routing.Schema{
 			DomainId: domainId, Name: "transfer agent",
-			Schema: model.Applications{
+			Schema: flow.Applications{
 				{"unSet": []any{"wbt_bt_agent_id"}},
 				{"set": map[string]any{"ignore_display_updates": true}},
 				{"joinAgent": map[string]any{"agent": map[string]any{"id": agentId}, "queue_name": "transfer"}},
@@ -303,7 +307,7 @@ func (a *SchemaAdapter) TransferAgentRouting(domainId int64, agentId int) (*mode
 
 // ── chat routing ──────────────────────────────────────────────────────────────
 
-func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*model.Routing, error) {
+func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*routing.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromProfile(domainId, profileId)
 	if err != nil {
 		return nil, fmt.Errorf("GetChatRouteFromProfile: store.chat.routing_from_profile: %w", err)
@@ -313,7 +317,7 @@ func (a *SchemaAdapter) GetChatRouteFromProfile(domainId, profileId int64) (*mod
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error) {
+func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32) (*routing.Routing, error) {
 	routing, err := a.store.Chat().RoutingFromSchemaId(domainId, schemaId)
 	if err != nil {
 		return nil, fmt.Errorf("GetChatRouteFromSchemaId: store.chat.routing_from_schema: %w", err)
@@ -323,12 +327,12 @@ func (a *SchemaAdapter) GetChatRouteFromSchemaId(domainId int64, schemaId int32)
 	return routing, appErr
 }
 
-func (a *SchemaAdapter) GetChatRouteFromUserId(domainId int64, userId int64) (*model.Routing, error) {
-	return &model.Routing{
+func (a *SchemaAdapter) GetChatRouteFromUserId(domainId int64, userId int64) (*routing.Routing, error) {
+	return &routing.Routing{
 		DomainId: domainId,
-		Schema: &model.Schema{
+		Schema: &routing.Schema{
 			DomainId: domainId, Name: "transfer to user",
-			Schema: model.Applications{
+			Schema: flow.Applications{
 				{"bridge": map[string]interface{}{"userId": userId}},
 			},
 		},

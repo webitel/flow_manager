@@ -9,9 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	userdomain "github.com/webitel/flow_manager/internal/domain/user"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -59,7 +60,7 @@ type userPropertiesRow struct {
 	Variables json.RawMessage `db:"variables"`
 }
 
-func (r *UserRepository) GetProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, error) {
+func (r *UserRepository) GetProperties(domainId int64, search *userdomain.SearchUser, mapRes flow.Variables) (flow.Variables, error) {
 	cols := make([]string, 0, len(mapRes))
 	for k, vi := range mapRes {
 		v, _ := vi.(string)
@@ -142,7 +143,7 @@ where a.user_id = u.id limit 1) ` + pgsql.QuoteIdentifier(k)
 		return nil, fmt.Errorf("domainId=%v: %w", domainId, err)
 	}
 
-	var result model.Variables
+	var result flow.Variables
 	if err := json.Unmarshal(row.Variables, &result); err != nil {
 		return nil, fmt.Errorf("unmarshal variables: %w", err)
 	}

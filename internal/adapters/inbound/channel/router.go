@@ -4,17 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // channelType is the channel discriminator stored in flow.runtime_state.
 // Matches model.ConnectionTypeChannel (iota = 6).
-const channelType = int16(model.ConnectionTypeChannel)
+const channelType = int16(flow.ConnectionTypeChannel)
 
 // schemaConn is the minimal interface the channel router needs from the
 // underlying connection beyond model.Connection.
@@ -28,7 +28,7 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps Deps) model.Router {
+func Init(deps Deps) flow.Router {
 	r := &Router{fm: deps}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
@@ -55,12 +55,12 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (r *Router) handle(conn model.Connection) {
+func (r *Router) handle(conn flow.Connection) {
 	sc, ok := conn.(schemaConn)
 	if !ok {
 		r.fm.Log().Error(fmt.Sprintf("channel: conn %s does not expose SchemaId", conn.Id()))

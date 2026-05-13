@@ -1,7 +1,7 @@
 package app
 
-import "github.com/webitel/flow_manager/model"
+import bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 
-func (f *FlowManager) Config() *model.Config {
+func (f *FlowManager) Config() *bscfg.Config {
 	return f.config
 }

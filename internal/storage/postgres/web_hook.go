@@ -5,8 +5,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/webhook"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -32,18 +32,18 @@ const webHookSQL = `select key, name, schema_id, origin, domain_id, "authorizati
 from flow.web_hook
 where key = @id`
 
-func (r *WebHookRepository) Get(id string) (model.WebHook, error) {
+func (r *WebHookRepository) Get(id string) (webhook.WebHook, error) {
 	var row webHookRow
 	if err := r.db.Get(context.Background(), &row, webHookSQL, pgx.NamedArgs{
 		"id": id,
 	}); err != nil {
-		return model.WebHook{}, err
+		return webhook.WebHook{}, err
 	}
 	return toWebHook(row), nil
 }
 
-func toWebHook(row webHookRow) model.WebHook {
-	return model.WebHook{
+func toWebHook(row webHookRow) webhook.WebHook {
+	return webhook.WebHook{
 		Key:           row.Key,
 		Name:          row.Name,
 		Enabled:       row.Enabled,

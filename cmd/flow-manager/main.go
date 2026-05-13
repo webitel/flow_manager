@@ -24,12 +24,13 @@ import (
 	outboundcontacts "github.com/webitel/flow_manager/internal/adapters/outbound/contacts"
 	outboundengine "github.com/webitel/flow_manager/internal/adapters/outbound/engine"
 	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	bsfx "github.com/webitel/flow_manager/internal/bootstrap/fx"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
-	"github.com/webitel/flow_manager/model"
 
 	_ "net/http/pprof"
 )
@@ -72,13 +73,13 @@ func main() {
 }
 
 type appRouters struct {
-	Call    model.Router
-	GRPC    model.Router
-	Chat    model.Router
-	Form    model.Router
-	Email   model.Router
-	Channel model.Router
-	IM      model.Router
+	Call    flow.Router
+	GRPC    flow.Router
+	Chat    flow.Router
+	Form    flow.Router
+	Email   flow.Router
+	Channel flow.Router
+	IM      flow.Router
 }
 
 func newAppRouters(
@@ -141,7 +142,7 @@ func newEngineClient(lc fx.Lifecycle, fm *app.FlowManager) (domainengine.Client,
 	return c, nil
 }
 
-func newMeetingClient(lc fx.Lifecycle, cfg *model.Config) (domainmeeting.Client, error) {
+func newMeetingClient(lc fx.Lifecycle, cfg *bscfg.Config) (domainmeeting.Client, error) {
 	c := outboundmeeting.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/webitel/flow_manager/model"
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/wlog"
 	"golang.org/x/sync/singleflight"
 )
@@ -15,7 +16,7 @@ var (
 	smtpOauthGroup singleflight.Group
 )
 
-func (a *Adapter) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error) {
+func (a *Adapter) SmtpSettings(domainId int64, search *queue.SearchEntity) (*emaildomain.SmtSettings, error) {
 	key := fmt.Sprintf("%d-", domainId)
 	if search.Id != nil {
 		key += fmt.Sprintf("%d-", *search.Id)
@@ -29,10 +30,10 @@ func (a *Adapter) SmtpSettings(domainId int64, search *model.SearchEntity) (*mod
 	if err != nil {
 		return nil, err
 	}
-	return settings.(*model.SmtSettings), nil
+	return settings.(*emaildomain.SmtSettings), nil
 }
 
-func (a *Adapter) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, error) {
+func (a *Adapter) SmtpSettingsOAuthToken(settings *emaildomain.SmtSettings) (string, error) {
 	token, err, _ := smtpOauthGroup.Do(fmt.Sprintf("%v", settings.Id), func() (interface{}, error) {
 		return a.smtpOAuthToken(settings)
 	})
@@ -42,11 +43,11 @@ func (a *Adapter) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, e
 	return token.(string), nil
 }
 
-func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, error) {
+func (a *Adapter) smtpOAuthToken(settings *emaildomain.SmtSettings) (string, error) {
 	if settings.Params == nil || settings.Params.OAuth2 == nil {
 		return "", nil
 	}
-	oauthConfig := model.OAuthConfig(settings.Server, settings.Params.OAuth2)
+	oauthConfig := emaildomain.OAuthConfig(settings.Server, settings.Params.OAuth2)
 	var t time.Time
 	if settings.Token != nil {
 		t = settings.Token.Expiry
@@ -65,7 +66,7 @@ func (a *Adapter) smtpOAuthToken(settings *model.SmtSettings) (string, error) {
 	return newToken.AccessToken, nil
 }
 
-func (a *Adapter) ReplyEmail(conn model.EmailConnection, text string) error {
+func (a *Adapter) ReplyEmail(conn emaildomain.EmailConnection, text string) error {
 	replyEmail, err := conn.Reply(text)
 	if err != nil {
 		return err

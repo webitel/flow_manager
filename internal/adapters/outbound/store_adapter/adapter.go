@@ -7,8 +7,16 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/calendar"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/files"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	listdomain "github.com/webitel/flow_manager/internal/domain/list"
+	"github.com/webitel/flow_manager/internal/domain/queue"
+	"github.com/webitel/flow_manager/internal/domain/user"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -35,29 +43,29 @@ func toError(op string, err error) error {
 
 // ── Media ─────────────────────────────────────────────────────────────────────
 
-func (a *Adapter) GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error) {
+func (a *Adapter) GetMediaFiles(domainId int64, req *[]*call.PlaybackFile) ([]*call.PlaybackFile, error) {
 	res, err := a.store.Media().GetFiles(domainId, req)
 	return res, toError("App.GetMediaFiles", err)
 }
 
-func (a *Adapter) GetMediaFile(domainId int64, id int) (*model.File, error) {
+func (a *Adapter) GetMediaFile(domainId int64, id int) (*files.File, error) {
 	res, err := a.store.Media().Get(domainId, id)
 	return res, toError("App.GetMediaFile", err)
 }
 
-func (a *Adapter) SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, error) {
+func (a *Adapter) SearchMediaFile(domainId int64, search *files.SearchFile) (*files.File, error) {
 	res, err := a.store.Media().SearchOne(domainId, search)
 	return res, toError("App.SearchMediaFile", err)
 }
 
-func (a *Adapter) GetPlaybackFile(domainId int64, search *model.PlaybackFile) (*model.PlaybackFile, error) {
+func (a *Adapter) GetPlaybackFile(domainId int64, search *call.PlaybackFile) (*call.PlaybackFile, error) {
 	res, err := a.store.Media().GetPlaybackFile(domainId, search)
 	return res, toError("App.GetPlaybackFile", err)
 }
 
 // ── Log ───────────────────────────────────────────────────────────────────────
 
-func (a *Adapter) StoreLog(schemaId int, connId string, log []*model.StepLog) error {
+func (a *Adapter) StoreLog(schemaId int, connId string, log []*flow.StepLog) error {
 	if len(log) == 0 {
 		return nil
 	}
@@ -79,7 +87,7 @@ func (a *Adapter) FindQueueByName(domainId int64, name string) (int32, error) {
 
 // ── User ──────────────────────────────────────────────────────────────────────
 
-func (a *Adapter) GetUserProperties(domainId int64, search *model.SearchUser, mapRes model.Variables) (model.Variables, error) {
+func (a *Adapter) GetUserProperties(domainId int64, search *user.SearchUser, mapRes flow.Variables) (flow.Variables, error) {
 	res, err := a.store.User().GetProperties(domainId, search, mapRes)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserProperties: store.user.get_properties: %w", err)
@@ -113,7 +121,7 @@ func (a *Adapter) StoreCallVariables(id string, vars map[string]string) error {
 	if len(vars) == 0 {
 		return nil
 	}
-	cv := make(model.CallVariables)
+	cv := make(call.CallVariables)
 	for k, v := range vars {
 		cv[k] = v
 	}
@@ -124,7 +132,7 @@ func (a *Adapter) UpdateCallFrom(id string, name, number, destination *string) e
 	return toError("App.UpdateCallFrom", a.store.Call().UpdateFrom(id, name, number, destination))
 }
 
-func (a *Adapter) LastBridgedCall(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes model.Variables) (model.Variables, error) {
+func (a *Adapter) LastBridgedCall(domainId int64, number, hours string, dialer, inbound, outbound *string, queueIds []int, mapRes flow.Variables) (flow.Variables, error) {
 	res, err := a.store.Call().LastBridged(domainId, number, hours, dialer, inbound, outbound, queueIds, mapRes)
 	return res, toError("App.LastBridgedCall", err)
 }
@@ -140,12 +148,12 @@ func (a *Adapter) GetCallPosition(callId string) (int64, error) {
 	return res, toError("App.GetCallPosition", err)
 }
 
-func (a *Adapter) GetMemberProperties(domainId int64, search *model.SearchMember, mapRes model.Variables) (model.Variables, error) {
+func (a *Adapter) GetMemberProperties(domainId int64, search *queue.SearchMember, mapRes flow.Variables) (flow.Variables, error) {
 	res, err := a.store.Member().GetProperties(domainId, search, mapRes)
 	return res, toError("App.GetMemberProperties", err)
 }
 
-func (a *Adapter) PatchMembers(domainId int64, search *model.SearchMember, patch *model.PatchMember) (int, error) {
+func (a *Adapter) PatchMembers(domainId int64, search *queue.SearchMember, patch *queue.PatchMember) (int, error) {
 	res, err := a.store.Member().PatchMembers(domainId, search, patch)
 	return res, toError("App.PatchMembers", err)
 }
@@ -157,7 +165,7 @@ func (a *Adapter) EWTPuzzle(domainId int64, callId string, min int, queueIds []i
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 
-func (a *Adapter) CheckCalendar(domainId int64, id *int, name *string) (*model.Calendar, error) {
+func (a *Adapter) CheckCalendar(domainId int64, id *int, name *string) (*calendar.Calendar, error) {
 	c, err := a.store.Calendar().Check(domainId, id, name)
 	if err != nil {
 		return nil, fmt.Errorf("CheckCalendar: store.calendar.check: %w", err)
@@ -167,7 +175,7 @@ func (a *Adapter) CheckCalendar(domainId int64, id *int, name *string) (*model.C
 
 // ── Email ─────────────────────────────────────────────────────────────────────
 
-func (a *Adapter) GetEmailProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, error) {
+func (a *Adapter) GetEmailProperties(domainId int64, id *int64, messageId *string, mapRes flow.Variables) (flow.Variables, error) {
 	vars, err := a.store.Email().GerProperties(domainId, id, messageId, mapRes)
 	if err != nil {
 		return nil, fmt.Errorf("GetEmailProperties: store.email.get_properties: %w", err)
@@ -182,17 +190,17 @@ func (a *Adapter) MailSetContacts(ctx context.Context, domainId int64, id string
 	return nil
 }
 
-func (a *Adapter) SaveEmail(domainId int64, email *model.Email) error {
+func (a *Adapter) SaveEmail(domainId int64, email *emaildomain.Email) error {
 	return a.store.Email().Save(domainId, email)
 }
 
-func (a *Adapter) GetFileMetadata(domainId int64, ids []int64) ([]model.File, error) {
+func (a *Adapter) GetFileMetadata(domainId int64, ids []int64) ([]files.File, error) {
 	return a.store.File().GetMetadata(domainId, ids)
 }
 
 // ── Chat (store-only) ─────────────────────────────────────────────────────────
 
-func (a *Adapter) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, error) {
+func (a *Adapter) LastBridgedChat(domainId int64, number, hours string, queueIds []int, mapRes flow.Variables) (flow.Variables, error) {
 	vars, err := a.store.Chat().LastBridged(domainId, number, hours, queueIds, mapRes)
 	if err != nil {
 		return nil, fmt.Errorf("LastBridgedChat: store.chat.last_bridged: %w", err)
@@ -204,7 +212,7 @@ func (a *Adapter) ChatProfileType(domainId int64, profileId int) (string, error)
 	return a.store.Chat().ProfileType(domainId, profileId)
 }
 
-func (a *Adapter) GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]model.ChatMessage, error) {
+func (a *Adapter) GetChatMessagesByConversationId(ctx context.Context, domainId int64, conversationId string, limit int64) (*[]chatdomain.ChatMessage, error) {
 	messages, storeErr := a.store.Chat().GetMessagesByConversation(ctx, domainId, conversationId, limit)
 	if storeErr != nil {
 		return nil, storeErr
@@ -225,7 +233,7 @@ func (a *Adapter) CheckList(domainId int64, number string, listId *int, listName
 
 // AddToList satisfies the builtin.ListDeps interface; delegates to ListAddCommunication.
 func (a *Adapter) AddToList(ctx context.Context, domainId int64, listId *int, listName *string, destination string, description *string, expireAtMS int64) error {
-	comm := &model.ListCommunication{
+	comm := &listdomain.ListCommunication{
 		Destination: destination,
 		Description: description,
 	}
@@ -233,7 +241,7 @@ func (a *Adapter) AddToList(ctx context.Context, domainId int64, listId *int, li
 		t := time.UnixMilli(expireAtMS)
 		comm.ExpireAt = &t
 	}
-	return a.ListAddCommunication(domainId, &model.SearchEntity{Id: listId, Name: listName}, comm)
+	return a.ListAddCommunication(domainId, &queue.SearchEntity{Id: listId, Name: listName}, comm)
 }
 
 func (a *Adapter) ListCheckNumber(domainId int64, number string, listId *int, listName *string) (bool, error) {
@@ -244,7 +252,7 @@ func (a *Adapter) ListCheckNumber(domainId int64, number string, listId *int, li
 	return ok, nil
 }
 
-func (a *Adapter) ListAddCommunication(domainId int64, search *model.SearchEntity, comm *model.ListCommunication) error {
+func (a *Adapter) ListAddCommunication(domainId int64, search *queue.SearchEntity, comm *listdomain.ListCommunication) error {
 	if err := a.store.List().AddDestination(domainId, search, comm); err != nil {
 		return fmt.Errorf("ListAddCommunication: store.list.add_destination: %w", err)
 	}

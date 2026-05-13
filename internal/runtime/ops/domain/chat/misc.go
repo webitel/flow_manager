@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // RegisterMisc registers bridge, export, menu, unSet, and recvMessage.
@@ -72,7 +72,7 @@ func (menuOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error)
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("menu: no conversation in context")
 	}
-	var argv model.ChatMenuArgs
+	var argv chatdomain.ChatMenuArgs
 	argv.Type = "buttons"
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err

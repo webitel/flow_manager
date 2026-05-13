@@ -24,9 +24,11 @@ import (
 
 	"github.com/webitel/wlog"
 
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/files"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 
 	_ "github.com/emersion/go-message/charset"
 )
@@ -62,7 +64,7 @@ type Profile struct {
 	log         *wlog.Logger
 }
 
-func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
+func newProfile(srv *MailServer, params *emaildomain.EmailProfile) *Profile {
 	return &Profile{
 		Id:          params.Id,
 		DomainId:    params.DomainId,
@@ -136,7 +138,7 @@ func (p *Profile) clientLogin() error {
 		p.client.SetDebug(os.Stdout)
 	}
 
-	if p.authMethod == model.MailAuthTypeOAuth2 {
+	if p.authMethod == emaildomain.MailAuthTypeOAuth2 {
 		var ok bool
 		ok, err = p.client.SupportAuth(Xoauth2)
 		if err != nil {
@@ -225,13 +227,13 @@ func (p *Profile) storeToken(token *oauth2.Token) {
 	p.server.storeToken(p, token)
 }
 
-func (p *Profile) Read() ([]*model.Email, error) {
+func (p *Profile) Read() ([]*emaildomain.Email, error) {
 	if !p.logged {
 		if err := p.Login(); err != nil {
 			return nil, err
 		}
 	}
-	res := make([]*model.Email, 0)
+	res := make([]*emaildomain.Email, 0)
 
 	criteria := imap.NewSearchCriteria()
 	criteria.WithoutFlags = []string{"\\Seen"}
@@ -282,13 +284,13 @@ func (p *Profile) Read() ([]*model.Email, error) {
 	return res, nil
 }
 
-func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) {
-	id, err := model.GenerateMailID()
+func (p *Profile) Reply(parent *emaildomain.Email, data []byte) (*emaildomain.Email, error) {
+	id, err := emaildomain.GenerateMailID()
 	if err != nil {
 		return nil, fmt.Errorf("Email: email.reply.app_err: %w", err)
 	}
 
-	rr := &model.Email{
+	rr := &emaildomain.Email{
 		Direction: "outbound", // FIXME
 		MessageId: id,
 		Subject:   parent.Subject,
@@ -323,7 +325,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) 
 	mail.SetBody("text/html", string(rr.HtmlBody))
 	var dialer *gomail.Dialer
 
-	if p.authMethod == model.MailAuthTypeOAuth2 {
+	if p.authMethod == emaildomain.MailAuthTypeOAuth2 {
 		p.log.Debug("using OAuth2",
 			wlog.String("from", p.login),
 			wlog.String("smtpHost", p.smtpHost),
@@ -351,8 +353,8 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, error) 
 	return rr, nil
 }
 
-func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, error) {
-	m := &model.Email{
+func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*emaildomain.Email, error) {
+	m := &emaildomain.Email{
 		ProfileId: p.Id,
 		Direction: "inbound", // TODO
 	}
@@ -394,7 +396,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 	var text []byte
 	var html []byte
 
-	m.Cid = make(map[string]model.EmailCid)
+	m.Cid = make(map[string]emaildomain.EmailCid)
 
 	// Process each message's part
 	var part *mail.Part
@@ -431,7 +433,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 					p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
 					continue
 				}
-				m.Cid[cid] = model.EmailCid(file.Id)
+				m.Cid[cid] = emaildomain.EmailCid(file.Id)
 			}
 			ct := h.Get("Content-Type")
 			// This is the message's text (can be plain-text or HTML)
@@ -449,7 +451,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				continue
 			}
 			if fileName == "" {
-				fileName = model.NewId()
+				fileName = utils.NewId()
 			}
 
 			var file domstorage.File
@@ -462,7 +464,7 @@ func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName)
 				p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
 				continue
 			}
-			m.Attachments = append(m.Attachments, model.File{
+			m.Attachments = append(m.Attachments, files.File{
 				Id:       file.Id,
 				Url:      file.Url,
 				Name:     file.Name,

@@ -6,9 +6,10 @@ import (
 	"fmt"
 
 	"github.com/webitel/flow_manager/api/gen/workflow"
+	domgrpc "github.com/webitel/flow_manager/internal/domain/grpc"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
-	"github.com/webitel/flow_manager/model"
 )
 
 // Register adds all gRPC channel ops to reg.
@@ -21,14 +22,14 @@ func Register(reg *ops.Registry) {
 	reg.Register("export", &exportOp{})
 }
 
-// grpcConnFromContext retrieves model.GRPCConnection from the context stored
+// grpcConnFromContext retrieves domgrpc.GRPCConnection from the context stored
 // by connctx.WithConnection in the decorator.
-func grpcConnFromContext(ctx context.Context) (model.GRPCConnection, bool) {
+func grpcConnFromContext(ctx context.Context) (domgrpc.GRPCConnection, bool) {
 	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}
-	gc, ok := conn.(model.GRPCConnection)
+	gc, ok := conn.(domgrpc.GRPCConnection)
 	return gc, ok
 }
 
@@ -198,7 +199,7 @@ func (retryOp) Kind() ops.OpKind { return ops.OpKindSync }
 type retryArgs struct {
 	NextResource bool                `json:"nextResource"`
 	Sleep        int32               `json:"sleep"`
-	Resource     *model.SearchEntity `json:"resource"`
+	Resource     *queue.SearchEntity `json:"resource"`
 	Export       []string            `json:"export"`
 }
 

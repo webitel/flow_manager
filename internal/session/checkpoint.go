@@ -3,7 +3,7 @@ package session
 import (
 	"time"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 type Status string
@@ -19,7 +19,7 @@ type Checkpoint struct {
 	ID           string
 	ConnectionID string
 	DomainID     int64
-	Channel      model.ConnectionType
+	Channel      flow.ConnectionType
 	SchemaID     int
 	AppID        string // node/instance that owns this checkpoint
 	Variables    map[string]string
@@ -30,15 +30,15 @@ type Checkpoint struct {
 }
 
 // IsStateful reports whether a connection type requires session recovery.
-func IsStateful(t model.ConnectionType) bool {
+func IsStateful(t flow.ConnectionType) bool {
 	switch t {
-	case model.ConnectionTypeChat, model.ConnectionTypeIM, model.ConnectionTypeEmail:
+	case flow.ConnectionTypeChat, flow.ConnectionTypeIM, flow.ConnectionTypeEmail:
 		return true
 	}
 	return false
 }
 
-func New(conn model.Connection, schemaID int, appID string) *Checkpoint {
+func New(conn flow.Connection, schemaID int, appID string) *Checkpoint {
 	now := time.Now().UTC()
 	return &Checkpoint{
 		ConnectionID: conn.Id(),

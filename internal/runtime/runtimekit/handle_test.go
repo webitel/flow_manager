@@ -10,17 +10,18 @@ import (
 	"github.com/google/uuid"
 	"github.com/webitel/wlog"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // ─── fakes ──────────────────────────────────────────────────────────────────
 
-// fakeConn satisfies model.Connection but NOT sessionmgr.Connection.
+// fakeConn satisfies flow.Connection but NOT sessionmgr.Connection.
 type fakeConn struct {
 	id   string
 	vars map[string]string
@@ -34,14 +35,14 @@ func newFakeConn(id string) *fakeConn {
 func (c *fakeConn) Id() string                   { return c.id }
 func (c *fakeConn) Context() context.Context     { return c.ctx }
 func (c *fakeConn) Variables() map[string]string { return c.vars }
-func (c *fakeConn) Type() model.ConnectionType   { return 0 }
+func (c *fakeConn) Type() flow.ConnectionType   { return 0 }
 func (c *fakeConn) NodeId() string               { return "" }
 func (c *fakeConn) DomainId() int64              { return 0 }
 func (c *fakeConn) Get(_ string) (string, bool)  { return "", false }
-func (c *fakeConn) Set(_ context.Context, _ model.Variables) (model.Response, error) {
+func (c *fakeConn) Set(_ context.Context, _ flow.Variables) (flow.Response, error) {
 	return nil, nil
 }
-func (c *fakeConn) ParseText(text string, _ ...model.ParseOption) string { return text }
+func (c *fakeConn) ParseText(text string, _ ...flow.ParseOption) string { return text }
 func (c *fakeConn) Close() error                                         { return nil }
 func (c *fakeConn) Log() *wlog.Logger                                    { return testLogger() }
 
@@ -138,7 +139,7 @@ func testLogger() *wlog.Logger {
 
 func minimalTree() *tree.Tree { return &tree.Tree{} }
 
-func baseConfig(conn model.Connection, repo *fakeRepo, runner *fakeRunner, watcher *fakeWatcher) runtimekit.HandleConfig {
+func baseConfig(conn flow.Connection, repo *fakeRepo, runner *fakeRunner, watcher *fakeWatcher) runtimekit.HandleConfig {
 	return runtimekit.HandleConfig{
 		ChannelName: "test",
 		ChannelType: 9,
@@ -198,7 +199,7 @@ func TestRunSession_NoSessionmgrConnection(t *testing.T) {
 // rec is already suspended → Watch called with initialMsg from conn variables.
 func TestRunSession_SuspendedRecovery(t *testing.T) {
 	conn := newFakeConnInbound("c2")
-	conn.vars[model.ConversationStartMessageVariable] = "hello"
+	conn.vars[chatdomain.ConversationStartMessageVariable] = "hello"
 
 	repo := &fakeRepo{}
 	runner := &fakeRunner{}

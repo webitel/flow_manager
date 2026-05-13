@@ -13,9 +13,11 @@ import (
 
 	"github.com/webitel/wlog"
 
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -28,11 +30,11 @@ var (
 type MailServer struct {
 	store           store.EmailStore
 	storage         StorageApi
-	profiles        *model.Cache
+	profiles        *cache.LRUCache
 	didFinishListen chan struct{}
 	stopped         chan struct{}
 	startOnce       sync.Once
-	consume         chan model.Connection
+	consume         chan flow.Connection
 	running         map[int]bool
 	debug           bool
 	sync.RWMutex
@@ -43,13 +45,13 @@ type StorageApi interface {
 	Upload(ctx context.Context, domainId int64, uuid string, sFile io.Reader, metadata domstorage.File) (domstorage.File, error)
 }
 
-func New(storageApi StorageApi, s store.EmailStore, debug bool) model.Server {
+func New(storageApi StorageApi, s store.EmailStore, debug bool) flow.Server {
 	return &MailServer{
 		store:           s,
-		profiles:        model.NewLru(SizeCache),
+		profiles:        cache.NewLru(SizeCache),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
-		consume:         make(chan model.Connection),
+		consume:         make(chan flow.Connection),
 		storage:         storageApi,
 		running:         make(map[int]bool),
 		debug:           debug,
@@ -85,11 +87,11 @@ func (s *MailServer) Port() int {
 	return 0
 }
 
-func (s *MailServer) Type() model.ConnectionType {
-	return model.ConnectionTypeEmail
+func (s *MailServer) Type() flow.ConnectionType {
+	return flow.ConnectionTypeEmail
 }
 
-func (s *MailServer) Consume() <-chan model.Connection {
+func (s *MailServer) Consume() <-chan flow.Connection {
 	return s.consume
 }
 
@@ -132,7 +134,7 @@ func (s *MailServer) listen() {
 				for _, v := range tasks {
 					if !s.hasRunning(v.Id) {
 						s.startRunning(v.Id)
-						go func(p *model.EmailProfileTask) {
+						go func(p *emaildomain.EmailProfileTask) {
 							s.fetchNewMessageInProfile(p)
 							s.stopRunning(p.Id)
 						}(v)
@@ -175,7 +177,7 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, error) {
 	return pp, nil
 }
 
-func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
+func (s *MailServer) fetchNewMessageInProfile(p *emaildomain.EmailProfileTask) {
 	profile, err := s.GetProfile(p.Id, p.UpdatedAt)
 	if err != nil {
 		s.storeError(profile, err)
@@ -192,7 +194,7 @@ retry:
 		s.log.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 	}
 
-	var emails []*model.Email
+	var emails []*emaildomain.Email
 	emails, err = profile.Read()
 	if err != nil {
 		if strings.Contains(err.Error(), "Not logged in") {

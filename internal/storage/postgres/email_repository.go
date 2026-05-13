@@ -8,9 +8,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -33,8 +35,8 @@ where id in (select id
              limit 100 for update skip locked)
 returning id, (extract(EPOCH from updated_at) * 1000)::int8 updated_at`
 
-func (r *EmailRepository) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, error) {
-	var tasks []*model.EmailProfileTask
+func (r *EmailRepository) ProfileTaskFetch(node string) ([]*emaildomain.EmailProfileTask, error) {
+	var tasks []*emaildomain.EmailProfileTask
 	if err := r.db.Select(context.Background(), &tasks, profileTaskFetchSQL, pgx.NamedArgs{}); err != nil {
 		return nil, err
 	}
@@ -52,7 +54,7 @@ type emailIdRow struct {
 	Id int64 `db:"id"`
 }
 
-func (r *EmailRepository) Save(domainId int64, m *model.Email) error {
+func (r *EmailRepository) Save(domainId int64, m *emaildomain.Email) error {
 	var cidJson []byte
 	if v := m.CIDJson(); v != nil {
 		cidJson = *v
@@ -115,7 +117,7 @@ const getProfileSQL = `select t.id, t.name, t.login, t.password, t.mailbox,
 from call_center.cc_email_profile t
 where t.id = @Id`
 
-func (r *EmailRepository) GetProfile(id int) (*model.EmailProfile, error) {
+func (r *EmailRepository) GetProfile(id int) (*emaildomain.EmailProfile, error) {
 	var row emailProfileRow
 	if err := r.db.Get(context.Background(), &row, getProfileSQL, pgx.NamedArgs{
 		"Id": id,
@@ -123,7 +125,7 @@ func (r *EmailRepository) GetProfile(id int) (*model.EmailProfile, error) {
 		return nil, err
 	}
 
-	profile := &model.EmailProfile{
+	profile := &emaildomain.EmailProfile{
 		Id:        row.Id,
 		DomainId:  row.DomainId,
 		Name:      row.Name,
@@ -194,14 +196,14 @@ func (r *EmailRepository) SetError(profileId int, appErr error) error {
 	})
 }
 
-func (r *EmailRepository) GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, error) {
+func (r *EmailRepository) GerProperties(domainId int64, id *int64, messageId *string, mapRes flow.Variables) (flow.Variables, error) {
 	f := make([]string, 0, len(mapRes))
 	for k, vi := range mapRes {
 		v, _ := vi.(string)
 		var val string
 		switch v {
 		case "html":
-			f = append(f, "cid as "+pgsql.QuoteIdentifier(model.MailCidKey))
+			f = append(f, "cid as "+pgsql.QuoteIdentifier(emaildomain.MailCidKey))
 			val = `coalesce("html"::text, '') as ` + pgsql.QuoteIdentifier(k)
 		case "from", "to", "subject", "contact_ids", "owner_id",
 			"cc", "sender", "reply_to", "in_reply_to", "body", "attachments", "message_id", "id":
@@ -256,7 +258,7 @@ from (
 		return nil, err
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}
@@ -287,7 +289,7 @@ where p.domain_id = @DomainId::int8
   and (p.id = @Id::int or p.name = @Name::varchar)
 limit 1`
 
-func (r *EmailRepository) SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, error) {
+func (r *EmailRepository) SmtpSettings(domainId int64, search *queue.SearchEntity) (*emaildomain.SmtSettings, error) {
 	var row smtpSettingsRow
 	if err := r.db.Get(context.Background(), &row, smtpSettingsSQL, pgx.NamedArgs{
 		"DomainId": domainId,
@@ -297,7 +299,7 @@ func (r *EmailRepository) SmtpSettings(domainId int64, search *model.SearchEntit
 		return nil, err
 	}
 
-	settings := &model.SmtSettings{
+	settings := &emaildomain.SmtSettings{
 		Id:       row.Id,
 		AuthType: row.AuthType,
 		Port:     row.Port,

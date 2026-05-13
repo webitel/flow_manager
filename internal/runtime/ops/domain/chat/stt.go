@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // STTDeps is the narrow interface required by the stt op.
@@ -58,7 +58,7 @@ func (o *sttOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 		return ops.OpOutput{}, fmt.Errorf("stt: %s", appErr.Error())
 	}
 
-	if _, appErr := conv.Set(ctx, model.Variables{argv.SetVar: text}); appErr != nil {
+	if _, appErr := conv.Set(ctx, flow.Variables{argv.SetVar: text}); appErr != nil {
 		return ops.OpOutput{}, fmt.Errorf("stt: set var: %s", appErr.Error())
 	}
 	return ops.OpOutput{SetVars: map[string]string{argv.SetVar: text}}, nil

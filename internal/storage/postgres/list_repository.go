@@ -6,8 +6,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	listdomain "github.com/webitel/flow_manager/internal/domain/list"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -56,7 +57,7 @@ where l.domain_id = @DomainId
 order by l.id
 limit 1 on conflict do nothing`
 
-func (r *ListRepository) AddDestination(domainId int64, entry *model.SearchEntity, comm *model.ListCommunication) error {
+func (r *ListRepository) AddDestination(domainId int64, entry *queue.SearchEntity, comm *listdomain.ListCommunication) error {
 	return r.db.Exec(context.Background(), addDestinationSQL, pgx.NamedArgs{
 		"DomainId":    domainId,
 		"Id":          entry.Id,

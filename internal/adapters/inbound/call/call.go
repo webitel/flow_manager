@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"regexp"
 
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
 )
 
 var compileOutPattern *regexp.Regexp
@@ -18,7 +19,7 @@ func init() {
 type callParser struct {
 	outboundVars map[string]string
 	timezoneName string
-	model.Call
+	calldomain.Call
 }
 
 func getOutboundReg(pattern, destination string) (map[string]string, error) {
@@ -40,8 +41,8 @@ func (call *callParser) OnInboundMessage(_ func(string)) (unregister func()) {
 	return func() {}
 }
 
-func (call *callParser) ParseText(text string, ops ...model.ParseOption) string {
-	txt := model.ParseText(call, text, ops...)
+func (call *callParser) ParseText(text string, ops ...flow.ParseOption) string {
+	txt := flow.ParseText(call, text, ops...)
 
 	if call.outboundVars != nil {
 		txt = compileOutPattern.ReplaceAllStringFunc(txt, func(s string) string {

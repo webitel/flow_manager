@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	domgrpc "github.com/webitel/flow_manager/internal/domain/grpc"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	grpcop "github.com/webitel/flow_manager/internal/runtime/ops/domain/grpc"
@@ -11,12 +13,11 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // grpcChannel is the channel discriminator stored in flow.runtime_state.
 // Matches model.ConnectionTypeGrpc (iota = 1).
-const grpcChannel = int16(model.ConnectionTypeGrpc)
+const grpcChannel = int16(flow.ConnectionTypeGrpc)
 
 type Router struct {
 	fm         Deps
@@ -24,7 +25,7 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps Deps) model.Router {
+func Init(deps Deps) flow.Router {
 	r := &Router{fm: deps}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
@@ -54,13 +55,13 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (r *Router) handle(conn model.Connection) {
-	gr := conn.(model.GRPCConnection)
+func (r *Router) handle(conn flow.Connection) {
+	gr := conn.(domgrpc.GRPCConnection)
 
 	s, err := r.fm.GetSchemaById(conn.DomainId(), gr.SchemaId())
 	if err != nil {
@@ -115,7 +116,7 @@ func (r *Router) handle(conn model.Connection) {
 	}
 }
 
-func (r *Router) disconnected(gr model.GRPCConnection) {
+func (r *Router) disconnected(gr domgrpc.GRPCConnection) {
 	scope := gr.Scope()
 	if scope.Id != "" && scope.Channel == "call" {
 		r.fm.StoreCallVariables(scope.Id, gr.DumpExportVariables())

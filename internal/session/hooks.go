@@ -6,12 +6,12 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 // Save persists a new checkpoint for stateful connections.
 // Returns nil if the connection type is not stateful or the repo is not configured.
-func Save(repo Repository, appID string, conn model.Connection, schemaID int) *Checkpoint {
+func Save(repo Repository, appID string, conn flow.Connection, schemaID int) *Checkpoint {
 	if !IsStateful(conn.Type()) || repo == nil {
 		return nil
 	}
@@ -27,7 +27,7 @@ func Save(repo Repository, appID string, conn model.Connection, schemaID int) *C
 }
 
 // Update refreshes checkpoint variables after a flow step completes.
-func Update(repo Repository, cp *Checkpoint, conn model.Connection) {
+func Update(repo Repository, cp *Checkpoint, conn flow.Connection) {
 	if cp == nil {
 		return
 	}

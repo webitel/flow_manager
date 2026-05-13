@@ -14,8 +14,10 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/adapters/inbound/fs/eventsocket"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	infraCache "github.com/webitel/flow_manager/internal/infrastructure/cache"
 )
 
 const (
@@ -62,12 +64,12 @@ type Connection struct {
 	// context         string
 	destination          string
 	stopped              bool
-	direction            model.CallDirection
+	direction            calldomain.CallDirection
 	gatewayId            int
 	domainId             int64
 	domainName           string
-	from                 *model.CallEndpoint
-	to                   *model.CallEndpoint
+	from                 *calldomain.CallEndpoint
+	to                   *calldomain.CallEndpoint
 	systemDirection      string
 	schemaId             *int
 	resample             int
@@ -82,14 +84,14 @@ type Connection struct {
 	lastEvent        *eventsocket.Event
 	connection       *eventsocket.Connection
 	callbackMessages map[string]chan *eventsocket.Event
-	variables        *model.ThreadSafeStringMap
+	variables        *infraCache.ThreadSafeStringMap
 	hangupCause      string
 	exportVariables  []string
 	ctx              context.Context
 	cancelFn         context.CancelFunc
 	hookBridged      chan struct{} // todo
 	cancelQueue      context.CancelFunc
-	speechMessages   []model.SpeechMessage
+	speechMessages   []calldomain.SpeechMessage
 	playBackground   int
 	sync.RWMutex
 	useTTSPrepare bool
@@ -97,16 +99,16 @@ type Connection struct {
 	log *wlog.Logger
 }
 
-func (c *Connection) Type() model.ConnectionType {
-	return model.ConnectionTypeCall
+func (c *Connection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeCall
 }
 
-func getDirection(str string) model.CallDirection {
+func getDirection(str string) calldomain.CallDirection {
 	switch str {
-	case model.CallDirectionOutbound, "internal":
-		return model.CallDirectionOutbound
+	case calldomain.CallDirectionOutbound, "internal":
+		return calldomain.CallDirectionOutbound
 	default:
-		return model.CallDirectionInbound
+		return calldomain.CallDirectionInbound
 	}
 }
 
@@ -127,7 +129,7 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 		lastEvent:        dump,
 		callbackMessages: make(map[string]chan *eventsocket.Event),
 		// disconnected:     make(chan struct{}),
-		variables: model.NewThreadSafeStringMap(),
+		variables: infraCache.NewThreadSafeStringMap(),
 	}
 	connection.log = wlog.GlobalLogger().With(
 		wlog.Namespace("context"),
@@ -262,35 +264,35 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	c.initDestination(dump)
 	// dump.PrettyPrint()
 
-	c.from = &model.CallEndpoint{}
+	c.from = &calldomain.CallEndpoint{}
 
 	if c.gatewayId != 0 && c.userId == 0 {
-		c.from.Type = model.CallEndpointTypeDestination
+		c.from.Type = calldomain.CallEndpointTypeDestination
 		c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		c.from.Name = dump.Get("Caller-Caller-ID-Name")
 
-		c.to = &model.CallEndpoint{
-			Type:   model.CallEndpointTypeGateway,
+		c.to = &calldomain.CallEndpoint{
+			Type:   calldomain.CallEndpointTypeGateway,
 			Id:     dump.Get("variable_sip_h_X-Webitel-Gateway-Id"),
 			Name:   dump.Get("variable_sip_h_X-Webitel-Gateway"),
 			Number: c.from.Number,
 		}
 	} else if c.userId != 0 {
 		if direction == "inbound" {
-			c.from.Type = model.CallEndpointTypeUser
+			c.from.Type = calldomain.CallEndpointTypeUser
 			c.from.Id = fmt.Sprintf("%d", c.userId)
 			c.from.Name = dump.Get("Caller-Caller-ID-Name")
 			c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		} else {
-			c.from.Type = model.CallEndpointTypeUser
+			c.from.Type = calldomain.CallEndpointTypeUser
 			c.from.Id = fmt.Sprintf("%d", c.userId)
 			c.from.Name = dump.Get("Caller-Caller-ID-Name")
 			c.from.Number = dump.Get("Caller-Caller-ID-Number")
 		}
 		// fmt.Println(direction)
 	} else if c.webCall != "" && c.transferSchema != 0 {
-		c.to = &model.CallEndpoint{
-			Type:   model.CallEndpointTypeDestination,
+		c.to = &calldomain.CallEndpoint{
+			Type:   calldomain.CallEndpointTypeDestination,
 			Id:     "",
 			Name:   dump.Get("Caller-Orig-Caller-ID-Name"),
 			Number: dump.Get("Caller-Orig-Caller-ID-Number"),
@@ -300,11 +302,11 @@ func (c *Connection) setCallInfo(dump *eventsocket.Event) {
 	}
 }
 
-func (c *Connection) From() *model.CallEndpoint {
+func (c *Connection) From() *calldomain.CallEndpoint {
 	return c.from
 }
 
-func (c *Connection) To() *model.CallEndpoint {
+func (c *Connection) To() *calldomain.CallEndpoint {
 	return c.to
 }
 
@@ -326,7 +328,7 @@ func (c *Connection) SetDomainName(name string) {
 }
 
 func (c *Connection) SetSchemaId(id int) error {
-	_, err := c.Push(context.Background(), model.CallVariableSchemaIds, strconv.Itoa(id))
+	_, err := c.Push(context.Background(), calldomain.CallVariableSchemaIds, strconv.Itoa(id))
 	return err
 }
 
@@ -338,7 +340,7 @@ func (c *Connection) UserId() int {
 	return c.userId
 }
 
-func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
+func (c *Connection) ParseText(text string, ops ...flow.ParseOption) string {
 	return text
 }
 
@@ -350,7 +352,7 @@ func (c *Connection) InboundGatewayId() int {
 	return c.gatewayId
 }
 
-func (c *Connection) Direction() model.CallDirection {
+func (c *Connection) Direction() calldomain.CallDirection {
 	return c.direction
 }
 
@@ -414,13 +416,13 @@ func (c *Connection) get(key string) (value string, ok bool) {
 	return value, ok
 }
 
-func (c *Connection) setDisconnectedVariables(vars model.Variables) (model.Response, error) {
+func (c *Connection) setDisconnectedVariables(vars flow.Variables) (flow.Response, error) {
 	m := make(map[string]string)
 	for k, v := range vars {
 		m[k] = fmt.Sprintf("%v", v)
 	}
 	c.variables.UnionMap(m)
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func escapeFsMultiset(src string) string {
@@ -441,7 +443,7 @@ func escapeFsMultiset(src string) string {
 	return res
 }
 
-func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars model.Variables) (model.Response, error) {
+func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars flow.Variables) (flow.Response, error) {
 	str := "^^"
 	for k, v := range vars {
 		str += fmt.Sprintf(`~'%s%s'=%v`, pref, k, escapeFsMultiset(fmt.Sprintf("%v", v)))
@@ -450,7 +452,7 @@ func (c *Connection) setChannelVariables(ctx context.Context, pref string, vars 
 	return c.executeWithContext(ctx, "multiset", str)
 }
 
-func (c *Connection) setInternal(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) setInternal(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	if c.Stopped() {
 		return nil, apperrs.New(http.StatusBadRequest, "Call.setInternal: call.app.set_internal.stopped: bad request")
 	}
@@ -462,7 +464,7 @@ func (c *Connection) UserVariablePrefix(name string) string {
 	return UsrVarPrefix + name
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	if len(vars) == 0 {
 		return nil, apperrs.New(http.StatusBadRequest, "Call.Set: call.app.set.valid.args: bad request")
 	}
@@ -474,7 +476,7 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 	}
 }
 
-func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) SetAll(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	var err error
 	for k, v := range vars {
 		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`'%s'='%v'`, c.UserVariablePrefix(k), v)); err != nil {
@@ -482,7 +484,7 @@ func (c *Connection) SetAll(ctx context.Context, vars model.Variables) (model.Re
 		}
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *Connection) ClearExportVariables() {
@@ -504,7 +506,7 @@ func (c *Connection) DumpExportVariables() map[string]string {
 	return res
 }
 
-func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) SetNoLocal(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	var err error
 	for k, v := range vars {
 		if _, err = c.executeWithContext(ctx, "export", fmt.Sprintf(`nolocal:'%s'='%v'`, k, v)); err != nil {
@@ -512,7 +514,7 @@ func (c *Connection) SetNoLocal(ctx context.Context, vars model.Variables) (mode
 		}
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *Connection) initDestination(dump *eventsocket.Event) {
@@ -631,7 +633,7 @@ func (c *Connection) HangupCause() string {
 	return c.hangupCause
 }
 
-func (c *Connection) executeWithContext(ctx context.Context, app string, args any) (model.Response, error) {
+func (c *Connection) executeWithContext(ctx context.Context, app string, args any) (flow.Response, error) {
 	if c.Stopped() {
 		return nil, errExecuteAfterHangup
 	}
@@ -665,7 +667,7 @@ func (c *Connection) executeWithContext(ctx context.Context, app string, args an
 
 	select {
 	case <-e:
-		return model.CallResponseOK, nil
+		return calldomain.CallResponseOK, nil
 	case <-ctx.Done():
 		return nil, fmt.Errorf("FreeSWITCH: provider.fs.execute.app_error: cancel")
 	}
@@ -763,6 +765,6 @@ func (c *Connection) MeetingId() string {
 
 // fixme
 func test() {
-	a := func(c model.Call) {}
+	a := func(c calldomain.Call) {}
 	a(&Connection{})
 }

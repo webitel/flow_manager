@@ -10,7 +10,7 @@ import (
 
 	"github.com/webitel/flow_manager/api/gen/chat"
 	chgrpc "github.com/webitel/flow_manager/api/gen/chat/messages"
-	"github.com/webitel/flow_manager/model"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 )
 
 var (
@@ -54,7 +54,7 @@ func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 
 func (cc ChatClientConnection) UnaryClientInterceptor(ctx context.Context, method string, req, reply any, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	// Create a new context with the token and make the first request
-	serviceCtx := metadata.AppendToOutgoingContext(ctx, model.HeaderFromServiceName, model.AppServiceName)
+	serviceCtx := metadata.AppendToOutgoingContext(ctx, bscfg.HeaderFromServiceName, bscfg.AppServiceName)
 	return invoker(serviceCtx, method, req, reply, conn, opts...)
 }
 

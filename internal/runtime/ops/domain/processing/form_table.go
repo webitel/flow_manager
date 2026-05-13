@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 	procpkg "github.com/webitel/flow_manager/pkg/processing"
 )
 
@@ -64,7 +64,7 @@ func (formTableOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 			}
 			// Sync connection-level variables so subsequent legacy ops see them.
 			if len(cbVars) > 0 {
-				connVars := make(model.Variables, len(cbVars))
+				connVars := make(flow.Variables, len(cbVars))
 				for k, v := range cbVars {
 					connVars[k] = v
 				}

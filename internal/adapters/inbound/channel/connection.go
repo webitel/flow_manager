@@ -12,7 +12,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
 type Connection struct {
@@ -25,8 +27,8 @@ type Connection struct {
 	log *wlog.Logger
 }
 
-func newConnection(c model.ChannelExec) model.Connection {
-	id := model.NewId()
+func newConnection(c flow.ChannelExec) flow.Connection {
+	id := utils.NewId()
 	conn := &Connection{
 		id:        id,
 		ctx:       context.Background(),
@@ -48,8 +50,8 @@ func newConnection(c model.ChannelExec) model.Connection {
 	return conn
 }
 
-func (c *Connection) Type() model.ConnectionType {
-	return model.ConnectionTypeChannel
+func (c *Connection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeChannel
 }
 
 func (c *Connection) Log() *wlog.Logger {
@@ -92,7 +94,7 @@ func (c *Connection) Get(key string) (string, bool) {
 	return v, ok
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -100,11 +102,11 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 		c.variables[k] = fmt.Sprintf("%v", v) // TODO
 	}
 
-	return model.CallResponseOK, nil
+	return call.CallResponseOK, nil
 }
 
-func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *Connection) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Close() error {

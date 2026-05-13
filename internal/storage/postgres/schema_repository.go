@@ -7,8 +7,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -39,7 +40,7 @@ SELECT s.id, s.domain_id, d.name AS domain_name, s.name,
   JOIN directory.wbt_domain d ON d.dc = s.domain_id
  WHERE s.domain_id = @domain_id AND s.id = @id`
 
-func (r *SchemaRepository) Get(domainId int64, id int) (*model.Schema, error) {
+func (r *SchemaRepository) Get(domainId int64, id int) (*routing.Schema, error) {
 	var row schemaRow
 	if err := r.db.Get(context.Background(), &row, getSchemaSQL, pgx.NamedArgs{
 		"domain_id": domainId,
@@ -95,7 +96,7 @@ SELECT sg.id AS source_id, sg.name AS source_name, 'transfer' AS source_data,
   LEFT JOIN flow.calendar_timezones ct ON d.timezone_id = ct.id
  WHERE sg.id = @schema_id AND sg.domain_id = @domain_id`
 
-func (r *SchemaRepository) GetTransferredRouting(domainId int64, schemaId int) (*model.Routing, error) {
+func (r *SchemaRepository) GetTransferredRouting(domainId int64, schemaId int) (*routing.Routing, error) {
 	var row routingRow
 	if err := r.db.Get(context.Background(), &row, getTransferredRoutingSQL, pgx.NamedArgs{
 		"schema_id": schemaId,
@@ -116,7 +117,7 @@ SELECT value #>> '{}' AS value, encrypt
   FROM flow.scheme_variable
  WHERE domain_id = @domain_id AND name = @name`
 
-func (r *SchemaRepository) GetVariable(domainId int64, name string) (*model.SchemaVariable, error) {
+func (r *SchemaRepository) GetVariable(domainId int64, name string) (*routing.SchemaVariable, error) {
 	var row schemaVariableRow
 	if err := r.db.Get(context.Background(), &row, getVariableSQL, pgx.NamedArgs{
 		"domain_id": domainId,
@@ -124,7 +125,7 @@ func (r *SchemaRepository) GetVariable(domainId int64, name string) (*model.Sche
 	}); err != nil {
 		return nil, err
 	}
-	return &model.SchemaVariable{
+	return &routing.SchemaVariable{
 		Value:   row.Value,
 		Encrypt: row.Encrypt,
 	}, nil
@@ -136,7 +137,7 @@ VALUES (@domain_id, @name, @value, @encrypt)
 ON CONFLICT (domain_id, name)
     DO UPDATE SET value = EXCLUDED.value, encrypt = EXCLUDED.encrypt`
 
-func (r *SchemaRepository) SetVariable(domainId int64, name string, val *model.SchemaVariable) error {
+func (r *SchemaRepository) SetVariable(domainId int64, name string, val *routing.SchemaVariable) error {
 	return r.db.Exec(context.Background(), setVariableSQL, pgx.NamedArgs{
 		"domain_id": domainId,
 		"name":      name,
@@ -145,14 +146,14 @@ func (r *SchemaRepository) SetVariable(domainId int64, name string, val *model.S
 	})
 }
 
-func toSchema(row schemaRow) (*model.Schema, error) {
-	var apps model.Applications
+func toSchema(row schemaRow) (*routing.Schema, error) {
+	var apps flow.Applications
 	if len(row.Schema) > 0 {
 		if err := json.Unmarshal(row.Schema, &apps); err != nil {
 			return nil, fmt.Errorf("schema: unmarshal applications: %w", err)
 		}
 	}
-	return &model.Schema{
+	return &routing.Schema{
 		Id:         row.Id,
 		DomainId:   row.DomainId,
 		UpdatedAt:  row.UpdatedAt,
@@ -164,8 +165,8 @@ func toSchema(row schemaRow) (*model.Schema, error) {
 	}, nil
 }
 
-func toRouting(row routingRow) *model.Routing {
-	return &model.Routing{
+func toRouting(row routingRow) *routing.Routing {
+	return &routing.Routing{
 		SourceId:        row.SourceId,
 		SourceName:      row.SourceName,
 		SourceData:      row.SourceData,

@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"time"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -18,7 +21,6 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/internal/session"
-	"github.com/webitel/flow_manager/model"
 )
 
 // imChannel is the channel discriminator stored in flow.runtime_state.
@@ -31,9 +33,9 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-type Dialog model.IMDialog
+type Dialog chatdomain.IMDialog
 
-func Init(deps Deps, contacts domcontacts.Client) model.Router {
+func Init(deps Deps, contacts domcontacts.Client) flow.Router {
 	router := &Router{
 		fm: deps,
 	}
@@ -65,7 +67,7 @@ func Init(deps Deps, contacts domcontacts.Client) model.Router {
 				rec, _ := deps.RuntimeStateRepo().LoadByConnectionID(ctx, connID)
 				if rec == nil || (rec.Status != state.StatusRunning && rec.Status != state.StatusSuspended) {
 					if conn := connctx.ConnectionFromContext(ctx); conn != nil {
-						if d, ok := conn.(model.IMDialog); ok {
+						if d, ok := conn.(chatdomain.IMDialog); ok {
 							d.Stop(nil)
 						}
 					}
@@ -104,24 +106,24 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (r *Router) handle(conn model.Connection) {
+func (r *Router) handle(conn flow.Connection) {
 	conv := conn.(Dialog)
-	var routing *model.Routing
+	var rt *routing.Routing
 	var err error
 	shId := conv.SchemaId()
 
 	if shId > 0 {
-		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), int32(shId))
+		rt, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), int32(shId))
 	} else {
 		// TODO ERROR
 	}
 
-	if routing == nil {
+	if rt == nil {
 		err = fmt.Errorf("IM: im.routing.not_found: Not found routing schema")
 	}
 	if err != nil {
@@ -130,15 +132,15 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	conn.Set(conn.Context(), map[string]any{
-		model.FlowSchemaNameVariable: routing.Schema.Name,
+		routing.FlowSchemaNameVariable: rt.Schema.Name,
 	})
 
-	// Convert model.Applications → tree.Schema.
-	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
-	for i, app := range routing.Schema.Schema {
+	// Convert Applications → tree.Schema.
+	rawSchema := make([]map[string]any, len(rt.Schema.Schema))
+	for i, app := range rt.Schema.Schema {
 		rawSchema[i] = map[string]any(app)
 	}
-	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	tr, parseErr := tree.Parse(rt.SchemaId, rawSchema)
 	if parseErr != nil {
 		conv.Stop(fmt.Errorf("IM: im.schema.parse: %w", parseErr))
 		return
@@ -159,7 +161,7 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, routing.SchemaId)
+	cp := session.Save(r.fm.CheckpointRepo(), r.fm.AppID(), conn, rt.SchemaId)
 
 	// activeRec is set via OnRecord once the persistence.Record is established
 	// (either loaded from DB or freshly created). Teardown reads variables from
@@ -182,7 +184,7 @@ func (r *Router) handle(conn model.Connection) {
 		Conn:        conn,
 		Tr:          tr,
 		Tags:        tags,
-		SchemaID:    routing.SchemaId,
+		SchemaID:    rt.SchemaId,
 		DomainID:    conv.DomainId(),
 		AppID:       r.fm.AppID(),
 		Repo:        r.fm.RuntimeStateRepo(),
@@ -201,7 +203,7 @@ func (r *Router) handle(conn model.Connection) {
 // stops the connection, fires the disconnect trigger via the native driver,
 // and closes the session.
 func (r *Router) teardown(
-	conn model.Connection,
+	conn flow.Connection,
 	conv Dialog,
 	cp *session.Checkpoint,
 	tr *tree.Tree,

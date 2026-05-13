@@ -6,9 +6,9 @@ import (
 	"github.com/webitel/wlog"
 
 	cc2 "github.com/webitel/flow_manager/api/gen/cc"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
-	"github.com/webitel/flow_manager/model"
 )
 
 const ServiceName = "call_center"
@@ -22,13 +22,13 @@ type ccManager struct {
 
 	agent    domcc.AgentApi
 	member   domcc.MemberApi
-	events   <-chan model.CCQueueEvent
+	events   <-chan chatdomain.CCQueueEvent
 	attempts map[int64]chan domcc.QueueEvent
 	closed   chan struct{}
 	sync.RWMutex
 }
 
-func NewCCManager(consulAddr string, events <-chan model.CCQueueEvent) domcc.CCManager {
+func NewCCManager(consulAddr string, events <-chan chatdomain.CCQueueEvent) domcc.CCManager {
 	cli := &ccManager{
 		consulAddr: consulAddr,
 		events:     events,

@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/webitel/flow_manager/api/gen/workflow"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
 const (
@@ -20,7 +20,7 @@ func (s *Server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(model.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
+	conn := newConnection(utils.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
 
 	var result *workflow.DistributeAttemptResponse
 
@@ -54,7 +54,7 @@ func (s *Server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 		vars = make(map[string]string)
 	}
 
-	conn := newConnection(model.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
+	conn := newConnection(utils.NewId(), in.DomainId, int(in.SchemaId), ctx, vars, 0)
 
 	var result *workflow.ResultAttemptResponse
 	sc := in.GetScope()
@@ -94,7 +94,7 @@ func (s *Server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 	if vars == nil {
 		vars = make(map[string]string)
 	}
-	id := model.NewId()
+	id := utils.NewId()
 
 	conn := newConnection(id, in.DomainId, int(in.SchemaId), context.Background(), vars, 0)
 
@@ -119,7 +119,7 @@ func (s *Server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRe
 		vars = make(map[string]string)
 	}
 
-	id := model.NewId()
+	id := utils.NewId()
 	conn := newConnection(id, in.DomainId, int(in.SchemaId), ctx, vars, time.Duration(in.TimeoutSec)*time.Second)
 
 	s.consume <- conn

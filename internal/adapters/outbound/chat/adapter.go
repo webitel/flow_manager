@@ -8,7 +8,7 @@ import (
 	html "html/template"
 
 	ingrpc "github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
-	"github.com/webitel/flow_manager/model"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 )
 
 // Adapter implements chat-manager–backed Deps methods.
@@ -21,11 +21,11 @@ func NewChatMgrAdapter(mgr *ingrpc.ChatManager, templatesPath string) *ChatMgrAd
 	return &ChatMgrAdapter{mgr: mgr, templatesPath: templatesPath}
 }
 
-func (a *ChatMgrAdapter) BroadcastChatMessage(ctx context.Context, domainId int64, req model.BroadcastChat, peers []model.BroadcastPeer) (*model.BroadcastChatResponse, error) {
+func (a *ChatMgrAdapter) BroadcastChatMessage(ctx context.Context, domainId int64, req chatdomain.BroadcastChat, peers []chatdomain.BroadcastPeer) (*chatdomain.BroadcastChatResponse, error) {
 	return a.mgr.BroadcastMessage(ctx, domainId, req, peers)
 }
 
-func (a *ChatMgrAdapter) SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error {
+func (a *ChatMgrAdapter) SenChatAction(ctx context.Context, channelId string, action chatdomain.ChatAction) error {
 	if err := a.mgr.SendAction(ctx, channelId, action); err != nil {
 		return fmt.Errorf("Chat: chat.send_action.error: %w", err)
 	}
@@ -39,7 +39,7 @@ func (a *ChatMgrAdapter) ContactLinkToChat(ctx context.Context, conversationId s
 	return nil
 }
 
-func (a *ChatMgrAdapter) ParseChatMessages(messages *[]model.ChatMessage, output string) (string, error) {
+func (a *ChatMgrAdapter) ParseChatMessages(messages *[]chatdomain.ChatMessage, output string) (string, error) {
 	if messages == nil || len(*messages) == 0 {
 		return "", fmt.Errorf("messages is nil or empty")
 	}
@@ -63,7 +63,7 @@ func (a *ChatMgrAdapter) ParseChatMessages(messages *[]model.ChatMessage, output
 	return wrapperBuf.String(), nil
 }
 
-func (a *ChatMgrAdapter) chatMessageTemplate(message *model.ChatMessage, outputType string, isInternal bool) (*html.Template, error) {
+func (a *ChatMgrAdapter) chatMessageTemplate(message *chatdomain.ChatMessage, outputType string, isInternal bool) (*html.Template, error) {
 	sender := "client"
 	if isInternal {
 		sender = "agent"

@@ -1,0 +1,2 @@
+{"type":"bootstrap","decision":"Initialized .oz internal workspace files for architecture context and refactor planning","context_files":["project_context.yaml","refactor_backlog.yaml","work_session_template.yaml"]}
+{"type":"planning","decision":"Added 1:1 gradual migration map for fx bootstrap and session recovery","artifact":".oz/migration_map_v1.yaml","approach":"strangler-incremental"}

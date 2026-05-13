@@ -4,14 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
-	"github.com/webitel/flow_manager/model"
 )
 
 // ReplyDeps is the subset of  the reply op needs.
 type ReplyDeps interface {
-	ReplyEmail(conn model.EmailConnection, text string) error
+	ReplyEmail(conn emaildomain.EmailConnection, text string) error
 }
 
 // RegisterReply adds the reply op to reg.
@@ -32,7 +32,7 @@ func (o *replyOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, er
 	if conn == nil {
 		return ops.OpOutput{}, fmt.Errorf("reply: no connection in context")
 	}
-	emailConn, ok := conn.(model.EmailConnection)
+	emailConn, ok := conn.(emaildomain.EmailConnection)
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("reply: connection is not an email connection")
 	}

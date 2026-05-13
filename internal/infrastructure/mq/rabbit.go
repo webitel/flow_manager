@@ -10,9 +10,12 @@ import (
 
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/infrastructure/pubsub"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
 const bufSize = 100
@@ -25,20 +28,20 @@ type RabbitEventBus struct {
 	nodeName string
 	log      *wlog.Logger
 
-	callEvent chan model.CallActionData
-	execEvent chan model.ChannelExec
-	imEvents  chan model.MessageWrapper
-	ccEvents  chan model.CCQueueEvent
+	callEvent chan call.CallActionData
+	execEvent chan flow.ChannelExec
+	imEvents  chan chat.MessageWrapper
+	ccEvents  chan chat.CCQueueEvent
 }
 
 func NewRabbitEventBus(log *wlog.Logger, url, nodeName string) (ports.EventBus, error) {
 	r := &RabbitEventBus{
 		nodeName:  nodeName,
 		log:       log,
-		callEvent: make(chan model.CallActionData, bufSize),
-		execEvent: make(chan model.ChannelExec, bufSize),
-		imEvents:  make(chan model.MessageWrapper, bufSize),
-		ccEvents:  make(chan model.CCQueueEvent, bufSize),
+		callEvent: make(chan call.CallActionData, bufSize),
+		execEvent: make(chan flow.ChannelExec, bufSize),
+		imEvents:  make(chan chat.MessageWrapper, bufSize),
+		ccEvents:  make(chan chat.CCQueueEvent, bufSize),
 	}
 
 	mgr, err := pubsub.New(log, url,
@@ -66,10 +69,10 @@ func (r *RabbitEventBus) Start() error {
 	return r.mgr.Start()
 }
 
-func (r *RabbitEventBus) ConsumeCallEvent() <-chan model.CallActionData { return r.callEvent }
-func (r *RabbitEventBus) ConsumeExec() <-chan model.ChannelExec         { return r.execEvent }
-func (r *RabbitEventBus) ConsumeIM() <-chan model.MessageWrapper        { return r.imEvents }
-func (r *RabbitEventBus) ConsumeCCEvents() <-chan model.CCQueueEvent    { return r.ccEvents }
+func (r *RabbitEventBus) ConsumeCallEvent() <-chan call.CallActionData { return r.callEvent }
+func (r *RabbitEventBus) ConsumeExec() <-chan flow.ChannelExec         { return r.execEvent }
+func (r *RabbitEventBus) ConsumeIM() <-chan chat.MessageWrapper        { return r.imEvents }
+func (r *RabbitEventBus) ConsumeCCEvents() <-chan chat.CCQueueEvent    { return r.ccEvents }
 
 // newConsumerChannel opens a plain amqp channel suitable for consuming.
 func newConsumerChannel(conn *amqp.Connection) (*amqp.Channel, error) {
@@ -86,34 +89,34 @@ func (r *RabbitEventBus) setupCallConsumer(conn *amqp.Connection, _ *pubsub.Chan
 		return err
 	}
 
-	if err = ch.ExchangeDeclare(model.FlowExchange, "direct", true, false, false, false, nil); err != nil {
-		return fmt.Errorf("declare %s exchange: %w", model.FlowExchange, err)
+	if err = ch.ExchangeDeclare(call.FlowExchange, "direct", true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare %s exchange: %w", call.FlowExchange, err)
 	}
 
-	if _, err = ch.QueueDeclare(model.CallEventQueueName, true, false, false, false,
+	if _, err = ch.QueueDeclare(call.CallEventQueueName, true, false, false, false,
 		amqp.Table{"x-queue-type": "quorum"}); err != nil {
-		return fmt.Errorf("declare queue %s: %w", model.CallEventQueueName, err)
+		return fmt.Errorf("declare queue %s: %w", call.CallEventQueueName, err)
 	}
 
-	if err = ch.QueueBind(model.CallEventQueueName, "events.#", model.CallExchange, true, nil); err != nil {
-		return fmt.Errorf("bind %s → %s: %w", model.CallEventQueueName, model.CallExchange, err)
+	if err = ch.QueueBind(call.CallEventQueueName, "events.#", call.CallExchange, true, nil); err != nil {
+		return fmt.Errorf("bind %s → %s: %w", call.CallEventQueueName, call.CallExchange, err)
 	}
-	if err = ch.QueueBind(model.CallEventQueueName, "sip.stats", model.OpensipsExchange, true, nil); err != nil {
-		return fmt.Errorf("bind %s → %s: %w", model.CallEventQueueName, model.OpensipsExchange, err)
+	if err = ch.QueueBind(call.CallEventQueueName, "sip.stats", call.OpensipsExchange, true, nil); err != nil {
+		return fmt.Errorf("bind %s → %s: %w", call.CallEventQueueName, call.OpensipsExchange, err)
 	}
 
-	msgs, err := ch.Consume(model.CallEventQueueName, r.nodeName, false, false, false, false, nil)
+	msgs, err := ch.Consume(call.CallEventQueueName, r.nodeName, false, false, false, false, nil)
 	if err != nil {
-		return fmt.Errorf("consume %s: %w", model.CallEventQueueName, err)
+		return fmt.Errorf("consume %s: %w", call.CallEventQueueName, err)
 	}
 
 	go func() {
 		for m := range msgs {
 			r.log.Debug(fmt.Sprintf("received a message: %s", m.RoutingKey))
 			switch m.Exchange {
-			case model.CallExchange:
+			case call.CallExchange:
 				r.handleCallMessage(m.Body)
-			case model.OpensipsExchange:
+			case call.OpensipsExchange:
 				r.handleCallMediaStats(m.Body)
 			default:
 				r.log.Warn(fmt.Sprintf("call consumer: unknown exchange %s", m.Exchange))
@@ -131,22 +134,22 @@ func (r *RabbitEventBus) setupExecConsumer(conn *amqp.Connection, _ *pubsub.Chan
 		return err
 	}
 
-	if err = ch.ExchangeDeclare(model.FlowExchange, "direct", true, false, false, false, nil); err != nil {
-		return fmt.Errorf("declare %s exchange: %w", model.FlowExchange, err)
+	if err = ch.ExchangeDeclare(call.FlowExchange, "direct", true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare %s exchange: %w", call.FlowExchange, err)
 	}
 
-	if _, err = ch.QueueDeclare(model.FlowExecQueueName, true, false, false, false,
+	if _, err = ch.QueueDeclare(call.FlowExecQueueName, true, false, false, false,
 		amqp.Table{"x-queue-type": "quorum"}); err != nil {
-		return fmt.Errorf("declare queue %s: %w", model.FlowExecQueueName, err)
+		return fmt.Errorf("declare queue %s: %w", call.FlowExecQueueName, err)
 	}
 
-	if err = ch.QueueBind(model.FlowExecQueueName, "exec", model.FlowExchange, true, nil); err != nil {
-		return fmt.Errorf("bind %s: %w", model.FlowExecQueueName, err)
+	if err = ch.QueueBind(call.FlowExecQueueName, "exec", call.FlowExchange, true, nil); err != nil {
+		return fmt.Errorf("bind %s: %w", call.FlowExecQueueName, err)
 	}
 
-	msgs, err := ch.Consume(model.FlowExecQueueName, "", false, false, false, false, nil)
+	msgs, err := ch.Consume(call.FlowExecQueueName, "", false, false, false, false, nil)
 	if err != nil {
-		return fmt.Errorf("consume %s: %w", model.FlowExecQueueName, err)
+		return fmt.Errorf("consume %s: %w", call.FlowExecQueueName, err)
 	}
 
 	go func() {
@@ -156,7 +159,7 @@ func (r *RabbitEventBus) setupExecConsumer(conn *amqp.Connection, _ *pubsub.Chan
 				m.Ack(false)
 				continue
 			}
-			var data model.ChannelExec
+			var data flow.ChannelExec
 			if err := json.Unmarshal(m.Body, &data); err != nil {
 				r.log.Warn(fmt.Sprintf("exec consumer: parse error: %s", err))
 			} else {
@@ -175,14 +178,14 @@ func (r *RabbitEventBus) setupIMConsumer(conn *amqp.Connection, _ *pubsub.Channe
 		return err
 	}
 
-	queueName := fmt.Sprintf("%s.%s.any", model.IMQueueNamePrefix, model.NewId()[0:8])
+	queueName := fmt.Sprintf("%s.%s.any", call.IMQueueNamePrefix, utils.NewId()[0:8])
 
 	if _, err = ch.QueueDeclare(queueName, true, false, false, true,
 		amqp.Table{"x-queue-type": "quorum", "x-expires": 10000}); err != nil {
 		return fmt.Errorf("declare IM queue: %w", err)
 	}
 
-	if err = ch.QueueBind(queueName, "#", model.IMExchange, true, nil); err != nil {
+	if err = ch.QueueBind(queueName, "#", call.IMExchange, true, nil); err != nil {
 		return fmt.Errorf("bind IM queue: %w", err)
 	}
 
@@ -193,12 +196,12 @@ func (r *RabbitEventBus) setupIMConsumer(conn *amqp.Connection, _ *pubsub.Channe
 
 	go func() {
 		for m := range msgs {
-			if m.Exchange != model.IMExchange {
+			if m.Exchange != call.IMExchange {
 				r.log.Warn(fmt.Sprintf("IM consumer: unknown exchange %s", m.Exchange))
 				m.Ack(false)
 				continue
 			}
-			var data model.MessageWrapper
+			var data chat.MessageWrapper
 			if err := json.Unmarshal(m.Body, &data); err != nil {
 				r.log.Warn(fmt.Sprintf("IM consumer: parse error: %s", err))
 				m.Ack(false)
@@ -222,18 +225,18 @@ func (r *RabbitEventBus) setupCCConsumer(conn *amqp.Connection, _ *pubsub.Channe
 		return err
 	}
 
-	if err = ch.ExchangeDeclare(model.CallCenterExchange, "topic", true, false, false, false, nil); err != nil {
-		return fmt.Errorf("declare %s exchange: %w", model.CallCenterExchange, err)
+	if err = ch.ExchangeDeclare(call.CallCenterExchange, "topic", true, false, false, false, nil); err != nil {
+		return fmt.Errorf("declare %s exchange: %w", call.CallCenterExchange, err)
 	}
 
-	queueName := fmt.Sprintf("%s.%s", model.CallCenterPrefix, model.NewId()[0:8])
+	queueName := fmt.Sprintf("%s.%s", call.CallCenterPrefix, utils.NewId()[0:8])
 
 	if _, err = ch.QueueDeclare(queueName, true, false, false, true,
 		amqp.Table{"x-queue-type": "quorum", "x-expires": 10000}); err != nil {
 		return fmt.Errorf("declare CC queue: %w", err)
 	}
 
-	if err = ch.QueueBind(queueName, "queue", model.CallCenterExchange, true, nil); err != nil {
+	if err = ch.QueueBind(queueName, "queue", call.CallCenterExchange, true, nil); err != nil {
 		return fmt.Errorf("bind CC queue: %w", err)
 	}
 
@@ -244,12 +247,12 @@ func (r *RabbitEventBus) setupCCConsumer(conn *amqp.Connection, _ *pubsub.Channe
 
 	go func() {
 		for m := range msgs {
-			if m.Exchange != model.CallCenterExchange {
+			if m.Exchange != call.CallCenterExchange {
 				r.log.Warn(fmt.Sprintf("CC consumer: unknown exchange %s", m.Exchange))
 				m.Ack(false)
 				continue
 			}
-			var ev model.CCQueueEvent
+			var ev chat.CCQueueEvent
 			if err := json.Unmarshal(m.Body, &ev); err != nil {
 				r.log.Warn(fmt.Sprintf("CC consumer: parse error: %s", err))
 			} else {
@@ -271,7 +274,7 @@ type jsonRPCCallStats struct {
 }
 
 func (r *RabbitEventBus) handleCallMessage(data []byte) {
-	var action model.CallActionData
+	var action call.CallActionData
 	if err := json.Unmarshal(data, &action); err != nil {
 		r.log.Error(fmt.Sprintf("call consumer: parse error: %s", err))
 		return
@@ -287,7 +290,7 @@ func (r *RabbitEventBus) handleCallMediaStats(data []byte) {
 		return
 	}
 
-	var callStats model.CallActionMediaStats
+	var callStats call.CallActionMediaStats
 	if err := json.Unmarshal([]byte(rpc.Params.Stats), &callStats); err != nil {
 		r.log.Error(fmt.Sprintf("call stats: parse stats error: %s", err))
 		return
@@ -299,9 +302,9 @@ func (r *RabbitEventBus) handleCallMediaStats(data []byte) {
 	}
 
 	callStats.Id = callStats.CallMediaStats.SipId
-	callStats.AppId = model.OpensipsExchange
-	callStats.Event = model.CallActionStatsName
-	callStats.Timestamp = model.GetMillis()
+	callStats.AppId = call.OpensipsExchange
+	callStats.Event = call.CallActionStatsName
+	callStats.Timestamp = utils.GetMillis()
 	if callStats.RTP.RoundTrip.Average > 0 {
 		callStats.RTP.RoundTrip.Average /= 1000
 		callStats.RTP.RoundTrip.Max /= 1000
@@ -313,8 +316,8 @@ func (r *RabbitEventBus) handleCallMediaStats(data []byte) {
 		callStats.RTP.Mos.Max /= 10
 	}
 
-	ca := model.CallActionDataWithUser{
-		CallActionData: model.CallActionData{
+	ca := call.CallActionDataWithUser{
+		CallActionData: call.CallActionData{
 			CallAction: callStats.CallAction,
 		},
 	}
@@ -336,7 +339,7 @@ func (r *RabbitEventBus) handleCallMediaStats(data []byte) {
 		return
 	}
 
-	if err = r.mgr.Publish(context.Background(), model.CallExchange,
+	if err = r.mgr.Publish(context.Background(), call.CallExchange,
 		fmt.Sprintf("events.stats..%d.%d", callStats.DomainId, userId), body); err != nil {
 		r.log.Error(fmt.Sprintf("call stats: publish error: %s", err))
 	}

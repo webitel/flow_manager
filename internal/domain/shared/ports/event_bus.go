@@ -3,7 +3,9 @@ package ports
 import (
 	"context"
 
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 // EventBus is the outbound port for publishing and consuming broker events.
@@ -12,8 +14,8 @@ type EventBus interface {
 	Close()
 	Start() error
 
-	ConsumeCallEvent() <-chan model.CallActionData
-	ConsumeExec() <-chan model.ChannelExec
-	ConsumeIM() <-chan model.MessageWrapper
-	ConsumeCCEvents() <-chan model.CCQueueEvent
+	ConsumeCallEvent() <-chan call.CallActionData
+	ConsumeExec() <-chan flow.ChannelExec
+	ConsumeIM() <-chan chat.MessageWrapper
+	ConsumeCCEvents() <-chan chat.CCQueueEvent
 }

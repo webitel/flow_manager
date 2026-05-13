@@ -6,8 +6,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/session"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -29,8 +29,8 @@ ORDER BY updated_at DESC
 LIMIT 1
 `
 
-func (r *SocketSessionRepository) Get(userID, domainID int64, appName string) (*model.SocketSession, error) {
-	var s model.SocketSession
+func (r *SocketSessionRepository) Get(userID, domainID int64, appName string) (*session.SocketSession, error) {
+	var s session.SocketSession
 	if err := r.db.Get(context.Background(), &s, getSocketSessionSQL, pgx.NamedArgs{
 		"UserId":   userID,
 		"DomainId": domainID,

@@ -11,14 +11,14 @@ import (
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	outcc "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
 	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	inframq "github.com/webitel/flow_manager/internal/infrastructure/mq"
-	"github.com/webitel/flow_manager/model"
 )
 
-func NewEventBus(lc fx.Lifecycle, cfg *model.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
+func NewEventBus(lc fx.Lifecycle, cfg *bscfg.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
 	cli, err := inframq.NewRabbitEventBus(log, cfg.MQSettings.Url, string(id))
 	if err != nil {
 		return nil, err
@@ -37,17 +37,17 @@ func NewEventBus(lc fx.Lifecycle, cfg *model.Config, id AppID, log *wlog.Logger)
 	return cli, nil
 }
 
-func NewStorageClient(cfg *model.Config) (domstorage.Client, error) {
+func NewStorageClient(cfg *bscfg.Config) (domstorage.Client, error) {
 	return outstorage.NewStorageClient(cfg.DiscoverySettings.Url)
 }
 
-func NewCasesClient(cfg *model.Config) (*cases.Api, error) {
+func NewCasesClient(cfg *bscfg.Config) (*cases.Api, error) {
 	return cases.NewClient(cfg.DiscoverySettings.Url)
 }
 
 // NewAiBotsClient creates the AI bots gRPC client and registers Start/Stop in
 // the fx lifecycle.
-func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*aibridge.Client, error) {
+func NewAiBotsClient(lc fx.Lifecycle, cfg *bscfg.Config) (*aibridge.Client, error) {
 	cli := aibridge.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
@@ -63,7 +63,7 @@ func NewAiBotsClient(lc fx.Lifecycle, cfg *model.Config) (*aibridge.Client, erro
 
 // NewCCManager creates the CC queue manager and registers Start/Stop in the fx
 // lifecycle.
-func NewCCManager(lc fx.Lifecycle, cfg *model.Config, eventQueue ports.EventBus) (domcc.CCManager, error) {
+func NewCCManager(lc fx.Lifecycle, cfg *bscfg.Config, eventQueue ports.EventBus) (domcc.CCManager, error) {
 	mgr := outcc.NewCCManager(cfg.DiscoverySettings.Url, eventQueue.ConsumeCCEvents())
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {

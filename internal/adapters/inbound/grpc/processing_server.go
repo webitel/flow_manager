@@ -8,8 +8,9 @@ import (
 	"github.com/webitel/wlog"
 
 	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	infraCache "github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/pkg/processing"
 )
 
@@ -19,7 +20,7 @@ var (
 )
 
 type processingApi struct {
-	connections model.ObjectCache
+	connections infraCache.ObjectCache
 	*Server
 	workflow2.UnsafeFlowProcessingServiceServer
 }
@@ -27,7 +28,7 @@ type processingApi struct {
 func NewProcessingApi(s *Server) *processingApi {
 	return &processingApi{
 		Server:      s,
-		connections: model.NewLru(activeProcessingCacheSize),
+		connections: infraCache.NewLru(activeProcessingCacheSize),
 	}
 }
 
@@ -86,7 +87,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow2.FormAction
 
 	err = c.FormAction(processing.FormAction{
 		Name:   in.Action,
-		Fields: model.VariablesFromStringMap(in.Variables),
+		Fields: flow.VariablesFromStringMap(in.Variables),
 	})
 	if err != nil {
 		return nil, err

@@ -7,9 +7,11 @@ import (
 	"net/http"
 
 	genpb "github.com/webitel/flow_manager/api/gen/cc"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/processing"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // FMDeps is the narrow interface required by the FM call ops.
@@ -17,7 +19,7 @@ type FMDeps interface {
 	SetCallGranteeId(domainId int64, id string, granteeId int64) error
 	SetCallUserId(domainId int64, id string, userId int64) error
 	UpdateCallFrom(id string, name, number, destination *string) error
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
+	GetMediaFiles(domainId int64, req *[]*calldomain.PlaybackFile) ([]*calldomain.PlaybackFile, error)
 	CallOutboundQueue(ctx context.Context, in *genpb.OutboundCallRequest) (*genpb.OutboundCallResponse, error)
 }
 
@@ -54,7 +56,7 @@ func (o *setGranteeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 	if appErr := o.deps.SetCallGranteeId(call.DomainId(), call.Id(), argv.Id); appErr != nil {
 		return ops.OpOutput{}, appErr
 	}
-	if _, appErr := call.Set(ctx, model.Variables{model.GranteeHeader: argv.Id}); appErr != nil {
+	if _, appErr := call.Set(ctx, flow.Variables{calldomain.GranteeHeader: argv.Id}); appErr != nil {
 		return ops.OpOutput{}, appErr
 	}
 	return ops.OpOutput{}, nil
@@ -140,14 +142,14 @@ func (o *ringbackOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput,
 	}
 	var argv struct {
 		All      bool                `json:"all"`
-		Call     *model.PlaybackFile `json:"call"`
-		Hold     *model.PlaybackFile `json:"hold"`
-		Transfer *model.PlaybackFile `json:"transfer"`
+		Call     *calldomain.PlaybackFile `json:"call"`
+		Hold     *calldomain.PlaybackFile `json:"hold"`
+		Transfer *calldomain.PlaybackFile `json:"transfer"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
-	search := []*model.PlaybackFile{argv.Call, argv.Hold, argv.Transfer}
+	search := []*calldomain.PlaybackFile{argv.Call, argv.Hold, argv.Transfer}
 	res, appErr := o.deps.GetMediaFiles(call.DomainId(), &search)
 	if appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -171,13 +173,13 @@ func (o *backgroundPlaybackOp) Execute(ctx context.Context, in ops.OpInput) (ops
 	}
 	var argv struct {
 		Name            string              `json:"name"`
-		File            *model.PlaybackFile `json:"file"`
+		File            *calldomain.PlaybackFile `json:"file"`
 		VolumeReduction int                 `json:"volumeReduction"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
-	search := []*model.PlaybackFile{argv.File}
+	search := []*calldomain.PlaybackFile{argv.File}
 	res, appErr := o.deps.GetMediaFiles(call.DomainId(), &search)
 	if appErr != nil {
 		return ops.OpOutput{}, appErr
@@ -199,7 +201,7 @@ func (o *ccOutboundOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("ccOutbound: no call connection in context")
 	}
-	if call.Direction() != model.CallDirectionOutbound {
+	if call.Direction() != calldomain.CallDirectionOutbound {
 		return ops.OpOutput{}, apperrs.New(http.StatusBadRequest, "call.cc_outbound: this call is not an outbound")
 	}
 	if call.UserId() == 0 {
@@ -208,7 +210,7 @@ func (o *ccOutboundOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutpu
 	var argv struct {
 		QueueName        string                        `json:"queueName"`
 		CancelDistribute bool                          `json:"cancelDistribute"`
-		Processing       model.ProcessingWithoutAnswer `json:"processing"`
+		Processing       processing.ProcessingWithoutAnswer `json:"processing"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err

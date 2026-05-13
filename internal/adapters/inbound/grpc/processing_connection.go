@@ -14,8 +14,10 @@ import (
 
 	"github.com/webitel/wlog"
 
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/pkg/processing"
 )
 
@@ -57,7 +59,7 @@ func NewProcessingConnection(domainId int64, schemaId int, vars map[string]strin
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
-	id := fmt.Sprintf("%d-%s", attemptId, model.NewId())
+	id := fmt.Sprintf("%d-%s", attemptId, utils.NewId())
 	return &processingConnection{
 		id:         id,
 		domainId:   domainId,
@@ -262,7 +264,7 @@ func (c *processingConnection) ComponentAction(ctx context.Context, formId, comp
 		return fmt.Errorf("processing.form.app_err: component %s does not have output %s", componentId, action)
 	}
 
-	err := fn(ctx, sync, model.VariablesFromStringMap(vars))
+	err := fn(ctx, sync, flow.VariablesFromStringMap(vars))
 	if err != nil {
 		return fmt.Errorf("processing.form.app_err: error processing form: %w", err)
 	}
@@ -290,8 +292,8 @@ func (c *processingConnection) NodeId() string {
 	return "TODO"
 }
 
-func (c *processingConnection) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *processingConnection) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *processingConnection) Id() string {
@@ -316,11 +318,11 @@ func (c *processingConnection) DomainId() int64 {
 	return c.domainId
 }
 
-func (c *processingConnection) Type() model.ConnectionType {
-	return model.ConnectionTypeForm
+func (c *processingConnection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeForm
 }
 
-func (c *processingConnection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *processingConnection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -328,7 +330,7 @@ func (c *processingConnection) Set(ctx context.Context, vars model.Variables) (m
 		c.variables[k] = fmt.Sprintf("%v", v) // TODO
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
 func (c *processingConnection) Get(key string) (string, bool) {
@@ -364,7 +366,7 @@ type processingConnIface interface {
 	Id() string
 	DomainId() int64
 	Get(key string) (string, bool)
-	Set(ctx context.Context, vars model.Variables) (model.Response, error)
+	Set(ctx context.Context, vars flow.Variables) (flow.Response, error)
 	GetComponentByName(name string) any
 	SetComponent(name string, component any)
 	Export(ctx context.Context, vars []string)

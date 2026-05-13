@@ -7,8 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -40,19 +40,19 @@ from call_center.cc_queue sg
     inner join flow.acr_routing_scheme ars on ars.id = sg.schema_id
 where sg.id = @QueueId and sg.domain_id = @DomainId`
 
-func (r *CallRoutingRepository) FromQueue(domainId int64, queueId int) (*model.Routing, error) {
-	var routing model.Routing
-	err := r.db.Get(context.Background(), &routing, fromQueueSQL, pgx.NamedArgs{
+func (r *CallRoutingRepository) FromQueue(domainId int64, queueId int) (*routing.Routing, error) {
+	var rt routing.Routing
+	err := r.db.Get(context.Background(), &rt, fromQueueSQL, pgx.NamedArgs{
 		"QueueId":  queueId,
 		"DomainId": domainId,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, model.ErrNotFoundRoute
+			return nil, routing.ErrNotFoundRoute
 		}
 		return nil, fmt.Errorf("domainId=%v queueId=%v: %w", domainId, queueId, err)
 	}
-	return &routing, nil
+	return &rt, nil
 }
 
 const fromGatewaySQL = `select
@@ -74,19 +74,19 @@ from directory.sip_gateway sg
     inner join flow.acr_routing_scheme ars on ars.id = sg.scheme_id
 where sg.id = @GatewayId and sg.dc = @DomainId`
 
-func (r *CallRoutingRepository) FromGateway(domainId int64, gatewayId int) (*model.Routing, error) {
-	var routing model.Routing
-	err := r.db.Get(context.Background(), &routing, fromGatewaySQL, pgx.NamedArgs{
+func (r *CallRoutingRepository) FromGateway(domainId int64, gatewayId int) (*routing.Routing, error) {
+	var rt routing.Routing
+	err := r.db.Get(context.Background(), &rt, fromGatewaySQL, pgx.NamedArgs{
 		"GatewayId": gatewayId,
 		"DomainId":  domainId,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, model.ErrNotFoundRoute
+			return nil, routing.ErrNotFoundRoute
 		}
 		return nil, fmt.Errorf("domainId=%v gatewayId=%v: %w", domainId, gatewayId, err)
 	}
-	return &routing, nil
+	return &rt, nil
 }
 
 const searchToDestinationSQL = `select
@@ -110,17 +110,17 @@ where r.domain_id = @DomainId and (not r.disabled) and @Destination::varchar(50)
 order by r.pos desc
 limit 1`
 
-func (r *CallRoutingRepository) SearchToDestination(domainId int64, destination string) (*model.Routing, error) {
-	var routing model.Routing
-	err := r.db.Get(context.Background(), &routing, searchToDestinationSQL, pgx.NamedArgs{
+func (r *CallRoutingRepository) SearchToDestination(domainId int64, destination string) (*routing.Routing, error) {
+	var rt routing.Routing
+	err := r.db.Get(context.Background(), &rt, searchToDestinationSQL, pgx.NamedArgs{
 		"DomainId":    domainId,
 		"Destination": destination,
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, model.ErrNotFoundRoute
+			return nil, routing.ErrNotFoundRoute
 		}
 		return nil, fmt.Errorf("domainId=%v dest=%v: %w", domainId, destination, err)
 	}
-	return &routing, nil
+	return &rt, nil
 }

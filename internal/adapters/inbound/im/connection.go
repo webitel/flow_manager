@@ -14,10 +14,14 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/api/gen/im/api/gateway/v1"
-	"github.com/webitel/flow_manager/model"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/files"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 )
 
-var _ model.IMDialog = (*Connection)(nil)
+var _ chatdomain.IMDialog = (*Connection)(nil)
 
 type Connection struct {
 	id       string
@@ -28,21 +32,21 @@ type Connection struct {
 	srv      *server
 	sync.RWMutex
 	variables       map[string]string
-	msg             model.Message
-	lastMsg         model.Message
-	from            model.ImEndpoint
-	to              model.ImEndpoint
+	msg             chatdomain.Message
+	lastMsg         chatdomain.Message
+	from            chatdomain.ImEndpoint
+	to              chatdomain.ImEndpoint
 	log             *wlog.Logger
 	hdrs            metadata.MD
-	queueKey        *model.InQueueKey
+	queueKey        *queue.InQueueKey
 	exportVariables []string
-	messages        []model.MessageWrapper
+	messages        []chatdomain.MessageWrapper
 
 	inboundHandlers map[uint64]func(text string)
 	nextHandlerID   uint64
 }
 
-func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageWrapper) *Connection {
+func newConnection(s *server, id string, to chatdomain.ImEndpoint, msg chatdomain.MessageWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	conn := &Connection{
@@ -71,12 +75,12 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 		),
 	}
 
-	conn.variables[model.ConversationStartMessageVariable] = msg.Message.Text
+	conn.variables[chatdomain.ConversationStartMessageVariable] = msg.Message.Text
 	return conn
 }
 
 // OnMessage delivers an inbound message to all registered handlers.
-func (c *Connection) OnMessage(msg model.MessageWrapper) {
+func (c *Connection) OnMessage(msg chatdomain.MessageWrapper) {
 	if msg.Message.From.Sub == c.to.Sub {
 		c.log.Debug("message from sub changed")
 		return
@@ -120,11 +124,11 @@ func (c *Connection) OnInboundMessage(handler func(text string)) (unregister fun
 	}
 }
 
-func (c *Connection) From() model.ImEndpoint {
+func (c *Connection) From() chatdomain.ImEndpoint {
 	return c.from
 }
 
-func (c *Connection) To() model.ImEndpoint {
+func (c *Connection) To() chatdomain.ImEndpoint {
 	return c.to
 }
 
@@ -132,11 +136,11 @@ func (c *Connection) ThreadId() string {
 	return c.threadId
 }
 
-func (c *Connection) LastMessage() model.Message {
+func (c *Connection) LastMessage() chatdomain.Message {
 	return c.lastMsg
 }
 
-func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
+func (c *Connection) SendMessage(ctx context.Context, msg chatdomain.ChatMessageOutbound) (flow.Response, error) {
 	var docs []*thread.ImageInput
 
 	if msg.File != nil {
@@ -163,13 +167,13 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("SendMessage: conv.msg: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("SendMessage: conv.msg: %w", err)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
+func (c *Connection) SendTextMessage(ctx context.Context, text string) (flow.Response, error) {
 	_, err := c.srv.client.API.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendTextRequest{
 		To: &thread.Peer{
 			Kind: &thread.Peer_Contact{
@@ -182,12 +186,12 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 		Body: text,
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("SendTextMessage: conv.msg: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("SendTextMessage: conv.msg: %w", err)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
+func (c *Connection) SendImageMessage(ctx context.Context, msg chatdomain.ChatMessageOutbound) (flow.Response, error) {
 	var images []*thread.ImageInput
 	if msg.File != nil {
 		f := msg.File
@@ -206,12 +210,12 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 		Image: &thread.ImageRequest{Images: images, Body: msg.Text},
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("SendImageMessage: conv.msg: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("SendImageMessage: conv.msg: %w", err)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
+func (c *Connection) SendDocumentMessage(ctx context.Context, msg chatdomain.ChatMessageOutbound) (flow.Response, error) {
 	var docs []*thread.DocumentInput
 	if msg.File != nil {
 		f := msg.File
@@ -230,12 +234,12 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 		Document: &thread.DocumentRequest{Documents: docs, Body: msg.Text},
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("SendDocumentMessage: conv.msg: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("SendDocumentMessage: conv.msg: %w", err)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
+func (c *Connection) SendFile(ctx context.Context, text string, f *files.File, kind string) (flow.Response, error) {
 	var docs []*thread.DocumentInput
 	if f != nil {
 		docs = append(docs, &thread.DocumentInput{
@@ -253,12 +257,12 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 		Document: &thread.DocumentRequest{Documents: docs, Body: text},
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("SendFile: conv.msg: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("SendFile: conv.msg: %w", err)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, error) {
+func (c *Connection) SendMenu(ctx context.Context, menu *chatdomain.ChatMenuArgs) (flow.Response, error) {
 	rows := buildKeyboardRows(menu.Buttons)
 	if menu.Type == "inline" {
 		rows = buildKeyboardRows(menu.Inline)
@@ -277,12 +281,12 @@ func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (mo
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, fmt.Errorf("Connection.SendMenu: conv.send.menu.app_err: %w", err)
+		return calldomain.CallResponseError, fmt.Errorf("Connection.SendMenu: conv.send.menu.app_err: %w", err)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func buildKeyboardRows(src [][]model.ChatButton) []*thread.KeyboardRow {
+func buildKeyboardRows(src [][]chatdomain.ChatButton) []*thread.KeyboardRow {
 	rows := make([]*thread.KeyboardRow, 0, len(src))
 	for _, row := range src {
 		buttons := make([]*thread.KeyboardButton, 0, len(row))
@@ -303,7 +307,7 @@ func buildKeyboardRows(src [][]model.ChatButton) []*thread.KeyboardRow {
 	return rows
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, error) {
+func (c *Connection) Export(ctx context.Context, vars []string) (flow.Response, error) {
 	exp := make(map[string]any)
 	for _, v := range vars {
 		tmp, _ := c.Get(v)
@@ -319,19 +323,19 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 		return c.Set(ctx, exp)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response, error) {
+func (c *Connection) UnSet(_ context.Context, varKeys []string) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for _, k := range varKeys {
 		delete(c.variables, k)
 	}
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) LastMessages(limit int) []model.ChatMessage {
+func (c *Connection) LastMessages(limit int) []chatdomain.ChatMessage {
 	c.RLock()
 	msgs := c.messages
 	c.RUnlock()
@@ -339,20 +343,20 @@ func (c *Connection) LastMessages(limit int) []model.ChatMessage {
 	if limit > 0 && len(msgs) > limit {
 		msgs = msgs[len(msgs)-limit:]
 	}
-	result := make([]model.ChatMessage, 0, len(msgs))
+	result := make([]chatdomain.ChatMessage, 0, len(msgs))
 	for _, m := range msgs {
-		result = append(result, model.ChatMessage{Text: m.Message.Text})
+		result = append(result, chatdomain.ChatMessage{Text: m.Message.Text})
 	}
 	return result
 }
 
-func (c *Connection) GetQueueKey() *model.InQueueKey {
+func (c *Connection) GetQueueKey() *queue.InQueueKey {
 	c.RLock()
 	defer c.RUnlock()
 	return c.queueKey
 }
 
-func (c *Connection) SetQueue(key *model.InQueueKey) bool {
+func (c *Connection) SetQueue(key *queue.InQueueKey) bool {
 	c.Lock()
 	defer c.Unlock()
 
@@ -384,8 +388,8 @@ func (c *Connection) Stop(err error) {
 	c.srv.stopConnection(c)
 }
 
-func (c *Connection) Type() model.ConnectionType {
-	return model.ConnectionTypeIM
+func (c *Connection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeIM
 }
 
 func (c *Connection) Log() *wlog.Logger {
@@ -427,7 +431,7 @@ func (c *Connection) Get(key string) (string, bool) {
 	return v, ok
 }
 
-func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *Connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -435,11 +439,11 @@ func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Respo
 		c.variables[k] = fmt.Sprintf("%v", v)
 	}
 
-	return model.CallResponseOK, nil
+	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *Connection) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *Connection) Close() error {

@@ -9,8 +9,12 @@ import (
 
 	"github.com/webitel/wlog"
 
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	callops "github.com/webitel/flow_manager/internal/runtime/ops/domain/call"
@@ -19,12 +23,11 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // callChannel is the channel discriminator stored in flow.runtime_state.
 // Matches model.ConnectionTypeCall (iota = 0).
-const callChannel = int16(model.ConnectionTypeCall)
+const callChannel = int16(flow.ConnectionTypeCall)
 
 type Router struct {
 	fm         Deps
@@ -34,7 +37,7 @@ type Router struct {
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps Deps, contacts domaincontacts.Client, meeting domainmeeting.Client) model.Router {
+func Init(deps Deps, contacts domaincontacts.Client, meeting domainmeeting.Client) flow.Router {
 	router := &Router{
 		fm:       deps,
 		contacts: contacts,
@@ -71,35 +74,35 @@ func (r *Router) GlobalVariable(domainId int64, name string) string {
 	return r.fm.SchemaVariable(context.TODO(), domainId, name)
 }
 
-func (r *Router) ToRequired(call model.Call, in *model.CallEndpoint) *model.CallEndpoint {
+func (r *Router) ToRequired(c calldomain.Call, in *calldomain.CallEndpoint) *calldomain.CallEndpoint {
 	if in == nil {
-		call.Log().Error("not found TO")
-		if _, err := call.HangupAppErr(call.Context()); err != nil {
-			call.Log().Err(err)
+		c.Log().Error("not found TO")
+		if _, err := c.HangupAppErr(c.Context()); err != nil {
+			c.Log().Err(err)
 		}
 		return nil
 	}
 	return in
 }
 
-func (r *Router) Handle(conn model.Connection) error {
+func (r *Router) Handle(conn flow.Connection) error {
 	go r.handle(conn)
 	return nil
 }
 
-func (e *Router) notFoundRoute(call model.Call) {
-	call.Log().Debug("not found route schema")
-	if _, err := call.HangupNoRoute(call.Context()); err != nil {
-		call.Log().Err(err)
+func (e *Router) notFoundRoute(c calldomain.Call) {
+	c.Log().Debug("not found route schema")
+	if _, err := c.HangupNoRoute(c.Context()); err != nil {
+		c.Log().Err(err)
 	}
 }
 
-func (r *Router) handle(conn model.Connection) {
+func (r *Router) handle(conn flow.Connection) {
 	call := &callParser{
-		Call: conn.(model.Call),
+		Call: conn.(calldomain.Call),
 	}
 
-	var routing *model.Routing
+	var rt *routing.Routing
 	var err error
 
 	queueId := call.IVRQueueId()
@@ -113,21 +116,21 @@ func (r *Router) handle(conn model.Connection) {
 		fmt.Sprintf(":bl_xfer:%s/default/XML", call.Destination())) && call.GetVariable("variable_cc_app_id") != ""
 
 	if transferSchemaId != nil && isTransfer {
-		routing, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
+		rt, err = r.fm.SearchTransferredRouting(call.DomainId(), *transferSchemaId)
 	} else if transferQueueId != 0 && isTransfer {
 		call.Log().Info("transfer from: " + call.From().String() + " to queue_id ")
-		routing, _ = r.fm.TransferQueueRouting(call.DomainId(), transferQueueId)
+		rt, _ = r.fm.TransferQueueRouting(call.DomainId(), transferQueueId)
 
 	} else if transferAgentId != 0 && isTransfer {
 		call.Log().Info("transfer from: " + call.From().String() + " to agent_id ")
-		routing, _ = r.fm.TransferAgentRouting(call.DomainId(), transferAgentId)
+		rt, _ = r.fm.TransferAgentRouting(call.DomainId(), transferAgentId)
 
 	} else if isTransfer && queueId == nil && (ccXfer || !call.IsOriginateRequest()) {
 		call.Log().Info("transfer from: " + call.From().String() + " to destination " + call.Destination())
-		if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
-			call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
+		if rt, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
+			call.outboundVars, err = getOutboundReg(rt.SourceData, call.Destination())
 		}
-		if call.Direction() == model.CallDirectionInbound {
+		if call.Direction() == calldomain.CallDirectionInbound {
 			call.SetTransferFromId()
 		}
 
@@ -135,7 +138,7 @@ func (r *Router) handle(conn model.Connection) {
 	} else if queueId != nil {
 		call.Log().Info("ivr from: " + call.From().String() + " to destination " + call.Destination())
 
-		routing, err = r.fm.SearchOutboundFromQueueRouting(call.DomainId(), *queueId)
+		rt, err = r.fm.SearchOutboundFromQueueRouting(call.DomainId(), *queueId)
 
 	} else {
 		from := call.From()
@@ -150,15 +153,15 @@ func (r *Router) handle(conn model.Connection) {
 		call.Log().Info("call from: " + call.From().String() + " to: " + call.To().String() + ", destination: " + call.Destination())
 
 		switch call.Direction() {
-		case model.CallDirectionInbound:
-			var to *model.CallEndpoint
+		case calldomain.CallDirectionInbound:
+			var to *calldomain.CallEndpoint
 			to = r.ToRequired(call, call.To())
 			if to == nil {
 				return
 			}
 
 			switch from.Type {
-			case model.CallEndpointTypeDestination:
+			case calldomain.CallEndpointTypeDestination:
 				if id := to.IntId(); id == nil {
 					if _, err = call.HangupNoRoute(call.Context()); err != nil {
 						call.Log().Err(err)
@@ -166,14 +169,14 @@ func (r *Router) handle(conn model.Connection) {
 
 					return
 				} else {
-					routing, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
+					rt, err = r.fm.GetRoutingFromDestToGateway(call.DomainId(), *id)
 				}
 			}
-		case model.CallDirectionOutbound:
+		case calldomain.CallDirectionOutbound:
 			switch from.Type {
-			case model.CallEndpointTypeUser:
-				if routing, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
-					call.outboundVars, err = getOutboundReg(routing.SourceData, call.Destination())
+			case calldomain.CallEndpointTypeUser:
+				if rt, err = r.fm.SearchOutboundToDestinationRouting(call.DomainId(), call.Destination()); err == nil {
+					call.outboundVars, err = getOutboundReg(rt.SourceData, call.Destination())
 				}
 			}
 
@@ -182,13 +185,13 @@ func (r *Router) handle(conn model.Connection) {
 		}
 	}
 
-	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysAutoLinkCallToContact)
+	autoLink, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), bscfg.SysAutoLinkCallToContact)
 	if autoLink.BoolValue {
 		r.linkContact(call)
 	}
 
 	if err != nil {
-		if errors.Is(err, model.ErrNotFoundRoute) {
+		if errors.Is(err, routing.ErrNotFoundRoute) {
 			r.notFoundRoute(call)
 		} else {
 			call.Log().Err(err)
@@ -200,15 +203,15 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	if routing == nil {
+	if rt == nil {
 		r.notFoundRoute(call)
 		return
 	}
 
-	call.timezoneName = routing.TimezoneName
-	call.SetDomainName(routing.DomainName)
+	call.timezoneName = rt.TimezoneName
+	call.SetDomainName(rt.DomainName)
 
-	if err = call.SetSchemaId(routing.SchemaId); err != nil {
+	if err = call.SetSchemaId(rt.SchemaId); err != nil {
 		call.Log().Err(err)
 	}
 
@@ -217,15 +220,15 @@ func (r *Router) handle(conn model.Connection) {
 		if err2 != nil {
 			call.Log().Error(err2.Error(), wlog.Err(err2))
 		} else {
-			call.Set(call.Context(), model.VariablesFromStringMap(vars))
+			call.Set(call.Context(), flow.VariablesFromStringMap(vars))
 		}
 	}
 
-	rawSchema := make([]map[string]any, len(routing.Schema.Schema))
-	for i, app := range routing.Schema.Schema {
+	rawSchema := make([]map[string]any, len(rt.Schema.Schema))
+	for i, app := range rt.Schema.Schema {
 		rawSchema[i] = map[string]any(app)
 	}
-	tr, parseErr := tree.Parse(routing.SchemaId, rawSchema)
+	tr, parseErr := tree.Parse(rt.SchemaId, rawSchema)
 	if parseErr != nil {
 		wlog.Error(fmt.Sprintf("call %s parse error: %s", call.Id(), parseErr.Error()))
 		return
@@ -240,7 +243,7 @@ func (r *Router) handle(conn model.Connection) {
 		return connctx.WithConnection(ctx, call)
 	}
 
-	schemaId := routing.SchemaId
+	schemaId := rt.SchemaId
 	var activeRec *persistence.Record
 
 	teardown := func() {

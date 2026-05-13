@@ -13,9 +13,11 @@ import (
 
 	"github.com/webitel/flow_manager/api/gen/chat"
 	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	infraCache "github.com/webitel/flow_manager/internal/infrastructure/cache"
 )
 
 const (
@@ -30,7 +32,7 @@ var (
 )
 
 type chatApi struct {
-	conversations model.ObjectCache
+	conversations infraCache.ObjectCache
 	*Server
 	workflow2.UnsafeFlowChatServerServiceServer
 }
@@ -38,7 +40,7 @@ type chatApi struct {
 func NewChatApi(s *Server) *chatApi {
 	return &chatApi{
 		Server:        s,
-		conversations: model.NewLru(activeConversationCacheSize),
+		conversations: infraCache.NewLru(activeConversationCacheSize),
 	}
 }
 
@@ -80,15 +82,15 @@ func (s *chatApi) Start(ctx context.Context, req *workflow2.StartRequest) (*work
 			}
 		}
 
-		conv.Set(ctx, model.Variables{
-			model.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
+		conv.Set(ctx, flow.Variables{
+			chatdomain.ConversationStartMessageVariable: strings.Join(messageToText(req.Message), " "),
 		})
-		conv.storeMessages[model.ConversationStartMessageVariable], _ = json.Marshal(req.Message)
+		conv.storeMessages[chatdomain.ConversationStartMessageVariable], _ = json.Marshal(req.Message)
 		conv.saveMessages(req.Message)
 	}
 	conv.Set(ctx, map[string]any{
-		model.ConversationSessionId: conv.id,
-		model.ConversationProfileId: conv.profileId,
+		chatdomain.ConversationSessionId: conv.id,
+		chatdomain.ConversationProfileId: conv.profileId,
 	})
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
@@ -150,7 +152,7 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow2.BreakBridgeRequ
 		return nil, err
 	}
 
-	isTransfer := strings.EqualFold(in.Cause, model.BreakChatTransferCause)
+	isTransfer := strings.EqualFold(in.Cause, chatdomain.BreakChatTransferCause)
 	conv.mx.Lock()
 	br := conv.chBridge
 	conv.mx.Unlock()
@@ -205,8 +207,8 @@ func (s *chatApi) getConversationFromRequest(ctx context.Context, id string) (*c
 	return conv, nil
 }
 
-func pettyMessage(msg *chat.Message) model.ChatMessage {
-	m := model.ChatMessage{
+func pettyMessage(msg *chat.Message) chatdomain.ChatMessage {
+	m := chatdomain.ChatMessage{
 		Text:       msg.Text,
 		CreatedAt:  "",
 		Type:       msg.Type,

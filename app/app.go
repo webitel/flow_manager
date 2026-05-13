@@ -25,14 +25,15 @@ import (
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
-	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	_ "github.com/webitel/flow_manager/internal/infrastructure/resolver"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/internal/usecase/callback"
 	callWatcherPkg "github.com/webitel/flow_manager/internal/workers/call_watcher"
 	listWatcher "github.com/webitel/flow_manager/internal/workers/list_watcher"
-	"github.com/webitel/flow_manager/model"
+	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
+	"github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/infrastructure/cache"
 	"github.com/webitel/flow_manager/store"
 
 	// -------------------- plugin(s) -------------------- //
@@ -56,7 +57,7 @@ type FlowManager struct {
 
 	log    *wlog.Logger
 	id     string
-	config *model.Config
+	config *bscfg.Config
 
 	cluster *clusterPkg.Cluster
 	Store   store.Store
@@ -84,7 +85,7 @@ type FlowManager struct {
 }
 
 func NewFlowManager(
-	cfg *model.Config,
+	cfg *bscfg.Config,
 	log *wlog.Logger,
 	st store.Store,
 	checkpointRepo session.Repository,
@@ -100,12 +101,12 @@ func NewFlowManager(
 	eventQueue ports.EventBus,
 	cb *callback.Resolver,
 ) (*FlowManager, error) {
-	schemaCache := model.NewLruWithParams(model.SchemaCacheSize, "schema", model.SchemaCacheExpire, "")
+	schemaCache := cache.NewLruWithParams(bscfg.SchemaCacheSize, "schema", bscfg.SchemaCacheExpire, "")
 
 	stop := make(chan struct{})
 	stopped := make(chan struct{})
 
-	appID := fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id)
+	appID := fmt.Sprintf("%s-%s", bscfg.AppServiceName, cfg.Id)
 
 	fm := &FlowManager{
 		Adapter:         storeAdapter.New(st),
@@ -229,6 +230,6 @@ func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
 func (f *FlowManager) Cases() domcases.Client        { return f.cases }
 
 // ConsumeCallEvent satisfies call_watcher.CallEventDeps; delegates to eventQueue.
-func (f *FlowManager) ConsumeCallEvent() <-chan model.CallActionData {
+func (f *FlowManager) ConsumeCallEvent() <-chan call.CallActionData {
 	return f.eventQueue.ConsumeCallEvent()
 }

@@ -10,7 +10,9 @@ import (
 	"github.com/tidwall/gjson"
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/model"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	emaildomain "github.com/webitel/flow_manager/internal/domain/email"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
 type PKey struct {
@@ -23,15 +25,15 @@ type PKey struct {
 type connection struct {
 	id        string
 	srv       *MailServer
-	email     *model.Email
-	variables model.Variables
+	email     *emaildomain.Email
+	variables flow.Variables
 	ctx       context.Context
 	pkey      PKey
 	sync.RWMutex
 	log *wlog.Logger
 }
 
-func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
+func NewConnection(srv *MailServer, pkey PKey, email *emaildomain.Email) *connection {
 	c := &connection{
 		id:        email.MessageId,
 		srv:       srv,
@@ -69,7 +71,7 @@ func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 	return c
 }
 
-func (c *connection) Email() *model.Email {
+func (c *connection) Email() *emaildomain.Email {
 	return c.email
 }
 
@@ -77,8 +79,8 @@ func (c *connection) Log() *wlog.Logger {
 	return c.log
 }
 
-func (c *connection) Type() model.ConnectionType {
-	return model.ConnectionTypeEmail
+func (c *connection) Type() flow.ConnectionType {
+	return flow.ConnectionTypeEmail
 }
 
 func (c *connection) Id() string {
@@ -110,18 +112,18 @@ func (c *connection) GetProfile() (*Profile, error) {
 	return c.srv.GetProfile(c.pkey.Id, c.pkey.UpdatedAt)
 }
 
-func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, error) {
+func (c *connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for k, v := range vars {
 		c.variables[k] = v
 	}
 
-	return model.CallResponseOK, nil //TODO
+	return calldomain.CallResponseOK, nil //TODO
 }
 
-func (c *connection) ParseText(text string, ops ...model.ParseOption) string {
-	return model.ParseText(c, text, ops...)
+func (c *connection) ParseText(text string, ops ...flow.ParseOption) string {
+	return flow.ParseText(c, text, ops...)
 }
 
 func (c *connection) SchemaId() int {
@@ -154,6 +156,6 @@ func (c *connection) Variables() map[string]string {
 
 // fixme
 func test() {
-	a := func(c model.EmailConnection) {}
+	a := func(c emaildomain.EmailConnection) {}
 	a(&connection{})
 }

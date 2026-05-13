@@ -9,9 +9,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -42,16 +44,16 @@ from chat.bot p
     left join flow.calendar_timezones ct on d.timezone_id = ct.id
 where p.id = @ProfileId and p.dc = @DomainId`
 
-func (r *ChatRepository) RoutingFromProfile(domainId, profileId int64) (*model.Routing, error) {
-	var routing model.Routing
-	err := r.db.Get(context.Background(), &routing, routingFromProfileSQL, pgx.NamedArgs{
+func (r *ChatRepository) RoutingFromProfile(domainId, profileId int64) (*routing.Routing, error) {
+	var rt routing.Routing
+	err := r.db.Get(context.Background(), &rt, routingFromProfileSQL, pgx.NamedArgs{
 		"ProfileId": profileId,
 		"DomainId":  domainId,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("domainId=%v profileId=%v: %w", domainId, profileId, err)
 	}
-	return &routing, nil
+	return &rt, nil
 }
 
 const routingFromSchemaIdSQL = `select
@@ -72,16 +74,16 @@ from flow.acr_routing_scheme ars
     left join flow.calendar_timezones ct on d.timezone_id = ct.id
 where ars.id = @SchemaId and ars.domain_id = @DomainId`
 
-func (r *ChatRepository) RoutingFromSchemaId(domainId int64, schemaId int32) (*model.Routing, error) {
-	var routing model.Routing
-	err := r.db.Get(context.Background(), &routing, routingFromSchemaIdSQL, pgx.NamedArgs{
+func (r *ChatRepository) RoutingFromSchemaId(domainId int64, schemaId int32) (*routing.Routing, error) {
+	var rt routing.Routing
+	err := r.db.Get(context.Background(), &rt, routingFromSchemaIdSQL, pgx.NamedArgs{
 		"SchemaId": schemaId,
 		"DomainId": domainId,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("domainId=%v schemaId=%v: %w", domainId, schemaId, err)
 	}
-	return &routing, nil
+	return &rt, nil
 }
 
 const getMessagesByConversationSQL = `select
@@ -97,8 +99,8 @@ where m.conversation_id = @ConversationId::uuid
 order by created_at asc
 limit @Limit`
 
-func (r *ChatRepository) GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) ([]model.ChatMessage, error) {
-	var messages []model.ChatMessage
+func (r *ChatRepository) GetMessagesByConversation(ctx context.Context, domainId int64, conversationId string, limit int64) ([]chatdomain.ChatMessage, error) {
+	var messages []chatdomain.ChatMessage
 	err := r.db.Select(ctx, &messages, getMessagesByConversationSQL, pgx.NamedArgs{
 		"ConversationId": conversationId,
 		"DomainId":       domainId,
@@ -110,7 +112,7 @@ func (r *ChatRepository) GetMessagesByConversation(ctx context.Context, domainId
 	return messages, nil
 }
 
-func (r *ChatRepository) LastBridged(domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, error) {
+func (r *ChatRepository) LastBridged(domainId int64, number, hours string, queueIds []int, mapRes flow.Variables) (flow.Variables, error) {
 	f := make([]string, 0, len(mapRes))
 	for k, vi := range mapRes {
 		v, _ := vi.(string)
@@ -189,7 +191,7 @@ from (select ` + strings.Join(f, ", ") + `
 		return nil, fmt.Errorf("domainId=%v number=%v: %w", domainId, number, err)
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}

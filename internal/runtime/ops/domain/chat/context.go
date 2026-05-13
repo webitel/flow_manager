@@ -4,17 +4,17 @@ import (
 	"context"
 	"strings"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
-	"github.com/webitel/flow_manager/model"
 )
 
-func conversationFromContext(ctx context.Context) (model.Conversation, bool) {
+func conversationFromContext(ctx context.Context) (chatdomain.Conversation, bool) {
 	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}
-	conv, ok := conn.(model.Conversation)
+	conv, ok := conn.(chatdomain.Conversation)
 	return conv, ok
 }
 

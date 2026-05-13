@@ -9,9 +9,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -31,7 +32,7 @@ type findQueueRow struct {
 	Id int32 `db:"id"`
 }
 
-func (r *QueueRepository) HistoryStatistics(domainId int64, search *model.SearchQueueCompleteStatistics) (float64, error) {
+func (r *QueueRepository) HistoryStatistics(domainId int64, search *queue.SearchQueueCompleteStatistics) (float64, error) {
 	var agg string
 
 	switch search.Metric {
@@ -84,7 +85,7 @@ func (r *QueueRepository) HistoryStatistics(domainId int64, search *model.Search
 	return *row.Value, nil
 }
 
-func (r *QueueRepository) GetQueueData(domainId int64, search *model.SearchEntity, mapRes model.Variables) (model.Variables, error) {
+func (r *QueueRepository) GetQueueData(domainId int64, search *queue.SearchEntity, mapRes flow.Variables) (flow.Variables, error) {
 	f := make([]string, 0, len(mapRes))
 	for k, v := range mapRes {
 		var val string
@@ -131,14 +132,14 @@ from (
 		return nil, err
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}
 	return vars, nil
 }
 
-func (r *QueueRepository) GetQueueAgents(domainId int64, queueId int, channel string, mapRes model.Variables) (model.Variables, error) {
+func (r *QueueRepository) GetQueueAgents(domainId int64, queueId int, channel string, mapRes flow.Variables) (flow.Variables, error) {
 	f := make([]string, 0, len(mapRes))
 	for k, v := range mapRes {
 		switch v {
@@ -182,7 +183,7 @@ from (
 		return nil, err
 	}
 
-	var vars model.Variables
+	var vars flow.Variables
 	if err := json.Unmarshal(row.Variables, &vars); err != nil {
 		return nil, err
 	}

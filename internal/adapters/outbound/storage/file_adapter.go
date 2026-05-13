@@ -6,8 +6,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/webitel/flow_manager/internal/domain/files"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
-	"github.com/webitel/flow_manager/model"
 )
 
 // FileAdapter implements storage-backed Deps methods (file links, downloads,
@@ -53,7 +53,7 @@ func (a *FileAdapter) GeneratePreSignedLink(ctx context.Context, action, source 
 	return a.generateResourceSignature(ctx, action, source, fileId, domainId, query)
 }
 
-func (a *FileAdapter) SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, error) {
+func (a *FileAdapter) SetupPublicFileUrl(file *files.File, domainId int64, server, source string, expire int64) (*files.File, error) {
 	if source == "" {
 		source = "file"
 	}
@@ -78,9 +78,9 @@ func (a *FileAdapter) GetFileTranscription(ctx context.Context, fileId, domainId
 	return resp, nil
 }
 
-func (a *FileAdapter) BulkGenerateFileLink(ctx context.Context, domainId int64, files []model.FileLinkRequest) ([]string, error) {
-	reqs := make([]domstorage.FileLinkRequest, len(files))
-	for i, f := range files {
+func (a *FileAdapter) BulkGenerateFileLink(ctx context.Context, domainId int64, fileLinks []files.FileLinkRequest) ([]string, error) {
+	reqs := make([]domstorage.FileLinkRequest, len(fileLinks))
+	for i, f := range fileLinks {
 		reqs[i] = domstorage.FileLinkRequest{FileId: f.FileId, Action: f.Action, Source: f.Source}
 	}
 	resp, err := a.storage.BulkGenerateFileLink(ctx, domainId, reqs)

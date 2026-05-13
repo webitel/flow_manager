@@ -5,15 +5,16 @@ import (
 	"fmt"
 	"net/url"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/files"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	"github.com/webitel/flow_manager/model"
 )
 
 // SendDeps is the subset of  the send ops need.
 type SendDeps interface {
-	SearchMediaFile(domainId int64, search *model.SearchFile) (*model.File, error)
-	SetupPublicFileUrl(file *model.File, domainId int64, server, source string, expire int64) (*model.File, error)
-	SenChatAction(ctx context.Context, channelId string, action model.ChatAction) error
+	SearchMediaFile(domainId int64, search *files.SearchFile) (*files.File, error)
+	SetupPublicFileUrl(file *files.File, domainId int64, server, source string, expire int64) (*files.File, error)
+	SenChatAction(ctx context.Context, channelId string, action chatdomain.ChatAction) error
 	GenerateTTSLink(ctx context.Context, text string, domainId int64, profileId int, textType string, voice string, language string) (string, error)
 }
 
@@ -38,7 +39,7 @@ func (o *sendMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 	if !ok {
 		return ops.OpOutput{}, fmt.Errorf("sendMessage: no conversation in context")
 	}
-	var argv model.ChatMessageOutbound
+	var argv chatdomain.ChatMessageOutbound
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err
 	}
@@ -48,7 +49,7 @@ func (o *sendMessageOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutp
 		} else {
 			server := resolveServer(argv.File.Server, argv.Server)
 			var appErr error
-			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &model.SearchFile{
+			argv.File, appErr = o.deps.SearchMediaFile(in.DomainID, &files.SearchFile{
 				Id:   argv.File.Id,
 				Name: argv.File.Name,
 			})
@@ -96,7 +97,7 @@ func (o *sendFileOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type sendFileArgs struct {
 	Id     int              `json:"id"` // deprecated alias for file.id
-	File   model.SearchFile `json:"file"`
+	File   files.SearchFile `json:"file"`
 	Text   string           `json:"text"`
 	Source string           `json:"source"`
 	Expire int64            `json:"expire"`
@@ -178,7 +179,7 @@ type sendActionOp struct{ deps SendDeps }
 func (o *sendActionOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type sendActionArgs struct {
-	Action model.ChatAction `json:"action"`
+	Action chatdomain.ChatAction `json:"action"`
 }
 
 func (o *sendActionOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, error) {
@@ -226,7 +227,7 @@ func (o *sendTtsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, 
 	if appErr != nil {
 		return ops.OpOutput{}, fmt.Errorf("sendTts: %s", appErr.Error())
 	}
-	file := &model.File{
+	file := &files.File{
 		Url:      argv.Server + uri,
 		MimeType: "audio/mpeg",
 		Name:     argv.FileName,

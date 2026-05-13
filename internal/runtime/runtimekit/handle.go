@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 )
 
@@ -36,8 +37,8 @@ type HandleConfig struct {
 	ChannelName string
 	// ChannelType is stored in persistence.Record.Channel.
 	ChannelType int16
-	// Conn is the original model.Connection.
-	Conn model.Connection
+	// Conn is the original flow.Connection.
+	Conn flow.Connection
 	// Tr is the parsed schema tree.
 	Tr *tree.Tree
 	// Tags maps tag name → node ID (from Tr.ByTag).
@@ -99,7 +100,7 @@ func RunSession(rec *persistence.Record, cfg HandleConfig) (watching bool, err e
 
 	// Recovery: reconnected to a suspended flow — skip Run entirely.
 	if rec != nil && rec.Status == state.StatusSuspended {
-		initialMsg := conn.Variables()[model.ConversationStartMessageVariable]
+		initialMsg := conn.Variables()[chatdomain.ConversationStartMessageVariable]
 		cfg.SessionMgr.Watch(sessConn, rec, initialMsg, decorate, cfg.Teardown)
 		return true, nil
 	}

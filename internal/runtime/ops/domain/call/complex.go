@@ -11,17 +11,21 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/api/gen/cc"
+	calldomain "github.com/webitel/flow_manager/internal/domain/call"
+	"github.com/webitel/flow_manager/internal/domain/flow"
+	"github.com/webitel/flow_manager/internal/domain/processing"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
 
 // ComplexDeps is the narrow interface required by bridge, joinQueue, and joinAgent ops.
 type ComplexDeps interface {
 	GetStore() store.Store
-	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
+	GetMediaFiles(domainId int64, req *[]*calldomain.PlaybackFile) ([]*calldomain.PlaybackFile, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error)
 	JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error)
@@ -135,7 +139,7 @@ func (o *bridgeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	}
 
 	vars := map[string]string{
-		model.CallVariableSchemaIds: call.GetVariable(model.CallVariableSchemaIds),
+		calldomain.CallVariableSchemaIds: call.GetVariable(calldomain.CallVariableSchemaIds),
 	}
 	if sendOnAnswer := mapStr(props, "sendOnAnswer"); sendOnAnswer != "" {
 		sendOnAnswer = call.ParseText(sendOnAnswer)
@@ -178,7 +182,7 @@ func (o *bridgeOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, e
 	return ops.OpOutput{}, nil
 }
 
-func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applications) ([]*model.Endpoint, error) {
+func (o *bridgeOp) getRemoteEndpoints(call calldomain.Call, endpoints flow.Applications) ([]*calldomain.Endpoint, error) {
 	length := len(endpoints)
 	endp, storeErr := o.deps.GetStore().Endpoint().Get(int64(call.DomainId()), "NAME", "NUMBER", endpoints)
 	if storeErr != nil {
@@ -191,12 +195,12 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 		switch e.TypeName {
 		case "gateway":
 			if e.Destination != nil {
-				e.Number = model.NewString(mapStr(endpoints[key], "dialString"))
-				e.Name = model.NewString(mapStr(endpoints[key], "displayName"))
+				e.Number = utils.NewString(mapStr(endpoints[key], "dialString"))
+				e.Name = utils.NewString(mapStr(endpoints[key], "displayName"))
 				if *e.Name == "" {
 					e.Name = e.Number
 				}
-				e.Destination = model.NewString(fmt.Sprintf("%s@%s", *e.Number, *e.Destination))
+				e.Destination = utils.NewString(fmt.Sprintf("%s@%s", *e.Number, *e.Destination))
 			}
 			e.Variables = endpointVars(endpoints[key], e.Variables)
 		case "user":
@@ -205,7 +209,7 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 				e.Variables = append(e.Variables, "execute_on_originate=wbt_send_hook")
 			}
 			if tmp := call.GetVariable("variable_wbt_contact_id"); tmp != "" {
-				if !(call.UserId() > 0 && call.Direction() == model.CallDirectionOutbound) {
+				if !(call.UserId() > 0 && call.Direction() == calldomain.CallDirectionOutbound) {
 					e.Variables = append(e.Variables, fmt.Sprintf("wbt_contact_id=%s", tmp))
 				}
 			}
@@ -221,19 +225,19 @@ func (o *bridgeOp) getRemoteEndpoints(call model.Call, endpoints model.Applicati
 
 // replaceBridgeEndpoints marshals endpoints to JSON, expands FS vars via
 // call.ParseText, then unmarshals back. Mirrors legacy replaceBridgeRequest.
-func replaceBridgeEndpoints(call model.Call, arr any) (model.Applications, error) {
+func replaceBridgeEndpoints(call calldomain.Call, arr any) (flow.Applications, error) {
 	data, err := json.Marshal(arr)
 	if err != nil {
 		return nil, apperrs.Newf(http.StatusBadRequest, "bridge: call.bridge.valid.endpoints: %s", err.Error())
 	}
-	var res model.Applications
+	var res flow.Applications
 	if err = json.Unmarshal([]byte(call.ParseText(string(data))), &res); err != nil {
 		return nil, apperrs.Newf(http.StatusBadRequest, "bridge: call.bridge.valid.endpoints: %s", err.Error())
 	}
 	return res, nil
 }
 
-func endpointVars(src model.ApplicationObject, res []string) []string {
+func endpointVars(src flow.ApplicationObject, res []string) []string {
 	if v, ok := src["parameters"].(map[string]any); ok {
 		for k, vv := range v {
 			res = append(res, fmt.Sprintf("'%s'='%s'", k, vv))
@@ -255,7 +259,7 @@ func mapStr(m any, key string) string {
 				return fmt.Sprint(s)
 			}
 		}
-	case model.ApplicationObject:
+	case flow.ApplicationObject:
 		return mapStr(map[string]any(mm), key)
 	}
 	return ""
@@ -308,9 +312,9 @@ type joinQueueArgs struct {
 		Extension *string `json:"extension"`
 	} `json:"agent"`
 	StickyAgentId       int32               `json:"stickyAgentId"`
-	Ringtone            model.PlaybackFile  `json:"ringtone"`
+	Ringtone            calldomain.PlaybackFile  `json:"ringtone"`
 	Timers              []callTimerArg      `json:"timers"`
-	TransferAfterBridge *model.SearchEntity `json:"transferAfterBridge"`
+	TransferAfterBridge *queue.SearchEntity `json:"transferAfterBridge"`
 }
 
 type callTimerArg struct {
@@ -359,7 +363,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	// Ringtone resolution.
 	var ringtone *cc.CallJoinToQueueRequest_WaitingMusic
 	if q.Ringtone.Name != nil || q.Ringtone.Id != nil {
-		req := []*model.PlaybackFile{{Id: q.Ringtone.Id, Name: q.Ringtone.Name}}
+		req := []*calldomain.PlaybackFile{{Id: q.Ringtone.Id, Name: q.Ringtone.Name}}
 		if res, appErr := o.deps.GetMediaFiles(call.DomainId(), &req); appErr == nil && len(res) > 0 && res[0] != nil && res[0].Type != nil {
 			ringtone = &cc.CallJoinToQueueRequest_WaitingMusic{
 				Id:   int32(*res[0].Id),
@@ -517,8 +521,8 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 			Id        *int32  `json:"id"`
 			Extension *string `json:"extension"`
 		} `json:"agent"`
-		Processing       *model.Processing  `json:"processing"`
-		Ringtone         model.PlaybackFile `json:"ringtone"`
+		Processing       *processing.Processing  `json:"processing"`
+		Ringtone         calldomain.PlaybackFile `json:"ringtone"`
 		Timeout          int32              `json:"timeout"`
 		QueueName        string             `json:"queue_name"`
 		CancelDistribute bool               `json:"cancel_distribute"`
@@ -545,7 +549,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	// Ringtone resolution.
 	var ringtone *cc.CallJoinToAgentRequest_WaitingMusic
 	if argv.Ringtone.Name != nil || argv.Ringtone.Id != nil {
-		req := []*model.PlaybackFile{{Id: argv.Ringtone.Id, Name: argv.Ringtone.Name}}
+		req := []*calldomain.PlaybackFile{{Id: argv.Ringtone.Id, Name: argv.Ringtone.Name}}
 		if res, appErr := o.deps.GetMediaFiles(call.DomainId(), &req); appErr == nil && len(res) > 0 && res[0] != nil && res[0].Type != nil {
 			ringtone = &cc.CallJoinToAgentRequest_WaitingMusic{
 				Id:   int32(*res[0].Id),
@@ -603,7 +607,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 
 		switch e := msg.Data.(type) {
 		case *cc.QueueEvent_Joined:
-			call.Set(ctx, model.Variables{"attempt_id": e.Joined.AttemptId}) //nolint:errcheck
+			call.Set(ctx, flow.Variables{"attempt_id": e.Joined.AttemptId}) //nolint:errcheck
 
 		case *cc.QueueEvent_Bridged:
 			agentExt := call.GetVariable("Caller-Caller-ID-Number")
@@ -613,7 +617,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 			})
 
 		case *cc.QueueEvent_Leaving:
-			call.Set(ctx, model.Variables{"cc_result": e.Leaving.Result}) //nolint:errcheck
+			call.Set(ctx, flow.Variables{"cc_result": e.Leaving.Result}) //nolint:errcheck
 		}
 	}
 

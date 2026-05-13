@@ -8,8 +8,9 @@ import (
 	"github.com/webitel/wlog"
 
 	outboundim "github.com/webitel/flow_manager/internal/adapters/outbound/im"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
-	"github.com/webitel/flow_manager/model"
 )
 
 // SessionStore is the distributed ownership-claim store for IM connections.
@@ -23,8 +24,8 @@ type SessionStore interface {
 
 type server struct {
 	id              string
-	receiver        <-chan model.MessageWrapper
-	consume         chan model.Connection
+	receiver        <-chan chatdomain.MessageWrapper
+	consume         chan flow.Connection
 	didFinishListen chan struct{}
 	stopped         chan struct{}
 	startOnce       sync.Once
@@ -34,8 +35,8 @@ type server struct {
 	dispatcher      *Dispatcher
 }
 
-func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
-	consume := make(chan model.Connection, 100)
+func NewServer(id, consulAddr string, receiver <-chan chatdomain.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) flow.Server {
+	consume := make(chan flow.Connection, 100)
 	connStore := NewConnectionStore(log)
 
 	s := &server{
@@ -84,12 +85,12 @@ func (s *server) Port() int {
 	return 0
 }
 
-func (s *server) Consume() <-chan model.Connection {
+func (s *server) Consume() <-chan flow.Connection {
 	return s.consume
 }
 
-func (s *server) Type() model.ConnectionType {
-	return model.ConnectionTypeIM
+func (s *server) Type() flow.ConnectionType {
+	return flow.ConnectionTypeIM
 }
 
 func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {

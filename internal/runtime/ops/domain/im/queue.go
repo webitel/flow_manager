@@ -9,17 +9,18 @@ import (
 	"time"
 
 	genpb "github.com/webitel/flow_manager/api/gen/cc"
+	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/domain/queue"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
-	"github.com/webitel/flow_manager/model"
 )
 
 // QueueDeps is the subset of  the queue ops need.
 type QueueDeps interface {
-	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error
+	CancelAttempt(ctx context.Context, att queue.InQueueKey, result string) error
 	FindQueueByName(domainId int64, name string) (int32, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
 	JoinIMToInboundQueue(ctx context.Context, in *genpb.IMJoinToQueueRequest) (int64, <-chan domcc.QueueEvent, error)
@@ -50,12 +51,12 @@ func Register(reg *ops.Registry, deps QueueDeps, coord QueueDispatcher) {
 
 // dialogFromContext retrieves the IMDialog stored by connctx.WithConnection.
 // Returns nil when no connection or the connection is not an IMDialog.
-func dialogFromContext(ctx context.Context) (model.IMDialog, bool) {
+func dialogFromContext(ctx context.Context) (chatdomain.IMDialog, bool) {
 	conn := connctx.ConnectionFromContext(ctx)
 	if conn == nil {
 		return nil, false
 	}
-	d, ok := conn.(model.IMDialog)
+	d, ok := conn.(chatdomain.IMDialog)
 	return d, ok
 }
 

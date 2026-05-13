@@ -16,9 +16,10 @@ import (
 	"github.com/webitel/wlog"
 
 	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
 )
 
 type Config struct {
@@ -31,7 +32,7 @@ type Server struct {
 	cfg             *Config
 	server          *grpc.Server
 	didFinishListen chan struct{}
-	consume         chan model.Connection
+	consume         chan flow.Connection
 	chatApi         *chatApi
 	processingApi   *processingApi
 	startOnce       sync.Once
@@ -51,7 +52,7 @@ func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
 	srv := &Server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
-		consume:         make(chan model.Connection),
+		consume:         make(chan flow.Connection),
 		nodeName:        cfg.NodeName,
 		chatManager:     cm,
 		log: wlog.GlobalLogger().With(
@@ -69,7 +70,7 @@ func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
 func publicAddr(lis net.Listener) (string, int) {
 	h, p, _ := net.SplitHostPort(lis.Addr().String())
 	if h == "::" {
-		h = model.GetPublicAddr()
+		h = utils.GetPublicAddr()
 	}
 	port, _ := strconv.Atoi(p)
 	return h, port
@@ -141,7 +142,7 @@ func (s *Server) Port() int {
 	return s.cfg.Port
 }
 
-func (s *Server) Consume() <-chan model.Connection {
+func (s *Server) Consume() <-chan flow.Connection {
 	return s.consume
 }
 
@@ -149,8 +150,8 @@ func (s *Server) NodeName() string {
 	return s.nodeName
 }
 
-func (s Server) Type() model.ConnectionType {
-	return model.ConnectionTypeGrpc
+func (s Server) Type() flow.ConnectionType {
+	return flow.ConnectionTypeGrpc
 }
 
 func unaryInterceptor(ctx context.Context,

@@ -19,24 +19,24 @@ import (
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
-	"github.com/webitel/flow_manager/model"
+	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	"github.com/webitel/flow_manager/store"
 )
 
 // AppID is a distinct named type so fx can inject it unambiguously.
 type AppID string
 
-func NewConfig() (*model.Config, error) {
+func NewConfig() (*bscfg.Config, error) {
 	return bscfg.Load()
 }
 
-func NewAppID(cfg *model.Config) AppID {
-	return AppID(fmt.Sprintf("%s-%s", model.AppServiceName, cfg.Id))
+func NewAppID(cfg *bscfg.Config) AppID {
+	return AppID(fmt.Sprintf("%s-%s", bscfg.AppServiceName, cfg.Id))
 }
 
 // NewLogger constructs the application logger, configures OpenTelemetry if
 // enabled, and registers the otel shutdown via the fx lifecycle.
-func NewLogger(lc fx.Lifecycle, cfg *model.Config, id AppID) (*wlog.Logger, error) {
+func NewLogger(lc fx.Lifecycle, cfg *bscfg.Config, id AppID) (*wlog.Logger, error) {
 	logConfig := &wlog.LoggerConfiguration{
 		EnableConsole: cfg.Log.Console,
 		ConsoleJson:   false,
@@ -53,8 +53,8 @@ func NewLogger(lc fx.Lifecycle, cfg *model.Config, id AppID) (*wlog.Logger, erro
 		shutdownFunc, err := otelsdk.Configure(
 			context.Background(),
 			otelsdk.WithResource(resource.NewSchemaless(
-				semconv.ServiceName(model.AppServiceName),
-				semconv.ServiceVersion(model.CurrentVersion),
+				semconv.ServiceName(bscfg.AppServiceName),
+				semconv.ServiceVersion(bsversion.CurrentVersion),
 				semconv.ServiceInstanceID(string(id)),
 				semconv.ServiceNamespace("webitel"),
 			)),
@@ -80,7 +80,7 @@ func NewStore(db infraSql.Store) store.Store {
 }
 
 // NewPgxPool creates a pgxpool connection pool from cfg and registers pool.Close in the fx lifecycle.
-func NewPgxPool(lc fx.Lifecycle, cfg *model.Config) (*pgxpool.Pool, error) {
+func NewPgxPool(lc fx.Lifecycle, cfg *bscfg.Config) (*pgxpool.Pool, error) {
 	pool, err := pgxpool.New(context.Background(), *cfg.SqlSettings.DataSource)
 	if err != nil {
 		return nil, fmt.Errorf("pgxpool: %w", err)
@@ -112,7 +112,7 @@ func NewRuntimeStateRepo(db infraSql.Store) persistence.Repository {
 }
 
 // NewCacheStores always provides in-memory cache; adds Redis when configured.
-func NewCacheStores(cfg *model.Config) (cache.CacheStores, error) {
+func NewCacheStores(cfg *bscfg.Config) (cache.CacheStores, error) {
 	stores := cache.CacheStores{
 		cache.Memory: cache.NewMemoryCache(&cache.MemoryCacheConfig{
 			Size:          10000,

@@ -8,9 +8,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/webitel/flow_manager/internal/domain/flow"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	"github.com/webitel/flow_manager/internal/session"
-	"github.com/webitel/flow_manager/model"
 )
 
 type CheckpointRepository struct {
@@ -152,7 +152,7 @@ func toCheckpoint(row checkpointRow) (*session.Checkpoint, error) {
 		ID:           row.ID,
 		ConnectionID: row.ConnectionID,
 		DomainID:     row.DomainID,
-		Channel:      model.ConnectionType(row.Channel),
+		Channel:      flow.ConnectionType(row.Channel),
 		SchemaID:     int(row.SchemaID),
 		AppID:        row.AppID,
 		Variables:    vars,
