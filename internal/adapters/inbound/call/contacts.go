@@ -3,7 +3,7 @@ package call
 import (
 	"strconv"
 
-	"github.com/webitel/flow_manager/gen/contacts"
+	"github.com/webitel/flow_manager/api/gen/contacts"
 	"github.com/webitel/flow_manager/model"
 )
 

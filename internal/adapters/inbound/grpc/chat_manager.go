@@ -8,8 +8,8 @@ import (
 
 	"github.com/webitel/wlog"
 
-	proto "github.com/webitel/flow_manager/gen/chat"
-	"github.com/webitel/flow_manager/gen/chat/messages"
+	proto "github.com/webitel/flow_manager/api/gen/chat"
+	messages2 "github.com/webitel/flow_manager/api/gen/chat/messages"
 	"github.com/webitel/flow_manager/infra/discovery"
 	"github.com/webitel/flow_manager/infra/watcher"
 	"github.com/webitel/flow_manager/model"
@@ -133,34 +133,34 @@ func (cm *ChatManager) wakeUp() {
 	cm.poolConnections.RecheckConnections(list.Ids())
 }
 
-func inputFile(f *model.File) *messages.InputFile {
+func inputFile(f *model.File) *messages2.InputFile {
 	if f == nil {
 		return nil
 	}
 
 	if len(f.Url) != 0 {
-		return &messages.InputFile{
-			FileSource: &messages.InputFile_Url{
+		return &messages2.InputFile{
+			FileSource: &messages2.InputFile_Url{
 				Url: f.Url,
 			},
 		}
 	} else {
-		return &messages.InputFile{
-			FileSource: &messages.InputFile_Id{
+		return &messages2.InputFile{
+			FileSource: &messages2.InputFile_Id{
 				Id: fmt.Sprintf("%d", f.Id),
 			},
 		}
 	}
 }
 
-func inputKeyboard(btns [][]model.ChatButton) *messages.InputKeyboard {
+func inputKeyboard(btns [][]model.ChatButton) *messages2.InputKeyboard {
 	l := len(btns)
 	if l == 0 {
 		return nil
 	}
 
-	keyboard := &messages.InputKeyboard{
-		Rows: make([]*messages.InputButtonRow, 0, l),
+	keyboard := &messages2.InputKeyboard{
+		Rows: make([]*messages2.InputButtonRow, 0, l),
 	}
 
 	for _, row := range btns {
@@ -169,10 +169,10 @@ func inputKeyboard(btns [][]model.ChatButton) *messages.InputKeyboard {
 			continue
 		}
 
-		buttons := make([]*messages.InputButton, 0, l)
+		buttons := make([]*messages2.InputButton, 0, l)
 
 		for _, btn := range row {
-			buttons = append(buttons, &messages.InputButton{
+			buttons = append(buttons, &messages2.InputButton{
 				Caption: btn.Caption,
 				Text:    btn.Text,
 				Type:    btn.Type,
@@ -181,7 +181,7 @@ func inputKeyboard(btns [][]model.ChatButton) *messages.InputKeyboard {
 			})
 		}
 
-		keyboard.Rows = append(keyboard.Rows, &messages.InputButtonRow{
+		keyboard.Rows = append(keyboard.Rows, &messages2.InputButtonRow{
 			Buttons: buttons,
 		})
 	}
@@ -189,11 +189,11 @@ func inputKeyboard(btns [][]model.ChatButton) *messages.InputKeyboard {
 	return keyboard
 }
 
-func inputPeers(ps []model.BroadcastPeer) []*messages.InputPeer {
-	peers := make([]*messages.InputPeer, 0, len(ps))
+func inputPeers(ps []model.BroadcastPeer) []*messages2.InputPeer {
+	peers := make([]*messages2.InputPeer, 0, len(ps))
 
 	for _, v := range ps {
-		peers = append(peers, &messages.InputPeer{
+		peers = append(peers, &messages2.InputPeer{
 			Id:   v.Id,
 			Type: v.Type,
 			Via:  v.Via,
@@ -209,7 +209,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		return nil, e
 	}
 
-	msg := &messages.InputMessage{
+	msg := &messages2.InputMessage{
 		Text:     req.Text,
 		File:     inputFile(req.File),
 		Keyboard: inputKeyboard(req.Buttons),
@@ -222,7 +222,7 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 		newContext = ctx
 	}
 
-	broadcastResponse, e := c.messages.BroadcastMessageNA(newContext, &messages.BroadcastMessageRequest{
+	broadcastResponse, e := c.messages.BroadcastMessageNA(newContext, &messages2.BroadcastMessageRequest{
 		Message:   msg,
 		Peers:     inputPeers(peers),
 		Timeout:   req.Timeout,
@@ -249,7 +249,7 @@ func (cc *ChatManager) LinkContact(ctx context.Context, contactId, conversationI
 	if e != nil {
 		return e
 	}
-	_, e = c.contacts.LinkContactToClientNA(ctx, &messages.LinkContactToClientNARequest{
+	_, e = c.contacts.LinkContactToClientNA(ctx, &messages2.LinkContactToClientNARequest{
 		ConversationId: conversationId,
 		ContactId:      contactId,
 	})

@@ -9,17 +9,18 @@ import (
 	"strings"
 	"time"
 
-	"github.com/webitel/flow_manager/gen/chat"
-	"github.com/webitel/flow_manager/gen/workflow"
+	"google.golang.org/grpc/metadata"
+
+	"github.com/webitel/flow_manager/api/gen/chat"
+	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
 	"github.com/webitel/flow_manager/infra/discovery"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
-	"google.golang.org/grpc/metadata"
 )
 
 const (
 	activeConversationCacheSize = 50000
-	maximumInactiveChat         = 0 //30 * 60 * 60 * 24 // day
+	maximumInactiveChat         = 0 // 30 * 60 * 60 * 24 // day
 	confirmationBuffer          = 100
 )
 
@@ -31,7 +32,7 @@ var (
 type chatApi struct {
 	conversations model.ObjectCache
 	*Server
-	workflow.UnsafeFlowChatServerServiceServer
+	workflow2.UnsafeFlowChatServerServiceServer
 }
 
 func NewChatApi(s *Server) *chatApi {
@@ -59,9 +60,9 @@ func (s *chatApi) getClientFromRequest(ctx context.Context) (*ChatClientConnecti
 	return nil, discovery.ErrNotFoundConnection
 }
 
-func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workflow.StartResponse, error) {
+func (s *chatApi) Start(ctx context.Context, req *workflow2.StartRequest) (*workflow2.StartResponse, error) {
 	if _, ok := s.conversations.Get(req.ConversationId); ok {
-		//return nil, errors.New(fmt.Sprintf("Conversation %s already exists", req.ConversationId))
+		// return nil, errors.New(fmt.Sprintf("Conversation %s already exists", req.ConversationId))
 	}
 
 	client, err := s.getClientFromRequest(ctx)
@@ -85,7 +86,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 		conv.storeMessages[model.ConversationStartMessageVariable], _ = json.Marshal(req.Message)
 		conv.saveMessages(req.Message)
 	}
-	conv.Set(ctx, map[string]interface{}{
+	conv.Set(ctx, map[string]any{
 		model.ConversationSessionId: conv.id,
 		model.ConversationProfileId: conv.profileId,
 	})
@@ -94,24 +95,24 @@ func (s *chatApi) Start(ctx context.Context, req *workflow.StartRequest) (*workf
 
 	s.Server.consume <- conv
 
-	return &workflow.StartResponse{}, nil
+	return &workflow2.StartResponse{}, nil
 }
 
-func (s *chatApi) Break(ctx context.Context, req *workflow.BreakRequest) (*workflow.BreakResponse, error) {
+func (s *chatApi) Break(ctx context.Context, req *workflow2.BreakRequest) (*workflow2.BreakResponse, error) {
 	conv, err := s.getConversationFromRequest(ctx, req.ConversationId)
 	if err != nil {
 		return nil, err
 	}
 
-	//todo if cause TRANSFER
+	// todo if cause TRANSFER
 	if err := conv.Break(req.Cause); err != nil {
 		return nil, err
 	}
 
-	return &workflow.BreakResponse{}, nil
+	return &workflow2.BreakResponse{}, nil
 }
 
-func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.ConfirmationMessageRequest) (*workflow.ConfirmationMessageResponse, error) {
+func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow2.ConfirmationMessageRequest) (*workflow2.ConfirmationMessageResponse, error) {
 	var conf chan []*chat.Message
 	var ok bool
 
@@ -131,7 +132,7 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 		// not silently dropped.
 		text := strings.Join(messageToText(req.Messages...), " ")
 		conv.fireInboundHandlers(text)
-		return &workflow.ConfirmationMessageResponse{}, nil
+		return &workflow2.ConfirmationMessageResponse{}, nil
 	}
 
 	select {
@@ -140,10 +141,10 @@ func (s *chatApi) ConfirmationMessage(ctx context.Context, req *workflow.Confirm
 
 	}
 
-	return &workflow.ConfirmationMessageResponse{}, nil
+	return &workflow2.ConfirmationMessageResponse{}, nil
 }
 
-func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeRequest) (*workflow.BreakBridgeResponse, error) {
+func (s *chatApi) BreakBridge(ctx context.Context, in *workflow2.BreakBridgeRequest) (*workflow2.BreakBridgeResponse, error) {
 	conv, err := s.getConversationFromRequest(ctx, in.ConversationId)
 	if err != nil {
 		return nil, err
@@ -158,7 +159,7 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 		return nil, errors.New("bridge not found")
 	}
 
-	//todo
+	// todo
 	if isTransfer {
 		conv.mx.Lock()
 		conv.breakCause = in.Cause
@@ -168,12 +169,12 @@ func (s *chatApi) BreakBridge(ctx context.Context, in *workflow.BreakBridgeReque
 
 	conv.closeIfBreak()
 
-	return &workflow.BreakBridgeResponse{}, nil
+	return &workflow2.BreakBridgeResponse{}, nil
 }
 
-func (s *chatApi) TransferChatPlan(ctx context.Context, in *workflow.TransferChatPlanRequest) (*workflow.TransferChatPlanResponse, error) {
-	//todo
-	return &workflow.TransferChatPlanResponse{}, nil
+func (s *chatApi) TransferChatPlan(ctx context.Context, in *workflow2.TransferChatPlanRequest) (*workflow2.TransferChatPlanResponse, error) {
+	// todo
+	return &workflow2.TransferChatPlanResponse{}, nil
 }
 
 func (s *chatApi) getConversation(id string) (*conversation, error) {

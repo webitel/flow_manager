@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	"github.com/webitel/flow_manager/model"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/connectivity"
 	"google.golang.org/grpc/metadata"
 
-	gogrpc "github.com/webitel/flow_manager/gen/chat"
-	chgrpc "github.com/webitel/flow_manager/gen/chat/messages"
+	"github.com/webitel/flow_manager/api/gen/chat"
+	chgrpc "github.com/webitel/flow_manager/api/gen/chat/messages"
+	"github.com/webitel/flow_manager/model"
 )
 
 var (
@@ -22,9 +22,9 @@ type ChatClientConnection struct {
 	id       string
 	host     string
 	client   *grpc.ClientConn
-	api      gogrpc.ChatServiceClient
+	api      chat.ChatServiceClient
 	contacts chgrpc.ContactLinkingServiceClient
-	messages gogrpc.MessagesServiceClient
+	messages chat.MessagesServiceClient
 }
 
 func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
@@ -41,19 +41,18 @@ func NewChatClientConnection(id, url string) (*ChatClientConnection, error) {
 		grpc.WithTimeout(time.Second*5),
 		grpc.WithUnaryInterceptor(connection.UnaryClientInterceptor),
 	)
-
 	if err != nil {
 		return nil, err
 	}
 
-	connection.api = gogrpc.NewChatServiceClient(connection.client)
-	connection.messages = gogrpc.NewMessagesServiceClient(connection.client)
+	connection.api = chat.NewChatServiceClient(connection.client)
+	connection.messages = chat.NewMessagesServiceClient(connection.client)
 	connection.contacts = chgrpc.NewContactLinkingServiceClient(connection.client)
 
 	return connection, nil
 }
 
-func (cc ChatClientConnection) UnaryClientInterceptor(ctx context.Context, method string, req interface{}, reply interface{}, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+func (cc ChatClientConnection) UnaryClientInterceptor(ctx context.Context, method string, req, reply any, conn *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
 	// Create a new context with the token and make the first request
 	serviceCtx := metadata.AppendToOutgoingContext(ctx, model.HeaderFromServiceName, model.AppServiceName)
 	return invoker(serviceCtx, method, req, reply, conn, opts...)

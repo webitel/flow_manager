@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	casespb "github.com/webitel/flow_manager/gen/cases"
+	"github.com/webitel/flow_manager/api/gen/cases"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	procpkg "github.com/webitel/flow_manager/pkg/processing"
@@ -183,7 +183,7 @@ func (o *formSelectCaseStatusOp) Execute(ctx context.Context, in ops.OpInput) (o
 		return ops.OpOutput{}, fmt.Errorf("formSelectCaseStatus: token is required")
 	}
 
-	svcRes, err := o.deps.LocateService(ctx, &casespb.LocateServiceRequest{
+	svcRes, err := o.deps.LocateService(ctx, &cases.LocateServiceRequest{
 		Id:     argv.ServiceId,
 		Fields: []string{"id", "catalog_id"},
 	}, argv.Token)
@@ -199,7 +199,7 @@ func (o *formSelectCaseStatusOp) Execute(ctx context.Context, in ops.OpInput) (o
 		return ops.OpOutput{}, fmt.Errorf("formSelectCaseStatus: service has no catalog")
 	}
 
-	catRes, err := o.deps.LocateCatalog(ctx, &casespb.LocateCatalogRequest{Id: catalogId}, argv.Token)
+	catRes, err := o.deps.LocateCatalog(ctx, &cases.LocateCatalogRequest{Id: catalogId}, argv.Token)
 	if err != nil {
 		return ops.OpOutput{}, fmt.Errorf("formSelectCaseStatus: locate catalog: %w", err)
 	}
@@ -208,7 +208,7 @@ func (o *formSelectCaseStatusOp) Execute(ctx context.Context, in ops.OpInput) (o
 		return ops.OpOutput{}, fmt.Errorf("formSelectCaseStatus: catalog has no linked status dictionary")
 	}
 
-	condRes, err := o.deps.ListStatusConditions(ctx, &casespb.ListStatusConditionRequest{
+	condRes, err := o.deps.ListStatusConditions(ctx, &cases.ListStatusConditionRequest{
 		StatusId: cat.GetStatus().GetId(),
 		Size:     100,
 	}, argv.Token)
@@ -245,7 +245,7 @@ func (o *formSelectCaseStatusOp) Execute(ctx context.Context, in ops.OpInput) (o
 
 // casesStatusOptions fetches select options from the cases service.
 func casesStatusOptions(ctx context.Context, deps ComponentDeps, token string, serviceId int64) ([]procpkg.SelectOption, error) {
-	svcRes, err := deps.LocateService(ctx, &casespb.LocateServiceRequest{
+	svcRes, err := deps.LocateService(ctx, &cases.LocateServiceRequest{
 		Id:     serviceId,
 		Fields: []string{"id", "catalog_id"},
 	}, token)
@@ -261,7 +261,7 @@ func casesStatusOptions(ctx context.Context, deps ComponentDeps, token string, s
 		return nil, fmt.Errorf("service has no catalog")
 	}
 
-	catRes, err := deps.LocateCatalog(ctx, &casespb.LocateCatalogRequest{Id: catalogId}, token)
+	catRes, err := deps.LocateCatalog(ctx, &cases.LocateCatalogRequest{Id: catalogId}, token)
 	if err != nil {
 		return nil, fmt.Errorf("locate catalog: %w", err)
 	}
@@ -270,7 +270,7 @@ func casesStatusOptions(ctx context.Context, deps ComponentDeps, token string, s
 		return nil, fmt.Errorf("catalog has no linked status dictionary")
 	}
 
-	condRes, err := deps.ListStatusConditions(ctx, &casespb.ListStatusConditionRequest{
+	condRes, err := deps.ListStatusConditions(ctx, &cases.ListStatusConditionRequest{
 		StatusId: cat.GetStatus().GetId(),
 		Size:     100,
 	}, token)

@@ -3,24 +3,24 @@ package cases
 import (
 	"context"
 
-	pb "github.com/webitel/flow_manager/gen/cases"
+	cases2 "github.com/webitel/flow_manager/api/gen/cases"
 )
 
 // Client is the narrow interface that the cases native ops depend on.
 // *outboundcases.Api satisfies this interface.
 type Client interface {
-	SearchCases(ctx context.Context, req *pb.SearchCasesRequest, token string) (*pb.CaseList, error)
-	LocateCase(ctx context.Context, req *pb.LocateCaseRequest, token string) (*pb.Case, error)
-	CreateCase(ctx context.Context, req *pb.CreateCaseRequest, token string) (*pb.Case, error)
-	UpdateCase(ctx context.Context, req *pb.UpdateCaseRequest, token string) (*pb.UpdateCaseResponse, error)
-	LinkCommunication(ctx context.Context, req *pb.LinkCommunicationRequest, token string) (*pb.LinkCommunicationResponse, error)
-	GetServiceCatalogs(ctx context.Context, req *pb.ListCatalogRequest, token string) (*pb.CatalogList, error)
-	PublishComment(ctx context.Context, req *pb.PublishCommentRequest, token string) (*pb.CaseComment, error)
-	CreateLink(ctx context.Context, req *pb.CreateLinkRequest, token string) (*pb.CaseLink, error)
-	DeleteLink(ctx context.Context, req *pb.DeleteLinkRequest, token string) (*pb.CaseLink, error)
-	LocateService(ctx context.Context, req *pb.LocateServiceRequest, token string) (*pb.LocateServiceResponse, error)
-	CreateRelatedCase(ctx context.Context, req *pb.CreateRelatedCaseRequest, token string) (*pb.RelatedCase, error)
-	ListCaseFiles(ctx context.Context, req *pb.ListFilesRequest, token string) (*pb.CaseFileList, error)
-	LocateCatalog(ctx context.Context, req *pb.LocateCatalogRequest, token string) (*pb.LocateCatalogResponse, error)
-	ListStatusConditions(ctx context.Context, req *pb.ListStatusConditionRequest, token string) (*pb.StatusConditionList, error)
+	SearchCases(ctx context.Context, req *cases2.SearchCasesRequest, token string) (*cases2.CaseList, error)
+	LocateCase(ctx context.Context, req *cases2.LocateCaseRequest, token string) (*cases2.Case, error)
+	CreateCase(ctx context.Context, req *cases2.CreateCaseRequest, token string) (*cases2.Case, error)
+	UpdateCase(ctx context.Context, req *cases2.UpdateCaseRequest, token string) (*cases2.UpdateCaseResponse, error)
+	LinkCommunication(ctx context.Context, req *cases2.LinkCommunicationRequest, token string) (*cases2.LinkCommunicationResponse, error)
+	GetServiceCatalogs(ctx context.Context, req *cases2.ListCatalogRequest, token string) (*cases2.CatalogList, error)
+	PublishComment(ctx context.Context, req *cases2.PublishCommentRequest, token string) (*cases2.CaseComment, error)
+	CreateLink(ctx context.Context, req *cases2.CreateLinkRequest, token string) (*cases2.CaseLink, error)
+	DeleteLink(ctx context.Context, req *cases2.DeleteLinkRequest, token string) (*cases2.CaseLink, error)
+	LocateService(ctx context.Context, req *cases2.LocateServiceRequest, token string) (*cases2.LocateServiceResponse, error)
+	CreateRelatedCase(ctx context.Context, req *cases2.CreateRelatedCaseRequest, token string) (*cases2.RelatedCase, error)
+	ListCaseFiles(ctx context.Context, req *cases2.ListFilesRequest, token string) (*cases2.CaseFileList, error)
+	LocateCatalog(ctx context.Context, req *cases2.LocateCatalogRequest, token string) (*cases2.LocateCatalogResponse, error)
+	ListStatusConditions(ctx context.Context, req *cases2.ListStatusConditionRequest, token string) (*cases2.StatusConditionList, error)
 }

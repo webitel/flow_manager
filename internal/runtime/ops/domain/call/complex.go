@@ -10,7 +10,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	genpb "github.com/webitel/flow_manager/gen/cc"
+	"github.com/webitel/flow_manager/api/gen/cc"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -23,8 +23,8 @@ type ComplexDeps interface {
 	GetStore() store.Store
 	GetMediaFiles(domainId int64, req *[]*model.PlaybackFile) ([]*model.PlaybackFile, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
-	JoinToInboundQueue(ctx context.Context, in *genpb.CallJoinToQueueRequest) (genpb.MemberService_CallJoinToQueueClient, error)
-	JoinToAgent(ctx context.Context, in *genpb.CallJoinToAgentRequest) (genpb.MemberService_CallJoinToAgentClient, error)
+	JoinToInboundQueue(ctx context.Context, in *cc.CallJoinToQueueRequest) (cc.MemberService_CallJoinToQueueClient, error)
+	JoinToAgent(ctx context.Context, in *cc.CallJoinToAgentRequest) (cc.MemberService_CallJoinToAgentClient, error)
 }
 
 // RegisterComplex adds call ops that use sub-flows or blocking gRPC streams.
@@ -357,11 +357,11 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	t := call.GetVariable("variable_transfer_history")
 
 	// Ringtone resolution.
-	var ringtone *genpb.CallJoinToQueueRequest_WaitingMusic
+	var ringtone *cc.CallJoinToQueueRequest_WaitingMusic
 	if q.Ringtone.Name != nil || q.Ringtone.Id != nil {
 		req := []*model.PlaybackFile{{Id: q.Ringtone.Id, Name: q.Ringtone.Name}}
 		if res, appErr := o.deps.GetMediaFiles(call.DomainId(), &req); appErr == nil && len(res) > 0 && res[0] != nil && res[0].Type != nil {
-			ringtone = &genpb.CallJoinToQueueRequest_WaitingMusic{
+			ringtone = &cc.CallJoinToQueueRequest_WaitingMusic{
 				Id:   int32(*res[0].Id),
 				Type: *res[0].Type,
 			}
@@ -394,9 +394,9 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	}
 
 	qCtx, cancelQueue := context.WithCancel(context.Background())
-	stream, appErr := o.deps.JoinToInboundQueue(qCtx, &genpb.CallJoinToQueueRequest{
+	stream, appErr := o.deps.JoinToInboundQueue(qCtx, &cc.CallJoinToQueueRequest{
 		MemberCallId: call.Id(),
-		Queue: &genpb.CallJoinToQueueRequest_Queue{
+		Queue: &cc.CallJoinToQueueRequest_Queue{
 			Id:   int32(q.Queue.Id),
 			Name: q.Queue.Name,
 		},
@@ -417,7 +417,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	defer call.SetQueueCancel(nil)
 
 	for {
-		var msg genpb.QueueEvent
+		var msg cc.QueueEvent
 		err := stream.RecvMsg(&msg)
 		if err == io.EOF {
 			break
@@ -427,19 +427,19 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		}
 
 		switch e := msg.Data.(type) {
-		case *genpb.QueueEvent_Offering:
+		case *cc.QueueEvent_Offering:
 			runHook(context.Background(), in, "offering", map[string]string{
 				"cc_agent_name":    e.Offering.AgentName,
 				"cc_agent_call_id": e.Offering.AgentCallId,
 				"cc_agent_id":      fmt.Sprintf("%d", e.Offering.AgentId),
 			})
 
-		case *genpb.QueueEvent_Bridged:
+		case *cc.QueueEvent_Bridged:
 			call.SetQueueCancel(nil)
 			wCancel()
 			runHook(context.Background(), in, "bridged", nil)
 
-		case *genpb.QueueEvent_Leaving:
+		case *cc.QueueEvent_Leaving:
 			runHook(context.Background(), in, "reporting", map[string]string{
 				"cc_result": e.Leaving.Result,
 			})
@@ -543,18 +543,18 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	t := call.GetVariable("variable_transfer_history")
 
 	// Ringtone resolution.
-	var ringtone *genpb.CallJoinToAgentRequest_WaitingMusic
+	var ringtone *cc.CallJoinToAgentRequest_WaitingMusic
 	if argv.Ringtone.Name != nil || argv.Ringtone.Id != nil {
 		req := []*model.PlaybackFile{{Id: argv.Ringtone.Id, Name: argv.Ringtone.Name}}
 		if res, appErr := o.deps.GetMediaFiles(call.DomainId(), &req); appErr == nil && len(res) > 0 && res[0] != nil && res[0].Type != nil {
-			ringtone = &genpb.CallJoinToAgentRequest_WaitingMusic{
+			ringtone = &cc.CallJoinToAgentRequest_WaitingMusic{
 				Id:   int32(*res[0].Id),
 				Type: *res[0].Type,
 			}
 		}
 	}
 
-	req := &genpb.CallJoinToAgentRequest{
+	req := &cc.CallJoinToAgentRequest{
 		DomainId:         call.DomainId(),
 		MemberCallId:     call.Id(),
 		AgentId:          *agentId,
@@ -567,16 +567,16 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	}
 
 	if argv.Processing != nil && argv.Processing.Enabled {
-		req.Processing = &genpb.CallJoinToAgentRequest_Processing{
+		req.Processing = &cc.CallJoinToAgentRequest_Processing{
 			Enabled:    true,
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
 		}
 		if argv.Processing.Form.Id > 0 {
-			req.Processing.Form = &genpb.QueueFormSchema{Id: argv.Processing.Form.Id}
+			req.Processing.Form = &cc.QueueFormSchema{Id: argv.Processing.Form.Id}
 		}
 		if argv.Processing.Prolongation != nil && argv.Processing.Prolongation.Enabled {
-			req.Processing.ProcessingProlongation = &genpb.ProcessingProlongation{
+			req.Processing.ProcessingProlongation = &cc.ProcessingProlongation{
 				Enabled:             true,
 				RepeatsNumber:       argv.Processing.Prolongation.RepeatsNumber,
 				ProlongationTimeSec: argv.Processing.Prolongation.ProlongationTimeSec,
@@ -592,7 +592,7 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	}
 
 	for {
-		var msg genpb.QueueEvent
+		var msg cc.QueueEvent
 		err := stream.RecvMsg(&msg)
 		if err == io.EOF {
 			break
@@ -602,17 +602,17 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		}
 
 		switch e := msg.Data.(type) {
-		case *genpb.QueueEvent_Joined:
+		case *cc.QueueEvent_Joined:
 			call.Set(ctx, model.Variables{"attempt_id": e.Joined.AttemptId}) //nolint:errcheck
 
-		case *genpb.QueueEvent_Bridged:
+		case *cc.QueueEvent_Bridged:
 			agentExt := call.GetVariable("Caller-Caller-ID-Number")
 			runHook(context.Background(), in, "bridged", map[string]string{
 				"agent_id":        fmt.Sprintf("%d", e.Bridged.AgentId),
 				"agent_extension": agentExt,
 			})
 
-		case *genpb.QueueEvent_Leaving:
+		case *cc.QueueEvent_Leaving:
 			call.Set(ctx, model.Variables{"cc_result": e.Leaving.Result}) //nolint:errcheck
 		}
 	}

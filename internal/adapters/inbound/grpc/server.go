@@ -9,14 +9,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/webitel/flow_manager/gen/workflow"
-	"github.com/webitel/flow_manager/infra/discovery"
-	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	"github.com/webitel/wlog"
+
+	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
+	"github.com/webitel/flow_manager/infra/discovery"
+	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
+	"github.com/webitel/flow_manager/model"
 )
 
 type Config struct {
@@ -35,7 +37,7 @@ type Server struct {
 	startOnce       sync.Once
 	chatManager     *ChatManager
 	nodeName        string
-	workflow.UnsafeFlowServiceServer
+	workflow2.UnsafeFlowServiceServer
 	cb CallbackResolver
 
 	log *wlog.Logger
@@ -89,9 +91,9 @@ func (s *Server) Start() error {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	)
 
-	workflow.RegisterFlowServiceServer(s.server, s)
-	workflow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
-	workflow.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
+	workflow2.RegisterFlowServiceServer(s.server, s)
+	workflow2.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
+	workflow2.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
@@ -105,7 +107,7 @@ func (s *Server) listen(lis net.Listener) {
 	s.log.Debug(fmt.Sprintf("server listening %s", lis.Addr().String()))
 	err := s.server.Serve(lis)
 	if err != nil {
-		//FIXME
+		// FIXME
 		panic(err.Error())
 	} else {
 		close(s.didFinishListen)
@@ -134,9 +136,11 @@ func (s *Server) Stop() {
 func (s *Server) Host() string {
 	return s.cfg.Host
 }
+
 func (s *Server) Port() int {
 	return s.cfg.Port
 }
+
 func (s *Server) Consume() <-chan model.Connection {
 	return s.consume
 }
@@ -150,9 +154,10 @@ func (s Server) Type() model.ConnectionType {
 }
 
 func unaryInterceptor(ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
-	handler grpc.UnaryHandler) (interface{}, error) {
+	handler grpc.UnaryHandler,
+) (any, error) {
 	start := time.Now()
 
 	h, err := handler(ctx, req)

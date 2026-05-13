@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	pb "github.com/webitel/flow_manager/gen/contacts"
+	contacts2 "github.com/webitel/flow_manager/api/gen/contacts"
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
@@ -16,7 +16,7 @@ import (
 // LinkDeps is the subset of RouterDeps that linkContact needs.
 type LinkDeps interface {
 	CallSetContactId(domainId int64, callId string, contactId int64) error
-	ContactLinkToChat(ctx context.Context, conversationId string, contactId string) error
+	ContactLinkToChat(ctx context.Context, conversationId, contactId string) error
 	MailSetContacts(ctx context.Context, domainId int64, id string, contactIds []int64) error
 }
 
@@ -60,7 +60,7 @@ type getContactOp struct{ client domcontacts.Client }
 func (o *getContactOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getContactArgs struct {
-	pb.LocateContactRequest
+	contacts2.LocateContactRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 	Id     string `json:"id"`
@@ -94,7 +94,7 @@ type findContactOp struct{ client domcontacts.Client }
 func (o *findContactOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type findContactArgs struct {
-	pb.SearchContactsRequest
+	contacts2.SearchContactsRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -121,7 +121,7 @@ type addContactOp struct{ client domcontacts.Client }
 func (o *addContactOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type addContactArgs struct {
-	pb.InputContactRequest
+	contacts2.InputContactRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -148,7 +148,7 @@ type updateContactOp struct{ client domcontacts.Client }
 func (o *updateContactOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type updateContactArgs struct {
-	pb.InputContactRequest
+	contacts2.InputContactRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -175,7 +175,7 @@ type mergeContactPhonesOp struct{ client domcontacts.Client }
 func (o *mergeContactPhonesOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type mergeContactPhonesArgs struct {
-	pb.MergePhonesRequest
+	contacts2.MergePhonesRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -202,7 +202,7 @@ type mergeContactVariablesOp struct{ client domcontacts.Client }
 func (o *mergeContactVariablesOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type mergeContactVariablesArgs struct {
-	pb.MergeVariablesRequest
+	contacts2.MergeVariablesRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"net/http"
 
-	genpb "github.com/webitel/flow_manager/gen/cc"
-	"github.com/webitel/flow_manager/gen/engine"
+	cc2 "github.com/webitel/flow_manager/api/gen/cc"
+	"github.com/webitel/flow_manager/api/gen/engine"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
@@ -28,15 +28,15 @@ func NewFMAdapter(cc domcc.CCManager, st store.Store) *FMAdapter {
 	return &FMAdapter{cc: cc, store: st}
 }
 
-func (a *FMAdapter) JoinToInboundQueue(ctx context.Context, in *genpb.CallJoinToQueueRequest) (genpb.MemberService_CallJoinToQueueClient, error) {
+func (a *FMAdapter) JoinToInboundQueue(ctx context.Context, in *cc2.CallJoinToQueueRequest) (cc2.MemberService_CallJoinToQueueClient, error) {
 	return a.cc.Member().JoinCallToQueue(ctx, in)
 }
 
-func (a *FMAdapter) CallOutboundQueue(ctx context.Context, in *genpb.OutboundCallRequest) (*genpb.OutboundCallResponse, error) {
+func (a *FMAdapter) CallOutboundQueue(ctx context.Context, in *cc2.OutboundCallRequest) (*cc2.OutboundCallResponse, error) {
 	return a.cc.Member().CallOutbound(ctx, in)
 }
 
-func (a *FMAdapter) JoinChatToInboundQueue(ctx context.Context, in *genpb.ChatJoinToQueueRequest) (genpb.MemberService_ChatJoinToQueueClient, error) {
+func (a *FMAdapter) JoinChatToInboundQueue(ctx context.Context, in *cc2.ChatJoinToQueueRequest) (cc2.MemberService_ChatJoinToQueueClient, error) {
 	return a.cc.Member().JoinChatToQueue(ctx, in)
 }
 
@@ -47,11 +47,11 @@ func (a *FMAdapter) CreateMember(domainId int64, queueId, holdSec int, member *m
 	return nil
 }
 
-func (a *FMAdapter) JoinToAgent(ctx context.Context, in *genpb.CallJoinToAgentRequest) (genpb.MemberService_CallJoinToAgentClient, error) {
+func (a *FMAdapter) JoinToAgent(ctx context.Context, in *cc2.CallJoinToAgentRequest) (cc2.MemberService_CallJoinToAgentClient, error) {
 	return a.cc.Member().CallJoinToAgent(ctx, in)
 }
 
-func (a *FMAdapter) TaskJoinToAgent(ctx context.Context, in *genpb.TaskJoinToAgentRequest) (genpb.MemberService_TaskJoinToAgentClient, error) {
+func (a *FMAdapter) TaskJoinToAgent(ctx context.Context, in *cc2.TaskJoinToAgentRequest) (cc2.MemberService_TaskJoinToAgentClient, error) {
 	return a.cc.Member().TaskJoinToAgent(ctx, in)
 }
 
@@ -65,7 +65,7 @@ func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, ex
 		return nil
 	}
 
-	_, perr := a.cc.Member().CancelAgentDistribute(ctx, &genpb.CancelAgentDistributeRequest{
+	_, perr := a.cc.Member().CancelAgentDistribute(ctx, &cc2.CancelAgentDistributeRequest{
 		AgentId: *agentId,
 	})
 	if perr != nil {
@@ -76,7 +76,7 @@ func (a *FMAdapter) CancelUserDistribute(ctx context.Context, domainId int64, ex
 }
 
 func (a *FMAdapter) AttemptResult(result *model.AttemptResult) error {
-	req := &genpb.AttemptResultRequest{
+	req := &cc2.AttemptResultRequest{
 		AttemptId:                   result.Id,
 		Status:                      result.Status,
 		Variables:                   result.Variables,
@@ -104,7 +104,7 @@ func (a *FMAdapter) AttemptResult(result *model.AttemptResult) error {
 	return nil
 }
 
-func (a *FMAdapter) JoinIMToInboundQueue(ctx context.Context, in *genpb.IMJoinToQueueRequest) (int64, <-chan domcc.QueueEvent, error) {
+func (a *FMAdapter) JoinIMToInboundQueue(ctx context.Context, in *cc2.IMJoinToQueueRequest) (int64, <-chan domcc.QueueEvent, error) {
 	res, err := a.cc.Member().JoinIMToQueue(ctx, in)
 	if err != nil {
 		return 0, nil, err
@@ -128,16 +128,16 @@ func (a *FMAdapter) ResumeAttempt(ctx context.Context, attemptId, domainId int64
 	return a.cc.Member().ResumeAttempt(ctx, attemptId, domainId)
 }
 
-func ccCommunications(r []model.CallbackCommunication) []*genpb.MemberCommunicationCreateRequest {
+func ccCommunications(r []model.CallbackCommunication) []*cc2.MemberCommunicationCreateRequest {
 	l := len(r)
 	if l == 0 {
 		return nil
 	}
 
-	comm := make([]*genpb.MemberCommunicationCreateRequest, 0, l)
+	comm := make([]*cc2.MemberCommunicationCreateRequest, 0, l)
 	for _, v := range r {
 		if v.Destination != "" && v.Type.Id != nil {
-			c := &genpb.MemberCommunicationCreateRequest{
+			c := &cc2.MemberCommunicationCreateRequest{
 				Destination: v.Destination,
 				Type: &engine.Lookup{
 					Id: int64(*v.Type.Id),

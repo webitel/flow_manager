@@ -3,16 +3,16 @@ package contacts
 import (
 	"context"
 
-	"github.com/webitel/flow_manager/gen/contacts"
+	contacts2 "github.com/webitel/flow_manager/api/gen/contacts"
 )
 
 type Client interface {
-	Create(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, error)
-	Locate(ctx context.Context, token string, req *contacts.LocateContactRequest) (*contacts.Contact, error)
-	Search(ctx context.Context, token string, req *contacts.SearchContactsRequest) (*contacts.ContactList, error)
-	SearchNA(ctx context.Context, req *contacts.SearchContactsNARequest) (*contacts.ContactList, error)
-	Update(ctx context.Context, token string, req *contacts.InputContactRequest) (*contacts.Contact, error)
+	Create(ctx context.Context, token string, req *contacts2.InputContactRequest) (*contacts2.Contact, error)
+	Locate(ctx context.Context, token string, req *contacts2.LocateContactRequest) (*contacts2.Contact, error)
+	Search(ctx context.Context, token string, req *contacts2.SearchContactsRequest) (*contacts2.ContactList, error)
+	SearchNA(ctx context.Context, req *contacts2.SearchContactsNARequest) (*contacts2.ContactList, error)
+	Update(ctx context.Context, token string, req *contacts2.InputContactRequest) (*contacts2.Contact, error)
 
-	MergeVariables(ctx context.Context, token string, req *contacts.MergeVariablesRequest) (*contacts.VariableList, error)
-	MergePhones(ctx context.Context, token string, req *contacts.MergePhonesRequest) (*contacts.PhoneList, error)
+	MergeVariables(ctx context.Context, token string, req *contacts2.MergeVariablesRequest) (*contacts2.VariableList, error)
+	MergePhones(ctx context.Context, token string, req *contacts2.MergePhonesRequest) (*contacts2.PhoneList, error)
 }

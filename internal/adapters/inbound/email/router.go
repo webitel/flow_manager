@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/webitel/flow_manager/gen/contacts"
+	"github.com/webitel/flow_manager/api/gen/contacts"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
-	emailop "github.com/webitel/flow_manager/internal/runtime/ops/domain/email"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
+	emailop "github.com/webitel/flow_manager/internal/runtime/ops/domain/email"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
@@ -34,7 +34,7 @@ func Init(deps Deps, contacts domaincontacts.Client) model.Router {
 	r := &Router{fm: deps, contacts: contacts}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:     deps,
+		Deps: deps,
 		ExtraOps: func(reg *ops.Registry) {
 			emailop.RegisterReply(reg, deps)
 		},

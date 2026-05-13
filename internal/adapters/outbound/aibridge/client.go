@@ -6,7 +6,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/gen/ai_bots"
+	ai_bots2 "github.com/webitel/flow_manager/api/gen/ai_bots"
 	"github.com/webitel/flow_manager/infra/grpcdial"
 )
 
@@ -17,9 +17,9 @@ const (
 type Client struct {
 	consulAddr string
 	startOnce  sync.Once
-	converse   *grpcdial.Client[ai_bots.ConverseServiceClient]
-	bot        *grpcdial.Client[ai_bots.BotsServiceClient]
-	embed      *grpcdial.Client[ai_bots.EmbeddingServiceClient]
+	converse   *grpcdial.Client[ai_bots2.ConverseServiceClient]
+	bot        *grpcdial.Client[ai_bots2.BotsServiceClient]
+	embed      *grpcdial.Client[ai_bots2.EmbeddingServiceClient]
 }
 
 func New(consulAddr string) *Client {
@@ -34,15 +34,15 @@ func (cm *Client) Start() error {
 	wlog.Debug("starting ai_bots client")
 	var err error
 	cm.startOnce.Do(func() {
-		cm.bot, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots.NewBotsServiceClient)
+		cm.bot, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots2.NewBotsServiceClient)
 		if err != nil {
 			return
 		}
-		cm.embed, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots.NewEmbeddingServiceClient)
+		cm.embed, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots2.NewEmbeddingServiceClient)
 		if err != nil {
 			return
 		}
-		cm.converse, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots.NewConverseServiceClient)
+		cm.converse, err = grpcdial.NewClient(cm.consulAddr, serviceName, ai_bots2.NewConverseServiceClient)
 		if err != nil {
 			return
 		}
@@ -50,15 +50,15 @@ func (cm *Client) Start() error {
 	return err
 }
 
-func (cm *Client) Bot() ai_bots.BotsServiceClient {
+func (cm *Client) Bot() ai_bots2.BotsServiceClient {
 	return cm.bot.API
 }
 
-func (cm *Client) Embed() ai_bots.EmbeddingServiceClient {
+func (cm *Client) Embed() ai_bots2.EmbeddingServiceClient {
 	return cm.embed.API
 }
 
-func (cm *Client) Converse() ai_bots.ConverseServiceClient {
+func (cm *Client) Converse() ai_bots2.ConverseServiceClient {
 	return cm.converse.API
 }
 

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	genpb "github.com/webitel/flow_manager/gen/cc"
+	genpb "github.com/webitel/flow_manager/api/gen/cc"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/model"

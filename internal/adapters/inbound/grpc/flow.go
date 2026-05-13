@@ -5,16 +5,16 @@ import (
 	"errors"
 	"time"
 
-	"github.com/webitel/flow_manager/gen/workflow"
+	"github.com/webitel/flow_manager/api/gen/workflow"
 	"github.com/webitel/flow_manager/model"
 )
 
 const (
-	timeoutFlowSchema = 30 * time.Second //todo config ?
+	timeoutFlowSchema = 30 * time.Second // todo config ?
 )
 
 func (s *Server) DistributeAttempt(ctx context.Context, in *workflow.DistributeAttemptRequest) (*workflow.DistributeAttemptResponse, error) {
-	var vars = in.Variables
+	vars := in.Variables
 
 	if vars == nil {
 		vars = make(map[string]string)
@@ -48,7 +48,7 @@ func (s *Server) DistributeAttempt(ctx context.Context, in *workflow.DistributeA
 }
 
 func (s *Server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRequest) (*workflow.ResultAttemptResponse, error) {
-	var vars = in.Variables
+	vars := in.Variables
 
 	if vars == nil {
 		vars = make(map[string]string)
@@ -89,7 +89,7 @@ func (s *Server) ResultAttempt(ctx context.Context, in *workflow.ResultAttemptRe
 }
 
 func (s *Server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*workflow.StartFlowResponse, error) {
-	var vars = in.Variables
+	vars := in.Variables
 
 	if vars == nil {
 		vars = make(map[string]string)
@@ -113,7 +113,7 @@ func (s *Server) StartFlow(_ context.Context, in *workflow.StartFlowRequest) (*w
 }
 
 func (s *Server) StartSyncFlow(ctx context.Context, in *workflow.StartSyncFlowRequest) (*workflow.StartSyncFlowResponse, error) {
-	var vars = in.Variables
+	vars := in.Variables
 
 	if vars == nil {
 		vars = make(map[string]string)

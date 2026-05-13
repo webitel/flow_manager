@@ -7,7 +7,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	genengine "github.com/webitel/flow_manager/gen/engine"
+	engine2 "github.com/webitel/flow_manager/api/gen/engine"
 	"github.com/webitel/flow_manager/infra/grpcdial"
 	"github.com/webitel/flow_manager/model"
 )
@@ -17,8 +17,8 @@ const serviceName = "engine"
 type Client struct {
 	consulAddr string
 	startOnce  sync.Once
-	call       *grpcdial.Client[genengine.CallServiceClient]
-	feedback   *grpcdial.Client[genengine.FeedbackServiceClient]
+	call       *grpcdial.Client[engine2.CallServiceClient]
+	feedback   *grpcdial.Client[engine2.FeedbackServiceClient]
 }
 
 func New(consulAddr string) *Client {
@@ -29,11 +29,11 @@ func (c *Client) Start() error {
 	wlog.Debug("starting engine client")
 	var err error
 	c.startOnce.Do(func() {
-		c.call, err = grpcdial.NewClient(c.consulAddr, serviceName, genengine.NewCallServiceClient)
+		c.call, err = grpcdial.NewClient(c.consulAddr, serviceName, engine2.NewCallServiceClient)
 		if err != nil {
 			return
 		}
-		c.feedback, err = grpcdial.NewClient(c.consulAddr, serviceName, genengine.NewFeedbackServiceClient)
+		c.feedback, err = grpcdial.NewClient(c.consulAddr, serviceName, engine2.NewFeedbackServiceClient)
 	})
 	return err
 }
@@ -41,12 +41,12 @@ func (c *Client) Start() error {
 func (c *Client) Stop() {}
 
 func (c *Client) MakeCall(ctx context.Context, req model.OutboundCallRequest) (string, error) {
-	protoReq := &genengine.CreateCallRequest{
+	protoReq := &engine2.CreateCallRequest{
 		Destination: req.Destination,
 		DomainId:    req.DomainID,
 	}
 	if req.From != nil {
-		protoReq.From = &genengine.CreateCallRequest_EndpointRequest{
+		protoReq.From = &engine2.CreateCallRequest_EndpointRequest{
 			AppId:     req.From.AppId,
 			Type:      req.From.Type,
 			Id:        req.From.Id,
@@ -54,7 +54,7 @@ func (c *Client) MakeCall(ctx context.Context, req model.OutboundCallRequest) (s
 		}
 	}
 	if req.To != nil {
-		protoReq.To = &genengine.CreateCallRequest_EndpointRequest{
+		protoReq.To = &engine2.CreateCallRequest_EndpointRequest{
 			AppId:     req.To.AppId,
 			Type:      req.To.Type,
 			Id:        req.To.Id,
@@ -62,7 +62,7 @@ func (c *Client) MakeCall(ctx context.Context, req model.OutboundCallRequest) (s
 		}
 	}
 	if req.Params != nil {
-		protoReq.Params = &genengine.CreateCallRequest_CallSettings{
+		protoReq.Params = &engine2.CreateCallRequest_CallSettings{
 			Timeout:           req.Params.Timeout,
 			Variables:         req.Params.Variables,
 			Display:           req.Params.Display,
@@ -83,7 +83,7 @@ func (c *Client) MakeCall(ctx context.Context, req model.OutboundCallRequest) (s
 }
 
 func (c *Client) GenerateFeedback(ctx context.Context, domainId int64, sourceId, source string, payload map[string]string) (string, error) {
-	res, err := c.feedback.API.GenerateFeedback(ctx, &genengine.GenerateFeedbackRequest{
+	res, err := c.feedback.API.GenerateFeedback(ctx, &engine2.GenerateFeedbackRequest{
 		DomainId: domainId,
 		SourceId: sourceId,
 		Source:   source,

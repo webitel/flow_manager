@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/webitel/flow_manager/gen/workflow"
+	"github.com/webitel/flow_manager/api/gen/workflow"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/model"

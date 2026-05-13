@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/webitel/flow_manager/gen/storage"
+	storage2 "github.com/webitel/flow_manager/api/gen/storage"
 	"github.com/webitel/flow_manager/infra/grpcdial"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 )
@@ -12,16 +12,16 @@ import (
 const serviceName = "storage"
 
 type StorageClient struct {
-	file       *grpcdial.Client[storage.FileServiceClient]
-	transcript *grpcdial.Client[storage.FileTranscriptServiceClient]
+	file       *grpcdial.Client[storage2.FileServiceClient]
+	transcript *grpcdial.Client[storage2.FileTranscriptServiceClient]
 }
 
 func NewStorageClient(consulTarget string) (*StorageClient, error) {
-	file, err := grpcdial.NewClient(consulTarget, serviceName, storage.NewFileServiceClient)
+	file, err := grpcdial.NewClient(consulTarget, serviceName, storage2.NewFileServiceClient)
 	if err != nil {
 		return nil, err
 	}
-	transcript, err := grpcdial.NewClient(consulTarget, serviceName, storage.NewFileTranscriptServiceClient)
+	transcript, err := grpcdial.NewClient(consulTarget, serviceName, storage2.NewFileTranscriptServiceClient)
 	if err != nil {
 		return nil, err
 	}
@@ -38,9 +38,9 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 		return domstorage.File{}, err
 	}
 
-	err = stream.Send(&storage.UploadFileRequest{
-		Data: &storage.UploadFileRequest_Metadata_{
-			Metadata: &storage.UploadFileRequest_Metadata{
+	err = stream.Send(&storage2.UploadFileRequest{
+		Data: &storage2.UploadFileRequest_Metadata_{
+			Metadata: &storage2.UploadFileRequest_Metadata{
 				DomainId: domainId,
 				Name:     metadata.Name,
 				MimeType: metadata.MimeType,
@@ -63,8 +63,8 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 		if err != nil {
 			break
 		}
-		err = stream.Send(&storage.UploadFileRequest{
-			Data: &storage.UploadFileRequest_Chunk{
+		err = stream.Send(&storage2.UploadFileRequest{
+			Data: &storage2.UploadFileRequest_Chunk{
 				Chunk: buf,
 			},
 		})
@@ -81,7 +81,7 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 		return domstorage.File{}, err
 	}
 
-	var res *storage.UploadFileResponse
+	var res *storage2.UploadFileResponse
 	res, err = stream.CloseAndRecv()
 	if err != nil {
 		return domstorage.File{}, err
@@ -96,7 +96,7 @@ func (api *StorageClient) Upload(ctx context.Context, domainId int64, uuid strin
 }
 
 func (api *StorageClient) Download(ctx context.Context, domainId, id int64) (io.ReadCloser, error) {
-	stream, err := api.file.API.DownloadFile(ctx, &storage.DownloadFileRequest{
+	stream, err := api.file.API.DownloadFile(ctx, &storage2.DownloadFileRequest{
 		Id:       id,
 		DomainId: domainId,
 		Metadata: false,
@@ -108,7 +108,7 @@ func (api *StorageClient) Download(ctx context.Context, domainId, id int64) (io.
 	reader, writer := io.Pipe()
 
 	go func(w io.WriteCloser) {
-		var sf *storage.StreamFile
+		var sf *storage2.StreamFile
 		var err error
 		for {
 			sf, err = stream.Recv()
@@ -116,7 +116,7 @@ func (api *StorageClient) Download(ctx context.Context, domainId, id int64) (io.
 				break
 			}
 
-			if r, ok := sf.Data.(*storage.StreamFile_Chunk); ok {
+			if r, ok := sf.Data.(*storage2.StreamFile_Chunk); ok {
 				writer.Write(r.Chunk)
 			}
 		}
@@ -127,7 +127,7 @@ func (api *StorageClient) Download(ctx context.Context, domainId, id int64) (io.
 }
 
 func (api *StorageClient) GenerateFileLink(ctx context.Context, fileId, domainId int64, source, action string, query map[string]string) (string, error) {
-	uri, err := api.file.API.GenerateFileLink(ctx, &storage.GenerateFileLinkRequest{
+	uri, err := api.file.API.GenerateFileLink(ctx, &storage2.GenerateFileLinkRequest{
 		DomainId: domainId,
 		FileId:   fileId,
 		Source:   source,
@@ -141,16 +141,16 @@ func (api *StorageClient) GenerateFileLink(ctx context.Context, fileId, domainId
 }
 
 func (api *StorageClient) BulkGenerateFileLink(ctx context.Context, domainId int64, files []domstorage.FileLinkRequest) ([]string, error) {
-	data := make([]*storage.GenerateFileLinkRequest, len(files))
+	data := make([]*storage2.GenerateFileLinkRequest, len(files))
 	for i, v := range files {
-		data[i] = &storage.GenerateFileLinkRequest{
+		data[i] = &storage2.GenerateFileLinkRequest{
 			DomainId: domainId,
 			FileId:   v.FileId,
 			Source:   v.Source,
 			Action:   v.Action,
 		}
 	}
-	res, err := api.file.API.BulkGenerateFileLink(ctx, &storage.BulkGenerateFileLinkRequest{
+	res, err := api.file.API.BulkGenerateFileLink(ctx, &storage2.BulkGenerateFileLinkRequest{
 		Files: data,
 	})
 	if err != nil {
@@ -166,7 +166,7 @@ func (api *StorageClient) BulkGenerateFileLink(ctx context.Context, domainId int
 }
 
 func (api *StorageClient) GetFileTranscription(ctx context.Context, fileId, domainId, profileId int64, language string) (string, error) {
-	resp, err := api.transcript.API.FileTranscriptSafe(ctx, &storage.FileTranscriptSafeRequest{
+	resp, err := api.transcript.API.FileTranscriptSafe(ctx, &storage2.FileTranscriptSafeRequest{
 		FileId:    fileId,
 		Locale:    language,
 		ProfileId: profileId,
@@ -178,15 +178,15 @@ func (api *StorageClient) GetFileTranscription(ctx context.Context, fileId, doma
 	return resp.Transcript, nil
 }
 
-func fileChannel(s string) storage.UploadFileChannel {
+func fileChannel(s string) storage2.UploadFileChannel {
 	switch s {
 	case domstorage.ChannelCall:
-		return storage.UploadFileChannel_CallChannel
+		return storage2.UploadFileChannel_CallChannel
 	case domstorage.ChannelMail:
-		return storage.UploadFileChannel_MailChannel
+		return storage2.UploadFileChannel_MailChannel
 	case domstorage.ChannelChat:
-		return storage.UploadFileChannel_ChatChannel
+		return storage2.UploadFileChannel_ChatChannel
 	default:
-		return storage.UploadFileChannel_UnknownChannel
+		return storage2.UploadFileChannel_UnknownChannel
 	}
 }

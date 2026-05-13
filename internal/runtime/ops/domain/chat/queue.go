@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	genpb "github.com/webitel/flow_manager/gen/cc"
+	"github.com/webitel/flow_manager/api/gen/cc"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
 	"github.com/webitel/flow_manager/model"
@@ -18,7 +18,7 @@ type QueueDeps interface {
 	CancelAttempt(ctx context.Context, att model.InQueueKey, result string) error
 	FindQueueByName(domainId int64, name string) (int32, error)
 	GetAgentIdByExtension(domainId int64, extension string) (*int32, error)
-	JoinChatToInboundQueue(ctx context.Context, in *genpb.ChatJoinToQueueRequest) (genpb.MemberService_ChatJoinToQueueClient, error)
+	JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error)
 }
 
 // RegisterQueue adds cancelQueue and joinQueue to reg.
@@ -118,9 +118,9 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	timerCtx, timerCancel := context.WithCancel(ctx)
 	defer timerCancel()
 
-	stream, err := o.deps.JoinChatToInboundQueue(ctx, &genpb.ChatJoinToQueueRequest{
+	stream, err := o.deps.JoinChatToInboundQueue(ctx, &cc.ChatJoinToQueueRequest{
 		ConversationId: conv.Id(),
-		Queue: &genpb.ChatJoinToQueueRequest_Queue{
+		Queue: &cc.ChatJoinToQueueRequest_Queue{
 			Id:   argv.Queue.Id,
 			Name: argv.Queue.Name,
 		},
@@ -140,7 +140,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 	setVars := make(map[string]string)
 
 	for {
-		var msg genpb.QueueEvent
+		var msg cc.QueueEvent
 		if recvErr := stream.RecvMsg(&msg); recvErr != nil {
 			if recvErr != io.EOF {
 				return ops.OpOutput{SetVars: setVars}, nil
@@ -149,28 +149,28 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		}
 
 		switch e := msg.Data.(type) {
-		case *genpb.QueueEvent_Joined:
+		case *cc.QueueEvent_Joined:
 			conv.SetQueue(&model.InQueueKey{
 				AttemptId: e.Joined.GetAttemptId(),
 				AppId:     e.Joined.GetAppId(),
 			})
 
-		case *genpb.QueueEvent_Offering:
+		case *cc.QueueEvent_Offering:
 			name := e.Offering.GetAgentName()
 			id := strconv.Itoa(int(e.Offering.GetAgentId()))
 			_, _ = conv.Set(ctx, model.Variables{"cc_agent_name": name, "cc_agent_id": id})
 			setVars["cc_agent_name"] = name
 			setVars["cc_agent_id"] = id
 
-		case *genpb.QueueEvent_Missed:
+		case *cc.QueueEvent_Missed:
 			_, _ = conv.Set(ctx, model.Variables{"cc_agent_name": "", "cc_agent_id": ""})
 			setVars["cc_agent_name"] = ""
 			setVars["cc_agent_id"] = ""
 
-		case *genpb.QueueEvent_Bridged:
+		case *cc.QueueEvent_Bridged:
 			timerCancel()
 
-		case *genpb.QueueEvent_Leaving:
+		case *cc.QueueEvent_Leaving:
 			result := e.Leaving.GetResult()
 			_, _ = conv.Set(ctx, model.Variables{"cc_result": result})
 			setVars["cc_result"] = result

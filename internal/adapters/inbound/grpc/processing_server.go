@@ -7,7 +7,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/gen/workflow"
+	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/pkg/processing"
@@ -21,7 +21,7 @@ var (
 type processingApi struct {
 	connections model.ObjectCache
 	*Server
-	workflow.UnsafeFlowProcessingServiceServer
+	workflow2.UnsafeFlowProcessingServiceServer
 }
 
 func NewProcessingApi(s *Server) *processingApi {
@@ -31,7 +31,7 @@ func NewProcessingApi(s *Server) *processingApi {
 	}
 }
 
-func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartProcessingRequest) (*workflow.Form, error) {
+func (s *processingApi) StartProcessing(ctx context.Context, in *workflow2.StartProcessingRequest) (*workflow2.Form, error) {
 	c := NewProcessingConnection(in.DomainId, int(in.SchemaId), in.Variables)
 	s.connections.AddWithDefaultExpires(c.id, c)
 
@@ -63,7 +63,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 		return nil, nil
 	}
 
-	return &workflow.Form{
+	return &workflow2.Form{
 		Id:      c.id,
 		AppId:   c.appId,
 		Form:    f.ToJson(),
@@ -73,7 +73,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow.StartP
 	}, nil
 }
 
-func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionRequest) (*workflow.Form, error) {
+func (s *processingApi) FormAction(ctx context.Context, in *workflow2.FormActionRequest) (*workflow2.Form, error) {
 	c, err := s.getProcessingById(in.GetId())
 	if err != nil {
 		return nil, err
@@ -102,7 +102,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 		return nil, nil
 	}
 
-	return &workflow.Form{
+	return &workflow2.Form{
 		Id:      c.id,
 		AppId:   c.appId,
 		Form:    f.ToJson(),
@@ -112,7 +112,7 @@ func (s *processingApi) FormAction(ctx context.Context, in *workflow.FormActionR
 	}, nil
 }
 
-func (s *processingApi) ComponentAction(ctx context.Context, in *workflow.ComponentActionRequest) (*workflow.ComponentActionResponse, error) {
+func (s *processingApi) ComponentAction(ctx context.Context, in *workflow2.ComponentActionRequest) (*workflow2.ComponentActionResponse, error) {
 	p, err := s.getProcessingById(in.GetId())
 	if err != nil {
 		return nil, err
@@ -129,10 +129,10 @@ func (s *processingApi) ComponentAction(ctx context.Context, in *workflow.Compon
 		return nil, err
 	}
 
-	return &workflow.ComponentActionResponse{}, nil
+	return &workflow2.ComponentActionResponse{}, nil
 }
 
-func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.CancelProcessingRequest) (*workflow.CancelProcessingResponse, error) {
+func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow2.CancelProcessingRequest) (*workflow2.CancelProcessingResponse, error) {
 	c, err := s.getProcessingById(in.GetId())
 	if err != nil {
 		return nil, err
@@ -141,7 +141,7 @@ func (s *processingApi) CancelProcessing(ctx context.Context, in *workflow.Cance
 	if closeErr := c.Close(); closeErr != nil {
 		return nil, closeErr
 	}
-	return &workflow.CancelProcessingResponse{}, nil
+	return &workflow2.CancelProcessingResponse{}, nil
 }
 
 func (s *processingApi) getProcessingById(id string) (*processingConnection, error) {

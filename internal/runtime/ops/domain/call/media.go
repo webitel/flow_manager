@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/webitel/flow_manager/gen/ai_bots"
+	"github.com/webitel/flow_manager/api/gen/ai_bots"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -161,7 +161,7 @@ func doStopStt(ctx context.Context, call model.Call, gs *model.GetSpeech, vSleep
 	if wbtError != "" {
 		return fmt.Errorf("Playback.Stt: call.stt.error: %s", wbtError)
 	}
-	call.Set(ctx, map[string]interface{}{vSleepTimeout: "true"}) //nolint:errcheck
+	call.Set(ctx, map[string]any{vSleepTimeout: "true"}) //nolint:errcheck
 	isFinal, _ := call.Get(vStatus)
 	if isFinal != vFinal {
 		if _, err := call.Playback(ctx, []*model.PlaybackFile{{
@@ -243,7 +243,7 @@ func (o *ttsOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput, erro
 			if wbtError != "" {
 				return ops.OpOutput{}, fmt.Errorf("tts.stt: call.stt.error: %s", wbtError)
 			}
-			call.Set(ctx, map[string]interface{}{"google_play_sleep_timeout": "true"}) //nolint:errcheck
+			call.Set(ctx, map[string]any{"google_play_sleep_timeout": "true"}) //nolint:errcheck
 			isFinal, _ := call.Get("google_final")
 			if isFinal != "true" {
 				if _, err := call.Playback(ctx, []*model.PlaybackFile{{

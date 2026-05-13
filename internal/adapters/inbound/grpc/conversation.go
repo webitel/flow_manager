@@ -13,8 +13,8 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/gen/ai_bots"
-	proto "github.com/webitel/flow_manager/gen/chat"
+	ai_bots2 "github.com/webitel/flow_manager/api/gen/ai_bots"
+	chat2 "github.com/webitel/flow_manager/api/gen/chat"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 )
@@ -35,12 +35,12 @@ type conversation struct {
 	chBridge      chan struct{}
 	breakCause    string
 
-	confirmation    map[string]chan []*proto.Message
+	confirmation    map[string]chan []*chat2.Message
 	exportVariables []string
 	nodeId          string
 	userId          int64
 	queueKey        *model.InQueueKey
-	messages        []*proto.Message
+	messages        []*chat2.Message
 
 	inboundHandlers map[uint64]func(text string)
 	nextHandlerID   uint64
@@ -65,7 +65,7 @@ func NewConversation(cli *ChatClientConnection, id string, domainId, profileId i
 		cancel:        cancel,
 		userId:        userId,
 		storeMessages: make(map[string][]byte),
-		confirmation:  make(map[string]chan []*proto.Message),
+		confirmation:  make(map[string]chan []*chat2.Message),
 		nodeId:        cli.Name(),
 		log: wlog.GlobalLogger().With(
 			wlog.String("conversation_id", id),
@@ -182,7 +182,7 @@ func (c *conversation) setTransferVariable() {
 			vars = make(map[string]string)
 		}
 		vars["chat_transferred"] = "true"
-		c.client.api.SetVariables(context.TODO(), &proto.SetVariablesRequest{
+		c.client.api.SetVariables(context.TODO(), &chat2.SetVariablesRequest{
 			ChannelId: c.id,
 			Variables: vars,
 		})
@@ -201,9 +201,9 @@ func (c *conversation) ProfileId() int64 {
 }
 
 func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &proto.Message{
+		Message: &chat2.Message{
 			Type:    msg.Type,
 			Text:    msg.Text,
 			Buttons: getChatButtons(msg.Buttons),
@@ -221,9 +221,9 @@ func (c *conversation) SendMessage(ctx context.Context, msg model.ChatMessageOut
 }
 
 func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &proto.Message{
+		Message: &chat2.Message{
 			Type: "text", // FIXME
 			Text: text,
 		},
@@ -235,14 +235,14 @@ func (c *conversation) SendTextMessage(ctx context.Context, text string) (model.
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRequest) error {
+func (c *conversation) sendMessage(ctx context.Context, req *chat2.SendMessageRequest) error {
 	_, err := c.client.api.SendMessage(ctx, req)
 	if err != nil {
 		textErr := err.Error()
 		if strings.Index(textErr, `"id":"chat.send.channel.from.closed"`) != -1 {
-			c.client.api.CloseConversation(c.ctx, &proto.CloseConversationRequest{
+			c.client.api.CloseConversation(c.ctx, &chat2.CloseConversationRequest{
 				ConversationId: c.id,
-				Cause:          proto.CloseConversationCause_flow_err,
+				Cause:          chat2.CloseConversationCause_flow_err,
 			})
 			c.Break("error")
 		}
@@ -256,7 +256,7 @@ func (c *conversation) sendMessage(ctx context.Context, req *proto.SendMessageRe
 }
 
 func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, error) {
-	req := &proto.Message{
+	req := &chat2.Message{
 		Type:    "text",
 		Text:    menu.Text,
 		Buttons: getChatButtons(menu.Buttons),
@@ -265,7 +265,7 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 	}
 	// menu.Set // fixme
 
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		Message:        req,
 		ConversationId: c.Id(),
 	})
@@ -277,13 +277,13 @@ func (c *conversation) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (
 }
 
 func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, kind string) (model.Response, error) {
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &proto.Message{
+		Message: &chat2.Message{
 			Type: "file", // FIXME
 			Text: text,
 			Kind: kind,
-			File: &proto.File{
+			File: &chat2.File{
 				Url:  url,
 				Name: name,
 			},
@@ -297,9 +297,9 @@ func (c *conversation) SendImageMessage(ctx context.Context, url, name, text, ki
 }
 
 func (c *conversation) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &proto.Message{
+		Message: &chat2.Message{
 			Type: "file", // FIXME
 			Text: text,
 			Kind: kind,
@@ -314,12 +314,12 @@ func (c *conversation) SendFile(ctx context.Context, text string, f *model.File,
 }
 
 func (c *conversation) proto(ctx context.Context, url, name, text string) (model.Response, error) {
-	err := c.sendMessage(ctx, &proto.SendMessageRequest{
+	err := c.sendMessage(ctx, &chat2.SendMessageRequest{
 		ConversationId: c.id,
-		Message: &proto.Message{
+		Message: &chat2.Message{
 			Text: text,
 			Type: "file", // FIXME
-			File: &proto.File{
+			File: &chat2.File{
 				Id:   1, // TODO
 				Url:  url,
 				Name: name,
@@ -333,7 +333,7 @@ func (c *conversation) proto(ctx context.Context, url, name, text string) (model
 	return model.CallResponseOK, nil
 }
 
-func (c *conversation) addConfirmationId(id string, ch chan []*proto.Message) {
+func (c *conversation) addConfirmationId(id string, ch chan []*chat2.Message) {
 	c.mx.Lock()
 	c.confirmation[id] = ch
 	c.mx.Unlock()
@@ -345,7 +345,7 @@ func (c *conversation) deleteConfirmationId(id string) {
 	c.mx.Unlock()
 }
 
-func (c *conversation) saveMessages(msgs ...*proto.Message) {
+func (c *conversation) saveMessages(msgs ...*chat2.Message) {
 	c.mx.Lock()
 	c.messages = append(c.messages, msgs...)
 	c.mx.Unlock()
@@ -383,7 +383,7 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout,
 	}
 
 	if messageTimeout > 0 {
-		var m []*proto.Message
+		var m []*chat2.Message
 		for err == nil {
 			m, err = c.receive(ctx, messageTimeout)
 			msgs = append(msgs, m...)
@@ -396,15 +396,15 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout,
 	return messageToText(msgs...), nil
 }
 
-func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Message, error) {
+func (c *conversation) receive(ctx context.Context, timeout int) ([]*chat2.Message, error) {
 	id := model.NewId()
 
-	ch := make(chan []*proto.Message)
+	ch := make(chan []*chat2.Message)
 	c.addConfirmationId(id, ch)
 	defer c.deleteConfirmationId(id)
 
 	// TODO rename server api
-	res, err := c.client.api.WaitMessage(ctx, &proto.WaitMessageRequest{
+	res, err := c.client.api.WaitMessage(ctx, &chat2.WaitMessageRequest{
 		ConversationId: c.id,
 		ConfirmationId: id,
 	})
@@ -441,10 +441,10 @@ func (c *conversation) NodeName() string {
 	return c.NodeId()
 }
 
-func (c *conversation) Stop(err error, cause proto.CloseConversationCause) {
+func (c *conversation) Stop(err error, cause chat2.CloseConversationCause) {
 	if err != nil {
 		c.log.Err(err)
-		cause = proto.CloseConversationCause_flow_err
+		cause = chat2.CloseConversationCause_flow_err
 	}
 
 	// When breakCause != "" - messages-srv initiated close via Break,
@@ -454,7 +454,7 @@ func (c *conversation) Stop(err error, cause proto.CloseConversationCause) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		_, e := c.client.api.CloseConversation(ctx, &proto.CloseConversationRequest{
+		_, e := c.client.api.CloseConversation(ctx, &chat2.CloseConversationRequest{
 			ConversationId: c.id,
 			Cause:          cause,
 		})
@@ -482,7 +482,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 
 	if len(exp) > 0 {
 		if c.BreakCause() == "" {
-			_, err := c.client.api.SetVariables(ctx, &proto.SetVariablesRequest{
+			_, err := c.client.api.SetVariables(ctx, &chat2.SetVariablesRequest{
 				ChannelId: c.id,
 				Variables: transferVars,
 			})
@@ -498,7 +498,7 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 
 func (c *conversation) UnSet(ctx context.Context, varKeys []string) (model.Response, error) {
 	vars := model.Variables{}
-	req := &proto.SetVariablesRequest{
+	req := &chat2.SetVariablesRequest{
 		ChannelId: c.id,
 		Variables: make(map[string]string),
 	}
@@ -533,8 +533,8 @@ func (c *conversation) Bridge(ctx context.Context, userId int64, timeout int) er
 		}
 	}
 
-	res, err := c.client.api.InviteToConversation(ctx, &proto.InviteToConversationRequest{
-		User: &proto.User{
+	res, err := c.client.api.InviteToConversation(ctx, &chat2.InviteToConversationRequest{
+		User: &chat2.User{
 			UserId:   userId,
 			Type:     "webitel",
 			Internal: true,
@@ -583,12 +583,12 @@ func (c *conversation) Variables() map[string]string {
 func (c *conversation) StartWaiting(timeout int) {
 	go func() {
 		id := model.NewId()
-		ch := make(chan []*proto.Message, 1)
+		ch := make(chan []*chat2.Message, 1)
 		c.addConfirmationId(id, ch)
 		defer c.deleteConfirmationId(id)
 
 		ctx := c.ctx
-		res, err := c.client.api.WaitMessage(ctx, &proto.WaitMessageRequest{
+		res, err := c.client.api.WaitMessage(ctx, &chat2.WaitMessageRequest{
 			ConversationId: c.id,
 			ConfirmationId: id,
 		})
@@ -596,7 +596,7 @@ func (c *conversation) StartWaiting(timeout int) {
 			return
 		}
 
-		var msgs []*proto.Message
+		var msgs []*chat2.Message
 		if len(res.Messages) > 0 {
 			msgs = res.Messages
 		} else {
@@ -680,8 +680,8 @@ func (c *conversation) GetQueueKey() *model.InQueueKey {
 	return c.queueKey
 }
 
-func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClient, id string) (model.Response, error) {
-	var res *ai_bots.ConverseResponse
+func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClient, id string) (model.Response, error) {
+	var res *ai_bots2.ConverseResponse
 	stream, err := cli.Converse(ctx)
 	if err != nil {
 		return model.CallResponseError, nil
@@ -689,9 +689,9 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClien
 
 	defer stream.CloseSend()
 
-	err = stream.Send(&ai_bots.ConverseRequest{
-		RequestType: &ai_bots.ConverseRequest_Config{
-			Config: &ai_bots.Config{
+	err = stream.Send(&ai_bots2.ConverseRequest{
+		RequestType: &ai_bots2.ConverseRequest_Config{
+			Config: &ai_bots2.Config{
 				ConversationId: c.id,
 				DialogId:       id,
 				UserData:       nil,
@@ -710,10 +710,10 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots.ConverseServiceClien
 				return
 			}
 
-			err2 := stream.Send(&ai_bots.ConverseRequest{
-				RequestType: &ai_bots.ConverseRequest_Input{
-					Input: &ai_bots.Input{
-						Data: &ai_bots.Input_TextData{
+			err2 := stream.Send(&ai_bots2.ConverseRequest{
+				RequestType: &ai_bots2.ConverseRequest_Input{
+					Input: &ai_bots2.Input{
+						Data: &ai_bots2.Input_TextData{
 							TextData: strings.Join(msg, "."),
 						},
 					},
@@ -756,19 +756,19 @@ func (c *conversation) actualizeClient(cli *ChatClientConnection) {
 	}
 }
 
-func getChatButtons(buttons [][]model.ChatButton) []*proto.Buttons {
+func getChatButtons(buttons [][]model.ChatButton) []*chat2.Buttons {
 	l := len(buttons)
 
 	if l == 0 {
 		return nil
 	}
 
-	res := make([]*proto.Buttons, 0, l)
+	res := make([]*chat2.Buttons, 0, l)
 
 	for _, v := range buttons {
-		btns := make([]*proto.Button, 0, len(v))
+		btns := make([]*chat2.Button, 0, len(v))
 		for _, b := range v {
-			btns = append(btns, &proto.Button{
+			btns = append(btns, &chat2.Button{
 				Text: b.Text,
 				Type: b.Type,
 				Url:  b.Url,
@@ -776,7 +776,7 @@ func getChatButtons(buttons [][]model.ChatButton) []*proto.Buttons {
 			})
 		}
 
-		res = append(res, &proto.Buttons{
+		res = append(res, &chat2.Buttons{
 			Button: btns,
 		})
 	}
@@ -784,12 +784,12 @@ func getChatButtons(buttons [][]model.ChatButton) []*proto.Buttons {
 	return res
 }
 
-func getFile(f *model.File) *proto.File {
+func getFile(f *model.File) *chat2.File {
 	if f == nil {
 		return nil
 	}
 
-	return &proto.File{
+	return &chat2.File{
 		Id:   int64(f.Id), // TODO
 		Url:  f.Url,
 		Mime: f.MimeType,

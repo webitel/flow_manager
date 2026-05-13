@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	pb "github.com/webitel/flow_manager/gen/cases"
+	cases2 "github.com/webitel/flow_manager/api/gen/cases"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 )
@@ -62,7 +62,7 @@ type getCasesOp struct{ client domcases.Client }
 func (o *getCasesOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getCasesArgs struct {
-	pb.SearchCasesRequest
+	cases2.SearchCasesRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -89,7 +89,7 @@ type locateCaseOp struct{ client domcases.Client }
 func (o *locateCaseOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type locateCaseArgs struct {
-	pb.LocateCaseRequest
+	cases2.LocateCaseRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -116,7 +116,7 @@ type createCaseOp struct{ client domcases.Client }
 func (o *createCaseOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type createCaseArgs struct {
-	pb.CreateCaseRequest
+	cases2.CreateCaseRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -143,7 +143,7 @@ type updateCaseOp struct{ client domcases.Client }
 func (o *updateCaseOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type updateCaseArgs struct {
-	pb.UpdateCaseRequest
+	cases2.UpdateCaseRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -170,7 +170,7 @@ type linkCommunicationOp struct{ client domcases.Client }
 func (o *linkCommunicationOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type linkCommunicationArgs struct {
-	pb.LinkCommunicationRequest
+	cases2.LinkCommunicationRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -197,7 +197,7 @@ type getServiceCatalogsOp struct{ client domcases.Client }
 func (o *getServiceCatalogsOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type getServiceCatalogsArgs struct {
-	pb.ListCatalogRequest
+	cases2.ListCatalogRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -224,7 +224,7 @@ type publishCommentOp struct{ client domcases.Client }
 func (o *publishCommentOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type publishCommentArgs struct {
-	pb.PublishCommentRequest
+	cases2.PublishCommentRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -251,7 +251,7 @@ type createLinkOp struct{ client domcases.Client }
 func (o *createLinkOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type createLinkArgs struct {
-	pb.CreateLinkRequest
+	cases2.CreateLinkRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -278,7 +278,7 @@ type deleteLinkOp struct{ client domcases.Client }
 func (o *deleteLinkOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type deleteLinkArgs struct {
-	pb.DeleteLinkRequest
+	cases2.DeleteLinkRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -305,7 +305,7 @@ type locateServiceOp struct{ client domcases.Client }
 func (o *locateServiceOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type locateServiceArgs struct {
-	pb.LocateServiceRequest
+	cases2.LocateServiceRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -332,7 +332,7 @@ type createRelatedCaseOp struct{ client domcases.Client }
 func (o *createRelatedCaseOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type createRelatedCaseArgs struct {
-	pb.CreateRelatedCaseRequest
+	cases2.CreateRelatedCaseRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }
@@ -359,7 +359,7 @@ type listCaseFilesOp struct{ client domcases.Client }
 func (o *listCaseFilesOp) Kind() ops.OpKind { return ops.OpKindSync }
 
 type listCaseFilesArgs struct {
-	pb.ListFilesRequest
+	cases2.ListFilesRequest
 	Token  string `json:"token"`
 	SetVar string `json:"setVar"`
 }

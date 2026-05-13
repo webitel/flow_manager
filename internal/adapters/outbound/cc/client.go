@@ -5,7 +5,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	genpb "github.com/webitel/flow_manager/gen/cc"
+	cc2 "github.com/webitel/flow_manager/api/gen/cc"
 	"github.com/webitel/flow_manager/infra/grpcdial"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/model"
@@ -17,8 +17,8 @@ type ccManager struct {
 	startOnce  sync.Once
 	consulAddr string
 
-	agentClient  *grpcdial.Client[genpb.AgentServiceClient]
-	memberClient *grpcdial.Client[genpb.MemberServiceClient]
+	agentClient  *grpcdial.Client[cc2.AgentServiceClient]
+	memberClient *grpcdial.Client[cc2.MemberServiceClient]
 
 	agent    domcc.AgentApi
 	member   domcc.MemberApi
@@ -52,12 +52,12 @@ func (cm *ccManager) Start() error {
 	var err error
 
 	cm.startOnce.Do(func() {
-		cm.agentClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, genpb.NewAgentServiceClient)
+		cm.agentClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, cc2.NewAgentServiceClient)
 		if err != nil {
 			return
 		}
 
-		cm.memberClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, genpb.NewMemberServiceClient)
+		cm.memberClient, err = grpcdial.NewClient(cm.consulAddr, ServiceName, cc2.NewMemberServiceClient)
 		if err != nil {
 			return
 		}

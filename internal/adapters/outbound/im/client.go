@@ -10,7 +10,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	p "github.com/webitel/flow_manager/api/gen/im/api/gateway/v1"
 	"github.com/webitel/flow_manager/infra/grpcdial"
 )
 

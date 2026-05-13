@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"time"
 
-	proto "github.com/webitel/flow_manager/gen/chat"
+	proto "github.com/webitel/flow_manager/api/gen/chat"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
+	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
 	"github.com/webitel/flow_manager/internal/runtime/ops/domain/messaging"
-	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
 	"github.com/webitel/flow_manager/internal/runtime/sessionmgr"
@@ -35,7 +35,7 @@ func Init(deps Deps) model.Router {
 	}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
-		Deps:     deps,
+		Deps: deps,
 		ExtraOps: func(reg *ops.Registry) {
 			chatop.Register(reg, deps)
 			chatop.RegisterSend(reg, deps)
@@ -190,4 +190,3 @@ func (r *Router) teardownNative(
 
 	session.Close(r.fm.CheckpointRepo(), r.fm.Log(), cp, conn.Id())
 }
-

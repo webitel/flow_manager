@@ -3,8 +3,8 @@ package model
 import (
 	"context"
 
-	"github.com/webitel/flow_manager/gen/ai_bots"
-	proto "github.com/webitel/flow_manager/gen/chat"
+	"github.com/webitel/flow_manager/api/gen/ai_bots"
+	proto "github.com/webitel/flow_manager/api/gen/chat"
 	chatdomain "github.com/webitel/flow_manager/internal/domain/chat"
 )
 
@@ -18,15 +18,17 @@ const (
 )
 
 // Re-exports for backward compatibility.
-type ChatAction = chatdomain.ChatAction
-type ChatButton = chatdomain.ChatButton
-type ChatMenuArgs = chatdomain.ChatMenuArgs
-type ChatMessageOutbound = chatdomain.ChatMessageOutbound
-type BroadcastPeer = chatdomain.BroadcastPeer
-type BroadcastChat = chatdomain.BroadcastChat
-type BroadcastChatResponse = chatdomain.BroadcastChatResponse
-type FailedReceiver = chatdomain.FailedReceiver
-type ChatMessage = chatdomain.ChatMessage
+type (
+	ChatAction            = chatdomain.ChatAction
+	ChatButton            = chatdomain.ChatButton
+	ChatMenuArgs          = chatdomain.ChatMenuArgs
+	ChatMessageOutbound   = chatdomain.ChatMessageOutbound
+	BroadcastPeer         = chatdomain.BroadcastPeer
+	BroadcastChat         = chatdomain.BroadcastChat
+	BroadcastChatResponse = chatdomain.BroadcastChatResponse
+	FailedReceiver        = chatdomain.FailedReceiver
+	ChatMessage           = chatdomain.ChatMessage
+)
 
 const (
 	ChatActionTyping = chatdomain.ChatActionTyping
@@ -43,8 +45,8 @@ type Conversation interface {
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, error)
 	SendTextMessage(ctx context.Context, text string) (Response, error)
 	SendMenu(ctx context.Context, menu *ChatMenuArgs) (Response, error)
-	SendImageMessage(ctx context.Context, url string, name string, text string, kind string) (Response, error)
-	ReceiveMessage(ctx context.Context, name string, timeout int, messageTimeout int) ([]string, error)
+	SendImageMessage(ctx context.Context, url, name, text, kind string) (Response, error)
+	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, error)
 	Bridge(ctx context.Context, userId int64, timeout int) error
 	Export(ctx context.Context, vars []string) (Response, error)
 	DumpExportVariables() map[string]string

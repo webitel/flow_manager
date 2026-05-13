@@ -13,7 +13,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	"github.com/webitel/flow_manager/api/gen/im/api/gateway/v1"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -137,27 +137,27 @@ func (c *Connection) LastMessage() model.Message {
 }
 
 func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
-	var docs []*p.ImageInput
+	var docs []*thread.ImageInput
 
 	if msg.File != nil {
 		f := msg.File
-		docs = append(docs, &p.ImageInput{
+		docs = append(docs, &thread.ImageInput{
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
 		})
 	}
 
-	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{
-			Kind: &p.Peer_Contact{
-				Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendImageRequest{
+		To: &thread.Peer{
+			Kind: &thread.Peer_Contact{
+				Contact: &thread.PeerIdentity{
 					Sub: c.msg.From.Sub,
 					Iss: c.msg.From.Issuer,
 				},
 			},
 		},
-		Image: &p.ImageRequest{
+		Image: &thread.ImageRequest{
 			Images: docs,
 			Body:   msg.Text,
 		},
@@ -170,10 +170,10 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, error) {
-	_, err := c.srv.client.API.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendTextRequest{
-		To: &p.Peer{
-			Kind: &p.Peer_Contact{
-				Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendText(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendTextRequest{
+		To: &thread.Peer{
+			Kind: &thread.Peer_Contact{
+				Contact: &thread.PeerIdentity{
 					Sub: c.msg.From.Sub,
 					Iss: c.msg.From.Issuer,
 				},
@@ -188,22 +188,22 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 }
 
 func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
-	var images []*p.ImageInput
+	var images []*thread.ImageInput
 	if msg.File != nil {
 		f := msg.File
-		images = append(images, &p.ImageInput{
+		images = append(images, &thread.ImageInput{
 			Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
 		})
 	}
-	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendImageRequest{
+		To: &thread.Peer{Kind: &thread.Peer_Contact{Contact: &thread.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Image: &p.ImageRequest{Images: images, Body: msg.Text},
+		Image: &thread.ImageRequest{Images: images, Body: msg.Text},
 	})
 	if err != nil {
 		return model.CallResponseError, fmt.Errorf("SendImageMessage: conv.msg: %w", err)
@@ -212,22 +212,22 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 }
 
 func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, error) {
-	var docs []*p.DocumentInput
+	var docs []*thread.DocumentInput
 	if msg.File != nil {
 		f := msg.File
-		docs = append(docs, &p.DocumentInput{
+		docs = append(docs, &thread.DocumentInput{
 			FileName:  f.Name,
 			Url:       f.Url,
 			MimeType:  f.MimeType,
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendDocumentRequest{
+		To: &thread.Peer{Kind: &thread.Peer_Contact{Contact: &thread.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Document: &p.DocumentRequest{Documents: docs, Body: msg.Text},
+		Document: &thread.DocumentRequest{Documents: docs, Body: msg.Text},
 	})
 	if err != nil {
 		return model.CallResponseError, fmt.Errorf("SendDocumentMessage: conv.msg: %w", err)
@@ -236,21 +236,21 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 }
 
 func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, kind string) (model.Response, error) {
-	var docs []*p.DocumentInput
+	var docs []*thread.DocumentInput
 	if f != nil {
-		docs = append(docs, &p.DocumentInput{
+		docs = append(docs, &thread.DocumentInput{
 			FileName:  f.Name,
 			Url:       f.Url,
 			MimeType:  f.MimeType,
 			SizeBytes: &f.Size,
 		})
 	}
-	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendDocumentRequest{
+		To: &thread.Peer{Kind: &thread.Peer_Contact{Contact: &thread.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Document: &p.DocumentRequest{Documents: docs, Body: text},
+		Document: &thread.DocumentRequest{Documents: docs, Body: text},
 	})
 	if err != nil {
 		return model.CallResponseError, fmt.Errorf("SendFile: conv.msg: %w", err)
@@ -264,15 +264,15 @@ func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (mo
 		rows = buildKeyboardRows(menu.Inline)
 	}
 
-	_, err := c.srv.client.API.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	_, err := c.srv.client.API.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &thread.SendInteractiveMessageRequest{
+		To: &thread.Peer{Kind: &thread.Peer_Contact{Contact: &thread.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
 		Body: &menu.Text,
-		Interactive: &p.Interactive{
-			Kind: &p.Interactive_Markup{
-				Markup: &p.KeyboardMarkup{Rows: rows},
+		Interactive: &thread.Interactive{
+			Kind: &thread.Interactive_Markup{
+				Markup: &thread.KeyboardMarkup{Rows: rows},
 			},
 		},
 	})
@@ -282,23 +282,23 @@ func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (mo
 	return model.CallResponseOK, nil
 }
 
-func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
-	rows := make([]*p.KeyboardRow, 0, len(src))
+func buildKeyboardRows(src [][]model.ChatButton) []*thread.KeyboardRow {
+	rows := make([]*thread.KeyboardRow, 0, len(src))
 	for _, row := range src {
-		buttons := make([]*p.KeyboardButton, 0, len(row))
+		buttons := make([]*thread.KeyboardButton, 0, len(row))
 		for _, btn := range row {
-			kb := &p.KeyboardButton{Label: btn.Caption}
+			kb := &thread.KeyboardButton{Label: btn.Caption}
 			switch {
 			case btn.Type == "url":
-				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
+				kb.Kind = &thread.KeyboardButton_Url{Url: &thread.KeyboardButtonURL{Url: btn.Url}}
 			case btn.Code != "":
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Code}}
+				kb.Kind = &thread.KeyboardButton_Callback{Callback: &thread.KeyboardButtonCallback{Data: btn.Code}}
 			default:
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
+				kb.Kind = &thread.KeyboardButton_Callback{Callback: &thread.KeyboardButtonCallback{Data: btn.Text}}
 			}
 			buttons = append(buttons, kb)
 		}
-		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
+		rows = append(rows, &thread.KeyboardRow{Buttons: buttons})
 	}
 	return rows
 }
