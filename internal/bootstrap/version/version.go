@@ -1,13 +1,20 @@
-// Package version exposes the application version string.
 package version
 
-import (
-	"fmt"
+import "fmt"
 
-	"github.com/webitel/flow_manager/model"
+var (
+	CurrentVersion string = versions[0]
+	BuildNumber    string
 )
 
-// String returns the human-readable version string "vX.Y.Z [build:N]".
+var versions = []string{
+	"26.02", "25.12", "25.10", "25.08", "25.05", "25.04", "25.02",
+	"24.10", "24.08", "24.04", "24.02",
+	"23.12", "23.09", "23.07", "23.05", "23.02",
+	"22.12", "22.09", "22.07", "22.05",
+	"2019.0.0",
+}
+
 func String() string {
-	return fmt.Sprintf("%s [build:%s]", model.CurrentVersion, model.BuildNumber)
+	return fmt.Sprintf("%s [build:%s]", CurrentVersion, BuildNumber)
 }

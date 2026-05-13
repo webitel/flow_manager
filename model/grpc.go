@@ -1,12 +1,6 @@
 package model
 
-import "context"
+import domgrpc "github.com/webitel/flow_manager/internal/domain/grpc"
 
-type GRPCConnection interface {
-	Connection
-	SchemaId() int
-	Result(result interface{})
-	Export(ctx context.Context, vars []string) (Response, error)
-	DumpExportVariables() map[string]string
-	Scope() Scope
-}
+// Re-export for backward compatibility.
+type GRPCConnection = domgrpc.GRPCConnection
