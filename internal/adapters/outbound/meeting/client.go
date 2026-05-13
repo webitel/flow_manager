@@ -8,7 +8,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/api/gen/web-meeting-backend"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const serviceName = "web_meeting_backend"

@@ -6,7 +6,6 @@ import (
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
 
-	_ "github.com/webitel/flow_manager/infra/resolver"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cacheAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/cache_adapter"
@@ -17,19 +16,20 @@ import (
 	schemaAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/schema"
 	fileAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
+	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
+	bsruntime "github.com/webitel/flow_manager/internal/bootstrap/runtime"
+	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
+	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
+	_ "github.com/webitel/flow_manager/internal/infrastructure/resolver"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	"github.com/webitel/flow_manager/internal/usecase/callback"
-	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
-	bsruntime "github.com/webitel/flow_manager/internal/bootstrap/runtime"
-	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
-	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	callWatcherPkg "github.com/webitel/flow_manager/internal/workers/call_watcher"
 	listWatcher "github.com/webitel/flow_manager/internal/workers/list_watcher"
 	"github.com/webitel/flow_manager/model"
@@ -221,12 +221,12 @@ func (f *FlowManager) Shutdown() {
 }
 
 func (f *FlowManager) Log() *wlog.Logger             { return f.log }
-func (f *FlowManager) AppID() string                  { return f.id }
-func (f *FlowManager) Callback() *callback.Resolver   { return f.cbr }
-func (f *FlowManager) GetStore() store.Store           { return f.Store }
-func (f *FlowManager) GetAiBots() *aibridge.Client     { return f.AiBots }
-func (f *FlowManager) Meeting() domainmeeting.Client   { return f.meeting }
-func (f *FlowManager) Cases() domcases.Client          { return f.cases }
+func (f *FlowManager) AppID() string                 { return f.id }
+func (f *FlowManager) Callback() *callback.Resolver  { return f.cbr }
+func (f *FlowManager) GetStore() store.Store         { return f.Store }
+func (f *FlowManager) GetAiBots() *aibridge.Client   { return f.AiBots }
+func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
+func (f *FlowManager) Cases() domcases.Client        { return f.cases }
 
 // ConsumeCallEvent satisfies call_watcher.CallEventDeps; delegates to eventQueue.
 func (f *FlowManager) ConsumeCallEvent() <-chan model.CallActionData {

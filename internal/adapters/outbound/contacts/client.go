@@ -8,7 +8,7 @@ import (
 	"github.com/webitel/wlog"
 
 	contacts2 "github.com/webitel/flow_manager/api/gen/contacts"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const serviceName = "go.webitel.app"

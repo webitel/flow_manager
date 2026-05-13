@@ -10,7 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	infraSql "github.com/webitel/flow_manager/infra/sql"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/state"
 )

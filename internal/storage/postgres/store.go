@@ -1,7 +1,7 @@
 package postgres
 
 import (
-	infraSql "github.com/webitel/flow_manager/infra/sql"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	"github.com/webitel/flow_manager/store"
 )
 

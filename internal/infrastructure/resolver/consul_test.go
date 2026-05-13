@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
-	"github.com/webitel/flow_manager/infra/resolver/mocks"
+	"github.com/webitel/flow_manager/internal/infrastructure/resolver/mocks"
 )
 
 func TestWatchConsulService(t *testing.T) {

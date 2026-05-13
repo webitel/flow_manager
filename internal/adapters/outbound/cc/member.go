@@ -4,8 +4,8 @@ import (
 	"context"
 
 	cc2 "github.com/webitel/flow_manager/api/gen/cc"
-	"github.com/webitel/flow_manager/infra/grpcdial"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 type memberApi struct {

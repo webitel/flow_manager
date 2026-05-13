@@ -7,8 +7,8 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/discovery"
 	outboundim "github.com/webitel/flow_manager/internal/adapters/outbound/im"
+	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 

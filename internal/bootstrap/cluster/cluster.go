@@ -4,24 +4,24 @@ package cluster
 import (
 	"fmt"
 
-	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	"github.com/webitel/flow_manager/model"
 )
 
 // Cluster manages Consul service registration for this node.
 type Cluster struct {
-	connection string
-	id         string
+	connection   string
+	id           string
 	discoveryURL string
-	host       string
-	port       int
-	Discovery  discovery.ServiceDiscovery
+	host         string
+	port         int
+	Discovery    discovery.ServiceDiscovery
 }
 
 // New creates a Cluster for the given node id and Consul URL.
 // host/port are the gRPC advertise coordinates (may be empty/zero when no
 // gRPC server is configured).
-func New(id, discoveryURL string, host string, port int) *Cluster {
+func New(id, discoveryURL, host string, port int) *Cluster {
 	return &Cluster{
 		id:           id,
 		discoveryURL: discoveryURL,

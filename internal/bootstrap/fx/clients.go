@@ -7,7 +7,6 @@ import (
 
 	"github.com/webitel/wlog"
 
-	inframq "github.com/webitel/flow_manager/infra/mq"
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	outcc "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
@@ -15,6 +14,7 @@ import (
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	inframq "github.com/webitel/flow_manager/internal/infrastructure/mq"
 	"github.com/webitel/flow_manager/model"
 )
 

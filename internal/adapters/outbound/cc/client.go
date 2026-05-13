@@ -6,8 +6,8 @@ import (
 	"github.com/webitel/wlog"
 
 	cc2 "github.com/webitel/flow_manager/api/gen/cc"
-	"github.com/webitel/flow_manager/infra/grpcdial"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 	"github.com/webitel/flow_manager/model"
 )
 

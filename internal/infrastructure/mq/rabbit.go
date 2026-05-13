@@ -10,8 +10,8 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/pubsub"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
+	"github.com/webitel/flow_manager/internal/infrastructure/pubsub"
 	"github.com/webitel/flow_manager/model"
 )
 

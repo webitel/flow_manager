@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/webitel/flow_manager/infra/resolver"
+	"github.com/webitel/flow_manager/internal/infrastructure/resolver"
 )
 
 const (

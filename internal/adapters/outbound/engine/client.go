@@ -8,7 +8,7 @@ import (
 	"github.com/webitel/wlog"
 
 	engine2 "github.com/webitel/flow_manager/api/gen/engine"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 	"github.com/webitel/flow_manager/model"
 )
 

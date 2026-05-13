@@ -10,14 +10,14 @@ import (
 
 	proto "github.com/webitel/flow_manager/api/gen/chat"
 	messages2 "github.com/webitel/flow_manager/api/gen/chat/messages"
-	"github.com/webitel/flow_manager/infra/discovery"
-	"github.com/webitel/flow_manager/infra/watcher"
+	discovery2 "github.com/webitel/flow_manager/internal/infrastructure/discovery"
+	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
 	"github.com/webitel/flow_manager/model"
 )
 
 type ChatManager struct {
-	serviceDiscovery discovery.ServiceDiscovery
-	poolConnections  discovery.Pool
+	serviceDiscovery discovery2.ServiceDiscovery
+	poolConnections  discovery2.Pool
 
 	watcher   *watcher.Watcher
 	startOnce sync.Once
@@ -30,7 +30,7 @@ func NewChatManager() *ChatManager {
 	return &ChatManager{
 		stop:            make(chan struct{}),
 		stopped:         make(chan struct{}),
-		poolConnections: discovery.NewPoolConnections(),
+		poolConnections: discovery2.NewPoolConnections(),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "chat manager"),
@@ -38,7 +38,7 @@ func NewChatManager() *ChatManager {
 	}
 }
 
-func (cm *ChatManager) Start(sd discovery.ServiceDiscovery) error {
+func (cm *ChatManager) Start(sd discovery2.ServiceDiscovery) error {
 	cm.log.Debug("starting chat client")
 	cm.serviceDiscovery = sd
 
@@ -84,7 +84,7 @@ func (cm *ChatManager) Stop() {
 	<-cm.stopped
 }
 
-func (cm *ChatManager) registerConnection(v *discovery.ServiceConnection) {
+func (cm *ChatManager) registerConnection(v *discovery2.ServiceConnection) {
 	addr := fmt.Sprintf("%s:%d", v.Host, v.Port)
 	c, err := NewChatClientConnection(v.Id, addr)
 	if err != nil {
@@ -111,7 +111,7 @@ func (cm *ChatManager) getClient(name string) (*ChatClientConnection, error) {
 }
 
 func (cm *ChatManager) getRandCli() (*ChatClientConnection, error) {
-	conn, err := cm.poolConnections.Get(discovery.StrategyRoundRobin)
+	conn, err := cm.poolConnections.Get(discovery2.StrategyRoundRobin)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (cm *ChatManager) wakeUp() {
 	}
 
 	for _, v := range list {
-		if _, err := cm.poolConnections.GetById(v.Id); err == discovery.ErrNotFoundConnection {
+		if _, err := cm.poolConnections.GetById(v.Id); err == discovery2.ErrNotFoundConnection {
 			cm.registerConnection(v)
 		}
 	}

@@ -8,15 +8,15 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/oauth2"
 	"golang.org/x/sync/singleflight"
 
-	"golang.org/x/oauth2"
+	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/discovery"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"github.com/webitel/wlog"
 )
 
 var (
@@ -78,7 +78,7 @@ func (s *MailServer) Stop() {
 }
 
 func (s *MailServer) Host() string {
-	return "" //TODO
+	return "" // TODO
 }
 
 func (s *MailServer) Port() int {
@@ -153,7 +153,7 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, error) {
 		}
 	}
 
-	v, doErr, shared := profileSGroup.Do(fmt.Sprintf("%d-%d", id, updatedAt), func() (interface{}, error) {
+	v, doErr, shared := profileSGroup.Do(fmt.Sprintf("%d-%d", id, updatedAt), func() (any, error) {
 		params, err := s.store.GetProfile(id)
 		if err != nil {
 			return nil, err

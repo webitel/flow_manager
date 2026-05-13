@@ -8,14 +8,14 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 )
 
 // ConnectionType identifies the transport type of a flow connection.
 type ConnectionType int8
 
 const (
-	ConnectionTypeCall    ConnectionType = iota
+	ConnectionTypeCall ConnectionType = iota
 	ConnectionTypeGrpc
 	ConnectionTypeEmail
 	ConnectionTypeWebHook

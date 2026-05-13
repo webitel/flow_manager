@@ -6,7 +6,7 @@ import (
 	"google.golang.org/grpc/metadata"
 
 	cases2 "github.com/webitel/flow_manager/api/gen/cases"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const ServiceName = "webitel.cases"

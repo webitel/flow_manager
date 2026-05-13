@@ -11,7 +11,7 @@ import (
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/api/gen/im/api/gateway/v1"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const ServiceName = "im-gateway-service"

@@ -5,8 +5,8 @@ import (
 	"io"
 
 	storage2 "github.com/webitel/flow_manager/api/gen/storage"
-	"github.com/webitel/flow_manager/infra/grpcdial"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const serviceName = "storage"

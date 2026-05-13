@@ -7,7 +7,7 @@ import (
 	"github.com/webitel/wlog"
 
 	ai_bots2 "github.com/webitel/flow_manager/api/gen/ai_bots"
-	"github.com/webitel/flow_manager/infra/grpcdial"
+	"github.com/webitel/flow_manager/internal/infrastructure/grpcdial"
 )
 
 const (

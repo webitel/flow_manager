@@ -8,9 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 
-	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
-
-	infraSql "github.com/webitel/flow_manager/infra/sql"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
+	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )

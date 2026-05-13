@@ -5,16 +5,17 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
-	"github.com/webitel/wlog"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.uber.org/fx"
 
-	infraSql "github.com/webitel/flow_manager/infra/sql"
-	pgsqlImpl "github.com/webitel/flow_manager/infra/sql/pgsql"
+	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	"github.com/webitel/wlog"
+
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	"github.com/webitel/flow_manager/internal/infrastructure/cache"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
+	pgsqlImpl "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"

@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	infraSql "github.com/webitel/flow_manager/infra/sql"
-	pgsql "github.com/webitel/flow_manager/infra/sql/pgsql"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
+	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -108,7 +108,7 @@ left join lateral (
       limit 2
 ) s on true`
 
-func (r *MemberRepository) EWTPuzzle(domainId int64, callId string, min int, queueIds []int, bucketIds []int) (float64, error) {
+func (r *MemberRepository) EWTPuzzle(domainId int64, callId string, min int, queueIds, bucketIds []int) (float64, error) {
 	var row ewtRow
 	if err := r.db.Get(context.Background(), &row, ewtPuzzleSQL, pgx.NamedArgs{
 		"CallId":    callId,
@@ -280,7 +280,7 @@ from call_center.cc_queue q
     inner join flow.calendar_timezones tz on tz.id = c.timezone_id
 where q.id = @QueueId::int4 and q.domain_id = @DomainId::int8`
 
-func (r *MemberRepository) CreateMember(domainId int64, queueId int, holdSec int, member *model.CallbackMember) error {
+func (r *MemberRepository) CreateMember(domainId int64, queueId, holdSec int, member *model.CallbackMember) error {
 	return r.db.Exec(context.Background(), createMemberSQL, pgx.NamedArgs{
 		"DomainId":              domainId,
 		"QueueId":               queueId,

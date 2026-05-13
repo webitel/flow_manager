@@ -16,7 +16,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/sql"
+	"github.com/webitel/flow_manager/internal/infrastructure/sql"
 )
 
 var testStore sql.Store

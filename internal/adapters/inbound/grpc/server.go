@@ -16,7 +16,7 @@ import (
 	"github.com/webitel/wlog"
 
 	workflow2 "github.com/webitel/flow_manager/api/gen/workflow"
-	"github.com/webitel/flow_manager/infra/discovery"
+	"github.com/webitel/flow_manager/internal/infrastructure/discovery"
 	apperrs "github.com/webitel/flow_manager/internal/infrastructure/errors"
 	"github.com/webitel/flow_manager/model"
 )

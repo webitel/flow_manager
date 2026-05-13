@@ -3,8 +3,9 @@ package discovery
 import (
 	"errors"
 	"fmt"
-	"github.com/webitel/wlog"
 	"sync"
+
+	"github.com/webitel/wlog"
 )
 
 var (

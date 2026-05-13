@@ -8,7 +8,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/infra/watcher"
+	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )

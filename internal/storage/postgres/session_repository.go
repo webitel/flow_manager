@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	infraSql "github.com/webitel/flow_manager/infra/sql"
+	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	"github.com/webitel/flow_manager/store"
 )
 
@@ -29,8 +29,10 @@ on conflict (id)
 returning session.seq
 `
 
-const removeSessionSQL = `delete from flow.session where id = @Id and app_id = @AppId`
-const removeAllSessionSQL = `delete from flow.session where app_id = @AppId`
+const (
+	removeSessionSQL    = `delete from flow.session where id = @Id and app_id = @AppId`
+	removeAllSessionSQL = `delete from flow.session where app_id = @AppId`
+)
 
 type touchRow struct {
 	Seq *int `db:"seq"`
