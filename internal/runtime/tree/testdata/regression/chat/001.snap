@@ -1,0 +1,66 @@
+0	if	415-if-custom-tag	2
+0.then	<seq>		1
+0.then.0	schema	416-schema-custom-tag	0
+0.else	<seq>		0
+1	httpRequest	40-httpRequest-custom-tag	0
+2	js	41-js-custom-tag	0
+3	httpRequest	42-httpRequest-custom-tag	0
+4	if	372-if-custom-tag	2
+4.then	<seq>		2
+4.then.0	switch	374-switch-custom-tag	1
+4.then.0.case.ru-RU	<seq>		1
+4.then.0.case.ru-RU.0	goto	373-goto-custom-tag	0
+4.then.1	goto	394-goto-custom-tag	0
+4.else	<seq>		1
+4.else.0	if	51-if-custom-tag	2
+4.else.0.then	<seq>		3
+4.else.0.then.0	sendText	52-sendText-custom-tag	0
+4.else.0.then.1	recvMessage	53-recvMessage-custom-tag	0
+4.else.0.then.2	if	54-if-custom-tag	2
+4.else.0.then.2.then	<seq>		4
+4.else.0.then.2.then.0	menu	352-menu-custom-tag	0
+4.else.0.then.2.then.1	recvMessage	57-recvMessage-custom-tag	0
+4.else.0.then.2.then.2	httpRequest	58-httpRequest-custom-tag	0
+4.else.0.then.2.then.3	if	377-if-custom-tag	2
+4.else.0.then.2.then.3.then	<seq>		1
+4.else.0.then.2.then.3.then.0	goto	376-goto-custom-tag	0
+4.else.0.then.2.then.3.else	<seq>		2
+4.else.0.then.2.then.3.else.0	if	60-if-custom-tag	2
+4.else.0.then.2.then.3.else.0.then	<seq>		3
+4.else.0.then.2.then.3.else.0.then.0	menu	59-menu-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.1	recvMessage	61-recvMessage-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2	switch	62-switch-custom-tag	1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский	<seq>		3
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.0	set	63-set-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.1	if	331-if-custom-tag	2
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.1.then	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.1.then.0	goto	340-goto-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.1.else	<seq>		0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2	if	101-if-custom-tag	2
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0	if	353-if-custom-tag	2
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0	switch	355-switch-custom-tag	3
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.00783ef6-f36b-1410-a883-16d83cab0980	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.00783ef6-f36b-1410-a883-16d83cab0980.0	goto	356-goto-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.d7ae3f65-0063-4f41-9389-3a4d5f154d09	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.d7ae3f65-0063-4f41-9389-3a4d5f154d09.0	goto	357-goto-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.default	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.then.0.case.default.0	goto	358-goto-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.else	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.then.0.else.0	goto	501-goto-custom-tag	0
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.else	<seq>		1
+4.else.0.then.2.then.3.else.0.then.2.case.Русский.2.else.0	menu	66-menu-custom-tag	0
+4.else.0.then.2.then.3.else.0.else	<seq>		0
+4.else.0.then.2.then.3.else.1	switch	113-switch-custom-tag	1
+4.else.0.then.2.then.3.else.1.case.ru-RU	<seq>		1
+4.else.0.then.2.then.3.else.1.case.ru-RU.0	goto	112-goto-custom-tag	0
+4.else.0.then.2.else	<seq>		2
+4.else.0.then.2.else.0	log	318-log-custom-tag	0
+4.else.0.then.2.else.1	goto	55-goto-custom-tag	0
+4.else.0.else	<seq>		1
+4.else.0.else.0	if	242-if-custom-tag	2
+4.else.0.else.0.then	<seq>		1
+4.else.0.else.0.then.0	goto	243-goto-custom-tag	0
+4.else.0.else.0.else	<seq>		1
+4.else.0.else.0.else.0	goto	182-goto-custom-tag	0
