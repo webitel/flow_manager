@@ -100,7 +100,7 @@ internal/
   storage/postgres/           — pgx/v5 repositories (no ORM)
   workers/                    — session_recovery, runtime_recovery, call/list watchers
   infrastructure/             — discovery, mq, grpcdial, cache, utils, errors
-store/store.go                — legacy store.Store interface (SQL)
+internal/storage/store.go     — storage.Store interface + sub-interfaces
 migrations/postgres/          — goose SQL migrations
 pkg/processing/               — public types (imported by external services)
 api/gen/                      — generated gRPC stubs

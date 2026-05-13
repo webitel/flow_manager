@@ -72,7 +72,7 @@ internal/runtime/
 ```
 internal/adapters/outbound/
   schema/        — SchemaAdapter: GetSchemaById, SchemaVariable, routing, GetSystemSettings
-  store_adapter/ — StoreAdapter: thin store.Store delegates (media, log, queue, user, call, …)
+  store_adapter/ — StoreAdapter: thin storage.Store delegates (media, log, queue, user, call, …)
   cc/            — CCAdapter: JoinToInboundQueue, JoinToAgent, AttemptResult, …
   cache_adapter/ — CacheAdapter: CacheGet/Set/Delete, CookieCache
   storage/       — FileAdapter: GeneratePreSignedLink, DownloadFile, GetFileTranscription
@@ -115,10 +115,10 @@ internal/workers/
 ## Storage
 
 ```
-internal/storage/postgres/ — pgx/v5 + squirrel repositories (no ORM)
+internal/storage/store.go  — storage.Store interface + all sub-interfaces
+internal/storage/postgres/ — pgx/v5 + squirrel implementations (no ORM)
 internal/session/          — Checkpoint type + Repository port
 migrations/postgres/       — goose SQL migrations (0NNN_*.sql, append-only)
-store/store.go             — store.Store interface (legacy SQL layer used by adapters)
 ```
 
 ## Infrastructure
@@ -162,4 +162,4 @@ go test ./internal/runtime/tree/... -run Regression
 - New errors → `fmt.Errorf` or `apperrs.New(code, msg)`. No typed error structs.
 - `migrations/postgres/` — append-only. Never edit existing migration files.
 - `pkg/processing/` — public package imported by external services, do not move to `internal/`.
-- `store/store.go` — legacy interface; prefer `internal/storage/postgres/` for new repositories.
+- New storage repos go in `internal/storage/postgres/`; add sub-interfaces to `internal/storage/store.go`.
