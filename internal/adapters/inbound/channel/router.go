@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops/connctx"
 	"github.com/webitel/flow_manager/internal/runtime/runtimekit"
@@ -24,12 +23,12 @@ type schemaConn interface {
 }
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps) model.Router {
+func Init(deps Deps) model.Router {
 	r := &Router{fm: deps}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{

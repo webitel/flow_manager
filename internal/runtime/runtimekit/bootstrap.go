@@ -6,9 +6,13 @@ package runtimekit
 
 import (
 	"context"
+	"time"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/domain/contacts"
-	"github.com/webitel/flow_manager/internal/domain/shared/ports"
+	domcases "github.com/webitel/flow_manager/internal/domain/cases"
+	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -22,14 +26,43 @@ import (
 	notifop "github.com/webitel/flow_manager/internal/runtime/ops/domain/notification"
 	queueop "github.com/webitel/flow_manager/internal/runtime/ops/domain/queue"
 	schemaop "github.com/webitel/flow_manager/internal/runtime/ops/domain/schema"
+	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/runtime/tree"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/store"
 )
+
+// BootstrapDeps is the set of dependencies that Bootstrap consumes directly
+// (own calls + interfaces required by the ops it registers).
+type BootstrapDeps interface {
+	// direct calls
+	GetLocation(id int) *time.Location
+	GetStore() store.Store
+	GetSchemaById(domainId int64, id int) (*model.Schema, *model.AppError)
+	Meeting() domainmeeting.Client
+	Cases() domcases.Client
+	RuntimeStateRepo() persistence.Repository
+	Log() *wlog.Logger
+	SchemaVariable(ctx context.Context, domainID int64, name string) string
+
+	// op interfaces (ops are passed cfg.Deps directly)
+	builtin.CookieCache
+	builtin.GlobalDeps
+	builtin.ListDeps
+	builtin.CacheDeps
+	builtin.GenerateLinkDeps
+	builtin.OpenLinkDeps
+	builtin.SqlDeps
+	emailop.EmailDeps
+	contactsop.LinkDeps
+	notifop.Deps
+}
 
 // Config holds the channel-specific inputs that Bootstrap needs to build the
 // shared runtime components.
 type Config struct {
 	// Deps is the channel router's dependency bundle.
-	Deps ports.RouterDeps
+	Deps BootstrapDeps
 
 	// ContactsClient, when non-nil, enables the contacts native ops
 	// (getContact, findContact, addContact, updateContact, mergeContactPhones,

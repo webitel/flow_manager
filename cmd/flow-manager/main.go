@@ -28,7 +28,6 @@ import (
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
-	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
 	"github.com/webitel/flow_manager/model"
 
@@ -62,7 +61,6 @@ func main() {
 		fx.Provide(bsfx.NewServers),
 		// app
 		fx.Provide(app.NewFlowManager),
-		fx.Provide(func(fm *app.FlowManager) ports.RouterDeps { return fm }),
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
@@ -84,18 +82,18 @@ type appRouters struct {
 }
 
 func newAppRouters(
-	deps ports.RouterDeps,
+	fm *app.FlowManager,
 	contacts domaincontacts.Client,
 	meetings domainmeeting.Client,
 ) *appRouters {
 	return &appRouters{
-		Call:    call.Init(deps, contacts, meetings),
-		GRPC:    grpc.Init(deps),
-		Chat:    chat.Init(deps),
-		Form:    processing.Init(deps),
-		Email:   email.Init(deps, contacts),
-		Channel: channel.Init(deps),
-		IM:      im.Init(deps, contacts),
+		Call:    call.Init(fm, contacts, meetings),
+		GRPC:    grpc.Init(fm),
+		Chat:    chat.Init(fm),
+		Form:    processing.Init(fm),
+		Email:   email.Init(fm, contacts),
+		Channel: channel.Init(fm),
+		IM:      im.Init(fm, contacts),
 	}
 }
 

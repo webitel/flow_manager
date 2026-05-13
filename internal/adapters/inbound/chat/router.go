@@ -7,7 +7,6 @@ import (
 	"time"
 
 	proto "github.com/webitel/flow_manager/gen/chat"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	chatop "github.com/webitel/flow_manager/internal/runtime/ops/domain/chat"
@@ -26,12 +25,12 @@ import (
 const chatChannel int16 = 4
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps) model.Router {
+func Init(deps Deps) model.Router {
 	router := &Router{
 		fm: deps,
 	}

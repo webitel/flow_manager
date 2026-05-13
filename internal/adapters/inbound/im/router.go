@@ -7,7 +7,6 @@ import (
 	"time"
 
 	domcontacts "github.com/webitel/flow_manager/internal/domain/contacts"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -27,7 +26,7 @@ import (
 const imChannel int16 = 2
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	driver     *interpreter.Driver
 	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
@@ -35,7 +34,7 @@ type Router struct {
 
 type Dialog model.IMDialog
 
-func Init(deps ports.RouterDeps, contacts domcontacts.Client) model.Router {
+func Init(deps Deps, contacts domcontacts.Client) model.Router {
 	router := &Router{
 		fm: deps,
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/coordinator"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
@@ -21,7 +20,7 @@ import (
 const processingChannel = int16(model.ConnectionTypeForm)
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	driver     *interpreter.Driver
 	coord      coordinator.Coordinator
 	sessionMgr *sessionmgr.Manager
@@ -39,7 +38,7 @@ type Connection interface {
 	DumpExportVariables() map[string]string
 }
 
-func Init(deps ports.RouterDeps) model.Router {
+func Init(deps Deps) model.Router {
 	router := &Router{fm: deps}
 
 	// coord is late-bound: nil when ExtraOps runs, set after Bootstrap returns.

@@ -7,7 +7,6 @@ import (
 
 	"github.com/webitel/flow_manager/gen/contacts"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
-	ports "github.com/webitel/flow_manager/internal/domain/shared/ports"
 	"github.com/webitel/flow_manager/internal/runtime/interpreter"
 	"github.com/webitel/flow_manager/internal/runtime/ops"
 	emailop "github.com/webitel/flow_manager/internal/runtime/ops/domain/email"
@@ -25,13 +24,13 @@ const emailChannel = int16(model.ConnectionTypeEmail)
 var compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 
 type Router struct {
-	fm         ports.RouterDeps
+	fm         Deps
 	contacts   domaincontacts.Client
 	driver     *interpreter.Driver
 	sessionMgr *sessionmgr.Manager
 }
 
-func Init(deps ports.RouterDeps, contacts domaincontacts.Client) model.Router {
+func Init(deps Deps, contacts domaincontacts.Client) model.Router {
 	r := &Router{fm: deps, contacts: contacts}
 
 	kit := runtimekit.Bootstrap(runtimekit.Config{
