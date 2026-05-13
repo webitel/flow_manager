@@ -1,13 +1,11 @@
 package model
 
-import "time"
+import (
+	"github.com/webitel/flow_manager/internal/domain/calendar"
+	"github.com/webitel/flow_manager/internal/infrastructure/utils"
+)
 
-type Timezone struct {
-	Id      int    `json:"id" db:"id"`
-	SysName string `json:"sys_name" db:"sys_name"`
-}
+// Re-exports for backward compatibility.
+type Timezone = calendar.Timezone
 
-// GetMillis is a convience method to get milliseconds since epoch.
-func GetMillis() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
-}
+func GetMillis() int64 { return utils.GetMillis() }

@@ -8,9 +8,15 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/pborman/uuid"
 )
+
+// GetMillis returns current time in milliseconds since epoch.
+func GetMillis() int64 {
+	return time.Now().UnixNano() / int64(time.Millisecond)
+}
 
 var encoding = base32.NewEncoding("ybndrfg8ejkmcpqxot1uwisza345h769")
 
