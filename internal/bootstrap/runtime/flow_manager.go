@@ -1,4 +1,4 @@
-package app
+package runtime
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	fileAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
 	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
-	bsruntime "github.com/webitel/flow_manager/internal/bootstrap/runtime"
+	
 	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
 	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
@@ -53,7 +53,7 @@ type FlowManager struct {
 	*fileAdapter.FileAdapter
 	*eventAdapter.EventBusAdapter
 	*chatAdapter.ChatMgrAdapter
-	*bsruntime.Dispatcher
+	*Dispatcher
 
 	log    *wlog.Logger
 	id     string
@@ -116,7 +116,7 @@ func NewFlowManager(
 		FileAdapter:     fileAdapter.NewFileAdapter(storage),
 		EventBusAdapter: eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
 		ChatMgrAdapter:  chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
-		Dispatcher: bsruntime.New(bsruntime.DispatcherConfig{
+		Dispatcher: New(DispatcherConfig{
 			Log:              log,
 			ID:               appID,
 			GrpcServer:       srvs.Grpc,
@@ -232,4 +232,20 @@ func (f *FlowManager) Cases() domcases.Client        { return f.cases }
 // ConsumeCallEvent satisfies call_watcher.CallEventDeps; delegates to eventQueue.
 func (f *FlowManager) ConsumeCallEvent() <-chan call.CallActionData {
 	return f.eventQueue.ConsumeCallEvent()
+}
+
+// Listen starts background watchers and then blocks in the transport dispatch
+// loop until all server goroutines have finished.
+//
+// The transport-level loop is owned by the embedded Dispatcher; this wrapper
+// starts the call and list watchers first so they are alive before any
+// connections arrive.
+func (f *FlowManager) Listen() {
+	f.callWatcher.Start(f.stop)
+	f.listWatcher.Start()
+	f.Dispatcher.Listen()
+}
+
+func (f *FlowManager) Config() *bscfg.Config {
+	return f.config
 }

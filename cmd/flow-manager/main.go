@@ -13,7 +13,7 @@ import (
 
 	"github.com/webitel/wlog"
 
-	"github.com/webitel/flow_manager/app"
+	bsruntime "github.com/webitel/flow_manager/internal/bootstrap/runtime"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/chat"
@@ -61,7 +61,7 @@ func main() {
 		fx.Provide(bsfx.NewChatManager),
 		fx.Provide(bsfx.NewServers),
 		// app
-		fx.Provide(app.NewFlowManager),
+		fx.Provide(bsruntime.NewFlowManager),
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
@@ -83,7 +83,7 @@ type appRouters struct {
 }
 
 func newAppRouters(
-	fm *app.FlowManager,
+	fm *bsruntime.FlowManager,
 	contacts domaincontacts.Client,
 	meetings domainmeeting.Client,
 ) *appRouters {
@@ -98,7 +98,7 @@ func newAppRouters(
 	}
 }
 
-func wireRouters(fm *app.FlowManager, routers *appRouters) {
+func wireRouters(fm *bsruntime.FlowManager, routers *appRouters) {
 	fm.CallRouter = routers.Call
 	fm.GRPCRouter = routers.GRPC
 	fm.ChatRouter = routers.Chat
@@ -108,7 +108,7 @@ func wireRouters(fm *app.FlowManager, routers *appRouters) {
 	fm.IMRouter = routers.IM
 }
 
-func registerLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {
+func registerLifecycle(lc fx.Lifecycle, fm *bsruntime.FlowManager) {
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			go fm.Listen()
@@ -122,7 +122,7 @@ func registerLifecycle(lc fx.Lifecycle, fm *app.FlowManager) {
 	})
 }
 
-func newContactsClient(lc fx.Lifecycle, fm *app.FlowManager) (domaincontacts.Client, error) {
+func newContactsClient(lc fx.Lifecycle, fm *bsruntime.FlowManager) (domaincontacts.Client, error) {
 	c := outboundcontacts.New(fm.Config().DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
@@ -132,7 +132,7 @@ func newContactsClient(lc fx.Lifecycle, fm *app.FlowManager) (domaincontacts.Cli
 	return c, nil
 }
 
-func newEngineClient(lc fx.Lifecycle, fm *app.FlowManager) (domainengine.Client, error) {
+func newEngineClient(lc fx.Lifecycle, fm *bsruntime.FlowManager) (domainengine.Client, error) {
 	c := outboundengine.New(fm.Config().DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
