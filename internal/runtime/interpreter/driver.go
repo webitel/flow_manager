@@ -93,9 +93,19 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 	const maxSyncSteps = 10_000
 	var syncSteps int
 
+	// persist uses a background context for all state-saving calls so that
+	// DB writes complete even when the flow context has been cancelled or has
+	// timed out. The flow context (ctx) is only used for op execution logic.
+	persist := context.Background()
+
 	stepPayload := payload
 	for {
 		if ctx.Err() != nil {
+			// Flow context cancelled (connection dropped, gRPC deadline, etc.).
+			// Mark the record as failed so it is not left stuck as "running".
+			rec.State = es
+			rec.Status = state.StatusFailed
+			_ = d.repo.Fail(persist, rec.ID, ctx.Err().Error())
 			return ctx.Err()
 		}
 
@@ -104,7 +114,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			err := fmt.Errorf("flow exceeded maximum synchronous step limit (%d) — possible infinite loop", maxSyncSteps)
 			rec.State = es
 			rec.Status = state.StatusFailed
-			return d.repo.Fail(ctx, rec.ID, err.Error())
+			return d.repo.Fail(persist, rec.ID, err.Error())
 		}
 
 		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, rec.ConnectionID, globalVar, stepPayload, runBranch)
@@ -115,7 +125,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 		case ActionContinue:
 			l.Debug("flow continue")
 			rec.State = es
-			if err2 := d.repo.Update(ctx, rec); err2 != nil {
+			if err2 := d.repo.Update(persist, rec); err2 != nil {
 				return err2
 			}
 
@@ -123,7 +133,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			l.Debug("flow completed")
 			rec.State = es
 			rec.Status = state.StatusCompleted
-			return d.repo.Complete(ctx, rec.ID)
+			return d.repo.Complete(persist, rec.ID)
 
 		case ActionSuspend:
 			if action.ReSuspend {
@@ -139,10 +149,10 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			rec.Status = state.StatusSuspended
 			// Update persisted state BEFORE suspending so that the external
 			// event handler can safely load and resume.
-			if err2 := d.repo.Update(ctx, rec); err2 != nil {
+			if err2 := d.repo.Update(persist, rec); err2 != nil {
 				return err2
 			}
-			return d.repo.Suspend(ctx, rec.ID, action.SuspendKey)
+			return d.repo.Suspend(persist, rec.ID, action.SuspendKey)
 
 		case ActionBranchAsync:
 			// Fire-and-forget trigger sub-flow: run branch in a goroutine
@@ -160,10 +170,10 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			// Re-suspend the main flow on the same key.
 			rec.State = es
 			rec.Status = state.StatusSuspended
-			if err2 := d.repo.Update(ctx, rec); err2 != nil {
+			if err2 := d.repo.Update(persist, rec); err2 != nil {
 				return err2
 			}
-			return d.repo.Suspend(ctx, rec.ID, action.SuspendKey)
+			return d.repo.Suspend(persist, rec.ID, action.SuspendKey)
 
 		case ActionFail:
 			reason := action.FailReason
@@ -175,7 +185,7 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 			)
 			rec.State = es
 			rec.Status = state.StatusFailed
-			return d.repo.Fail(ctx, rec.ID, reason)
+			return d.repo.Fail(persist, rec.ID, reason)
 		}
 	}
 }
