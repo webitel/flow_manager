@@ -1,0 +1,24 @@
+# mockery v2 config — generates mocks for interfaces that are too large to stub by hand.
+# Run: go run github.com/vektra/mockery/v2@latest
+#
+# Generated files land in internal/runtime/ops/testutil/mocks/ so all op tests
+# can share them without re-generating per package.
+
+quiet: false
+disable-version-string: true
+with-expecter: true           # generates EXPECT() helpers for clean call assertions
+mockname: "Mock{{.InterfaceName}}"
+outpkg: mocks
+dir: internal/runtime/ops/testutil/mocks
+
+packages:
+  # flow.Connection — for builtin ops that call conn.Set/Get (e.g. set, unSet)
+  github.com/webitel/flow_manager/internal/domain/flow:
+    interfaces:
+      Connection:
+      Response:
+
+  # call.Call — for call ops (playback, bridge, joinQueue, etc.)
+  github.com/webitel/flow_manager/internal/domain/call:
+    interfaces:
+      Call:
