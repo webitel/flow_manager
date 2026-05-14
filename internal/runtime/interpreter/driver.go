@@ -85,10 +85,26 @@ func (d *Driver) Run(ctx context.Context, rec *persistence.Record, tr *tree.Tree
 
 	l.Debug("run flow")
 
+	// maxSyncSteps limits synchronous steps per Run invocation (i.e. between
+	// two suspend/resume boundaries). It guards against infinite loops caused
+	// by schemas that cycle through known ops (e.g. switch with no match)
+	// which reset GotoCounter, preventing the consecutive-goto limit from
+	// firing. Resets naturally on every resume because Run() is re-entered.
+	const maxSyncSteps = 10_000
+	var syncSteps int
+
 	stepPayload := payload
 	for {
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+
+		syncSteps++
+		if syncSteps > maxSyncSteps {
+			err := fmt.Errorf("flow exceeded maximum synchronous step limit (%d) — possible infinite loop", maxSyncSteps)
+			rec.State = es
+			rec.Status = state.StatusFailed
+			return d.repo.Fail(ctx, rec.ID, err.Error())
 		}
 
 		action, next, err := Step(ctx, l, es, tr, d.reg, domainID, rec.ConnectionID, globalVar, stepPayload, runBranch)
