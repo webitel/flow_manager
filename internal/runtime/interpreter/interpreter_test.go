@@ -582,3 +582,92 @@ func TestInlineTriggerWithNestedWait(t *testing.T) {
 		t.Errorf("step4: after-op did not run")
 	}
 }
+
+// TestBreak_NodeFlagWithOp verifies that a node carrying both "break: true" and
+// a real op (e.g. set) first executes the op then stops the flow.
+// Regression for: {"break": true, "sendText": "bye"} — the break was ignored
+// because only out.Break (returned by the op) was checked, not child.Break.
+func TestBreak_NodeFlagWithOp(t *testing.T) {
+	schema := tree.Schema{
+		{"break": true, "set": map[string]any{"farewell": "yes"}},
+		{"set": map[string]any{"after": "yes"}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, kind := runAll(t, startState(1, tr.Version), tr, newReg())
+
+	if kind != interpreter.ActionDone {
+		t.Fatalf("expected ActionDone, got %v", kind)
+	}
+	if es.Variables["farewell"] != "yes" {
+		t.Error("op on the break node must execute before stopping")
+	}
+	if es.Variables["after"] == "yes" {
+		t.Error("node after the break+op node must not execute")
+	}
+}
+
+// TestBreak_NodeFlagInSwitchCase mirrors the kebab-bot pattern where each exit
+// case is {"break": true, "set": {…}} — the op runs, flow stops, goto is not
+// reached.
+func TestBreak_NodeFlagInSwitchCase(t *testing.T) {
+	schema := tree.Schema{
+		{"set": map[string]any{"choice": "5"}},
+		{
+			"switch": map[string]any{
+				"variable": "${choice}",
+				"case": map[string]any{
+					"5": []any{
+						map[string]any{"break": true, "set": map[string]any{"exit": "yes"}},
+					},
+				},
+			},
+		},
+		{"set": map[string]any{"reached_goto": "yes"}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, kind := runAll(t, startState(1, tr.Version), tr, newReg())
+
+	if kind != interpreter.ActionDone {
+		t.Fatalf("expected ActionDone, got %v", kind)
+	}
+	if es.Variables["exit"] != "yes" {
+		t.Error("set op inside the break+op case node must run")
+	}
+	if es.Variables["reached_goto"] == "yes" {
+		t.Error("node after the switch (the goto equivalent) must not run")
+	}
+}
+
+// TestBreak_UnknownOpIsNotBreak verifies that {"break1": true} (a typo — unknown
+// op, not the meta "break" key) is simply skipped and does NOT stop execution.
+func TestBreak_UnknownOpIsNotBreak(t *testing.T) {
+	schema := tree.Schema{
+		{"set": map[string]any{"before": "yes"}},
+		{"break1": true},
+		{"set": map[string]any{"after": "yes"}},
+	}
+	tr, err := tree.Parse(1, schema)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	es, kind := runAll(t, startState(1, tr.Version), tr, newReg())
+
+	if kind != interpreter.ActionDone {
+		t.Fatalf("expected ActionDone, got %v", kind)
+	}
+	if es.Variables["before"] != "yes" {
+		t.Error("node before unknown op should have run")
+	}
+	if es.Variables["after"] != "yes" {
+		t.Error("node after unknown op should have run — unknown op is a no-op, not a break")
+	}
+}

@@ -1,0 +1,42 @@
+0	set		0	
+1	sendText		0	
+2	sendText	main_menu	0	
+3	break1		0	
+4	recvMessage		0	
+5	switch		6	var=${kebab_choice}
+5.case.1	<seq>		1	
+5.case.1.0	sendMessage		0	
+5.case.2	<seq>		12	
+5.case.2.0	sendText		0	
+5.case.2.1	recvMessage		0	
+5.case.2.2	if		2	expr=${meat_type} == '2'
+5.case.2.2.then	<seq>		1	
+5.case.2.2.then.0	set		0	
+5.case.2.2.else	<seq>		1	
+5.case.2.2.else.0	set		0	
+5.case.2.3	sendText		0	
+5.case.2.4	recvMessage		0	
+5.case.2.5	if		2	expr=${sauce_type} == '3'
+5.case.2.5.then	<seq>		1	
+5.case.2.5.then.0	set		0	
+5.case.2.5.else	<seq>		1	
+5.case.2.5.else.0	set		0	
+5.case.2.6	sendText		0	
+5.case.2.7	recvMessage		0	
+5.case.2.8	switch		2	var=${extra_type}
+5.case.2.8.case.1	<seq>		1	
+5.case.2.8.case.1.0	set		0	
+5.case.2.8.case.2	<seq>		1	
+5.case.2.8.case.2.0	set		0	
+5.case.2.9	sendText		0	
+5.case.2.10	recvMessage		0	
+5.case.2.11	sendText		0	
+5.case.3	<seq>		1	
+5.case.3.0	sendText		0	
+5.case.4	<seq>		1	
+5.case.4.0	sendText		0	
+5.case.5	<seq>		1	
+5.case.5.0	sendText		0	
+5.case.6	<seq>		1	
+5.case.6.0	sendText		0	
+6	goto		0	→main_menu

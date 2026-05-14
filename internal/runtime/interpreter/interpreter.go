@@ -127,7 +127,9 @@ func Step(ctx context.Context, log *wlog.Logger, es state.ExecState, tr *tree.Tr
 		}
 
 		// Break: stop execution (matches legacy flow.SetCancel behaviour).
-		if out.Break {
+		// child.Break covers {"break": true, "sendText": "bye"} — a node that
+		// carries both an op and the break flag (op runs first, then flow stops).
+		if out.Break || child.Break {
 			es.Stack = nil
 			return Action{Kind: ActionDone}, es, nil
 		}

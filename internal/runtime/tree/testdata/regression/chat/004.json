@@ -1,0 +1,175 @@
+[
+  {
+    "set": {
+      "customer_name": "${start_message}",
+      "total_price": 0
+    }
+  },
+  {
+    "sendText": "blabla"
+  },
+  {
+    "sendText": "Вітаємо у Kebab Master! 🌯🔥\nНайкращий кебаб у місті чекає на тебе. \n\nОбери варіант:\n1. 📖 Подивитись меню (фото)\n2. 🌯 Скласти свій кебаб (Конструктор)\n3. 📍 Де моє замовлення?\n4. 🏠 Адреса та контакти\n5. 👋 Вихід\n6. З'єднайте мене з крутильщиком кебабів!",
+    "tag": "main_menu"
+  },
+  {
+    "break1": true
+  },
+  {
+    "recvMessage": {
+      "set": "kebab_choice",
+      "timeout": 120
+    }
+  },
+  {
+    "switch": {
+      "case": {
+        "1": [
+          {
+            "sendMessage": {
+              "1source": "media",
+              "file": {
+                "id": "748"
+              },
+              "isMediaActive": true,
+              "server": "https://dev.webitel.com",
+              "text": "Ось наше актуальне меню! Вибирай та пиши номер 2, щоб замовити. 🤤",
+              "type": "text"
+            }
+          }
+        ],
+        "2": [
+          {
+            "sendText": "Крок 1: Обери основу (м'ясо):\n1. Курка (120 грн)\n2. Яловичина (150 грн)\n3. Веган з фалафелем (110 грн)"
+          },
+          {
+            "recvMessage": {
+              "set": "meat_type",
+              "timeout": 60
+            }
+          },
+          {
+            "if": {
+              "else": [
+                {
+                  "set": {
+                    "meat_name": "Курка",
+                    "total_price": 120
+                  }
+                }
+              ],
+              "expression": "${meat_type} == '2'",
+              "then": [
+                {
+                  "set": {
+                    "meat_name": "Яловичина",
+                    "total_price": 150
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "sendText": "Крок 2: Додай гостроти! 🔥\n1. Лагідний (білий соус)\n2. Середній (класика)\n3. Пекельний (халапеньйо +50 грн)"
+          },
+          {
+            "recvMessage": {
+              "set": "sauce_type",
+              "timeout": 60
+            }
+          },
+          {
+            "if": {
+              "else": [
+                {
+                  "set": {
+                    "sauce_name": "Класичний"
+                  }
+                }
+              ],
+              "expression": "${sauce_type} == '3'",
+              "then": [
+                {
+                  "set": {
+                    "sauce_name": "Пекельний",
+                    "total_price": "${total_price} + 50"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "sendText": "Крок 3: Додатковий інгредієнт?\n1. Подвійний сир (+40 грн)\n2. Картопля фрі всередину (+30 грн)\n3. Без додатків (0 грн)"
+          },
+          {
+            "recvMessage": {
+              "set": "extra_type",
+              "timeout": 60
+            }
+          },
+          {
+            "switch": {
+              "case": {
+                "1": [
+                  {
+                    "set": {
+                      "extra_name": "Подвійний сир",
+                      "total_price": "${total_price} + 40"
+                    }
+                  }
+                ],
+                "2": [
+                  {
+                    "set": {
+                      "extra_name": "Картопля фрі",
+                      "total_price": "${total_price} + 30"
+                    }
+                  }
+                ]
+              },
+              "variable": "${extra_type}"
+            }
+          },
+          {
+            "sendText": "🧾 ТВІЙ ЧЕК:\n--------------------------\n🌯 Кебаб: ${meat_name}\n🌶 Соус: ${sauce_name}\n➕ Додатки: ${extra_name}\n--------------------------\n💰 РАЗОМ: ${total_price} грн\n\nГотуємо? (так/ні)"
+          },
+          {
+            "recvMessage": {
+              "set": "confirm",
+              "timeout": 60
+            }
+          },
+          {
+            "sendText": "Дякуємо! Замовлення прийнято. Повертаємось в меню..."
+          }
+        ],
+        "3": [
+          {
+            "sendText": "Твій кебаб вже на грилі! ♨️"
+          }
+        ],
+        "4": [
+          {
+            "sendText": "📍 вул. Смачна, 10. Чекаємо!"
+          }
+        ],
+        "5": [
+          {
+            "break": true,
+            "sendText": "Смачного! 👋"
+          }
+        ],
+        "6": [
+          {
+            "break": true,
+            "sendText": "Coming soon! 👋"
+          }
+        ]
+      },
+      "variable": "${kebab_choice}"
+    }
+  },
+  {
+    "goto": "main_menu"
+  }
+]
