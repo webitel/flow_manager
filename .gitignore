@@ -93,6 +93,7 @@ mutex.prof
 *.key
 *.crt
 *.cer
+*.csr
 *.der
 *.p12
 *.pfx
