@@ -137,11 +137,16 @@ func (m *Manager) Watch(
 	})
 
 	// In-process wake_at timer for recv_message. Provides accurate short
-	// timeouts and survives without the DB-polling worker. If wake_at is
-	// already in the past, dispatch immediately. The atomic claim inside the
-	// repository's LoadByResumeKey guarantees a second concurrent dispatch
-	// (e.g. message arrived first) is a no-op.
-	if rec != nil && rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
+	// timeouts and survives without the DB-polling worker. The atomic claim
+	// inside LoadByResumeKey guarantees concurrent dispatches are no-ops.
+	//
+	// When initialMsg is set the user already responded before the timer
+	// fires — dispatch the message and skip the timer entirely. An expired
+	// timer racing with an initial-message dispatch would cause the timeout
+	// to win non-deterministically and silently drop the user's reply.
+	if initialMsg != "" {
+		go dispatch(map[string]string{"msg": initialMsg})
+	} else if rec != nil && rec.State.Pending != nil && rec.State.Pending.OpName == "recv_message" {
 		if wakeAtStr, ok := rec.State.Pending.Args["wake_at"]; ok {
 			if wakeAt, err := time.Parse(time.RFC3339, wakeAtStr); err == nil {
 				delay := time.Until(wakeAt)
@@ -154,10 +159,6 @@ func (m *Manager) Watch(
 				}
 			}
 		}
-	}
-
-	if initialMsg != "" {
-		go dispatch(map[string]string{"msg": initialMsg})
 	}
 
 	go func() {

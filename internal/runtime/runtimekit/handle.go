@@ -100,6 +100,9 @@ func RunSession(rec *persistence.Record, cfg HandleConfig) (watching bool, err e
 
 	// Recovery: reconnected to a suspended flow — skip Run entirely.
 	if rec != nil && rec.Status == state.StatusSuspended {
+		if cfg.OnRecord != nil {
+			cfg.OnRecord(rec)
+		}
 		initialMsg := conn.Variables()[chatdomain.ConversationStartMessageVariable]
 		cfg.SessionMgr.Watch(sessConn, rec, initialMsg, decorate, cfg.Teardown)
 		return true, nil
