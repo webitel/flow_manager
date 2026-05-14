@@ -35,7 +35,7 @@ func newFakeConn(id string) *fakeConn {
 func (c *fakeConn) Id() string                   { return c.id }
 func (c *fakeConn) Context() context.Context     { return c.ctx }
 func (c *fakeConn) Variables() map[string]string { return c.vars }
-func (c *fakeConn) Type() flow.ConnectionType   { return 0 }
+func (c *fakeConn) Type() flow.ConnectionType    { return 0 }
 func (c *fakeConn) NodeId() string               { return "" }
 func (c *fakeConn) DomainId() int64              { return 0 }
 func (c *fakeConn) Get(_ string) (string, bool)  { return "", false }
@@ -43,8 +43,8 @@ func (c *fakeConn) Set(_ context.Context, _ flow.Variables) (flow.Response, erro
 	return nil, nil
 }
 func (c *fakeConn) ParseText(text string, _ ...flow.ParseOption) string { return text }
-func (c *fakeConn) Close() error                                         { return nil }
-func (c *fakeConn) Log() *wlog.Logger                                    { return testLogger() }
+func (c *fakeConn) Close() error                                        { return nil }
+func (c *fakeConn) Log() *wlog.Logger                                   { return testLogger() }
 
 // fakeConnInbound embeds fakeConn and adds OnInboundMessage, satisfying
 // sessionmgr.Connection.
@@ -456,5 +456,78 @@ func TestRunSession_FreshStart_SeedsVariables(t *testing.T) {
 	es := repo.created.State
 	if es.Variables["foo"] != "bar" || es.Variables["baz"] != "qux" {
 		t.Fatalf("expected conn variables in ExecState, got %v", es.Variables)
+	}
+}
+
+// OnRecord is called with the created record on fresh start.
+func TestRunSession_OnRecord_FreshStart(t *testing.T) {
+	conn := newFakeConnInbound("c10")
+	repo := &fakeRepo{}
+	runner := &fakeRunner{}
+
+	var recorded *persistence.Record
+	cfg := baseConfig(conn, repo, runner, &fakeWatcher{})
+	cfg.Conn = conn
+	cfg.OnRecord = func(r *persistence.Record) { recorded = r }
+
+	runtimekit.RunSession(nil, cfg)
+
+	if recorded == nil {
+		t.Fatal("OnRecord was not called on fresh start")
+	}
+	if recorded != repo.created {
+		t.Error("OnRecord received a different record than what was created")
+	}
+}
+
+// OnRecord is called with the existing record on recovery (suspended).
+func TestRunSession_OnRecord_Recovery(t *testing.T) {
+	conn := newFakeConnInbound("c11")
+	rec := &persistence.Record{
+		ID:     uuid.New(),
+		Status: state.StatusSuspended,
+		State:  state.ExecState{},
+	}
+
+	var recorded *persistence.Record
+	cfg := baseConfig(conn, &fakeRepo{}, &fakeRunner{}, &fakeWatcher{})
+	cfg.Conn = conn
+	cfg.OnRecord = func(r *persistence.Record) { recorded = r }
+
+	runtimekit.RunSession(rec, cfg)
+
+	if recorded == nil {
+		t.Fatal("OnRecord was not called on recovery path")
+	}
+	if recorded != rec {
+		t.Error("OnRecord received wrong record on recovery")
+	}
+}
+
+// Driver.Run error is logged; RunSession returns (false, nil) since execution
+// finished (without panic), and Teardown is still called.
+func TestRunSession_DriverRunError_Logged(t *testing.T) {
+	conn := newFakeConnInbound("c12")
+	repo := &fakeRepo{}
+	runner := &fakeRunner{runErr: errors.New("flow failed")}
+	watcher := &fakeWatcher{}
+
+	td, n := teardownTracker()
+	cfg := baseConfig(conn, repo, runner, watcher)
+	cfg.Conn = conn
+	cfg.Teardown = td
+
+	watching, err := runtimekit.RunSession(nil, cfg)
+
+	// RunSession absorbs Driver.Run errors (logs them, does not propagate).
+	if err != nil {
+		t.Fatalf("unexpected error from RunSession: %v", err)
+	}
+	if watching {
+		t.Fatal("expected watching=false when driver errors")
+	}
+	// Teardown must still fire even after a driver error.
+	if atomic.LoadInt32(n) != 1 {
+		t.Fatal("teardown must be called exactly once after driver error")
 	}
 }
