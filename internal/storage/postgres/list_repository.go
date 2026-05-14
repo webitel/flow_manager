@@ -9,14 +9,14 @@ import (
 	listdomain "github.com/webitel/flow_manager/internal/domain/list"
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type ListRepository struct {
 	db infraSql.Store
 }
 
-func NewListRepository(db infraSql.Store) store.ListStore {
+func NewListRepository(db infraSql.Store) storage.ListStore {
 	return &ListRepository{db: db}
 }
 

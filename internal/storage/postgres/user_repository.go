@@ -13,14 +13,14 @@ import (
 	userdomain "github.com/webitel/flow_manager/internal/domain/user"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type UserRepository struct {
 	db infraSql.Store
 }
 
-func NewUserRepository(db infraSql.Store) store.UserStore {
+func NewUserRepository(db infraSql.Store) storage.UserStore {
 	return &UserRepository{db: db}
 }
 

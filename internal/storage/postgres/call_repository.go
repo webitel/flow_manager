@@ -12,14 +12,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type CallRepository struct {
 	db infraSql.Store
 }
 
-func NewCallRepository(db infraSql.Store) store.CallStore {
+func NewCallRepository(db infraSql.Store) storage.CallStore {
 	return &CallRepository{db: db}
 }
 

@@ -10,7 +10,7 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 const (
@@ -30,7 +30,7 @@ type CallEventDeps interface {
 // Worker owns both the periodic history-flush watcher and the call-event
 // listener goroutine.
 type Worker struct {
-	store              store.Store
+	store              storage.Store
 	deps               CallEventDeps
 	log                *wlog.Logger
 	startOnce          sync.Once
@@ -38,7 +38,7 @@ type Worker struct {
 }
 
 // New creates a Worker.
-func New(st store.Store, deps CallEventDeps, log *wlog.Logger) *Worker {
+func New(st storage.Store, deps CallEventDeps, log *wlog.Logger) *Worker {
 	return &Worker{
 		store: st,
 		deps:  deps,

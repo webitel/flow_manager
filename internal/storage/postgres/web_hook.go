@@ -7,14 +7,14 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/webhook"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type WebHookRepository struct {
 	db infraSql.Store
 }
 
-func NewWebHookRepository(db infraSql.Store) store.WebHookStore {
+func NewWebHookRepository(db infraSql.Store) storage.WebHookStore {
 	return &WebHookRepository{db: db}
 }
 

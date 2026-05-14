@@ -7,14 +7,14 @@ import (
 
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	"github.com/webitel/flow_manager/internal/infrastructure/utils"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type LogRepository struct {
 	db infraSql.Store
 }
 
-func NewLogRepository(db infraSql.Store) store.LogStore {
+func NewLogRepository(db infraSql.Store) storage.LogStore {
 	return &LogRepository{db: db}
 }
 

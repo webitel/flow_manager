@@ -8,14 +8,14 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/calendar"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type CalendarRepository struct {
 	db infraSql.Store
 }
 
-func NewCalendarRepository(db infraSql.Store) store.CalendarStore {
+func NewCalendarRepository(db infraSql.Store) storage.CalendarStore {
 	return &CalendarRepository{db: db}
 }
 

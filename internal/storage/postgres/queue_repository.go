@@ -13,14 +13,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type QueueRepository struct {
 	db infraSql.Store
 }
 
-func NewQueueRepository(db infraSql.Store) store.QueueStore {
+func NewQueueRepository(db infraSql.Store) storage.QueueStore {
 	return &QueueRepository{db: db}
 }
 

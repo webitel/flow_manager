@@ -8,14 +8,14 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/session"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type SocketSessionRepository struct {
 	db infraSql.Store
 }
 
-func NewSocketSessionRepository(db infraSql.Store) store.SocketSessionStore {
+func NewSocketSessionRepository(db infraSql.Store) storage.SocketSessionStore {
 	return &SocketSessionRepository{db: db}
 }
 

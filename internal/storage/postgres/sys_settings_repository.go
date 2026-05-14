@@ -8,14 +8,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type SysSettingsRepository struct {
 	db infraSql.Store
 }
 
-func NewSysSettingsRepository(db infraSql.Store) store.SystemcSettings {
+func NewSysSettingsRepository(db infraSql.Store) storage.SystemcSettings {
 	return &SysSettingsRepository{db: db}
 }
 

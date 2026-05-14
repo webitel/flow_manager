@@ -10,14 +10,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type SchemaRepository struct {
 	db infraSql.Store
 }
 
-func NewSchemaRepository(db infraSql.Store) store.SchemaStore {
+func NewSchemaRepository(db infraSql.Store) storage.SchemaStore {
 	return &SchemaRepository{db: db}
 }
 

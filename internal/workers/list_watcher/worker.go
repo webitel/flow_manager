@@ -10,7 +10,7 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/infrastructure/watcher"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 const (
@@ -19,14 +19,14 @@ const (
 
 // Worker polls the store and removes expired list-communication numbers.
 type Worker struct {
-	store     store.Store
+	store     storage.Store
 	startOnce sync.Once
 	watcher   *watcher.Watcher
 	log       *wlog.Logger
 }
 
 // New creates a Worker backed by st.
-func New(st store.Store, log *wlog.Logger) *Worker {
+func New(st storage.Store, log *wlog.Logger) *Worker {
 	return &Worker{
 		store: st,
 		log: log.With(

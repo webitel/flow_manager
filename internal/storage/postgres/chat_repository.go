@@ -14,14 +14,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type ChatRepository struct {
 	db infraSql.Store
 }
 
-func NewChatRepository(db infraSql.Store) store.ChatStore {
+func NewChatRepository(db infraSql.Store) storage.ChatStore {
 	return &ChatRepository{db: db}
 }
 

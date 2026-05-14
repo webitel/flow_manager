@@ -8,14 +8,14 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type SessionRepository struct {
 	db infraSql.Store
 }
 
-func NewSessionRepository(db infraSql.Store) store.SessionStore {
+func NewSessionRepository(db infraSql.Store) storage.SessionStore {
 	return &SessionRepository{db: db}
 }
 

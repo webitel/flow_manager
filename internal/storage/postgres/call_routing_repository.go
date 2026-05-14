@@ -9,14 +9,14 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/routing"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type CallRoutingRepository struct {
 	db infraSql.Store
 }
 
-func NewCallRoutingRepository(db infraSql.Store) store.CallRoutingStore {
+func NewCallRoutingRepository(db infraSql.Store) storage.CallRoutingStore {
 	return &CallRoutingRepository{db: db}
 }
 

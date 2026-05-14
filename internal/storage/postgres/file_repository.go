@@ -8,14 +8,14 @@ import (
 
 	"github.com/webitel/flow_manager/internal/domain/files"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type FileRepository struct {
 	db infraSql.Store
 }
 
-func NewFileRepository(db infraSql.Store) store.FileStore {
+func NewFileRepository(db infraSql.Store) storage.FileStore {
 	return &FileRepository{db: db}
 }
 

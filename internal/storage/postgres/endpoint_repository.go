@@ -9,14 +9,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type EndpointRepository struct {
 	db infraSql.Store
 }
 
-func NewEndpointRepository(db infraSql.Store) store.EndpointStore {
+func NewEndpointRepository(db infraSql.Store) storage.EndpointStore {
 	return &EndpointRepository{db: db}
 }
 

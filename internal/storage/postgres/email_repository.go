@@ -13,14 +13,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/queue"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
 	pgsql "github.com/webitel/flow_manager/internal/infrastructure/sql/pgsql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type EmailRepository struct {
 	db infraSql.Store
 }
 
-func NewEmailRepository(db infraSql.Store) store.EmailStore {
+func NewEmailRepository(db infraSql.Store) storage.EmailStore {
 	return &EmailRepository{db: db}
 }
 

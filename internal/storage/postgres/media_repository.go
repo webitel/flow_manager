@@ -9,14 +9,14 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/call"
 	"github.com/webitel/flow_manager/internal/domain/files"
 	infraSql "github.com/webitel/flow_manager/internal/infrastructure/sql"
-	"github.com/webitel/flow_manager/store"
+	"github.com/webitel/flow_manager/internal/storage"
 )
 
 type MediaRepository struct {
 	db infraSql.Store
 }
 
-func NewMediaRepository(db infraSql.Store) store.MediaStore {
+func NewMediaRepository(db infraSql.Store) storage.MediaStore {
 	return &MediaRepository{db: db}
 }
 
