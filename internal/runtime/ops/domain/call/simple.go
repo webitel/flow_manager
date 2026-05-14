@@ -26,9 +26,9 @@ func callConnFromContext(ctx context.Context) (calldomain.Call, bool) {
 
 // Register adds all simple call ops (no RouterDeps beyond calldomain.Call) to reg.
 func Register(reg *ops.Registry) {
-	reg.Register("ringReady", syncOp(ringReadyFn))
-	reg.Register("preAnswer", syncOp(preAnswerFn))
-	reg.Register("answer", syncOp(answerFn))
+	reg.Register("ringReady", ringReadyOp{})
+	reg.Register("preAnswer", preAnswerOp{})
+	reg.Register("answer", answerOp{})
 	reg.Register("hangup", &hangupOp{})
 	reg.Register("echo", &echoOp{})
 	reg.Register("sleep", &sleepOp{})
