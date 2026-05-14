@@ -746,7 +746,7 @@ func (c *conversation) Bot(ctx context.Context, cli ai_bots2.ConverseServiceClie
 		}
 
 		if res.StopTalk {
-			// break
+			break
 		}
 	}
 
