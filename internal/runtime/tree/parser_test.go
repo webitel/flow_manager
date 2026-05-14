@@ -445,6 +445,82 @@ func TestParse_LegacyTriggerSingular(t *testing.T) {
 	}
 }
 
+func TestParse_Goto(t *testing.T) {
+	const schema = `[
+		{"log": {"message": "step1"}, "tag": "start"},
+		{"goto": "start"}
+	]`
+
+	tr := mustParse(t, 20, schema)
+
+	gotoNode := node(t, tr, "1")
+	if gotoNode.OpName != "goto" {
+		t.Fatalf("OpName: %q", gotoNode.OpName)
+	}
+	// goto target is stored as scalar under its own op key.
+	target, _ := gotoNode.Args["goto"].(string)
+	if target != "start" {
+		t.Errorf("goto target: got %q, want %q", target, "start")
+	}
+}
+
+func TestParse_FunctionDef(t *testing.T) {
+	const schema = `[
+		{"function": {"name": "greet", "actions": [
+			{"log": {"message": "hello"}},
+			{"set": {"greeted": "true"}}
+		]}},
+		{"execute": {"name": "greet"}}
+	]`
+
+	tr := mustParse(t, 21, schema)
+
+	// function node must NOT appear in Root.Children.
+	if len(tr.Root.Children) != 1 {
+		t.Fatalf("Root.Children: got %d, want 1 (only execute)", len(tr.Root.Children))
+	}
+	if tr.Root.Children[0].OpName != "execute" {
+		t.Errorf("root child OpName: %q", tr.Root.Children[0].OpName)
+	}
+
+	// function body must be indexed in Tree.Functions.
+	fn, ok := tr.Functions["greet"]
+	if !ok {
+		t.Fatal("Functions[greet] missing")
+	}
+	if fn.ID != "function.greet" {
+		t.Errorf("function container ID: %q", fn.ID)
+	}
+	if len(fn.Children) != 2 {
+		t.Errorf("function body children: got %d, want 2", len(fn.Children))
+	}
+	if fn.Children[0].OpName != "log" {
+		t.Errorf("fn body[0]: %q", fn.Children[0].OpName)
+	}
+	if fn.Children[1].OpName != "set" {
+		t.Errorf("fn body[1]: %q", fn.Children[1].OpName)
+	}
+
+	// function body nodes must be in ByID.
+	node(t, tr, "function.greet.0")
+	node(t, tr, "function.greet.1")
+
+	// execute node carries the function name in Args.
+	execNode := tr.Root.Children[0]
+	name, _ := execNode.Args["name"].(string)
+	if name != "greet" {
+		t.Errorf("execute Args[name]: got %q, want %q", name, "greet")
+	}
+}
+
+func TestParse_FunctionMissingName(t *testing.T) {
+	const schema = `[{"function": {"actions": [{"log": {"message": "x"}}]}}]`
+	_, err := tree.ParseJSON(22, []byte(schema))
+	if err == nil {
+		t.Fatal("expected error for function without name")
+	}
+}
+
 func TestParse_JSONRoundTripOfArgs(t *testing.T) {
 	const schema = `[{"httpRequest": {"url": "https://example.com", "method": "GET", "timeout": 5000}}]`
 

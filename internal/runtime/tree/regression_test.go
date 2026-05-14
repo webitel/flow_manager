@@ -111,10 +111,12 @@ func checkSnapshot(t *testing.T, fixturePath string, tr *tree.Tree) {
 // snapshotTree serialises the parsed tree as a human-readable text that can be
 // stored in git and diffed easily. Format (tab-separated columns):
 //
-//	{id}  {op}  {tag}  {childCount}
+//	{id}  {op}  {tag}  {childCount}  {sentinel}
 //
 // Containers (synthetic then/else/do/case nodes) have op "<seq>".
 // The virtual root is omitted. Triggers follow after "=== triggers ===".
+// sentinel captures key semantic args (goto target, if expression, etc.) so
+// that logic changes in structured ops are visible in the diff.
 func snapshotTree(tr *tree.Tree) string {
 	var sb strings.Builder
 
@@ -124,8 +126,7 @@ func snapshotTree(tr *tree.Tree) string {
 		if op == "" {
 			op = "<seq>"
 		}
-		tag := n.Tag
-		fmt.Fprintf(&sb, "%s\t%s\t%s\t%d\n", n.ID, op, tag, len(n.Children))
+		fmt.Fprintf(&sb, "%s\t%s\t%s\t%d\t%s\n", n.ID, op, n.Tag, len(n.Children), snapshotSentinel(n))
 		for _, c := range n.Children {
 			walk(c)
 		}
@@ -144,10 +145,63 @@ func snapshotTree(tr *tree.Tree) string {
 		for _, name := range names {
 			n := tr.Triggers[name]
 			fmt.Fprintf(&sb, "%s\t%d\n", name, len(n.Children))
+			for _, c := range n.Children {
+				walk(c)
+			}
+		}
+	}
+
+	if len(tr.Functions) > 0 {
+		sb.WriteString("=== functions ===\n")
+		names := make([]string, 0, len(tr.Functions))
+		for name := range tr.Functions {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			n := tr.Functions[name]
+			fmt.Fprintf(&sb, "%s\t%d\n", name, len(n.Children))
+			for _, c := range n.Children {
+				walk(c)
+			}
 		}
 	}
 
 	return sb.String()
+}
+
+// snapshotSentinel returns the key semantic argument(s) for ops where the args
+// carry logic that should be visible in a snapshot diff. Empty string for ops
+// whose logic is captured by structure alone (childCount, container IDs, etc.).
+func snapshotSentinel(n *tree.Node) string {
+	switch n.OpName {
+	case "goto":
+		// goto is always a scalar: {"goto": "tag-name"}
+		if v, _ := n.Args["goto"].(string); v != "" {
+			return "→" + v
+		}
+		// map form (rare): {"goto": {"name": "tag-name"}}
+		if v, _ := n.Args["name"].(string); v != "" {
+			return "→" + v
+		}
+	case "if":
+		if v, _ := n.Args["expression"].(string); v != "" {
+			return "expr=" + v
+		}
+	case "switch":
+		if v, _ := n.Args["variable"].(string); v != "" {
+			return "var=" + v
+		}
+	case "while":
+		if v, _ := n.Args["condition"].(string); v != "" {
+			return "cond=" + v
+		}
+	case "execute":
+		if v, _ := n.Args["name"].(string); v != "" {
+			return "fn=" + v
+		}
+	}
+	return ""
 }
 
 // assertTreeInvariants checks structural properties that must hold for any
@@ -172,6 +226,13 @@ func assertTreeInvariants(t *testing.T, tr *tree.Tree) {
 		}
 	}
 	walk(tr.Root)
+
+	for _, trig := range tr.Triggers {
+		walk(trig)
+	}
+	for _, fn := range tr.Functions {
+		walk(fn)
+	}
 
 	for tag, n := range tr.ByTag {
 		if _, ok := tr.ByID[n.ID]; !ok {

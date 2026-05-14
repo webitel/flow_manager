@@ -1,43 +1,43 @@
-0	calendar	51-calendar-custom-tag	0
-1	if	52-if-custom-tag	2
-1.then	<seq>		9
-1.then.0	sendText	56-sendText-custom-tag	0
-1.then.1	sendText	55-sendText-custom-tag	0
-1.then.2	recvMessage	58-recvMessage-custom-tag	0
-1.then.3	sendText	53-sendText-custom-tag	0
-1.then.4	recvMessage	60-recvMessage-custom-tag	0
-1.then.5	httpRequest	62-httpRequest-custom-tag	0
-1.then.6	js	63-js-custom-tag	0
-1.then.7	httpRequest	61-httpRequest-custom-tag	0
-1.then.8	sendText	84-sendText-custom-tag	0
-1.else	<seq>		0
-2	sendText	54-sendText-custom-tag	0
-3	sendText	64-sendText-custom-tag	0
-4	recvMessage	59-recvMessage-custom-tag	0
-5	sendText	65-sendText-custom-tag	0
-6	recvMessage	57-recvMessage-custom-tag	0
-7	js	80-js-custom-tag	0
-8	if	81-if-custom-tag	2
-8.then	<seq>		6
-8.then.0	sendText	66-sendText-custom-tag	0
-8.then.1	recvMessage	67-recvMessage-custom-tag	0
-8.then.2	js	76-js-custom-tag	0
-8.then.3	if	77-if-custom-tag	2
-8.then.3.then	<seq>		11
-8.then.3.then.0	sendText	96-sendText-custom-tag	0
-8.then.3.then.1	recvMessage	97-recvMessage-custom-tag	0
-8.then.3.then.2	set	94-set-custom-tag	0
-8.then.3.then.3	export	95-export-custom-tag	0
-8.then.3.then.4	joinQueue	68-joinQueue-custom-tag	0
-8.then.3.then.5	menu	70-menu-custom-tag	0
-8.then.3.then.6	recvMessage	71-recvMessage-custom-tag	0
-8.then.3.then.7	httpRequest	73-httpRequest-custom-tag	0
-8.then.3.then.8	js	75-js-custom-tag	0
-8.then.3.then.9	httpRequest	74-httpRequest-custom-tag	0
-8.then.3.then.10	sendText	85-sendText-custom-tag	0
-8.then.3.else	<seq>		0
-8.then.4	sendText	78-sendText-custom-tag	0
-8.then.5	goto	79-goto-custom-tag	0
-8.else	<seq>		0
-9	sendText	82-sendText-custom-tag	0
-10	goto	83-goto-custom-tag	0
+0	calendar	51-calendar-custom-tag	0	
+1	if	52-if-custom-tag	2	expr=${worktime} == 'false'
+1.then	<seq>		9	
+1.then.0	sendText	56-sendText-custom-tag	0	
+1.then.1	sendText	55-sendText-custom-tag	0	
+1.then.2	recvMessage	58-recvMessage-custom-tag	0	
+1.then.3	sendText	53-sendText-custom-tag	0	
+1.then.4	recvMessage	60-recvMessage-custom-tag	0	
+1.then.5	httpRequest	62-httpRequest-custom-tag	0	
+1.then.6	js	63-js-custom-tag	0	
+1.then.7	httpRequest	61-httpRequest-custom-tag	0	
+1.then.8	sendText	84-sendText-custom-tag	0	
+1.else	<seq>		0	
+2	sendText	54-sendText-custom-tag	0	
+3	sendText	64-sendText-custom-tag	0	
+4	recvMessage	59-recvMessage-custom-tag	0	
+5	sendText	65-sendText-custom-tag	0	
+6	recvMessage	57-recvMessage-custom-tag	0	
+7	js	80-js-custom-tag	0	
+8	if	81-if-custom-tag	2	expr=${isphonevalid} == 'true'
+8.then	<seq>		6	
+8.then.0	sendText	66-sendText-custom-tag	0	
+8.then.1	recvMessage	67-recvMessage-custom-tag	0	
+8.then.2	js	76-js-custom-tag	0	
+8.then.3	if	77-if-custom-tag	2	expr=${isEmailValid} == 'true'
+8.then.3.then	<seq>		11	
+8.then.3.then.0	sendText	96-sendText-custom-tag	0	
+8.then.3.then.1	recvMessage	97-recvMessage-custom-tag	0	
+8.then.3.then.2	set	94-set-custom-tag	0	
+8.then.3.then.3	export	95-export-custom-tag	0	
+8.then.3.then.4	joinQueue	68-joinQueue-custom-tag	0	
+8.then.3.then.5	menu	70-menu-custom-tag	0	
+8.then.3.then.6	recvMessage	71-recvMessage-custom-tag	0	
+8.then.3.then.7	httpRequest	73-httpRequest-custom-tag	0	
+8.then.3.then.8	js	75-js-custom-tag	0	
+8.then.3.then.9	httpRequest	74-httpRequest-custom-tag	0	
+8.then.3.then.10	sendText	85-sendText-custom-tag	0	
+8.then.3.else	<seq>		0	
+8.then.4	sendText	78-sendText-custom-tag	0	
+8.then.5	goto	79-goto-custom-tag	0	→67-recvMessage-custom-tag
+8.else	<seq>		0	
+9	sendText	82-sendText-custom-tag	0	
+10	goto	83-goto-custom-tag	0	→57-recvMessage-custom-tag

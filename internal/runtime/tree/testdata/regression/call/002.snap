@@ -1,0 +1,8 @@
+0	trigger	938-trigger-custom-tag	0	
+2	execute	execute__d33bb9147f9f79ca	0	fn=with_promo
+=== functions ===
+with_promo	4
+function.with_promo.0	string	customCode__52c25b0e15aa3661	0	
+function.with_promo.1	export	export__c9ada1e94265635f	0	
+function.with_promo.2	httpRequest	httpRequest__46db46feb2949a22	0	
+function.with_promo.3	export	export__ed82ced0ff30aa95	0	

@@ -1,0 +1,651 @@
+[
+  {
+    "tag": "938-trigger-custom-tag",
+    "trigger": {
+      "disconnected": [
+        {
+          "tag": "939-export-custom-tag",
+          "export": [
+            "result",
+            "reason",
+            "promo_promt"
+          ]
+        },
+        {
+          "tag": "switch__88545c25d0042f02",
+          "switch": {
+            "case": {
+              "busy": [
+                {
+                  "tag": "httpRequest__5827c736aca4dd05",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "call_back_later",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__9aea4c9d2d4c1e23",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "repeat": [
+                {
+                  "tag": "httpRequest__2514ae280d3ba57c",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "other",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__0f2f12f9456b0894",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "wiil_sign": [
+                {
+                  "goto": "httpRequest__ed0e2a877e5fff4f"
+                }
+              ],
+              "interested": [
+                {
+                  "goto": "httpRequest__7296717182d8f4ac"
+                }
+              ],
+              "will_think": [
+                {
+                  "tag": "httpRequest__7296717182d8f4ac",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "will_think",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__06e4b5b42d559ad1",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "how_to_sign": [
+                {
+                  "tag": "httpRequest__a41b3e19da5474b3",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "clarifies the terms of the loan",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__68234b73308c30bb",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "already_sign": [
+                {
+                  "tag": "httpRequest__0dd6888891396183",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "already_sign",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__8adf0ea34bb25681",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "not_customer": [
+                {
+                  "tag": "httpRequest__f5b063ad0c697c49",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "third_person",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__9ad344ed63643536",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "how_get_promo": [
+                {
+                  "goto": "httpRequest__a41b3e19da5474b3"
+                }
+              ],
+              "refuse_signed": [
+                {
+                  "tag": "httpRequest__5d705a8ba5baa651",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "rejection",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__6a5d0eb1cbbfeb60",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "who is calling": [
+                {
+                  "goto": "httpRequest__f5b063ad0c697c49"
+                }
+              ],
+              "call back later": [
+                {
+                  "goto": "httpRequest__5827c736aca4dd05"
+                }
+              ],
+              "internet_issues": [
+                {
+                  "tag": "httpRequest__f7fb8110e86aa3a3",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "internet_issues",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__684b19d511aaab61",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "not_recieved_sms": [
+                {
+                  "tag": "httpRequest__0112cbce3b1bebf4",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "problems_with_sms",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__461dfffdc99ce0fb",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "unclear_response": [
+                {
+                  "goto": "httpRequest__2514ae280d3ba57c"
+                }
+              ],
+              "dont_know_customer": [
+                {
+                  "goto": "httpRequest__f5b063ad0c697c49"
+                }
+              ],
+              "was_signed_on_call": [
+                {
+                  "tag": "httpRequest__3216a1755291428a",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "was signed on call",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__3d32f8abd7d1b236",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "dropped_on_greeting": [
+                {
+                  "tag": "httpRequest__dfc7f22e5961d855",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "call_was_disconnected",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__6cbbc94de5434bf8",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "drop_on_presentation": [
+                {
+                  "goto": "httpRequest__dfc7f22e5961d855"
+                }
+              ],
+              "dropped_on_greetings": [
+                {
+                  "goto": "httpRequest__dfc7f22e5961d855"
+                }
+              ],
+              "waht_is_repay_amount": [
+                {
+                  "goto": "httpRequest__a41b3e19da5474b3"
+                }
+              ],
+              "will_think_with_promo": [
+                {
+                  "goto": "httpRequest__7296717182d8f4ac"
+                }
+              ],
+              "confirmation_match_51%+": [
+                {
+                  "tag": "httpRequest__e653d79f69e928a9",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "confirmation_match_51%+",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__1aaf7c5f39b9b45e",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "what_is_amount_or_term?": [
+                {
+                  "goto": "httpRequest__a41b3e19da5474b3"
+                }
+              ],
+              "dropped_on_silence_stage": [
+                {
+                  "goto": "httpRequest__dfc7f22e5961d855"
+                }
+              ],
+              "want_change_amount_or_term": [
+                {
+                  "goto": "httpRequest__a41b3e19da5474b3"
+                }
+              ],
+              "dropped_after_repeat_question": [
+                {
+                  "goto": "httpRequest__dfc7f22e5961d855"
+                }
+              ],
+              "confirmation_match_less_than_50%": [
+                {
+                  "tag": "httpRequest__bf74ff08220bd6c9",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "confirmation_match_less_than_50%",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__e090f048efc6b84e",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ],
+              "will_sign_not_interested_on_the_call": [
+                {
+                  "tag": "httpRequest__ed0e2a877e5fff4f",
+                  "httpRequest": {
+                    "url": "https://api.suite.mx/api/p/webitel_call_center",
+                    "data": {
+                      "comment": "${google_transcript}",
+                      "user_id": "${user_id}",
+                      "cc_user_id": "319",
+                      "action_types": "outgoing_call",
+                      "result_types": "will sign",
+                      "statuses_client": "application_process",
+                      "webitel_call_id": "${uuid}"
+                    },
+                    "path": {},
+                    "method": "POST",
+                    "parser": "application/json",
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "timeout": 5000,
+                    "cacheCookie": false,
+                    "exportCookie": "my-cookie",
+                    "responseCode": "http_response_code_result",
+                    "exportVariables": {},
+                    "insecureSkipVerify": false
+                  }
+                },
+                {
+                  "tag": "export__1877f0c3c65bdad6",
+                  "export": [
+                    "http_response_code_result"
+                  ]
+                }
+              ]
+            },
+            "variable": "${result}"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "tag": "function__9f60de834db4822d",
+    "function": {
+      "name": "with_promo",
+      "actions": [
+        {
+          "tag": "customCode__52c25b0e15aa3661",
+          "string": {
+            "fn": "slice",
+            "args": [
+              "-10"
+            ],
+            "data": "${destination}",
+            "setVar": "cut_caller_id_number"
+          }
+        },
+        {
+          "tag": "export__c9ada1e94265635f",
+          "export": [
+            "cut_caller_id_number"
+          ]
+        },
+        {
+          "tag": "httpRequest__46db46feb2949a22",
+          "httpRequest": {
+            "url": "https://api.suite.mx/api/p/webitel_loan_verification_confirm",
+            "data": {
+              "phone": "${cut_caller_id_number}",
+              "promo_code": "IVR2502",
+              "customer_response": "confirmed"
+            },
+            "path": {},
+            "method": "POST",
+            "parser": "application/json",
+            "headers": {
+              "Content-Type": "application/json"
+            },
+            "timeout": 10000,
+            "cacheCookie": false,
+            "exportCookie": "my-cookie",
+            "responseCode": "http_response_code_confirm",
+            "exportVariables": {},
+            "insecureSkipVerify": false
+          }
+        },
+        {
+          "tag": "export__ed82ced0ff30aa95",
+          "export": [
+            "http_response_code_confirm"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "tag": "execute__d33bb9147f9f79ca",
+    "execute": {
+      "name": "with_promo",
+      "async": true
+    }
+  }
+]

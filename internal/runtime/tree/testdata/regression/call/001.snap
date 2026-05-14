@@ -1,0 +1,656 @@
+0	trigger	938-trigger-custom-tag	0	
+12	set	212-set-custom-tag	0	
+13	if	936-if-custom-tag	2	expr=${member_name} == ''
+13.then	<seq>		2	
+13.then.0	set	769-set-custom-tag	0	
+13.then.1	goto		0	→56-answer-custom-tag
+13.else	<seq>		5	
+13.else.0	answer	56-answer-custom-tag	0	
+13.else.1	backgroundPlayback	702-customCode-custom-tag	0	
+13.else.2	recordSession	211-recordSession-custom-tag	0	
+13.else.3	calendar	577-calendar-custom-tag	0	
+13.else.4	if	581-if-custom-tag	2	expr=${morning} == 'true'
+13.else.4.then	<seq>		4	
+13.else.4.then.0	math	595-math-custom-tag	0	
+13.else.4.then.1	set	906-set-custom-tag	0	
+13.else.4.then.2	math	600-math-custom-tag	0	
+13.else.4.then.3	switch	switch__c0e3ba8feb84f9d2	2	var=${result_on_last_call}
+13.else.4.then.3.case.default	<seq>		1	
+13.else.4.then.3.case.default.0	switch	switch__c21e444941aefd3b	2	var=${is_cb}
+13.else.4.then.3.case.default.0.case.default	<seq>		2	
+13.else.4.then.3.case.default.0.case.default.0	playback	288-customCode-custom-tag	0	
+13.else.4.then.3.case.default.0.case.default.1	if	if__5f8ed62c83f24a3e	2	expr=${wbt_tts_error} == ''
+13.else.4.then.3.case.default.0.case.default.1.then	<seq>		2	
+13.else.4.then.3.case.default.0.case.default.1.then.0	playback	722-customCode-custom-tag	0	
+13.else.4.then.3.case.default.0.case.default.1.then.1	if	if__7a5d4a538d321ef7	2	expr=${wbt_stt_error} == ''
+13.else.4.then.3.case.default.0.case.default.1.then.1.then	<seq>		2	
+13.else.4.then.3.case.default.0.case.default.1.then.1.then.0	set	72-set-custom-tag	0	
+13.else.4.then.3.case.default.0.case.default.1.then.1.then.1	execute	customModule__c75728ecd2d6a912	0	fn=eb9f984a-a1dc-410e-8881-7e257e78d4e3
+13.else.4.then.3.case.default.0.case.default.1.then.1.else	<seq>		1	
+13.else.4.then.3.case.default.0.case.default.1.then.1.else.0	goto		0	→72-set-custom-tag
+13.else.4.then.3.case.default.0.case.default.1.else	<seq>		2	
+13.else.4.then.3.case.default.0.case.default.1.else.0	httpRequest	httpRequest__a25e729397b45872	0	
+13.else.4.then.3.case.default.0.case.default.1.else.1	goto		0	→722-customCode-custom-tag
+13.else.4.then.3.case.default.0.case.true	<seq>		2	
+13.else.4.then.3.case.default.0.case.true.0	playback	customCode__f9f8cfe563e3ecf9	0	
+13.else.4.then.3.case.default.0.case.true.1	if	if__ec8624bc6b30f698	2	expr=${wbt_tts_error} == ''
+13.else.4.then.3.case.default.0.case.true.1.then	<seq>		2	
+13.else.4.then.3.case.default.0.case.true.1.then.0	playback	customCode__e2d7f16003c35d1f	0	
+13.else.4.then.3.case.default.0.case.true.1.then.1	if	if__c05d8b8e01b51bd0	2	expr=${wbt_stt_error} == ''
+13.else.4.then.3.case.default.0.case.true.1.then.1.then	<seq>		2	
+13.else.4.then.3.case.default.0.case.true.1.then.1.then.0	set	set__cec9a34999c92610	0	
+13.else.4.then.3.case.default.0.case.true.1.then.1.then.1	execute	customModule__e5d2c4dcf4f37291	0	fn=eb9f984a-a1dc-410e-8881-7e257e78d4e3
+13.else.4.then.3.case.default.0.case.true.1.then.1.else	<seq>		1	
+13.else.4.then.3.case.default.0.case.true.1.then.1.else.0	goto		0	→set__cec9a34999c92610
+13.else.4.then.3.case.default.0.case.true.1.else	<seq>		2	
+13.else.4.then.3.case.default.0.case.true.1.else.0	httpRequest	httpRequest__ff216f8e961a3197	0	
+13.else.4.then.3.case.default.0.case.true.1.else.1	goto		0	→customCode__e2d7f16003c35d1f
+13.else.4.then.3.case.dropped_on_greeting	<seq>		2	
+13.else.4.then.3.case.dropped_on_greeting.0	playback	customCode__1812e2504b06ce10	0	
+13.else.4.then.3.case.dropped_on_greeting.1	if	if__e8ca6e0f91070481	2	expr=${wbt_tts_error} == ''
+13.else.4.then.3.case.dropped_on_greeting.1.then	<seq>		2	
+13.else.4.then.3.case.dropped_on_greeting.1.then.0	playback	customCode__14089b82099311d1	0	
+13.else.4.then.3.case.dropped_on_greeting.1.then.1	if	if__969ff4b9ddf3d082	2	expr=${wbt_stt_error} == ''
+13.else.4.then.3.case.dropped_on_greeting.1.then.1.then	<seq>		2	
+13.else.4.then.3.case.dropped_on_greeting.1.then.1.then.0	set	set__8acc0c1d6c8713f1	0	
+13.else.4.then.3.case.dropped_on_greeting.1.then.1.then.1	execute	customModule__66ee47b2b10a1b97	0	fn=eb9f984a-a1dc-410e-8881-7e257e78d4e3
+13.else.4.then.3.case.dropped_on_greeting.1.then.1.else	<seq>		1	
+13.else.4.then.3.case.dropped_on_greeting.1.then.1.else.0	goto		0	→set__8acc0c1d6c8713f1
+13.else.4.then.3.case.dropped_on_greeting.1.else	<seq>		2	
+13.else.4.then.3.case.dropped_on_greeting.1.else.0	httpRequest	httpRequest__db20dbd074137f56	0	
+13.else.4.then.3.case.dropped_on_greeting.1.else.1	goto		0	→customCode__14089b82099311d1
+13.else.4.else	<seq>		2	
+13.else.4.else.0	calendar	578-calendar-custom-tag	0	
+13.else.4.else.1	if	582-if-custom-tag	2	expr=${middleday} == 'true'
+13.else.4.else.1.then	<seq>		2	
+13.else.4.else.1.then.0	math	596-math-custom-tag	0	
+13.else.4.else.1.then.1	goto		0	→906-set-custom-tag
+13.else.4.else.1.else	<seq>		1	
+13.else.4.else.1.else.0	goto		0	→596-math-custom-tag
+=== functions ===
+08a000b4-8c4f-406e-b8d6-8888e53a0aea	1
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0	switch	switch__2c7c4ff95028d374	3	var=${category}
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0	if	if__62e3015e9d253365	2	expr=${promo_promt} == 'true'
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then	<seq>		5	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then.0	httpRequest	httpRequest__4a82b05cfd39aff5	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then.1	export	export__778fae608a7a0242	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then.2	set	set__5cee81448f15abb3	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then.3	playback	playback__01ac60a63f2baed4	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.then.4	hangup	hangup__9b2038c7dbb004b0	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.else	<seq>		3	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.else.0	set	set__6d9a1d01283545eb	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.else.1	playback	playback__298b57f0cf819d1d	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I'll check it later.0.else.2	hangup	hangup__069447e632e7d261	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0	switch	switch__e145a3c70d09b1ad	2	var=${counter_busy}
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1	<seq>		6	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.0	set	set__95e2f1b764924d84	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.1	js	js__13996add004234e9	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.2	playback	customCode__153b79b695497d7c	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.3	playback	customCode__4d54f66a5c1bf4ef	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.4	js	js__17ff081705b8795e	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5	if	if__d3e63ccbb52b3f28	2	expr=${google_transcript} == ''
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.then	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.then.0	goto		0	→js__5eb938f5e733d5d2
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else	<seq>		7	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.0	js	js__5eb938f5e733d5d2	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.1	set	set__5364bff76c2a17ee	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.2	set	set__a5c754bf90ece27d	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.3	httpRequest	httpRequest__eb94eecae971ba54	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.4	set	set__78350f22eb4f08dc	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.5	export	export__ecdb63ea90529c74	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6	switch	switch__61c9603acc44cf6d	3	var=${chatgpt}
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.default	<seq>		4	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.default.0	set	set__50a6463ac985d110	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.default.1	playback	customCode__04946a20ae88afcc	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.default.2	callbackQueue	customCode__c7c5fbd134eb6542	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.default.3	hangup	hangup__e5411b6f392d1861	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0	switch	switch__82628a74aa562fd4	2	var=${counter_late_cb}
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1	<seq>		5	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1.0	set	set__ad6df2c9914a7da3	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1.1	js	js__fdb0b56c0b859641	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1.2	playback	customCode__eef3e5bc997b2536	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1.3	callbackQueue	callbackQueue__342f56f6b7c6e2b8	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.1.4	hangup	hangup__f0ae21946dff790b	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default	<seq>		5	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default.0	set	set__9bd2719d6f79a00f	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default.1	js	js__64eec983b434894d	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default.2	playback	customCode__3f1cb780f6d6b4a3	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default.3	playback	customCode__2528fe646f3aa19e	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.late_call_back.0.case.default.4	goto		0	→js__17ff081705b8795e
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0	switch	switch__241bcb520af98d73	2	var=${counter_not_time}
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1	<seq>		5	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1.0	set	set__8c4cabfd0982ae25	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1.1	js	js__e48ec9d72512d7f3	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1.2	playback	customCode__8c6269ab50586c0f	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1.3	callbackQueue	callbackQueue__cc03f1f022e9437a	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.1.4	hangup	hangup__291a38f9261e2030	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default	<seq>		5	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default.0	set	set__818a3affce533e24	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default.1	js	js__c976089ff9a779c1	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default.2	playback	customCode__0f9621698d86a53a	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default.3	playback	customCode__ca9e8471f07bfae8	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.1.5.else.6.case.not_time.0.case.default.4	goto		0	→js__17ff081705b8795e
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.default	<seq>		4	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.default.0	set	set__0942175b097937b0	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.default.1	js	js__336f3335d1f42c36	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.default.2	playback	customCode__b715075b6e71beaa	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.I’m busy.0.case.default.3	playback	customCode__81a07b1c0399d539	0	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.default	<seq>		1	
+function.08a000b4-8c4f-406e-b8d6-8888e53a0aea.0.case.default.0	execute	customModule__570cce989e8d5a38	0	fn=c2e686a9-d2c0-4631-b2bd-52277b51b956
+a4439eff-ab63-4a0a-b007-a6298f19bf4b	1
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0	switch	switch__83330f2674fe8377	5	var=${category}
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now	<seq>		2	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.0	set	set__f8bc8d8bf072db36	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1	switch	switch__17ebb013c5bbc474	3	var=${counter_no_need}
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.1	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.1.0	set	set__e84460d7d3ccc900	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.1.1	js	js__105bbca0e914dc56	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.1.2	playback	customCode__99addd05c6710953	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.1.3	playback	customCode__263c57e5ef17f69c	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.2	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.2.0	js	js__1ab008d2e98b7158	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.2.1	playback	customCode__1e152752c84c2f62	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.2.2	softSleep	softSleep__8bfdfa538f035308	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.2.3	hangup	hangup__d611073e353623f0	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.default	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.default.0	set	set__0226ed67342ccc16	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.default.1	js	js__11dce9ba613c2d29	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.default.2	playback	customCode__e7099e2a996ed320	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t need it now.1.case.default.3	playback	customCode__b805d41c847a3a1c	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment	<seq>		2	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.0	set	set__f114387516580d9a	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1	switch	switch__47ae4476425390d1	3	var=${counter_overpay}
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.1	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.1.0	set	set__09516034dc48bda1	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.1.1	js	js__31990fd076013176	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.1.2	playback	customCode__d25715cc8451aa5a	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.1.3	playback	customCode__7d664047df6c7d1f	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.2	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.2.0	js	js__498be52407811b41	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.2.1	playback	customCode__9b1c82db2214b533	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.2.2	softSleep	softSleep__e7eda554ba08828a	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.2.3	hangup	hangup__3329283cfd6ca74f	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.default	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.default.0	set	set__87865365da08fe1f	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.default.1	js	js__7516801eaef508bc	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.default.2	playback	customCode__6356d34299a267fc	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, big overpayment.1.case.default.3	playback	customCode__8315934ed19d20f0	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount	<seq>		2	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.0	set	set__5713cdc7d37b9a06	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1	switch	switch__4c8c80cf8977398f	3	var=${counter_small_amount}
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.1	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.1.0	set	set__3e37eb55e7146c11	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.1.1	js	js__502e4eb29dfd33a7	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.1.2	playback	customCode__165d8a288e3e7c4e	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.1.3	playback	customCode__d1097a8c4b1a62a8	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.2	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.2.0	js	js__9285b76ff9cb740b	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.2.1	playback	customCode__ee2edf1178152cae	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.2.2	softSleep	softSleep__65d363c2a7e5c860	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.2.3	hangup	hangup__eb2180fc7a5d9fdb	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.default	<seq>		4	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.default.0	set	set__0ff8f7ab3bb30166	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.default.1	js	js__083e5efc8f4661aa	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.default.2	playback	customCode__a8faa2396bba86e4	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Don’t want it, was approved small amount.1.case.default.3	playback	customCode__e76471c87a1d443e	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Refuse without reason	<seq>		3	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Refuse without reason.0	set	set__b3002c6c63553a57	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Refuse without reason.1	playback	customCode__4fbe6cda7a887198	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.Refuse without reason.2	playback	customCode__7c15d0ab6ddc7401	0	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.default	<seq>		1	
+function.a4439eff-ab63-4a0a-b007-a6298f19bf4b.0.case.default.0	execute	customModule__a19a7f48ab0fce40	0	fn=c2e686a9-d2c0-4631-b2bd-52277b51b956
+bc96e10b-846d-4c17-b562-06801b642b3e	1
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0	switch	switch__99f3f6f3d5bc1318	8	var=${category}
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?	<seq>		1	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0	switch	switch__075f19096dfd15de	2	var=${promo_promt}
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.default	<seq>		4	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.default.0	set	set__b8e88f1bebbfa4a9	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.default.1	httpRequest	httpRequest__069c945e629a7944	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.default.2	playback	customCode__3d3145ef42428823	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.default.3	playback	customCode__a32b1d2eb0567e43	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true	<seq>		5	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true.0	httpRequest	httpRequest__df31518602cabf87	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true.1	httpRequest	httpRequest__e26633ad1ab6f528	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true.2	set	set__5d3563aae199995f	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true.3	playback	customCode__0fe0ff6f983ac7c0	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How much do I have to pay back?.0.case.true.4	playback	customCode__a83fb555b6198dfe	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How to get a promo code?	<seq>		3	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How to get a promo code?.0	set	set__2a645b930b934765	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How to get a promo code?.1	playback	customCode__a376173ca318f803	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.How to get a promo code?.2	playback	customCode__a17008d585d2d45b	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Repeat the question	<seq>		4	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Repeat the question.0	set	set__f2592b9fb22482cc	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Repeat the question.1	httpRequest	httpRequest__f26507ba6e6f5194	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Repeat the question.2	playback	customCode__61ccc48ceee6d893	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Repeat the question.3	playback	customCode__5863632dacb78b63	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Want to change the amount or term	<seq>		3	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Want to change the amount or term.0	set	set__ba8461a98ff55e6e	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Want to change the amount or term.1	playback	customCode__3043ff3c654a469d	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Want to change the amount or term.2	playback	customCode__c7e3f9be8e19464c	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.What is the amount and term was approved?	<seq>		4	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.What is the amount and term was approved?.0	set	set__bae315dc926a9f04	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.What is the amount and term was approved?.1	httpRequest	httpRequest__9817d4f5e928f6a8	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.What is the amount and term was approved?.2	playback	customCode__86e36455c9999586	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.What is the amount and term was approved?.3	playback	customCode__f0405c7fc79c57d8	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Where can I find the contract?	<seq>		3	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Where can I find the contract?.0	set	set__525d3493a021e6da	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Where can I find the contract?.1	playback	customCode__72d058264fa97224	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Where can I find the contract?.2	playback	customCode__93b13561e7da25fe	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Who is calling?	<seq>		3	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Who is calling?.0	set	set__f96152ea51a5d4c2	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Who is calling?.1	playback	customCode__0012dca692469a9e	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.Who is calling?.2	playback	customCode__1a3d9205f40faaee	0	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.default	<seq>		1	
+function.bc96e10b-846d-4c17-b562-06801b642b3e.0.case.default.0	execute	customModule__3ccae9a79b67317b	0	fn=c2e686a9-d2c0-4631-b2bd-52277b51b956
+c2e686a9-d2c0-4631-b2bd-52277b51b956	1
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0	switch	switch__0d3e3a49eca9205b	4	var=${category}
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Didn’t receive SMS with OTP	<seq>		3	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Didn’t receive SMS with OTP.0	set	set__d42e0597f8fb69cc	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Didn’t receive SMS with OTP.1	playback	customCode__3088401820788a6d	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Didn’t receive SMS with OTP.2	playback	customCode__f98095f890c81309	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Internet issues	<seq>		3	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Internet issues.0	set	set__53a7ddb1e5ebb79c	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Internet issues.1	playback	customCode__2da0a4360539c516	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Internet issues.2	playback	customCode__9f6a9b7fb5059886	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response	<seq>		2	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.0	set	set__ddf966ac493336e4	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1	switch	switch__1948f2f80e40255a	4	var=${counter_unclear_response}
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.1	<seq>		4	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.1.0	set	set__7e230d6b8af453a5	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.1.1	js	js__4bc0a8fb009c57dd	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.1.2	playback	customCode__1cbbd8ef49499fc2	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.1.3	playback	customCode__5eff231415f64760	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2	<seq>		5	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2.0	js	js__a0a8395e29713982	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2.1	playback	customCode__79ab9f2c0d3b4c81	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2.2	callbackQueue	callbackQueue__83f1193c716ebcc7	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2.3	softSleep	softSleep__aa5111e791193690	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.2.4	hangup	hangup__20693333fe802fb6	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.3	<seq>		1	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.3.0	goto		0	→js__a0a8395e29713982
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.default	<seq>		4	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.default.0	set	set__79e700ba06f42b40	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.default.1	js	js__b5b29250aa80ed2a	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.default.2	playback	customCode__211e6e6db919ff50	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.Unclear response.1.case.default.3	playback	customCode__7c48fac1e75edab3	0	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.default	<seq>		1	
+function.c2e686a9-d2c0-4631-b2bd-52277b51b956.0.case.default.0	goto		0	→set__ddf966ac493336e4
+e773e28c-c5f9-4f64-9447-3e8002291149	2
+function.e773e28c-c5f9-4f64-9447-3e8002291149.0	js	js__0cfd031ef1dbce63	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1	if	if__c5102b044517f5d9	2	expr=${google_transcript} == ''
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then	<seq>		8	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.0	set	set__98895c4fe1e568e7	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.1	export	export__3a4fc2b0c5630a41	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.2	playback	customCode__cb9e18f32bbd0f75	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.3	playback	customCode__1c73442e82e0c2df	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.4	js	js__de36ea43551716c7	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.5	set	set__34e024fe1ead8f00	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.6	export	export__3955bddf43936892	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7	if	if__4d34180cf411d49d	2	expr=${google_transcript} == ''
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.then	<seq>		3	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.then.0	playback	customCode__439d34be148b7271	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.then.1	playback	customCode__f93d7474c7fc12c6	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.then.2	goto		0	→js__de36ea43551716c7
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else	<seq>		8	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.0	set	set__4b42f5e2d5652219	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.1	set	set__c2a31e42059bba8d	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.2	httpRequest	httpRequest__4ccb83faaf15416a	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.3	js	js__8f623323271dfb3e	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.4	js	js__7b38f1327ab4433e	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.5	set	set__ab612a1ff4f3b93f	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.6	export	export__975d66c29c5c14e7	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7	switch	switch__9810fe91c6850eb6	6	var=${intent}
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Delayed decision	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Delayed decision.0	goto		0	→switch__4fdca550219a3a1d
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Information request	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Information request.0	goto		0	→switch__4fdca550219a3a1d
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Negative intent	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Negative intent.0	goto		0	→switch__4fdca550219a3a1d
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Other	<seq>		4	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Other.0	playback	customCode__0417fbcc8890ad3d	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Other.1	playback	customCode__0e9f53e9b4933237	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Other.2	set	set__a7dfa783f308a447	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Other.3	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Positive intent	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.Positive intent.0	goto		0	→switch__4fdca550219a3a1d
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.default	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.then.7.else.7.case.default.0	goto		0	→customCode__0417fbcc8890ad3d
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else	<seq>		8	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.0	set	set__d63341577b568b36	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.1	set	set__60a081e13fef6b50	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.2	httpRequest	httpRequest__3f8184e57d6bb961	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.3	js	js__a854f8b21ab2fa3d	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.4	js	js__e0d268b6a47b0def	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.5	set	set__2086381aec9660a5	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.6	export	export__4cb5e5e0f04ccb4a	0	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7	switch	switch__4fdca550219a3a1d	7	var=${intent}
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Delayed decision	<seq>		2	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Delayed decision.0	execute	customModule__d37e93e965556005	0	fn=08a000b4-8c4f-406e-b8d6-8888e53a0aea
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Delayed decision.1	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Information request	<seq>		2	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Information request.0	execute	customModule__ecbb9bd39bef2239	0	fn=bc96e10b-846d-4c17-b562-06801b642b3e
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Information request.1	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Negative intent	<seq>		2	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Negative intent.0	execute	customModule__f91e06df2246dbaa	0	fn=a4439eff-ab63-4a0a-b007-a6298f19bf4b
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Negative intent.1	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Other	<seq>		2	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Other.0	execute	customModule__92d20d117db97e35	0	fn=c2e686a9-d2c0-4631-b2bd-52277b51b956
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Other.1	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Positive intent	<seq>		2	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Positive intent.0	execute	customModule__3ee1ed58d57ca36f	0	fn=fb82cda1-5c35-4242-8a96-77e1495bcdf6
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.Positive intent.1	goto		0	→js__0cfd031ef1dbce63
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.default	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.default.0	goto		0	→customModule__92d20d117db97e35
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.hangup	<seq>		1	
+function.e773e28c-c5f9-4f64-9447-3e8002291149.1.else.7.case.hangup.0	hangup	hangup__de088bf3cbf3364d	0	
+eb9f984a-a1dc-410e-8881-7e257e78d4e3	2
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.0	js	js__c4af8733502696b2	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1	if	if__a0dade6555849f26	2	expr=${google_transcript} == ''
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then	<seq>		8	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.0	set	set__a5ef980cd6377c6f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.1	export	export__afaf8c0118daccd3	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.2	playback	customCode__ae7752aeff3073e2	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.3	playback	customCode__0c16a16fd50bf425	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.4	js	js__e70c49cd65b4cd0c	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.5	set	set__643eeaff92c666f7	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.6	export	export__13ccc8993c091c44	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7	if	if__7f2bdf537ec6bb62	2	expr=${google_transcript} == ''
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.then	<seq>		3	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.then.0	playback	customCode__52f20d7a84cac6b1	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.then.1	playback	customCode__1c79fb7f0007c2aa	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.then.2	goto		0	→if__7f2bdf537ec6bb62
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0	if	if__848f30372b6ab47d	2	expr=${counter} == 1
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.then	<seq>		2	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.then.0	set	set__7ffe4d1aceabcedd	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.then.1	goto		0	→set__8c25095cd0dc0d6f
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else	<seq>		7	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.0	set	set__f04466d6d3a2e4c0	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.1	set	set__02e5683a29412254	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.2	set	set__8c25095cd0dc0d6f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.3	httpRequest	httpRequest__20aa4be210d2a3eb	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.4	set	set__21a89ea4793b02a5	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.5	export	export__a75c9d84a40e98ac	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6	switch	switch__8dd3d2a5d54428ee	10	var=${chatgpt}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I know him, but it's not me	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I know him, but it's not me.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I'm busy	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I'm busy.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I'm gonna put him on the phone now	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.I'm gonna put him on the phone now.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.No, I don't know him	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.No, I don't know him.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Repeat the question	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Repeat the question.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Unclear response	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Unclear response.0	playback	customCode__27da8374ab5c8911	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Unclear response.1	playback	customCode__aba88d59e5b231c1	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Unclear response.2	set	set__a969fcafe4092e8d	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Unclear response.3	goto		0	→js__c4af8733502696b2
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Who are you?	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Who are you?.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Yes, it's me	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Yes, it's me.0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Yes, it's me, but I'm busy 	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.Yes, it's me, but I'm busy .0	goto		0	→switch__1c42804b4ffb318e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.default	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.then.7.else.0.else.6.case.default.0	goto		0	→customCode__27da8374ab5c8911
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0	if	if__01469a1fd882a303	2	expr=${counter} == 1
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.then	<seq>		2	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.then.0	set	set__431b82028ca624a2	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.then.1	goto		0	→set__9b08216d5e860cfd
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else	<seq>		6	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.0	set	set__96031ffba37bbc4b	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.1	set	set__9b08216d5e860cfd	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.2	httpRequest	httpRequest__4bbb8b331256dc45	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.3	set	set__c57ead6f3c12cf5e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.4	export	export__dce81c1c2fd3ff0d	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5	switch	switch__1c42804b4ffb318e	10	var=${chatgpt}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I know him, but it's not me	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I know him, but it's not me.0	set	set__6d0d7d589665e259	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I know him, but it's not me.1	playback	playback__e4d663bb26918b44	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I know him, but it's not me.2	softSleep	softSleep__4a4484e72a02f80b	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I know him, but it's not me.3	hangup	hangup__e59bbf385ce3f789	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0	switch	switch__552288c795f6deb7	2	var=${counter_busy}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1	<seq>		6	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.0	set	set__42717f1a2130c83a	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.1	js	js__6a79d1639444378a	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.2	playback	customCode__b5b512c2f1f98068	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.3	playback	customCode__b9ba788692a69eb7	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.4	js	js__c31f1c0b5edf765f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5	if	if__23edb446faf4a0b3	2	expr=${google_transcript} == ''
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.then	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.then.0	goto		0	→js__d2a3df66ed56527e
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else	<seq>		7	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.0	js	js__d2a3df66ed56527e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.1	set	set__95e8191f3a88045e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.2	set	set__9babf16ee0f1c782	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.3	httpRequest	httpRequest__dcd0e9f314516e4a	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.4	set	set__eac6484122bccf89	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.5	export	export__0ef42c3479b91701	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6	switch	switch__e2228676b4250dbd	3	var=${chatgpt}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.default	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.default.0	set	set__65bbbd58e61bb924	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.default.1	playback	customCode__8c636534f0967983	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.default.2	playback	customCode__264237750738eda9	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.default.3	hangup	hangup__4b1df43a6a0e984e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0	switch	switch__626731b7ec7be42b	2	var=${counter_late_cb}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1.0	set	set__44949367f7977d17	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1.1	js	js__8de621841c8dc6fe	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1.2	playback	customCode__fe3cf8cba4f20856	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1.3	callbackQueue	callbackQueue__045c1707c987fff5	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.1.4	hangup	hangup__155a1a0c49c8fadf	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default.0	set	set__384fd063caadfa22	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default.1	js	js__54f59544da70c0f2	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default.2	playback	customCode__9357ea14976c0365	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default.3	playback	customCode__0bf564ea2bb11140	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.late_call_back.0.case.default.4	goto		0	→js__c31f1c0b5edf765f
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0	switch	switch__fe7ef19370131678	2	var=${counter_not_time}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1.0	set	set__b2da6780024181ed	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1.1	js	js__12d9362fd76ca20d	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1.2	playback	customCode__fef886a6c7dcc106	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1.3	callbackQueue	callbackQueue__9b9da97f65fbf00f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.1.4	hangup	hangup__6e71eaa4667c9443	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default.0	set	set__6d05c3f3611f0cac	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default.1	js	js__456f308876301afe	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default.2	playback	customCode__2799668b29aeb786	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default.3	playback	customCode__e0c18d38c01ca1c5	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.1.5.else.6.case.not_time.0.case.default.4	goto		0	→js__c31f1c0b5edf765f
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default.0	set	set__90d48688e445ac88	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default.1	js	js__76abeb10d77815bd	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default.2	playback	customCode__cfcf053c05cc0a73	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default.3	playback	customCode__fd14044cdf376b99	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm busy.0.case.default.4	goto		0	→js__c4af8733502696b2
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm gonna put him on the phone now	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.I'm gonna put him on the phone now.0	goto		0	→set__42717f1a2130c83a
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.No, I don't know him	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.No, I don't know him.0	set	set__a1b942b29d814895	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.No, I don't know him.1	playback	playback__e4c7df2211467637	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.No, I don't know him.2	softSleep	softSleep__9be447a90545c444	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.No, I don't know him.3	hangup	hangup__3fd2e7effbcc80a2	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Repeat the question	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Repeat the question.0	set	set__ac1343d63143e473	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Repeat the question.1	playback	customCode__0fedd445906b59fb	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Repeat the question.2	playback	customCode__a3a2036541346e70	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Repeat the question.3	goto		0	→js__c4af8733502696b2
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Unclear response	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Unclear response.0	goto		0	→set__6d0d7d589665e259
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Who are you?	<seq>		1	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Who are you?.0	goto		0	→set__ac1343d63143e473
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me.0	set	set__3fc53a4d419f4a1c	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me.1	playback	customCode__a5727c6d9959a546	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me.2	playback	customCode__1bcf36881b3fe41e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me.3	execute	customModule__21ef052a165f238d	0	fn=e773e28c-c5f9-4f64-9447-3e8002291149
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy 	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy .0	set	set__101b4ea2d4e52771	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy .1	js	js__45f97f13b003a003	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy .2	playback	customCode__341b96540cb2e902	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy .3	playback	customCode__f7f3ff977d107a41	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.Yes, it's me, but I'm busy .4	goto		0	→customModule__21ef052a165f238d
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default	<seq>		2	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.0	set	set__7c511c594502da86	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1	switch	switch__802befa768ca6253	3	var=${counter_unclear_response_first}
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.1	<seq>		4	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.1.0	js	js__a4926d733bda0008	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.1.1	playback	customCode__fbfa814dafd8190e	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.1.2	playback	customCode__d9879d44e3117be0	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.1.3	goto		0	→js__c4af8733502696b2
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2.0	js	js__dfa5f0bd372d669f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2.1	playback	customCode__7162074e9f2aae7f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2.2	callbackQueue	callbackQueue__3f74e3abaa42ca4f	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2.3	softSleep	softSleep__3173fe969e30ee70	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.2.4	hangup	hangup__c7faf3ec3f095525	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default	<seq>		5	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default.0	set	set__849a90a560d84a0c	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default.1	js	js__d79bba2886084878	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default.2	playback	customCode__af05a36489208eb8	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default.3	playback	customCode__b9dd9f2f596e70f3	0	
+function.eb9f984a-a1dc-410e-8881-7e257e78d4e3.1.else.0.else.5.case.default.1.case.default.4	goto		0	→js__c4af8733502696b2
+fb82cda1-5c35-4242-8a96-77e1495bcdf6	1
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0	switch	switch__4d8053bb19776805	6	var=${category}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Already signed	<seq>		3	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Already signed.0	set	set__e85931529de13954	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Already signed.1	playback	playback__75c0b6368cb40b7c	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Already signed.2	hangup	hangup__751e33aea0f510a8	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.How to sign the contract?	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.How to sign the contract?.0	set	set__709a9d34ac32e641	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.How to sign the contract?.1	playback	customCode__85d77fa599d60a7b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.How to sign the contract?.2	execute	execute__e49e2be2bee3d7b0	0	fn=sms1
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.How to sign the contract?.3	playback	customCode__a2215ae1731c36ca	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.0	set	set__1f0723490bcf958c	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.1	playback	playback__aa375e082fd52eb0	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.2	playback	customCode__fd25fff17e65367b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.3	js	js__10813d3432493414	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4	if	if__18b92cf092c9ae0c	2	expr=${google_transcript} == ''
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.then	<seq>		0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else	<seq>		6	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.0	set	set__332850b961a086a7	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.1	set	set__39478bdd47634712	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.2	httpRequest	httpRequest__e39b41d8057de3ad	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.3	set	set__49c8a955d3d21aca	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.4	export	export__ef7250134d283bd8	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5	switch	switch__87b3cac3550f71b9	4	var=${chatgpt}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.0	set	set__a02780b6d10b8f14	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.1	playback	playback__0f65782099e707db	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.2	playback	customCode__853c8a052ee8dc26	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.3	js	js__9cbaaf41420ab1d8	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4	if	if__4c3ca745aceaa30e	2	expr=${google_transcript} == ''
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.then	<seq>		0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else	<seq>		6	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.0	set	set__8362cc43073e892b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.1	set	set__6ec9e0f187fc21e0	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.2	httpRequest	httpRequest__d088e8d20cde83be	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.3	set	set__136b065ad12b57d1	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.4	export	export__ad35e36d5c1daf5f	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5	switch	switch__114f7f095fb41a03	4	var=${chatgpt}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%	<seq>		2	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.0	set	set__7caec82b1d5b41b0	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1	switch	switch__63261652d4d2b7b1	2	var=${counter_voice_conf_interested}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.1	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.1.0	js	js__3eeaecb3ec9cecf1	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.1.1	playback	customCode__af5b086c6d9f1459	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.1.2	softSleep	softSleep__4dea4ec1f6ad97ae	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.1.3	hangup	hangup__40b31d9d2722a7c7	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default.0	set	set__fe658f48aa8fbe97	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default.1	js	js__c604ef56ddfb0826	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default.2	playback	customCode__421dc356136d9e19	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default.3	playback	customCode__a33a36ffd444f0a5	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.0-50%.1.case.default.4	goto		0	→js__9cbaaf41420ab1d8
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%	<seq>		1	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0	if	if__2ee0d2224bf02946	2	expr=${promo_promt} == 'true'
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.then	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.then.0	execute	execute__d33bb9147f9f79ca	0	fn=with_promo
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.then.1	set	set__e1eed6d664ea1880	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.then.2	playback	playback__cf6121b413aeafeb	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.then.3	hangup	hangup__2e817977f4d584c4	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.else	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.else.0	execute	execute__a39697ceba41573f	0	fn=wo_promo
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.else.1	set	set__64318702c0b41eaa	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.else.2	playback	playback__2010ae25cd4ef1c1	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.100%.0.else.3	hangup	hangup__129b474a73b2bd59	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%	<seq>		2	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.0	set	set__a1b16a75afc9d698	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1	switch	switch__d9c2ec8b6d49aa50	2	var=${counter_voice_conf_interested}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.1	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.1.0	js	js__cba086622674cebc	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.1.1	playback	customCode__27e1dd5ad20a9ab2	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.1.2	softSleep	softSleep__24efe694e9f9fac8	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.1.3	hangup	hangup__ace0b93fbcbc1ff0	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default.0	set	set__d59fa7673c88c701	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default.1	js	js__a3f7de7b77a0d454	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default.2	playback	customCode__84cdaecf1bde4a48	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default.3	playback	customCode__dc873908a9993497	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.51-99%.1.case.default.4	goto		0	→js__9cbaaf41420ab1d8
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.default	<seq>		1	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Interested.4.else.5.case.default.0	goto		0	→set__7caec82b1d5b41b0
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Not interested	<seq>		3	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Not interested.0	set	set__7cfe85da5a966003	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Not interested.1	playback	playback__5c965190577a04ca	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Not interested.2	hangup	hangup__7c9a775d7015896d	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other	<seq>		2	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.0	set	set__736c5107548f9191	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1	switch	switch__f0002922c1dff212	2	var=${counter_voice_conf}
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.1	<seq>		4	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.1.0	js	js__2858fa4e3fc4306b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.1.1	playback	customCode__50033b4e7ae3a196	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.1.2	softSleep	softSleep__62667f2cff28e03b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.1.3	hangup	hangup__268674498d184baa	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default.0	set	set__ee3278e421343e89	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default.1	js	js__d8d9e7f42e8b977c	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default.2	playback	customCode__286de3f601de27bc	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default.3	playback	customCode__276625d67aeb0aa6	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.Other.1.case.default.4	goto		0	→js__10813d3432493414
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.default	<seq>		1	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.I will sign.4.else.5.case.default.0	goto		0	→set__736c5107548f9191
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.There are any problems	<seq>		3	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.There are any problems.0	set	set__dc44972bc144163b	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.There are any problems.1	playback	customCode__27eb61cc283e8ccb	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.There are any problems.2	playback	customCode__54d78a8f6fed47b2	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think	<seq>		1	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0	if	if__a1b76e930ec33e7c	2	expr=${promo_promt} == 'true'
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then	<seq>		5	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then.0	execute	execute__25ccdd3a02a66871	0	fn=sms2
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then.1	export	export__7d7b3e88b49b6965	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then.2	set	set__6a7e4202110a96e9	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then.3	playback	playback__25bed82948e1fd34	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.then.4	hangup	hangup__39c979e9d4d8aae6	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.else	<seq>		3	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.else.0	set	set__d18cf088bc45d7bd	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.else.1	playback	playback__d4b8ff3fc7c4aa92	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.Will think.0.else.2	hangup	hangup__f1a910a97daa4498	0	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.default	<seq>		1	
+function.fb82cda1-5c35-4242-8a96-77e1495bcdf6.0.case.default.0	execute	customModule__36033cb7a0ac81e4	0	fn=c2e686a9-d2c0-4631-b2bd-52277b51b956
+sms1	1
+function.sms1.0	httpRequest	httpRequest__b6aaa0e1709a1a24	0	
+sms2	1
+function.sms2.0	httpRequest	httpRequest__b4a20336a9f0d604	0	
+with_promo	4
+function.with_promo.0	string	customCode__52c25b0e15aa3661	0	
+function.with_promo.1	export	export__c9ada1e94265635f	0	
+function.with_promo.2	httpRequest	httpRequest__46db46feb2949a22	0	
+function.with_promo.3	export	export__ed82ced0ff30aa95	0	
+wo_promo	4
+function.wo_promo.0	string	customCode__67730217a6816f85	0	
+function.wo_promo.1	export	export__fc7652ca9f08f913	0	
+function.wo_promo.2	httpRequest	httpRequest__eb0df07bd92305e8	0	
+function.wo_promo.3	export	export__12fff78f75c62ac1	0	

@@ -1,11 +1,11 @@
-0	sendText	64-sendText-custom-tag	0
-1	while	66-while-custom-tag	1
-1.do	<seq>		2
-1.do.0	recvMessage	40-recvMessage-custom-tag	0
-1.do.1	if	44-if-custom-tag	2
-1.do.1.then	<seq>		4
-1.do.1.then.0	js	49-js-custom-tag	0
-1.do.1.then.1	httpRequest	57-customCode-custom-tag	0
-1.do.1.then.2	js	54-js-custom-tag	0
-1.do.1.then.3	sendText	47-sendText-custom-tag	0
-1.do.1.else	<seq>		0
+0	sendText	64-sendText-custom-tag	0	
+1	while	66-while-custom-tag	1	cond=true
+1.do	<seq>		2	
+1.do.0	recvMessage	40-recvMessage-custom-tag	0	
+1.do.1	if	44-if-custom-tag	2	expr=${req}
+1.do.1.then	<seq>		4	
+1.do.1.then.0	js	49-js-custom-tag	0	
+1.do.1.then.1	httpRequest	57-customCode-custom-tag	0	
+1.do.1.then.2	js	54-js-custom-tag	0	
+1.do.1.then.3	sendText	47-sendText-custom-tag	0	
+1.do.1.else	<seq>		0	
