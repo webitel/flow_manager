@@ -521,6 +521,337 @@ func TestParse_FunctionMissingName(t *testing.T) {
 	}
 }
 
+// ── list ──────────────────────────────────────────────────────────────────────
+
+func TestParse_List(t *testing.T) {
+	const schema = `[
+		{"list": {
+			"data":    "${myList}",
+			"itemVar": "item",
+			"actions": [
+				{"log": {"message": "processing"}},
+				{"set": {"done": "true"}}
+			]
+		}}
+	]`
+
+	tr := mustParse(t, 30, schema)
+
+	listNode := node(t, tr, "0")
+	if listNode.OpName != "list" {
+		t.Fatalf("OpName: %q", listNode.OpName)
+	}
+	// "actions" must be moved to a child container.
+	if _, ok := listNode.Args["actions"]; ok {
+		t.Error("Args[actions] should be removed from list node")
+	}
+	if len(listNode.Children) != 1 {
+		t.Fatalf("list Children: got %d, want 1", len(listNode.Children))
+	}
+
+	actionsContainer := listNode.Children[0]
+	if actionsContainer.ID != "0.actions" {
+		t.Errorf("actions container ID: %q", actionsContainer.ID)
+	}
+	if len(actionsContainer.Children) != 2 {
+		t.Errorf("actions children: got %d, want 2", len(actionsContainer.Children))
+	}
+	node(t, tr, "0.actions.0")
+	node(t, tr, "0.actions.1")
+}
+
+func TestParse_List_NoActions(t *testing.T) {
+	const schema = `[{"list": {"data": "${xs}", "itemVar": "x"}}]`
+
+	tr := mustParse(t, 31, schema)
+
+	listNode := node(t, tr, "0")
+	if len(listNode.Children) != 0 {
+		t.Errorf("list without actions should have 0 children, got %d", len(listNode.Children))
+	}
+}
+
+// ── formTable ─────────────────────────────────────────────────────────────────
+
+func TestParse_FormTable(t *testing.T) {
+	const schema = `[
+		{"formTable": {
+			"formId": "123",
+			"outputs": {
+				"reject":  [{"set": {"status": "rejected"}}],
+				"approve": [{"set": {"status": "approved"}}, {"log": {"message": "ok"}}]
+			}
+		}}
+	]`
+
+	tr := mustParse(t, 32, schema)
+
+	ft := node(t, tr, "0")
+	if ft.OpName != "formTable" {
+		t.Fatalf("OpName: %q", ft.OpName)
+	}
+	if _, ok := ft.Args["outputs"]; ok {
+		t.Error("Args[outputs] should be removed")
+	}
+
+	idx, ok := ft.Args["_outputs_index"].(map[string]int)
+	if !ok {
+		t.Fatalf("_outputs_index missing or wrong type: %T", ft.Args["_outputs_index"])
+	}
+	// Sorted alphabetically: approve(0), reject(1).
+	if idx["approve"] != 0 {
+		t.Errorf("approve index: got %d, want 0", idx["approve"])
+	}
+	if idx["reject"] != 1 {
+		t.Errorf("reject index: got %d, want 1", idx["reject"])
+	}
+	if len(ft.Children) != 2 {
+		t.Fatalf("formTable Children: got %d, want 2", len(ft.Children))
+	}
+
+	node(t, tr, "0.output.approve")
+	node(t, tr, "0.output.reject")
+	node(t, tr, "0.output.approve.0") // set inside approve
+	node(t, tr, "0.output.reject.0")  // set inside reject
+}
+
+func TestParse_FormTable_NoOutputs(t *testing.T) {
+	const schema = `[{"formTable": {"formId": "abc"}}]`
+
+	tr := mustParse(t, 33, schema)
+
+	ft := node(t, tr, "0")
+	if len(ft.Children) != 0 {
+		t.Errorf("formTable without outputs: got %d children, want 0", len(ft.Children))
+	}
+}
+
+// ── bridge / joinAgent hooks ──────────────────────────────────────────────────
+
+func TestParse_Bridge_Hooks(t *testing.T) {
+	const schema = `[
+		{"bridge": {
+			"destination": "sip:agent@domain",
+			"timeout":     30,
+			"bridged": [
+				{"log": {"message": "call connected"}},
+				{"set": {"result": "bridged"}}
+			]
+		}}
+	]`
+
+	tr := mustParse(t, 34, schema)
+
+	bridgeNode := node(t, tr, "0")
+	if bridgeNode.OpName != "bridge" {
+		t.Fatalf("OpName: %q", bridgeNode.OpName)
+	}
+	if _, ok := bridgeNode.Args["bridged"]; ok {
+		t.Error("Args[bridged] should be removed")
+	}
+
+	hooksIdx, ok := bridgeNode.Args["_hooks_index"].(map[string]int)
+	if !ok {
+		t.Fatalf("_hooks_index missing: %T", bridgeNode.Args["_hooks_index"])
+	}
+	if hooksIdx["bridged"] != 0 {
+		t.Errorf("bridged hook index: got %d, want 0", hooksIdx["bridged"])
+	}
+	if len(bridgeNode.Children) != 1 {
+		t.Fatalf("bridge Children: got %d, want 1", len(bridgeNode.Children))
+	}
+
+	bridgedContainer := bridgeNode.Children[0]
+	if bridgedContainer.ID != "0.bridged" {
+		t.Errorf("bridged container ID: %q", bridgedContainer.ID)
+	}
+	if len(bridgedContainer.Children) != 2 {
+		t.Errorf("bridged children: got %d, want 2", len(bridgedContainer.Children))
+	}
+}
+
+func TestParse_Bridge_EmptyHookSkipped(t *testing.T) {
+	// Empty bridged array must not create a child container.
+	const schema = `[{"bridge": {"destination": "sip:x", "bridged": []}}]`
+
+	tr := mustParse(t, 35, schema)
+
+	bridgeNode := node(t, tr, "0")
+	if len(bridgeNode.Children) != 0 {
+		t.Errorf("empty bridged should produce 0 children, got %d", len(bridgeNode.Children))
+	}
+	if _, ok := bridgeNode.Args["_hooks_index"]; ok {
+		t.Error("_hooks_index must not be set when all hooks are empty")
+	}
+}
+
+func TestParse_JoinAgent_Hooks(t *testing.T) {
+	const schema = `[
+		{"joinAgent": {
+			"agentId": "42",
+			"bridged": [{"set": {"transfer": "true"}}]
+		}}
+	]`
+
+	tr := mustParse(t, 36, schema)
+
+	ja := node(t, tr, "0")
+	if ja.OpName != "joinAgent" {
+		t.Fatalf("OpName: %q", ja.OpName)
+	}
+	if _, ok := ja.Args["bridged"]; ok {
+		t.Error("Args[bridged] should be removed")
+	}
+	hooksIdx, ok := ja.Args["_hooks_index"].(map[string]int)
+	if !ok {
+		t.Fatalf("_hooks_index missing: %T", ja.Args["_hooks_index"])
+	}
+	if hooksIdx["bridged"] != 0 {
+		t.Errorf("bridged index: got %d, want 0", hooksIdx["bridged"])
+	}
+}
+
+// ── joinQueue timers ──────────────────────────────────────────────────────────
+
+func TestParse_JoinQueue_Timers(t *testing.T) {
+	const schema = `[
+		{"joinQueue": {
+			"queueId": "99",
+			"timers": [
+				{
+					"condition": "${x} > 0",
+					"actions": [
+						{"log": {"message": "timer fired"}},
+						{"set": {"timed_out": "true"}}
+					]
+				},
+				{
+					"condition": "false"
+				}
+			]
+		}}
+	]`
+
+	tr := mustParse(t, 37, schema)
+
+	jq := node(t, tr, "0")
+	if jq.OpName != "joinQueue" {
+		t.Fatalf("OpName: %q", jq.OpName)
+	}
+
+	timers, ok := jq.Args["timers"].([]any)
+	if !ok {
+		t.Fatalf("Args[timers] wrong type: %T", jq.Args["timers"])
+	}
+
+	// Timer[0]: has actions → container created, actions deleted, _children_idx set.
+	t0, _ := timers[0].(map[string]any)
+	if _, still := t0["actions"]; still {
+		t.Error("timers[0].actions should be removed after parsing")
+	}
+	childIdx, _ := t0["_children_idx"].(int)
+	if childIdx != 0 {
+		t.Errorf("timers[0]._children_idx: got %d, want 0", childIdx)
+	}
+
+	// Timer[1]: no actions → not touched, no _children_idx.
+	t1, _ := timers[1].(map[string]any)
+	if _, has := t1["_children_idx"]; has {
+		t.Error("timers[1] should not have _children_idx (no actions)")
+	}
+
+	// Container registered in ByID and accessible as child.
+	node(t, tr, "0.timer.0")
+	node(t, tr, "0.timer.0.0") // log inside timer
+	node(t, tr, "0.timer.0.1") // set inside timer
+
+	// Timer[1] (no actions) must NOT produce a container.
+	if _, exists := tr.ByID["0.timer.1"]; exists {
+		t.Error("timer without actions must not create a container node")
+	}
+}
+
+func TestParse_JoinQueue_TimersAndHooks(t *testing.T) {
+	// Verifies that timers and hooks both contribute to Children and that
+	// _hooks_index accounts for the timer children that precede the hooks.
+	const schema = `[
+		{"joinQueue": {
+			"queueId": "5",
+			"timers": [
+				{"condition": "true", "actions": [{"log": {"message": "t"}}]}
+			],
+			"bridged": [{"set": {"call": "done"}}],
+			"waiting": [{"log": {"message": "waiting"}}]
+		}}
+	]`
+
+	tr := mustParse(t, 38, schema)
+
+	jq := node(t, tr, "0")
+
+	// 1 timer child + 2 hook children = 3 total.
+	if len(jq.Children) != 3 {
+		t.Fatalf("Children: got %d, want 3 (1 timer + bridged + waiting)", len(jq.Children))
+	}
+
+	hooksIdx, ok := jq.Args["_hooks_index"].(map[string]int)
+	if !ok {
+		t.Fatalf("_hooks_index missing")
+	}
+	// Timer occupies index 0; hooks follow in order: waiting, offering, bridged, reporting.
+	// waiting → index 1 (len=1 before append), bridged → index 2 (len=2 before append).
+	if hooksIdx["waiting"] != 1 {
+		t.Errorf("waiting index: got %d, want 1", hooksIdx["waiting"])
+	}
+	if hooksIdx["bridged"] != 2 {
+		t.Errorf("bridged index: got %d, want 2", hooksIdx["bridged"])
+	}
+}
+
+// ── error paths ───────────────────────────────────────────────────────────────
+
+func TestParseJSON_InvalidJSON(t *testing.T) {
+	_, err := tree.ParseJSON(99, []byte(`not json`))
+	if err == nil {
+		t.Fatal("expected error for invalid JSON")
+	}
+}
+
+func TestParse_TriggersBadSchema(t *testing.T) {
+	// triggers value must be an object, not an array.
+	const schema = `[{"triggers": ["bad"]}]`
+	_, err := tree.ParseJSON(100, []byte(schema))
+	if err == nil {
+		t.Fatal("expected error for non-object triggers value")
+	}
+}
+
+func TestParse_SwitchCaseBadSchema(t *testing.T) {
+	// switch.case must be an object (map), not an array.
+	const schema = `[{"switch": {"variable": "${x}", "case": ["bad"]}}]`
+	_, err := tree.ParseJSON(101, []byte(schema))
+	if err == nil {
+		t.Fatal("expected error for non-object switch.case")
+	}
+}
+
+func TestParse_IfBadThenSchema(t *testing.T) {
+	// if.then must be an array.
+	const schema = `[{"if": {"expression": "true", "then": "not-an-array"}}]`
+	_, err := tree.ParseJSON(102, []byte(schema))
+	if err == nil {
+		t.Fatal("expected error for non-array if.then")
+	}
+}
+
+func TestParse_WhileBadDoSchema(t *testing.T) {
+	const schema = `[{"while": {"condition": "true", "do": "not-an-array"}}]`
+	_, err := tree.ParseJSON(103, []byte(schema))
+	if err == nil {
+		t.Fatal("expected error for non-array while.do")
+	}
+}
+
 func TestParse_JSONRoundTripOfArgs(t *testing.T) {
 	const schema = `[{"httpRequest": {"url": "https://example.com", "method": "GET", "timeout": 5000}}]`
 

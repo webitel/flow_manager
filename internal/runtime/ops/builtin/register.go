@@ -20,4 +20,5 @@ func Register(reg *ops.Registry) {
 	reg.Register("dump", Dump())
 	reg.Register("monoPay", MonopayOp())
 	reg.Register("js", JsOp())
+	reg.Register("getTime", GetTime())
 }
