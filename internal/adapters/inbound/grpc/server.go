@@ -124,7 +124,7 @@ func (s *Server) getAddress() string {
 	return fmt.Sprintf("%s:%d", h, p)
 }
 
-func (s Server) Name() string {
+func (s *Server) Name() string {
 	return "GRPC"
 }
 
@@ -150,7 +150,7 @@ func (s *Server) NodeName() string {
 	return s.nodeName
 }
 
-func (s Server) Type() flow.ConnectionType {
+func (s *Server) Type() flow.ConnectionType {
 	return flow.ConnectionTypeGrpc
 }
 

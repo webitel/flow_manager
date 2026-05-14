@@ -217,11 +217,13 @@ func (cc *ChatManager) BroadcastMessage(ctx context.Context, domainId int64, req
 	}
 
 	var newContext context.Context
+	var cancel context.CancelFunc = func() {}
 	if req.Timeout != 0 {
-		newContext, _ = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Millisecond)
+		newContext, cancel = context.WithTimeout(context.Background(), time.Duration(req.Timeout+5)*time.Millisecond)
 	} else {
 		newContext = ctx
 	}
+	defer cancel()
 
 	broadcastResponse, e := c.messages.BroadcastMessageNA(newContext, &messages2.BroadcastMessageRequest{
 		Message:   msg,

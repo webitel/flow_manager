@@ -311,10 +311,10 @@ type joinQueueArgs struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	} `json:"agent"`
-	StickyAgentId       int32               `json:"stickyAgentId"`
-	Ringtone            calldomain.PlaybackFile  `json:"ringtone"`
-	Timers              []callTimerArg      `json:"timers"`
-	TransferAfterBridge *queue.SearchEntity `json:"transferAfterBridge"`
+	StickyAgentId       int32                   `json:"stickyAgentId"`
+	Ringtone            calldomain.PlaybackFile `json:"ringtone"`
+	Timers              []callTimerArg          `json:"timers"`
+	TransferAfterBridge *queue.SearchEntity     `json:"transferAfterBridge"`
 }
 
 type callTimerArg struct {
@@ -413,6 +413,7 @@ func (o *joinQueueOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		IsTransfer:    call.TransferQueueId() > 0 && !call.IsBlindTransferQueue(),
 	})
 	if appErr != nil {
+		cancelQueue()
 		call.Log().Err(appErr)
 		return ops.OpOutput{}, nil
 	}
@@ -523,9 +524,9 @@ func (o *joinAgentOp) Execute(ctx context.Context, in ops.OpInput) (ops.OpOutput
 		} `json:"agent"`
 		Processing       *processing.Processing  `json:"processing"`
 		Ringtone         calldomain.PlaybackFile `json:"ringtone"`
-		Timeout          int32              `json:"timeout"`
-		QueueName        string             `json:"queue_name"`
-		CancelDistribute bool               `json:"cancel_distribute"`
+		Timeout          int32                   `json:"timeout"`
+		QueueName        string                  `json:"queue_name"`
+		CancelDistribute bool                    `json:"cancel_distribute"`
 	}
 	if err := ops.DecodeArgs(in, &argv); err != nil {
 		return ops.OpOutput{}, err

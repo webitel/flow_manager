@@ -49,7 +49,7 @@ func parseURL(u string) (target, error) {
 	if rawURL.Scheme != schemeName ||
 		len(rawURL.Host) == 0 || len(strings.TrimLeft(rawURL.Path, "/")) == 0 {
 		return target{},
-			fmt.Errorf("malformed URL('%s'); must be in the next format: 'consul://[user:passwd]@host/service?param=value'", u)
+			fmt.Errorf("Malformed URL('%s'). Must be in the next format: 'consul://[user:passwd]@host/service?param=value'", u)
 	}
 
 	var tgt target

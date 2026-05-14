@@ -49,7 +49,7 @@ func NewServer(cfg *Config) flow.Server {
 	}
 }
 
-func (s server) Name() string {
+func (s *server) Name() string {
 	return "FreeSWITCH"
 }
 
@@ -57,7 +57,7 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) error {
 	return nil
 }
 
-func (s server) Type() flow.ConnectionType {
+func (s *server) Type() flow.ConnectionType {
 	return flow.ConnectionTypeCall
 }
 

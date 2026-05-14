@@ -145,8 +145,9 @@ func TestReadMIMEHeader(t *testing.T) {
 	r := reader("my-key: Value 1  \r\nLong-key: Even \n Longer Value\r\nmy-Key: Value 2\r\n\n")
 	m, err := r.ReadMIMEHeader()
 	want := MIMEHeader{
-		"My-Key":   {"Value 1", "Value 2"},
-		"Long-Key": {"Even Longer Value"},
+		"my-key":   {"Value 1"},
+		"Long-key": {"Even Longer Value"},
+		"my-Key":   {"Value 2"},
 	}
 	if !reflect.DeepEqual(m, want) || err != nil {
 		t.Fatalf("ReadMIMEHeader: %v, %v; want %v", m, err, want)
@@ -165,7 +166,7 @@ func TestReadMIMEHeaderSingle(t *testing.T) {
 func TestReadMIMEHeaderNoKey(t *testing.T) {
 	r := reader(": bar\ntest-1: 1\n\n")
 	m, err := r.ReadMIMEHeader()
-	want := MIMEHeader{"Test-1": {"1"}}
+	want := MIMEHeader{"test-1": {"1"}}
 	if !reflect.DeepEqual(m, want) || err != nil {
 		t.Fatalf("ReadMIMEHeader: %v, %v; want %v", m, err, want)
 	}
@@ -202,7 +203,7 @@ func TestReadMIMEHeaderNonCompliant(t *testing.T) {
 	want := MIMEHeader{
 		"Foo":              {"bar"},
 		"Content-Language": {"en"},
-		"Sid":              {"0"},
+		"SID":              {"0"},
 		"Audio Mode":       {"None"},
 		"Privilege":        {"127"},
 	}
@@ -246,9 +247,9 @@ func TestReadMIMEHeaderTrimContinued(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := MIMEHeader{
-		"A": {"0"},
-		"B": {"1"},
-		"C": {"2 3 4"},
+		"a": {"0"},
+		"b": {"1"},
+		"c": {"2 3 4"},
 	}
 	if !reflect.DeepEqual(m, want) {
 		t.Fatalf("ReadMIMEHeader mismatch.\n got: %q\nwant: %q", m, want)
