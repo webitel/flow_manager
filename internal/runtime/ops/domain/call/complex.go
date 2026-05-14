@@ -83,6 +83,9 @@ func runHook(ctx context.Context, in ops.OpInput, name string, extraVars map[str
 		return
 	}
 	v := snapVars(in.Variables)
+	if len(extraVars) > 0 && v == nil {
+		v = make(map[string]string, len(extraVars))
+	}
 	for k, val := range extraVars {
 		v[k] = val
 	}
