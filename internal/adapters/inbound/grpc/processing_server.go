@@ -21,14 +21,21 @@ var (
 
 type processingApi struct {
 	connections infraCache.ObjectCache
-	*Server
+	sink        chan<- flow.Connection
+	nodeName    string
+	log         *wlog.Logger
 	workflow2.UnsafeFlowProcessingServiceServer
 }
 
-func NewProcessingApi(s *Server) *processingApi {
+func newProcessingApi(sink chan<- flow.Connection, nodeName string) *processingApi {
 	return &processingApi{
-		Server:      s,
+		sink:        sink,
+		nodeName:    nodeName,
 		connections: infraCache.NewLru(activeProcessingCacheSize),
+		log: wlog.GlobalLogger().With(
+			wlog.Namespace("context"),
+			wlog.String("scope", "grpc processing"),
+		),
 	}
 }
 
@@ -36,7 +43,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow2.Start
 	c := NewProcessingConnection(in.DomainId, int(in.SchemaId), in.Variables)
 	s.connections.AddWithDefaultExpires(c.id, c)
 
-	c.appId = fmt.Sprintf("workflow-%s", s.Server.nodeName)
+	c.appId = fmt.Sprintf("workflow-%s", s.nodeName)
 
 	go func() {
 		for {
@@ -52,7 +59,7 @@ func (s *processingApi) StartProcessing(ctx context.Context, in *workflow2.Start
 		}
 	}()
 
-	s.Server.consume <- c
+	s.sink <- c
 
 	f, err := c.waitForm(waitSecSchemaForm)
 	if err != nil {

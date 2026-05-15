@@ -33,13 +33,15 @@ var (
 
 type chatApi struct {
 	conversations infraCache.ObjectCache
-	*Server
+	sink          chan<- flow.Connection
+	chatManager   *ChatManager
 	workflow2.UnsafeFlowChatServerServiceServer
 }
 
-func NewChatApi(s *Server) *chatApi {
+func newChatApi(sink chan<- flow.Connection, cm *ChatManager) *chatApi {
 	return &chatApi{
-		Server:        s,
+		sink:          sink,
+		chatManager:   cm,
 		conversations: infraCache.NewLru(activeConversationCacheSize),
 	}
 }
@@ -95,7 +97,7 @@ func (s *chatApi) Start(ctx context.Context, req *workflow2.StartRequest) (*work
 
 	s.conversations.AddWithExpiresInSecs(req.ConversationId, conv, maximumInactiveChat)
 
-	s.Server.consume <- conv
+	s.sink <- conv
 
 	return &workflow2.StartResponse{}, nil
 }

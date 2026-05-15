@@ -28,15 +28,18 @@ type Config struct {
 	NodeName string
 }
 
+type serviceEntry struct {
+	desc *grpc.ServiceDesc
+	impl any
+}
+
 type Server struct {
 	cfg             *Config
 	server          *grpc.Server
 	didFinishListen chan struct{}
 	consume         chan flow.Connection
-	chatApi         *chatApi
-	processingApi   *processingApi
+	services        []serviceEntry
 	startOnce       sync.Once
-	chatManager     *ChatManager
 	nodeName        string
 	workflow2.UnsafeFlowServiceServer
 	cb CallbackResolver
@@ -54,17 +57,26 @@ func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
 		didFinishListen: make(chan struct{}),
 		consume:         make(chan flow.Connection),
 		nodeName:        cfg.NodeName,
-		chatManager:     cm,
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "grpc server"),
 		),
 		cb: cb,
 	}
-	srv.chatApi = NewChatApi(srv)
-	srv.processingApi = NewProcessingApi(srv)
-
+	srv.Register(&workflow2.FlowChatServerService_ServiceDesc, newChatApi(srv.Sink(), cm))
+	srv.Register(&workflow2.FlowProcessingService_ServiceDesc, newProcessingApi(srv.Sink(), cfg.NodeName))
 	return srv
+}
+
+// Register adds a gRPC service to be served. Must be called before Start.
+func (s *Server) Register(desc *grpc.ServiceDesc, impl any) {
+	s.services = append(s.services, serviceEntry{desc, impl})
+}
+
+// Sink returns a write-only channel that gRPC service handlers use to enqueue
+// inbound connections for the Dispatcher.
+func (s *Server) Sink() chan<- flow.Connection {
+	return s.consume
 }
 
 func publicAddr(lis net.Listener) (string, int) {
@@ -93,8 +105,9 @@ func (s *Server) Start() error {
 	)
 
 	workflow2.RegisterFlowServiceServer(s.server, s)
-	workflow2.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
-	workflow2.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
+	for _, svc := range s.services {
+		s.server.RegisterService(svc.desc, svc.impl)
+	}
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
 
