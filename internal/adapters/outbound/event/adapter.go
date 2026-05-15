@@ -80,6 +80,11 @@ func (a *EventBusAdapter) OpenLink(domainId int64, sockId string, userId int64, 
 	return nil
 }
 
+// ConsumeCallEvent satisfies call_watcher.CallEventDeps.
+func (a *EventBusAdapter) ConsumeCallEvent() <-chan call.CallActionData {
+	return a.bus.ConsumeCallEvent()
+}
+
 func (a *EventBusAdapter) SendMQJson(exchange, key string, body []byte) error {
 	if !a.config.AllowUseMQ {
 		return ErrAllowUseMQ

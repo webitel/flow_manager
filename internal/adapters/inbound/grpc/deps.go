@@ -5,7 +5,7 @@ import (
 )
 
 // Deps is the narrow interface that the gRPC router needs.
-// *app.FlowManager satisfies this interface.
+// *bsruntime.RouterDeps satisfies this interface.
 type Deps interface {
 	runtimekit.BootstrapDeps
 	AppID() string

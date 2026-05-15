@@ -10,12 +10,16 @@ import (
 	aibridge "github.com/webitel/flow_manager/internal/adapters/outbound/aibridge"
 	cases "github.com/webitel/flow_manager/internal/adapters/outbound/cases"
 	outcc "github.com/webitel/flow_manager/internal/adapters/outbound/cc"
+	eventAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/event"
 	outstorage "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
 	"github.com/webitel/flow_manager/internal/domain/shared/ports"
 	domstorage "github.com/webitel/flow_manager/internal/domain/storage"
 	inframq "github.com/webitel/flow_manager/internal/infrastructure/mq"
+	"github.com/webitel/flow_manager/internal/storage"
+	callWatcherPkg "github.com/webitel/flow_manager/internal/workers/call_watcher"
+	listWatcherPkg "github.com/webitel/flow_manager/internal/workers/list_watcher"
 )
 
 func NewEventBus(lc fx.Lifecycle, cfg *bscfg.Config, id AppID, log *wlog.Logger) (ports.EventBus, error) {
@@ -75,4 +79,21 @@ func NewCCManager(lc fx.Lifecycle, cfg *bscfg.Config, eventQueue ports.EventBus)
 		},
 	})
 	return mgr, nil
+}
+
+// NewEventBusAdapter wraps the event bus into the adapter that satisfies
+// notification and call-event dep interfaces used by routers and workers.
+func NewEventBusAdapter(eventQueue ports.EventBus, st storage.Store, cfg *bscfg.Config) *eventAdapter.EventBusAdapter {
+	return eventAdapter.NewEventBusAdapter(eventQueue, st, cfg)
+}
+
+// NewCallWatcher creates the call-event worker. Lifecycle (Start/Stop) is
+// managed by registerLifecycle in main so it can use the Dispatcher's stop channel.
+func NewCallWatcher(st storage.Store, deps *eventAdapter.EventBusAdapter, log *wlog.Logger) *callWatcherPkg.Worker {
+	return callWatcherPkg.New(st, deps, log)
+}
+
+// NewListWatcher creates the list-cleanup worker.
+func NewListWatcher(st storage.Store, log *wlog.Logger) *listWatcherPkg.Worker {
+	return listWatcherPkg.New(st, log)
 }

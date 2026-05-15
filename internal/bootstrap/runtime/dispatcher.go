@@ -75,12 +75,9 @@ type DispatcherConfig struct {
 
 	CheckpointRepo   session.Repository
 	RuntimeStateRepo persistence.Repository
-
-	Stop    chan struct{}
-	Stopped chan struct{}
 }
 
-// New creates a Dispatcher.
+// New creates a Dispatcher with its own lifecycle channels.
 func New(cfg DispatcherConfig) *Dispatcher {
 	return &Dispatcher{
 		log:              cfg.Log,
@@ -99,10 +96,19 @@ func New(cfg DispatcherConfig) *Dispatcher {
 		imRouter:         cfg.Routers.IM,
 		checkpointRepo:   cfg.CheckpointRepo,
 		runtimeStateRepo: cfg.RuntimeStateRepo,
-		stop:             cfg.Stop,
-		stopped:          cfg.Stopped,
+		stop:             make(chan struct{}),
+		stopped:          make(chan struct{}),
 	}
 }
+
+// Shutdown signals the Dispatcher to stop and waits for it to drain.
+func (f *Dispatcher) Shutdown() {
+	close(f.stop)
+	<-f.stopped
+}
+
+// Stop returns the channel that goroutines select on to detect shutdown.
+func (f *Dispatcher) Stop() chan struct{} { return f.stop }
 
 // Listen blocks until all transport goroutines finish. It should be called in
 // its own goroutine.

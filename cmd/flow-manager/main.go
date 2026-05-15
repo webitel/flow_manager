@@ -32,6 +32,8 @@ import (
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
 	"github.com/webitel/flow_manager/internal/domain/flow"
 	postgresStorage "github.com/webitel/flow_manager/internal/storage/postgres"
+	callWatcherPkg "github.com/webitel/flow_manager/internal/workers/call_watcher"
+	listWatcherPkg "github.com/webitel/flow_manager/internal/workers/list_watcher"
 
 	_ "net/http/pprof"
 )
@@ -52,6 +54,7 @@ func main() {
 		fx.Invoke(runMigrations),
 		// clients
 		fx.Provide(bsfx.NewEventBus),
+		fx.Provide(bsfx.NewEventBusAdapter),
 		fx.Provide(bsfx.NewStorageClient),
 		fx.Provide(bsfx.NewCasesClient),
 		fx.Provide(bsfx.NewAiBotsClient),
@@ -61,11 +64,14 @@ func main() {
 		fx.Provide(bsfx.NewTLSConfig),
 		fx.Provide(bsfx.NewChatManager),
 		fx.Provide(bsfx.NewServers),
+		// workers
+		fx.Provide(bsfx.NewCallWatcher),
+		fx.Provide(bsfx.NewListWatcher),
 		// app
-		fx.Provide(bsruntime.NewFlowManager),
 		fx.Provide(newContactsClient),
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
+		fx.Provide(bsruntime.NewRouterDeps),
 		fx.Provide(newAppRouters),
 		fx.Provide(newDispatcher),
 		fx.Invoke(bsfx.RegisterInfraHooks),
@@ -84,29 +90,29 @@ type appRouters struct {
 }
 
 func newAppRouters(
-	fm *bsruntime.FlowManager,
+	deps *bsruntime.RouterDeps,
 	contacts domaincontacts.Client,
 	meetings domainmeeting.Client,
 ) *appRouters {
 	return &appRouters{
-		Call:    call.Init(fm, contacts, meetings),
-		GRPC:    grpc.Init(fm),
-		Chat:    chat.Init(fm),
-		Form:    processing.Init(fm, fm.Cases()),
-		Email:   email.Init(fm, contacts),
-		Channel: channel.Init(fm),
-		IM:      im.Init(fm, contacts),
+		Call:    call.Init(deps, contacts, meetings),
+		GRPC:    grpc.Init(deps),
+		Chat:    chat.Init(deps),
+		Form:    processing.Init(deps, deps.Cases()),
+		Email:   email.Init(deps, contacts),
+		Channel: channel.Init(deps),
+		IM:      im.Init(deps, contacts),
 	}
 }
 
 func newDispatcher(
-	fm *bsruntime.FlowManager,
+	deps *bsruntime.RouterDeps,
 	routers *appRouters,
 	srvs bootstrapServers.Servers,
 ) *bsruntime.Dispatcher {
 	return bsruntime.New(bsruntime.DispatcherConfig{
-		Log:           fm.Log(),
-		ID:            fm.AppID(),
+		Log:           deps.Log(),
+		ID:            deps.AppID(),
 		GrpcServer:    srvs.Grpc,
 		EslServer:     srvs.Esl,
 		MailServer:    srvs.Mail,
@@ -121,22 +127,29 @@ func newDispatcher(
 			Channel: routers.Channel,
 			IM:      routers.IM,
 		},
-		CheckpointRepo:   fm.CheckpointRepo(),
-		RuntimeStateRepo: fm.RuntimeStateRepo(),
-		Stop:             fm.Stop(),
-		Stopped:          fm.Stopped(),
+		CheckpointRepo:   deps.CheckpointRepo(),
+		RuntimeStateRepo: deps.RuntimeStateRepo(),
 	})
 }
 
-func registerLifecycle(lc fx.Lifecycle, fm *bsruntime.FlowManager, d *bsruntime.Dispatcher) {
+func registerLifecycle(
+	lc fx.Lifecycle,
+	d *bsruntime.Dispatcher,
+	callWatcher *callWatcherPkg.Worker,
+	listWatcher *listWatcherPkg.Worker,
+) {
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
-			go fm.Listen(d)
+			callWatcher.Start(d.Stop())
+			listWatcher.Start()
+			go d.Listen()
 			go startDebugServer()
 			return nil
 		},
 		OnStop: func(_ context.Context) error {
-			fm.Shutdown()
+			callWatcher.Stop()
+			listWatcher.Stop()
+			d.Shutdown()
 			return nil
 		},
 	})

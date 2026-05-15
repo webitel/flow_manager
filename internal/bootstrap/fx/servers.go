@@ -56,6 +56,5 @@ func NewServers(
 		Mail:    email.New(storage, s.Email(), cfg.DebugImap),
 		Channel: channel.New(eventQueue.ConsumeExec()),
 		Im:      im.NewServer(string(id), cfg.DiscoverySettings.Url, eventQueue.ConsumeIM(), log, tlsCfg, s.Session()),
-		// Http is created inside NewFlowManager (needs *FlowManager as the App interface)
 	}
 }

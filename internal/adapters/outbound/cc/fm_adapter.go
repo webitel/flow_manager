@@ -18,7 +18,7 @@ import (
 
 // FMAdapter wraps a CCManager and a storage.Store, exposing the higher-level
 // helper methods that used to live in app/cc.go.
-// Embed *FMAdapter in FlowManager to promote all methods.
+// Embed *FMAdapter in RouterDeps to promote all methods.
 type FMAdapter struct {
 	cc    domcc.CCManager
 	store storage.Store

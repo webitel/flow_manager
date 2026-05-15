@@ -26,7 +26,7 @@ func RegisterInfraHooks(
 	id AppID,
 	srvs bootstrapServers.Servers,
 	chatMgr *fmgrpc.ChatManager,
-	fm *bsruntime.FlowManager,
+	deps *bsruntime.RouterDeps,
 ) {
 	var cluster *clusterPkg.Cluster
 
@@ -68,7 +68,7 @@ func RegisterInfraHooks(
 				if err != nil {
 					return err
 				}
-				fm.SetCert(cert)
+				deps.SetCert(cert)
 				return nil
 			},
 		})
@@ -77,7 +77,7 @@ func RegisterInfraHooks(
 	// Step 5: timezone cache warm-up.
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
-			return fm.InitCacheTimezones()
+			return deps.InitCacheTimezones()
 		},
 	})
 }
