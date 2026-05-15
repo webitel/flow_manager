@@ -33,11 +33,12 @@ type Dispatcher struct {
 	log *wlog.Logger
 	id  string
 
-	eslServer     flow.Server
-	mailServer    flow.Server
-	channelServer flow.Server
-	imServer      flow.Server
-	grpcServer    grpcServer
+	eslServer      flow.Server
+	mailServer     flow.Server
+	channelServer  flow.Server
+	imServer       flow.Server
+	grpcServer     grpcConsumer
+	callGrpcServer grpcConsumer
 
 	callRouter    flow.Router
 	grpcRouter    flow.Router
@@ -54,9 +55,9 @@ type Dispatcher struct {
 	stopped chan struct{}
 }
 
-// grpcServer is the minimal interface we need from the gRPC server in the
-// dispatcher (just Consume).
-type grpcServer interface {
+// grpcConsumer is the minimal interface needed from a gRPC-based transport:
+// a channel of inbound connections.
+type grpcConsumer interface {
 	Consume() <-chan flow.Connection
 }
 
@@ -65,11 +66,12 @@ type DispatcherConfig struct {
 	Log *wlog.Logger
 	ID  string
 
-	GrpcServer    grpcServer
-	EslServer     flow.Server
-	MailServer    flow.Server
-	ChannelServer flow.Server
-	ImServer      flow.Server
+	GrpcServer     grpcConsumer
+	CallGrpcServer grpcConsumer
+	EslServer      flow.Server
+	MailServer     flow.Server
+	ChannelServer  flow.Server
+	ImServer       flow.Server
 
 	Routers RouterSet
 
@@ -83,6 +85,7 @@ func New(cfg DispatcherConfig) *Dispatcher {
 		log:              cfg.Log,
 		id:               cfg.ID,
 		grpcServer:       cfg.GrpcServer,
+		callGrpcServer:   cfg.CallGrpcServer,
 		eslServer:        cfg.EslServer,
 		mailServer:       cfg.MailServer,
 		channelServer:    cfg.ChannelServer,
@@ -149,6 +152,11 @@ func (f *Dispatcher) Listen() {
 		go f.listenGrpcConnection(&wg, f.grpcServer)
 	}
 
+	if f.callGrpcServer != nil {
+		wg.Add(1)
+		go f.listenGrpcCall(&wg, f.callGrpcServer)
+	}
+
 	if f.mailServer != nil {
 		wg.Add(1)
 		go f.listenInboundEmail(&wg, f.mailServer)
@@ -204,7 +212,7 @@ func (f *Dispatcher) listenCallConnection(wg *sync.WaitGroup, srv flow.Server) {
 	}
 }
 
-func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcServer) {
+func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcConsumer) {
 	defer wg.Done()
 	wlog.Info(fmt.Sprintf("listen GRPC connections..."))
 	for {
@@ -225,10 +233,24 @@ func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcServer) {
 				if err := f.formRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
-			default:
-				if err := f.grpcRouter.Handle(c); err != nil {
-					c.Log().Error(err.Error())
-				}
+			}
+		}
+	}
+}
+
+func (f *Dispatcher) listenGrpcCall(wg *sync.WaitGroup, srv grpcConsumer) {
+	defer wg.Done()
+	wlog.Info(fmt.Sprintf("listen GRPC call connections..."))
+	for {
+		select {
+		case <-f.stop:
+			return
+		case c, ok := <-srv.Consume():
+			if !ok {
+				return
+			}
+			if err := f.grpcRouter.Handle(c); err != nil {
+				c.Log().Error(err.Error())
 			}
 		}
 	}

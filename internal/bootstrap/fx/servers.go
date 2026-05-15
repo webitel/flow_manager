@@ -5,6 +5,7 @@ import (
 
 	"github.com/webitel/wlog"
 
+	callinbound "github.com/webitel/flow_manager/internal/adapters/inbound/call"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/channel"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/email"
 	"github.com/webitel/flow_manager/internal/adapters/inbound/fs"
@@ -48,10 +49,11 @@ func NewServers(
 		Host:     cfg.Grpc.Host,
 		Port:     cfg.Grpc.Port,
 		NodeName: string(id),
-	}, cm, cb)
+	}, cm)
 
 	return bootstrapServers.Servers{
 		Grpc:    grpcSrv,
+		CallGrpc: callinbound.NewCallGrpcTransport(grpcSrv, cb),
 		Esl:     fs.NewServer(&fs.Config{Host: cfg.Esl.Host, Port: cfg.Esl.Port, RecordResample: cfg.Record.Sample}),
 		Mail:    email.New(storage, s.Email(), cfg.DebugImap),
 		Channel: channel.New(eventQueue.ConsumeExec()),

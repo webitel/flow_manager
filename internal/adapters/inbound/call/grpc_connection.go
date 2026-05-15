@@ -1,4 +1,4 @@
-package grpc
+package call
 
 import (
 	"context"
@@ -12,11 +12,11 @@ import (
 	"github.com/webitel/wlog"
 
 	calldomain "github.com/webitel/flow_manager/internal/domain/call"
-	domgrpc "github.com/webitel/flow_manager/internal/domain/grpc"
 	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
-type Connection struct {
+// GrpcConnection is the transport-level connection for gRPC-driven call flows.
+type GrpcConnection struct {
 	id        string
 	nodeId    string
 	domainId  int64
@@ -39,8 +39,8 @@ type Connection struct {
 	log *wlog.Logger
 }
 
-func newConnection(id string, domainId int64, flowId int, ctx context.Context, variables map[string]string, timeout time.Duration) *Connection {
-	c := &Connection{
+func newGrpcConnection(id string, domainId int64, flowId int, ctx context.Context, variables map[string]string, timeout time.Duration) *GrpcConnection {
+	c := &GrpcConnection{
 		id:        id,
 		domainId:  domainId,
 		schemaId:  flowId,
@@ -57,66 +57,66 @@ func newConnection(id string, domainId int64, flowId int, ctx context.Context, v
 	}
 
 	if timeout == 0 {
-		timeout = timeoutFlowSchema
+		timeout = timeoutGrpcSchema
 	}
 	c.ctx, c.cancel = context.WithTimeout(ctx, timeout)
 
 	return c
 }
 
-func (c *Connection) Log() *wlog.Logger {
+func (c *GrpcConnection) Log() *wlog.Logger {
 	return c.log
 }
 
-func (c *Connection) Context() context.Context {
+func (c *GrpcConnection) Context() context.Context {
 	return c.ctx
 }
 
-func (c *Connection) ParseText(text string, ops ...flow.ParseOption) string {
+func (c *GrpcConnection) ParseText(text string, ops ...flow.ParseOption) string {
 	return flow.ParseText(c, text, ops...)
 }
 
-func (c *Connection) Result(result interface{}) {
+func (c *GrpcConnection) Result(result interface{}) {
 	c.result <- result
 }
 
-func (c *Connection) Id() string {
+func (c *GrpcConnection) Id() string {
 	return c.id
 }
 
-func (c *Connection) NodeId() string {
+func (c *GrpcConnection) NodeId() string {
 	return c.nodeId
 }
 
-func (c *Connection) SchemaId() int {
+func (c *GrpcConnection) SchemaId() int {
 	return c.schemaId
 }
 
-func (c *Connection) Close() error {
+func (c *GrpcConnection) Close() error {
 	c.cancel()
 	return nil
 }
 
-func (c *Connection) DomainId() int64 {
+func (c *GrpcConnection) DomainId() int64 {
 	return c.domainId
 }
 
-func (c *Connection) Type() flow.ConnectionType {
+func (c *GrpcConnection) Type() flow.ConnectionType {
 	return flow.ConnectionTypeGrpc
 }
 
-func (c *Connection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
+func (c *GrpcConnection) Set(ctx context.Context, vars flow.Variables) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 
 	for k, v := range vars {
-		c.variables[k] = fmt.Sprintf("%v", v) // TODO
+		c.variables[k] = fmt.Sprintf("%v", v)
 	}
 
 	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) Get(name string) (string, bool) {
+func (c *GrpcConnection) Get(name string) (string, bool) {
 	c.RLock()
 	defer c.RUnlock()
 
@@ -132,18 +132,18 @@ func (c *Connection) Get(name string) (string, bool) {
 	return v, ok
 }
 
-func (c *Connection) Variables() map[string]string {
+func (c *GrpcConnection) Variables() map[string]string {
 	c.RLock()
 	defer c.RUnlock()
 
 	return maps.Clone(c.variables)
 }
 
-func (c *Connection) Scope() flow.Scope {
+func (c *GrpcConnection) Scope() flow.Scope {
 	return c.scope
 }
 
-func (c *Connection) Export(ctx context.Context, vars []string) (flow.Response, error) {
+func (c *GrpcConnection) Export(ctx context.Context, vars []string) (flow.Response, error) {
 	c.Lock()
 	defer c.Unlock()
 	for _, v := range vars {
@@ -156,7 +156,7 @@ func (c *Connection) Export(ctx context.Context, vars []string) (flow.Response, 
 	return calldomain.CallResponseOK, nil
 }
 
-func (c *Connection) DumpExportVariables() map[string]string {
+func (c *GrpcConnection) DumpExportVariables() map[string]string {
 	c.RLock()
 	defer c.RUnlock()
 
@@ -172,12 +172,6 @@ func (c *Connection) DumpExportVariables() map[string]string {
 
 // OnInboundMessage satisfies sessionmgr.Connection. GRPC connections are
 // ephemeral and never receive inbound messages after flow start.
-func (c *Connection) OnInboundMessage(_ func(string)) (unregister func()) {
+func (c *GrpcConnection) OnInboundMessage(_ func(string)) (unregister func()) {
 	return func() {}
-}
-
-// fixme
-func test() {
-	a := func(c domgrpc.GRPCConnection) {}
-	a(&Connection{})
 }

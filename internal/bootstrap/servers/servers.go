@@ -11,16 +11,22 @@ import (
 	"github.com/webitel/flow_manager/internal/domain/flow"
 )
 
+// grpcConsumer is a transport that exposes only a consume channel (no lifecycle).
+type grpcConsumer interface {
+	Consume() <-chan flow.Connection
+}
+
 // Servers groups all protocol-level servers so they can be injected as a
 // single value, avoiding the fx same-type ambiguity for multiple flow.Server
 // providers.
 type Servers struct {
-	Grpc    *fmgrpc.Server
-	Esl     flow.Server
-	Mail    flow.Server
-	Channel flow.Server
-	Im      flow.Server
-	Http    flow.Server // nil when WebHook.Addr is not configured
+	Grpc     *fmgrpc.Server
+	CallGrpc grpcConsumer
+	Esl      flow.Server
+	Mail     flow.Server
+	Channel  flow.Server
+	Im       flow.Server
+	Http     flow.Server // nil when WebHook.Addr is not configured
 }
 
 // Register starts all non-nil servers in order.

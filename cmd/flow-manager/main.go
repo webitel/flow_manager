@@ -111,13 +111,14 @@ func newDispatcher(
 	srvs bootstrapServers.Servers,
 ) *bsruntime.Dispatcher {
 	return bsruntime.New(bsruntime.DispatcherConfig{
-		Log:           deps.Log(),
-		ID:            deps.AppID(),
-		GrpcServer:    srvs.Grpc,
-		EslServer:     srvs.Esl,
-		MailServer:    srvs.Mail,
-		ChannelServer: srvs.Channel,
-		ImServer:      srvs.Im,
+		Log:            deps.Log(),
+		ID:             deps.AppID(),
+		GrpcServer:     srvs.Grpc,
+		CallGrpcServer: srvs.CallGrpc,
+		EslServer:      srvs.Esl,
+		MailServer:     srvs.Mail,
+		ChannelServer:  srvs.Channel,
+		ImServer:       srvs.Im,
 		Routers: bsruntime.RouterSet{
 			Call:    routers.Call,
 			GRPC:    routers.GRPC,

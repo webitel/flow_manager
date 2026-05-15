@@ -41,17 +41,11 @@ type Server struct {
 	services        []serviceEntry
 	startOnce       sync.Once
 	nodeName        string
-	workflow2.UnsafeFlowServiceServer
-	cb CallbackResolver
 
 	log *wlog.Logger
 }
 
-type CallbackResolver interface {
-	Callback(ctx context.Context, id string, data any) (any, error)
-}
-
-func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
+func NewServer(cfg *Config, cm *ChatManager) *Server {
 	srv := &Server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
@@ -61,7 +55,6 @@ func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *Server {
 			wlog.Namespace("context"),
 			wlog.String("scope", "grpc server"),
 		),
-		cb: cb,
 	}
 	srv.Register(&workflow2.FlowChatServerService_ServiceDesc, newChatApi(srv.Sink(), cm))
 	srv.Register(&workflow2.FlowProcessingService_ServiceDesc, newProcessingApi(srv.Sink(), cfg.NodeName))
@@ -104,7 +97,6 @@ func (s *Server) Start() error {
 		grpc.UnaryInterceptor(unaryInterceptor),
 	)
 
-	workflow2.RegisterFlowServiceServer(s.server, s)
 	for _, svc := range s.services {
 		s.server.RegisterService(svc.desc, svc.impl)
 	}
