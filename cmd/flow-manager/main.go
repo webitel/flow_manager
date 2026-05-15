@@ -68,7 +68,7 @@ func main() {
 		fx.Provide(newMeetingClient),
 		fx.Provide(newAppRouters),
 		fx.Provide(newDispatcher),
-		fx.Invoke(bsfx.RegisterStartupHooks),
+		fx.Invoke(bsfx.RegisterInfraHooks),
 		fx.Invoke(registerLifecycle),
 	).Run()
 }

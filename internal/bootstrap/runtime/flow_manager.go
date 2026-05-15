@@ -3,7 +3,6 @@ package runtime
 import (
 	"fmt"
 
-	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/adapters/inbound/grpc"
@@ -16,8 +15,6 @@ import (
 	schemaAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/schema"
 	fileAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
-	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
-	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
 	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
 	domcc "github.com/webitel/flow_manager/internal/domain/cc"
@@ -57,16 +54,9 @@ type FlowManager struct {
 	id     string
 	config *bscfg.Config
 
-	cluster *clusterPkg.Cluster
-	Store   storage.Store
+	Store storage.Store
 
-	srvs       bootstrapServers.Servers
-	grpcServer *grpc.Server
-
-	chatManager *grpc.ChatManager
-	cases       *cases.Api
-
-	cc domcc.CCManager
+	cases *cases.Api
 
 	stop    chan struct{}
 	stopped chan struct{}
@@ -96,7 +86,6 @@ func NewFlowManager(
 	casesClient *cases.Api,
 	aiBots *aibridge.Client,
 	meetingClient domainmeeting.Client,
-	srvs bootstrapServers.Servers,
 	chatMgr *grpc.ChatManager,
 	ccMgr domcc.CCManager,
 	eventQueue ports.EventBus,
@@ -110,13 +99,13 @@ func NewFlowManager(
 	appID := fmt.Sprintf("%s-%s", bscfg.AppServiceName, cfg.Id)
 
 	fm := &FlowManager{
-		Adapter:         storeAdapter.New(st),
-		CacheAdapter:    cacheAdapter.New(cacheStores, log),
-		FMAdapter:       ccAdapter.NewFMAdapter(ccMgr, st),
-		SchemaAdapter:   schemaAdapter.NewSchemaAdapter(st, schemaCache),
-		FileAdapter:     fileAdapter.NewFileAdapter(storage),
-		EventBusAdapter: eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
-		ChatMgrAdapter:  chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
+		Adapter:          storeAdapter.New(st),
+		CacheAdapter:     cacheAdapter.New(cacheStores, log),
+		FMAdapter:        ccAdapter.NewFMAdapter(ccMgr, st),
+		SchemaAdapter:    schemaAdapter.NewSchemaAdapter(st, schemaCache),
+		FileAdapter:      fileAdapter.NewFileAdapter(storage),
+		EventBusAdapter:  eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
+		ChatMgrAdapter:   chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
 		log:              log,
 		id:               appID,
 		config:           cfg,
@@ -124,13 +113,9 @@ func NewFlowManager(
 		cases:            casesClient,
 		AiBots:           aiBots,
 		meeting:          meetingClient,
-		chatManager:      chatMgr,
-		cc:               ccMgr,
 		eventQueue:       eventQueue,
 		checkpointRepo:   checkpointRepo,
 		runtimeStateRepo: runtimeStateRepo,
-		srvs:             srvs,
-		grpcServer:       srvs.Grpc,
 		stop:             stop,
 		stopped:          stopped,
 		cbr:              cb,
@@ -149,66 +134,16 @@ func NewFlowManager(
 	return fm, nil
 }
 
-// Start runs all I/O-bound startup steps that must happen after the fx graph
-// is fully wired. Called from RegisterStartupHooks via fx.Lifecycle.OnStart.
-func (fm *FlowManager) Start() error {
-	// Start servers first so that grpcServer.Host()/Port() reflect the bound address.
-	if err := fm.srvs.Register(); err != nil {
-		return err
-	}
-
-	// Build cluster after servers are up so we advertise the real gRPC address.
-	fm.cluster = clusterPkg.New(
-		fm.id,
-		fm.config.DiscoverySettings.Url,
-		fm.grpcServer.Host(),
-		fm.grpcServer.Port(),
-	)
-	if err := fm.cluster.Start(); err != nil {
-		return err
-	}
-	if err := fm.chatManager.Start(fm.cluster.Discovery); err != nil {
-		return err
-	}
-	if err := fm.grpcServer.Cluster(fm.cluster.Discovery); err != nil {
-		return err
-	}
-	if fm.config.PreSignedCertificateLocation != "" {
-		cert, err := presign.NewPreSigned(fm.config.PreSignedCertificateLocation)
-		if err != nil {
-			return err
-		}
-		fm.SchemaAdapter.SetCert(cert)
-	}
-	if err := fm.InitCacheTimezones(); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (f *FlowManager) Shutdown() {
 	wlog.Info("stopping Server...")
-	if f.cluster != nil {
-		f.cluster.Stop()
-	}
 	if f.callWatcher != nil {
 		f.callWatcher.Stop()
 	}
 	if f.listWatcher != nil {
 		f.listWatcher.Stop()
 	}
-	if f.cc != nil {
-		f.cc.Stop()
-	}
-	if f.chatManager != nil {
-		f.chatManager.Stop()
-	}
-	if f.AiBots != nil {
-		f.AiBots.Stop()
-	}
 	close(f.stop)
 	<-f.stopped
-	f.srvs.Stop()
 }
 
 // Listen starts background watchers and then blocks in the transport dispatch
