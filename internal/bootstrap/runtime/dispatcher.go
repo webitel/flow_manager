@@ -10,11 +10,22 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/internal/domain/flow"
-	"github.com/webitel/flow_manager/internal/workers/runtime_recovery"
-	"github.com/webitel/flow_manager/internal/workers/session_recovery"
 	"github.com/webitel/flow_manager/internal/runtime/persistence"
 	"github.com/webitel/flow_manager/internal/session"
+	"github.com/webitel/flow_manager/internal/workers/runtime_recovery"
+	"github.com/webitel/flow_manager/internal/workers/session_recovery"
 )
+
+// RouterSet groups all channel routers so they can be passed as a unit.
+type RouterSet struct {
+	Call    flow.Router
+	GRPC    flow.Router
+	Chat    flow.Router
+	Form    flow.Router
+	Email   flow.Router
+	Channel flow.Router
+	IM      flow.Router
+}
 
 // Dispatcher connects inbound transport servers to domain routers and manages
 // background worker goroutines.
@@ -28,13 +39,13 @@ type Dispatcher struct {
 	imServer      flow.Server
 	grpcServer    grpcServer
 
-	CallRouter    flow.Router
-	GRPCRouter    flow.Router
-	ChatRouter    flow.Router
-	FormRouter    flow.Router
-	EmailRouter   flow.Router
-	ChannelRouter flow.Router
-	IMRouter      flow.Router
+	callRouter    flow.Router
+	grpcRouter    flow.Router
+	chatRouter    flow.Router
+	formRouter    flow.Router
+	emailRouter   flow.Router
+	channelRouter flow.Router
+	imRouter      flow.Router
 
 	checkpointRepo   session.Repository
 	runtimeStateRepo persistence.Repository
@@ -60,6 +71,8 @@ type DispatcherConfig struct {
 	ChannelServer flow.Server
 	ImServer      flow.Server
 
+	Routers RouterSet
+
 	CheckpointRepo   session.Repository
 	RuntimeStateRepo persistence.Repository
 
@@ -77,18 +90,19 @@ func New(cfg DispatcherConfig) *Dispatcher {
 		mailServer:       cfg.MailServer,
 		channelServer:    cfg.ChannelServer,
 		imServer:         cfg.ImServer,
+		callRouter:       cfg.Routers.Call,
+		grpcRouter:       cfg.Routers.GRPC,
+		chatRouter:       cfg.Routers.Chat,
+		formRouter:       cfg.Routers.Form,
+		emailRouter:      cfg.Routers.Email,
+		channelRouter:    cfg.Routers.Channel,
+		imRouter:         cfg.Routers.IM,
 		checkpointRepo:   cfg.CheckpointRepo,
 		runtimeStateRepo: cfg.RuntimeStateRepo,
 		stop:             cfg.Stop,
 		stopped:          cfg.Stopped,
 	}
 }
-
-// CheckpointRepo returns the session-checkpoint repository.
-func (f *Dispatcher) CheckpointRepo() session.Repository { return f.checkpointRepo }
-
-// RuntimeStateRepo returns the resumable-flow state repository.
-func (f *Dispatcher) RuntimeStateRepo() persistence.Repository { return f.runtimeStateRepo }
 
 // Listen blocks until all transport goroutines finish. It should be called in
 // its own goroutine.
@@ -115,7 +129,7 @@ func (f *Dispatcher) Listen() {
 	type backgroundRunner interface {
 		StartBackground(ctx context.Context)
 	}
-	if br, ok := f.IMRouter.(backgroundRunner); ok {
+	if br, ok := f.imRouter.(backgroundRunner); ok {
 		br.StartBackground(workerCtx)
 	}
 
@@ -158,7 +172,7 @@ func (f *Dispatcher) listenImConnection(wg *sync.WaitGroup, srv flow.Server) {
 			if !ok {
 				return
 			}
-			if err := f.IMRouter.Handle(c); err != nil {
+			if err := f.imRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}
 		}
@@ -177,7 +191,7 @@ func (f *Dispatcher) listenCallConnection(wg *sync.WaitGroup, srv flow.Server) {
 				return
 			}
 
-			if err := f.CallRouter.Handle(c); err != nil {
+			if err := f.callRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}
 		}
@@ -198,15 +212,15 @@ func (f *Dispatcher) listenGrpcConnection(wg *sync.WaitGroup, srv grpcServer) {
 
 			switch c.Type() {
 			case flow.ConnectionTypeChat:
-				if err := f.ChatRouter.Handle(c); err != nil {
+				if err := f.chatRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
 			case flow.ConnectionTypeForm:
-				if err := f.FormRouter.Handle(c); err != nil {
+				if err := f.formRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
 			default:
-				if err := f.GRPCRouter.Handle(c); err != nil {
+				if err := f.grpcRouter.Handle(c); err != nil {
 					c.Log().Error(err.Error())
 				}
 			}
@@ -226,7 +240,7 @@ func (f *Dispatcher) listenInboundEmail(wg *sync.WaitGroup, srv flow.Server) {
 				return
 			}
 
-			if err := f.EmailRouter.Handle(c); err != nil {
+			if err := f.emailRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}
 		}
@@ -245,7 +259,7 @@ func (f *Dispatcher) listenChannelConnection(wg *sync.WaitGroup, srv flow.Server
 				return
 			}
 
-			if err := f.ChannelRouter.Handle(c); err != nil {
+			if err := f.channelRouter.Handle(c); err != nil {
 				c.Log().Error(err.Error())
 			}
 		}

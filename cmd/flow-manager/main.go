@@ -26,6 +26,7 @@ import (
 	outboundmeeting "github.com/webitel/flow_manager/internal/adapters/outbound/meeting"
 	bscfg "github.com/webitel/flow_manager/internal/bootstrap/config"
 	bsfx "github.com/webitel/flow_manager/internal/bootstrap/fx"
+	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
 	domaincontacts "github.com/webitel/flow_manager/internal/domain/contacts"
 	domainengine "github.com/webitel/flow_manager/internal/domain/engine"
 	domainmeeting "github.com/webitel/flow_manager/internal/domain/meeting"
@@ -66,7 +67,7 @@ func main() {
 		fx.Provide(newEngineClient),
 		fx.Provide(newMeetingClient),
 		fx.Provide(newAppRouters),
-		fx.Invoke(wireRouters),
+		fx.Provide(newDispatcher),
 		fx.Invoke(bsfx.RegisterStartupHooks),
 		fx.Invoke(registerLifecycle),
 	).Run()
@@ -98,20 +99,39 @@ func newAppRouters(
 	}
 }
 
-func wireRouters(fm *bsruntime.FlowManager, routers *appRouters) {
-	fm.CallRouter = routers.Call
-	fm.GRPCRouter = routers.GRPC
-	fm.ChatRouter = routers.Chat
-	fm.FormRouter = routers.Form
-	fm.EmailRouter = routers.Email
-	fm.ChannelRouter = routers.Channel
-	fm.IMRouter = routers.IM
+func newDispatcher(
+	fm *bsruntime.FlowManager,
+	routers *appRouters,
+	srvs bootstrapServers.Servers,
+) *bsruntime.Dispatcher {
+	return bsruntime.New(bsruntime.DispatcherConfig{
+		Log:           fm.Log(),
+		ID:            fm.AppID(),
+		GrpcServer:    srvs.Grpc,
+		EslServer:     srvs.Esl,
+		MailServer:    srvs.Mail,
+		ChannelServer: srvs.Channel,
+		ImServer:      srvs.Im,
+		Routers: bsruntime.RouterSet{
+			Call:    routers.Call,
+			GRPC:    routers.GRPC,
+			Chat:    routers.Chat,
+			Form:    routers.Form,
+			Email:   routers.Email,
+			Channel: routers.Channel,
+			IM:      routers.IM,
+		},
+		CheckpointRepo:   fm.CheckpointRepo(),
+		RuntimeStateRepo: fm.RuntimeStateRepo(),
+		Stop:             fm.Stop(),
+		Stopped:          fm.Stopped(),
+	})
 }
 
-func registerLifecycle(lc fx.Lifecycle, fm *bsruntime.FlowManager) {
+func registerLifecycle(lc fx.Lifecycle, fm *bsruntime.FlowManager, d *bsruntime.Dispatcher) {
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
-			go fm.Listen()
+			go fm.Listen(d)
 			go startDebugServer()
 			return nil
 		},
@@ -122,8 +142,8 @@ func registerLifecycle(lc fx.Lifecycle, fm *bsruntime.FlowManager) {
 	})
 }
 
-func newContactsClient(lc fx.Lifecycle, fm *bsruntime.FlowManager) (domaincontacts.Client, error) {
-	c := outboundcontacts.New(fm.Config().DiscoverySettings.Url)
+func newContactsClient(lc fx.Lifecycle, cfg *bscfg.Config) (domaincontacts.Client, error) {
+	c := outboundcontacts.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return c.Start()
@@ -132,8 +152,8 @@ func newContactsClient(lc fx.Lifecycle, fm *bsruntime.FlowManager) (domaincontac
 	return c, nil
 }
 
-func newEngineClient(lc fx.Lifecycle, fm *bsruntime.FlowManager) (domainengine.Client, error) {
-	c := outboundengine.New(fm.Config().DiscoverySettings.Url)
+func newEngineClient(lc fx.Lifecycle, cfg *bscfg.Config) (domainengine.Client, error) {
+	c := outboundengine.New(cfg.DiscoverySettings.Url)
 	lc.Append(fx.Hook{
 		OnStart: func(_ context.Context) error {
 			return c.Start()

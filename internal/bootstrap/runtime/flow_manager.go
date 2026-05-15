@@ -17,7 +17,6 @@ import (
 	fileAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/storage"
 	storeAdapter "github.com/webitel/flow_manager/internal/adapters/outbound/store_adapter"
 	clusterPkg "github.com/webitel/flow_manager/internal/bootstrap/cluster"
-	
 	bootstrapServers "github.com/webitel/flow_manager/internal/bootstrap/servers"
 	bsversion "github.com/webitel/flow_manager/internal/bootstrap/version"
 	domcases "github.com/webitel/flow_manager/internal/domain/cases"
@@ -53,7 +52,6 @@ type FlowManager struct {
 	*fileAdapter.FileAdapter
 	*eventAdapter.EventBusAdapter
 	*chatAdapter.ChatMgrAdapter
-	*Dispatcher
 
 	log    *wlog.Logger
 	id     string
@@ -74,6 +72,9 @@ type FlowManager struct {
 	stopped chan struct{}
 
 	eventQueue ports.EventBus
+
+	checkpointRepo   session.Repository
+	runtimeStateRepo persistence.Repository
 
 	callWatcher *callWatcherPkg.Worker
 	listWatcher *listWatcher.Worker
@@ -116,34 +117,23 @@ func NewFlowManager(
 		FileAdapter:     fileAdapter.NewFileAdapter(storage),
 		EventBusAdapter: eventAdapter.NewEventBusAdapter(eventQueue, st, cfg),
 		ChatMgrAdapter:  chatAdapter.NewChatMgrAdapter(chatMgr, cfg.ChatTemplatesSettings.Path),
-		Dispatcher: New(DispatcherConfig{
-			Log:              log,
-			ID:               appID,
-			GrpcServer:       srvs.Grpc,
-			EslServer:        srvs.Esl,
-			MailServer:       srvs.Mail,
-			ChannelServer:    srvs.Channel,
-			ImServer:         srvs.Im,
-			CheckpointRepo:   checkpointRepo,
-			RuntimeStateRepo: runtimeStateRepo,
-			Stop:             stop,
-			Stopped:          stopped,
-		}),
-		log:         log,
-		id:          appID,
-		config:      cfg,
-		Store:       st,
-		cases:       casesClient,
-		AiBots:      aiBots,
-		meeting:     meetingClient,
-		chatManager: chatMgr,
-		cc:          ccMgr,
-		eventQueue:  eventQueue,
-		srvs:        srvs,
-		grpcServer:  srvs.Grpc,
-		stop:        stop,
-		stopped:     stopped,
-		cbr:         cb,
+		log:              log,
+		id:               appID,
+		config:           cfg,
+		Store:            st,
+		cases:            casesClient,
+		AiBots:           aiBots,
+		meeting:          meetingClient,
+		chatManager:      chatMgr,
+		cc:               ccMgr,
+		eventQueue:       eventQueue,
+		checkpointRepo:   checkpointRepo,
+		runtimeStateRepo: runtimeStateRepo,
+		srvs:             srvs,
+		grpcServer:       srvs.Grpc,
+		stop:             stop,
+		stopped:          stopped,
+		cbr:              cb,
 	}
 
 	if cfg.ExternalSql {
@@ -221,6 +211,20 @@ func (f *FlowManager) Shutdown() {
 	f.srvs.Stop()
 }
 
+// Listen starts background watchers and then blocks in the transport dispatch
+// loop until all server goroutines have finished.
+func (f *FlowManager) Listen(d *Dispatcher) {
+	f.callWatcher.Start(f.stop)
+	f.listWatcher.Start()
+	d.Listen()
+}
+
+// Stop returns the channel closed to signal all goroutines to stop.
+func (f *FlowManager) Stop() chan struct{} { return f.stop }
+
+// Stopped returns the channel closed by the Dispatcher when it finishes.
+func (f *FlowManager) Stopped() chan struct{} { return f.stopped }
+
 func (f *FlowManager) Log() *wlog.Logger             { return f.log }
 func (f *FlowManager) AppID() string                 { return f.id }
 func (f *FlowManager) Callback() *callback.Resolver  { return f.cbr }
@@ -229,21 +233,12 @@ func (f *FlowManager) GetAiBots() *aibridge.Client   { return f.AiBots }
 func (f *FlowManager) Meeting() domainmeeting.Client { return f.meeting }
 func (f *FlowManager) Cases() domcases.Client        { return f.cases }
 
+func (f *FlowManager) CheckpointRepo() session.Repository          { return f.checkpointRepo }
+func (f *FlowManager) RuntimeStateRepo() persistence.Repository    { return f.runtimeStateRepo }
+
 // ConsumeCallEvent satisfies call_watcher.CallEventDeps; delegates to eventQueue.
 func (f *FlowManager) ConsumeCallEvent() <-chan call.CallActionData {
 	return f.eventQueue.ConsumeCallEvent()
-}
-
-// Listen starts background watchers and then blocks in the transport dispatch
-// loop until all server goroutines have finished.
-//
-// The transport-level loop is owned by the embedded Dispatcher; this wrapper
-// starts the call and list watchers first so they are alive before any
-// connections arrive.
-func (f *FlowManager) Listen() {
-	f.callWatcher.Start(f.stop)
-	f.listWatcher.Start()
-	f.Dispatcher.Listen()
 }
 
 func (f *FlowManager) Config() *bscfg.Config {
