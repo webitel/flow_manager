@@ -22,7 +22,7 @@ type Config struct {
 	Esl                          EslSettings       `json:"esl"`
 	WebHook                      WebHookSettings   `json:"web_hook"`
 	Grpc                         GrpcServeSettings `json:"grpc"`
-	//EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
+	// EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 	Log                   LogSettings           `json:"log"`
 	Tls                   TLSConfig             `json:"tls"`
@@ -88,5 +88,6 @@ type WebHookSettings struct {
 }
 
 type MQSettings struct {
-	Url string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
+	Url   string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
+	UseIM bool   `json:"use_im" flag:"use_im|false|Use IM handlers" env:"USE_IM"`
 }

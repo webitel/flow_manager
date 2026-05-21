@@ -166,8 +166,11 @@ func (a *AMQP) initQueues() {
 
 	a.subscribeCall()
 	a.subscribeExec()
-	a.subscribeIM()
 	a.subscribeCC()
+
+	if a.settings.UseIM {
+		a.subscribeIM()
+	}
 }
 
 func (a *AMQP) subscribeCall() {
