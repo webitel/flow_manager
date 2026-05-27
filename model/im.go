@@ -29,10 +29,12 @@ type IMDialog interface {
 }
 
 type ThreadMember struct {
-	Type string
-	Name string
-	Iss  string
-	Sub  string
+	Type     string
+	Name     string
+	Iss      string
+	Sub      string
+	MemberId string
+	Role     int
 }
 
 type ThreadInfo struct {
@@ -69,9 +71,11 @@ type Message struct {
 
 // From описує відправника
 type ImEndpoint struct {
-	ID     string `json:"id"`
-	Type   int    `json:"type"`
-	Sub    string `json:"sub"`
-	Issuer string `json:"issuer"`
-	Name   string `json:"name"`
+	ID       string `json:"id"`
+	Type     int    `json:"type"`
+	Sub      string `json:"sub"`
+	Issuer   string `json:"issuer"`
+	Name     string `json:"name"`
+	MemberID string `json:"member_id"`
+	Role     int    `json:"role"`
 }

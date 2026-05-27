@@ -682,10 +682,12 @@ func (c *Connection) TreadInfo(ctx context.Context) (model.ThreadInfo, *model.Ap
 
 	for _, v := range infoResult.Members {
 		info.Members = append(info.Members, model.ThreadMember{
-			Type: v.GetContact().GetType(),
-			Name: v.GetContact().GetName(),
-			Iss:  v.GetContact().GetIss(),
-			Sub:  v.GetContact().GetSub(),
+			Type:     v.GetContact().GetType(),
+			Name:     v.GetContact().GetName(),
+			Iss:      v.GetContact().GetIss(),
+			Sub:      v.GetContact().GetSub(),
+			Role:     int(v.GetRole()),
+			MemberId: v.GetId(),
 		})
 	}
 
