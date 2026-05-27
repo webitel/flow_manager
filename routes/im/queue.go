@@ -98,10 +98,12 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 	var members []*cc.IMJoinToQueueRequest_MemberInfo
 	for _, m := range info.Members {
 		members = append(members, &cc.IMJoinToQueueRequest_MemberInfo{
-			Type: m.Type,
-			Name: m.Name,
-			Iss:  m.Iss,
-			Sub:  m.Sub,
+			Type:     m.Type,
+			Name:     m.Name,
+			Iss:      m.Iss,
+			Sub:      m.Sub,
+			Role:     int32(m.Role),
+			MemberId: m.MemberId,
 		})
 	}
 
@@ -122,12 +124,14 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		StickyAgentId: stickyAgentId,
 		Thread: &cc.IMJoinToQueueRequest_ThreadInfo{
 			From: &cc.IMJoinToQueueRequest_Endpoint{
-				Name: from.Name,
-				Sub:  from.Sub,
+				Name:     from.Name,
+				Sub:      from.Sub,
+				MemberId: from.MemberID,
 			},
 			To: &cc.IMJoinToQueueRequest_Endpoint{
-				Name: to.Name,
-				Sub:  to.Sub,
+				Name:     to.Name,
+				Sub:      to.Sub,
+				MemberId: to.MemberID,
 			},
 			Subject:     info.Subject,
 			Members:     members,
