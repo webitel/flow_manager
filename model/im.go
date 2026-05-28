@@ -53,6 +53,12 @@ type Message struct {
 	CreatedAt int64        `json:"created_at"` // Unix timestamp у мілісекундах
 }
 
+type SystemMessageOutbound struct {
+	Type     string         `json:"type"`
+	Text     string         `json:"text"`
+	Metadata map[string]any `json:"metadata"`
+}
+
 // From описує відправника
 type ImEndpoint struct {
 	ID     string `json:"id"`
