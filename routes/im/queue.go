@@ -90,10 +90,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 	from := conn.From()
 	to := conn.To()
 
-	info, errInfo := conn.TreadInfo(ctx)
-	if errInfo != nil {
-		return nil, errInfo
-	}
+	info := conn.TreadInfo()
 
 	var members []*cc.IMJoinToQueueRequest_MemberInfo
 	for _, m := range info.Members {
