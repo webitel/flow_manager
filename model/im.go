@@ -20,7 +20,7 @@ type IMDialog interface {
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
-	TreadInfo(ctx context.Context) (ThreadInfo, *AppError)
+	TreadInfo() ThreadInfo
 	LastMessages(limit int) []ChatMessage
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
@@ -39,8 +39,10 @@ type ThreadMember struct {
 
 type ThreadInfo struct {
 	Subject     string
+	Description string
 	Members     []ThreadMember
 	LastMessage string
+	Variables   map[string]string
 }
 
 type CCQueueEvent struct {
@@ -60,13 +62,15 @@ type MessageWrapper struct {
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string       `json:"id"`
-	ThreadID  string       `json:"thread_id"`
-	DomainID  int          `json:"domain_id"`
-	From      ImEndpoint   `json:"from"`
-	To        []ImEndpoint `json:"to"`
-	Text      string       `json:"text"`
-	CreatedAt int64        `json:"created_at"` // Unix timestamp у мілісекундах
+	ID          string       `json:"id"`
+	ThreadID    string       `json:"thread_id"`
+	DomainID    int          `json:"domain_id"`
+	From        ImEndpoint   `json:"from"`
+	To          []ImEndpoint `json:"to"`
+	Text        string       `json:"text"`
+	CreatedAt   int64        `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string       `json:"subject"`
+	Description string       `json:"description"`
 }
 
 // From описує відправника

@@ -46,6 +46,7 @@ type Connection struct {
 	queueKey        *model.InQueueKey
 	exportVariables []string
 	messages        []model.MessageWrapper
+	info            model.ThreadInfo
 }
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageWrapper) *Connection {
@@ -81,8 +82,26 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 		conn.variables = make(map[string]string)
 	}
 
-	conn.variables[model.ConversationStartMessageVariable] = msg.Message.Text
 	return conn
+}
+
+func (c *Connection) setupVariables() {
+	c.variables[model.ConversationStartMessageVariable] = c.msg.Text
+
+	c.variables["uuid"] = c.id
+	info, err := c.treadInfo(c.srv.client.ctx)
+	if err != nil {
+		c.log.Error("failed to get thread info", wlog.Err(err))
+		return
+	}
+	c.msg.Subject = info.Subject
+	c.msg.Description = info.Description
+	raw, _ := json.Marshal(c.msg)
+	c.variables["thread"] = string(raw)
+	for k, v := range info.Variables {
+		c.variables[k] = v
+	}
+	c.info = info
 }
 
 func (c *Connection) OnMessage(msg model.MessageWrapper) {
@@ -659,7 +678,11 @@ func (c *Connection) Variables() map[string]string {
 	return maps.Clone(c.variables)
 }
 
-func (c *Connection) TreadInfo(ctx context.Context) (model.ThreadInfo, *model.AppError) {
+func (c *Connection) TreadInfo() model.ThreadInfo {
+	return c.info
+}
+
+func (c *Connection) treadInfo(ctx context.Context) (model.ThreadInfo, *model.AppError) {
 	var info model.ThreadInfo
 	result, err := c.srv.client.threadService.Api.Search(metadata.NewOutgoingContext(ctx, c.hdrs), &p.ThreadSearchRequest{
 		Fields: nil,
@@ -676,6 +699,7 @@ func (c *Connection) TreadInfo(ctx context.Context) (model.ThreadInfo, *model.Ap
 
 	infoResult := result.Items[0]
 	info.Subject = infoResult.Subject
+	info.Description = infoResult.Description
 	if infoResult.LastMsg != nil {
 		info.LastMessage = infoResult.LastMsg.Body
 	}
@@ -689,6 +713,19 @@ func (c *Connection) TreadInfo(ctx context.Context) (model.ThreadInfo, *model.Ap
 			Role:     int(v.GetRole()),
 			MemberId: v.GetId(),
 		})
+	}
+
+	if infoResult.Variables == nil {
+		return info, nil
+	}
+	info.Variables = make(map[string]string)
+
+	for k, v := range infoResult.Variables.Variables {
+		if v.Value != nil {
+			if raw, err := v.Value.MarshalJSON(); err != nil {
+				info.Variables[k] = string(raw)
+			}
+		}
 	}
 
 	return info, nil

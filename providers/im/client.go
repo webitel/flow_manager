@@ -32,6 +32,7 @@ func NewClient(consulAddr string, log *wlog.Logger, t *tls.Config) *Client {
 		consulAddr: consulAddr,
 		log:        log,
 		tls:        t,
+		ctx:        context.Background(),
 	}
 
 	return cli
