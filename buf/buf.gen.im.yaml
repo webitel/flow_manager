@@ -24,8 +24,10 @@ plugins:
     opt: paths=source_relative
 
 inputs:
-  # The relative path to the source proto files
-  - directory: "../protos/im"
+  - git_repo: https://github.com/webitel/protos.git
+    branch: main
+    subdir: im
+    depth: 1
     types:
       - webitel.im.api.gateway.v1.Message
       - webitel.im.api.gateway.v1.ThreadManagement

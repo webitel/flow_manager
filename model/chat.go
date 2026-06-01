@@ -2,6 +2,7 @@ package model
 
 import (
 	"context"
+
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	proto "github.com/webitel/flow_manager/gen/chat"
 )

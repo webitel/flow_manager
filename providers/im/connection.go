@@ -204,6 +204,32 @@ func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Re
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMessageOutbound) (model.Response, *model.AppError) {
+	meta, err := structpb.NewStruct(msg.Metadata)
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusBadRequest)
+	}
+
+	_, err = c.srv.client.messageService.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
+		To: &p.Peer{
+			Kind: &p.Peer_Contact{
+				Contact: &p.PeerIdentity{
+					Sub: c.msg.From.Sub,
+					Iss: c.msg.From.Issuer,
+				},
+			},
+		},
+		Type:     msg.Type,
+		Body:     msg.Text,
+		Metadata: meta,
+	})
+	if err != nil {
+		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+	}
+
+	return model.CallResponseOK, nil
+}
+
 func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
 	var images []*p.ImageInput
 	if msg.File != nil {
