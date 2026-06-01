@@ -21,10 +21,29 @@ type IMDialog interface {
 	ReceiveMessage(ctx context.Context, name string, timeout, messageTimeout int) ([]string, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
+	TreadInfo() ThreadInfo
 	LastMessages(limit int) []ChatMessage
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
+	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
+}
+
+type ThreadMember struct {
+	Type     string
+	Name     string
+	Iss      string
+	Sub      string
+	MemberId string
+	Role     int
+}
+
+type ThreadInfo struct {
+	Subject     string
+	Description string
+	Members     []ThreadMember
+	LastMessage string
+	Variables   map[string]string
 }
 
 type CCQueueEvent struct {
@@ -44,13 +63,15 @@ type MessageWrapper struct {
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID        string       `json:"id"`
-	ThreadID  string       `json:"thread_id"`
-	DomainID  int          `json:"domain_id"`
-	From      ImEndpoint   `json:"from"`
-	To        []ImEndpoint `json:"to"`
-	Text      string       `json:"text"`
-	CreatedAt int64        `json:"created_at"` // Unix timestamp у мілісекундах
+	ID          string       `json:"id"`
+	ThreadID    string       `json:"thread_id"`
+	DomainID    int          `json:"domain_id"`
+	From        ImEndpoint   `json:"from"`
+	To          []ImEndpoint `json:"to"`
+	Text        string       `json:"text"`
+	CreatedAt   int64        `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string       `json:"subject"`
+	Description string       `json:"description"`
 }
 
 type SystemMessageOutbound struct {
@@ -61,9 +82,11 @@ type SystemMessageOutbound struct {
 
 // From описує відправника
 type ImEndpoint struct {
-	ID     string `json:"id"`
-	Type   int    `json:"type"`
-	Sub    string `json:"sub"`
-	Issuer string `json:"issuer"`
-	Name   string `json:"name"`
+	ID       string `json:"id"`
+	Type     int    `json:"type"`
+	Sub      string `json:"sub"`
+	Issuer   string `json:"issuer"`
+	Name     string `json:"name"`
+	MemberID string `json:"member_id"`
+	Role     int    `json:"role"`
 }

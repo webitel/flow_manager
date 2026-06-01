@@ -30,3 +30,4 @@ inputs:
     depth: 1
     types:
       - webitel.im.api.gateway.v1.Message
+      - webitel.im.api.gateway.v1.ThreadManagement

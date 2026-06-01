@@ -161,6 +161,8 @@ func (s *server) nodeMessage(msg model.MessageWrapper) error {
 		}
 
 		dialog := newConnection(s, id, endpoint, msg)
+		dialog.setupVariables()
+
 		s.connectionStore.Add(dialog)
 		dialog.log.Debug("start dialog " + id)
 		s.consume <- dialog

@@ -89,7 +89,24 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 
 	from := conn.From()
 	to := conn.To()
-	lastMsg := conn.LastMessage()
+
+	info := conn.TreadInfo()
+
+	var members []*cc.IMJoinToQueueRequest_MemberInfo
+	for _, m := range info.Members {
+		members = append(members, &cc.IMJoinToQueueRequest_MemberInfo{
+			Type:     m.Type,
+			Name:     m.Name,
+			Iss:      m.Iss,
+			Sub:      m.Sub,
+			Role:     int32(m.Role),
+			MemberId: m.MemberId,
+		})
+	}
+
+	if info.LastMessage == "" {
+		info.LastMessage = conn.LastMessage().Text
+	}
 
 	attId, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
 		ThreadId: conn.ThreadId(),
@@ -97,23 +114,25 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 			Id:   q.Queue.Id,
 			Name: q.Queue.Name,
 		},
-		Priority: q.Priority,
-		BucketId: q.Bucket.Id,
-		// Variables:     conn.DumpExportVariables(),
+		Priority:      q.Priority,
+		BucketId:      q.Bucket.Id,
+		Variables:     conn.DumpExportVariables(),
 		DomainId:      conn.DomainId(),
 		StickyAgentId: stickyAgentId,
-		Member: &cc.IMJoinToQueueRequest_Member{
+		Thread: &cc.IMJoinToQueueRequest_ThreadInfo{
 			From: &cc.IMJoinToQueueRequest_Endpoint{
-				Name: from.Name,
-				Sub:  from.Sub,
+				Name:     from.Name,
+				Sub:      from.Sub,
+				MemberId: from.MemberID,
 			},
 			To: &cc.IMJoinToQueueRequest_Endpoint{
-				Name: to.Name,
-				Sub:  to.Sub,
+				Name:     to.Name,
+				Sub:      to.Sub,
+				MemberId: to.MemberID,
 			},
-
-			LastMsg: lastMsg.Text,
-			LastSub: lastMsg.From.Sub, // TODO
+			Subject:     info.Subject,
+			Members:     members,
+			LastMessage: info.LastMessage,
 		},
 	})
 	if err != nil {
