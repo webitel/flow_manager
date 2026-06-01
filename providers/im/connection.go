@@ -210,7 +210,7 @@ func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMess
 		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusBadRequest)
 	}
 
-	_, err = c.srv.client.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
+	_, err = c.srv.client.messageService.Api.SendSystemMessage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendSystemMessageRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
