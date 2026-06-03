@@ -39,7 +39,7 @@ jobs:
     needs: [ prepare ]
     uses: webitel/reusable-workflows/.github/workflows/golang-build.yml@v2
     with:
-      binary-name: flow_manager
+      binary-name: webitel-flow-manager
       ldflags: >
         -s -w
         -X github.com/webitel/flow_manager/model.BuildNumber=${{ github.run_number }}
