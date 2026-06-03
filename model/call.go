@@ -188,23 +188,24 @@ type QueueInfo struct {
 }
 
 type CallActionInfo struct {
-	GatewayId       *int           `json:"gateway_id"`
-	UserId          *int           `json:"user_id"`
-	Direction       string         `json:"direction"`
-	Destination     string         `json:"destination"`
-	DestinationName *string        `json:"destination_name"`
-	From            *CallEndpoint  `json:"from"`
-	To              *CallEndpoint  `json:"to"`
-	ParentId        *string        `json:"parent_id"`
-	Payload         *CallVariables `json:"payload"`
-	Queue           *QueueInfo     `json:"queue"`
-	GranteeId       *int           `json:"grantee_id"`
-	SipId           *string        `json:"sip_id"`
-	Heartbeat       int            `json:"heartbeat,omitempty"`
-	Video           string         `json:"video,omitempty"`
-	MeetingId       string         `json:"meeting_id,omitempty"`
-	ContactId       *int64         `json:"contact_id"`
-	HideNumber      *bool          `json:"hide_number,omitempty"`
+	GatewayId        *int           `json:"gateway_id"`
+	UserId           *int           `json:"user_id"`
+	Direction        string         `json:"direction"`
+	Destination      string         `json:"destination"`
+	DestinationName  *string        `json:"destination_name"`
+	From             *CallEndpoint  `json:"from"`
+	To               *CallEndpoint  `json:"to"`
+	ParentId         *string        `json:"parent_id"`
+	Payload          *CallVariables `json:"payload"`
+	Queue            *QueueInfo     `json:"queue"`
+	GranteeId        *int           `json:"grantee_id"`
+	SipId            *string        `json:"sip_id"`
+	Heartbeat        int            `json:"heartbeat,omitempty"`
+	Video            string         `json:"video,omitempty"`
+	MeetingId        string         `json:"meeting_id,omitempty"`
+	ContactId        *int64         `json:"contact_id"`
+	HideNumber       *bool          `json:"hide_number,omitempty"`
+	IsConsultToQueue *bool          `json:"is_consult_to_queue,omitempty"`
 }
 
 type CallActionRinging struct {
@@ -275,14 +276,21 @@ func (r *CallActionRinging) GetParams() []byte {
 	if r.Heartbeat > 0 {
 		res["heartbeat"] = r.Heartbeat
 	}
+
 	if r.Video != "" {
 		res["video"] = r.Video
 	}
+
 	if r.MeetingId != "" {
 		res["meeting_id"] = r.MeetingId
 	}
+
 	if r.HideNumber != nil {
 		res["hide_number"] = *r.HideNumber
+	}
+
+	if r.IsConsultToQueue != nil {
+		res["is_consult_to_queue"] = *r.IsConsultToQueue
 	}
 
 	data, _ := json.Marshal(res)
