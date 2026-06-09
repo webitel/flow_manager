@@ -2,7 +2,6 @@ package im
 
 import (
 	"crypto/tls"
-	"fmt"
 	"sync"
 
 	"github.com/webitel/engine/pkg/discovery"
@@ -19,7 +18,7 @@ type SessionStore interface {
 
 type server struct {
 	id              string
-	receiver        <-chan model.MessageWrapper
+	receiver        <-chan model.IMEventWrapper
 	consume         chan model.Connection
 	didFinishListen chan struct{}
 	stopped         chan struct{}
@@ -30,7 +29,7 @@ type server struct {
 	sessionStore    SessionStore
 }
 
-func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
+func NewServer(id, consulAddr string, receiver <-chan model.IMEventWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
 	return &server{
 		id:              id,
 		receiver:        receiver,
@@ -44,9 +43,7 @@ func NewServer(id, consulAddr string, receiver <-chan model.MessageWrapper, log 
 	}
 }
 
-func (s *server) Name() string {
-	return "IM"
-}
+func (s *server) Name() string { return "IM" }
 
 func (s *server) Start() *model.AppError {
 	s.startOnce.Do(func() {
@@ -98,25 +95,28 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 
 func (s *server) listen() {
 	defer func() {
-		wlog.Debug("stop listen channel server...")
+		wlog.Debug("stop listen IM channel server...")
 		close(s.stopped)
 	}()
 
-	wlog.Debug("start listen channel")
+	wlog.Debug("start listen IM channel")
 
 	for {
 		select {
 		case <-s.didFinishListen:
 			return
 		case c, ok := <-s.receiver:
-			if ok {
-				if c.Message.ThreadID == "" {
-					s.log.Warn(fmt.Sprintf("received message with empty thread id %v", c))
-					continue
-				}
-				if err := s.nodeMessage(c); err != nil {
-					s.log.Warn(fmt.Sprintf("failed to handle message %v: %v", c, err))
-				}
+			if !ok {
+				continue //? switch to return or break to skip infinity loop?
+			}
+
+			if c.GetPayload().GetThreadID() == "" {
+				s.log.Warn("received message with empty thread ID", wlog.String("message_id", c.GetPayload().MessageID()))
+				continue
+			}
+
+			if err := s.nodeMessage(c); err != nil {
+				s.log.Error("handling message", wlog.String("message_id", c.GetPayload().MessageID()), wlog.Err(err))
 			}
 		}
 	}
@@ -130,43 +130,44 @@ func (s *server) stopConnection(c *Connection) {
 	}
 }
 
-func (s *server) nodeMessage(msg model.MessageWrapper) error {
-	if msg.Message.From.Issuer == "bot" {
+const IMUserTypeBot string = "bot"
+
+func (s *server) nodeMessage(msg model.IMEventWrapper) error {
+	if msg.GetPayload().Sender().Issuer == IMUserTypeBot {
 		return nil
 	}
 
-	for _, endpoint := range msg.Message.To {
-		if endpoint.Issuer != "bot" {
+	for _, endpoint := range msg.GetPayload().Receivers() {
+		if endpoint.Issuer != IMUserTypeBot {
 			continue
 		}
 
-		id := fmt.Sprintf("%s.%s", msg.Message.ThreadID, endpoint.Sub)
-		conn, ok := s.connectionStore.Get(id)
-		if ok {
+		compositeSessionID := msg.GetPayload().GetThreadID() + "." + endpoint.Sub
+
+		if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
 			conn.OnMessage(msg)
 			continue
-
 		}
 
-		seq, err := s.sessionStore.Touch(id, s.id)
+		seq, err := s.sessionStore.Touch(compositeSessionID, s.id)
 		if err != nil {
 			return err
 		}
+
 		if seq == nil {
 			return nil
 		}
 
 		if *seq > 1 {
-			s.log.Warn(fmt.Sprintf("received message with seq thread id %v", *seq))
+			s.log.Warn("received message with sequance thread ID", wlog.Int("sequance", *seq))
 		}
 
-		dialog := newConnection(s, id, endpoint, msg)
+		dialog := newConnection(s, compositeSessionID, endpoint, msg)
 		dialog.setupVariables()
 
 		s.connectionStore.Add(dialog)
-		dialog.log.Debug("start dialog " + id)
+		dialog.log.Debug("start dialog " + compositeSessionID)
 		s.consume <- dialog
-
 	}
 
 	return nil

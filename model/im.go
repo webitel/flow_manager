@@ -1,6 +1,14 @@
 package model
 
-import "context"
+import (
+	"context"
+	"time"
+)
+
+const (
+	IMEventTypeMessage  string = "message"
+	IMEventTypeCallback string = "callback"
+)
 
 type IMDialog interface {
 	Connection
@@ -22,7 +30,6 @@ type IMDialog interface {
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	UnSet(ctx context.Context, varKeys []string) (Response, *AppError)
 	TreadInfo() ThreadInfo
-	LastMessages(limit int) []ChatMessage
 	GetQueueKey() *InQueueKey
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
@@ -52,14 +59,39 @@ type CCQueueEvent struct {
 	Result    string `json:"result"`
 }
 
-// MessageWrapper представляє кореневий об'єкт
-type MessageWrapper struct {
-	ID       string  `json:"id"`
-	Message  Message `json:"payload"`
-	UserID   string  `json:"user_id"`
-	DomainID int64   `json:"domain_id"`
-	Echo     bool    `json:"echo"`
+type IMEventWrapper interface {
+	GetID() string
+	GetUserID() string
+	GetDomainID() int64
+	IsEcho() bool
+	GetPayload() IMEvent
+	GetType() string
 }
+
+type IMEvent interface {
+	GetThreadID() string
+	MessageID() string
+	Sender() ImEndpoint
+	Receivers() []ImEndpoint
+	Message() Message
+}
+
+// MessageWrapper представляє кореневий об'єкт
+type MessageWrapper[T IMEvent] struct {
+	ID       string `json:"id"`
+	Message  T      `json:"payload"`
+	UserID   string `json:"user_id"`
+	DomainID int64  `json:"domain_id"`
+	Echo     bool   `json:"echo"`
+	Type     string `json:"-"`
+}
+
+func (w MessageWrapper[T]) GetID() string       { return w.ID }
+func (w MessageWrapper[T]) GetUserID() string   { return w.UserID }
+func (w MessageWrapper[T]) GetDomainID() int64  { return w.DomainID }
+func (w MessageWrapper[T]) IsEcho() bool        { return w.Echo }
+func (w MessageWrapper[T]) GetPayload() IMEvent { return w.Message }
+func (w MessageWrapper[T]) GetType() string     { return w.Type }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
@@ -73,6 +105,12 @@ type Message struct {
 	Subject     string       `json:"subject"`
 	Description string       `json:"description"`
 }
+
+func (m Message) GetThreadID() string     { return m.ThreadID }
+func (m Message) MessageID() string       { return m.ID }
+func (m Message) Sender() ImEndpoint      { return m.From }
+func (m Message) Receivers() []ImEndpoint { return m.To }
+func (m Message) Message() Message        { return m }
 
 type SystemMessageOutbound struct {
 	Type     string         `json:"type"`
@@ -90,3 +128,20 @@ type ImEndpoint struct {
 	MemberID string `json:"member_id"`
 	Role     int    `json:"role"`
 }
+
+type InteractiveCallback struct {
+	ReactedBy    ImEndpoint `json:"reacted_by"`
+	Receiver     ImEndpoint `json:"receiver"`
+	InReplyTo    string     `json:"in_reply_to"`
+	ThreadID     string     `json:"thread_id"`
+	ButtonCode   string     `json:"button_code"`
+	CallbackData string     `json:"callback_data"`
+	ReactedAt    time.Time  `json:"reacted_at"`
+	DomainID     int
+}
+
+func (c InteractiveCallback) GetThreadID() string     { return c.ThreadID }
+func (c InteractiveCallback) MessageID() string       { return c.InReplyTo }
+func (c InteractiveCallback) Sender() ImEndpoint      { return c.ReactedBy }
+func (c InteractiveCallback) Message() Message        { return Message{Text: c.ButtonCode} }
+func (c InteractiveCallback) Receivers() []ImEndpoint { return []ImEndpoint{c.Receiver} }

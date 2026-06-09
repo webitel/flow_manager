@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
-	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,49 +22,50 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
+var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.timeout.msg", nil, "Timeout", http.StatusRequestTimeout)
 
 var _ model.IMDialog = (*Connection)(nil)
 
 type Connection struct {
-	id        string
-	threadId  string
-	ctx       context.Context
-	domainId  int64
-	schemaId  int
-	srv       *server
-	variables map[string]string
-	msg       model.Message
 	sync.RWMutex
+
+	id              string
+	threadId        string
+	ctx             context.Context
+	domainId        int64
+	schemaId        int
+	srv             *server
+	variables       map[string]string
+	msg             model.Message
 	lastMsg         model.Message
 	from            model.ImEndpoint
 	to              model.ImEndpoint
 	log             *wlog.Logger
-	waitMsgChan     chan model.MessageWrapper
+	waitMsgChan     chan model.IMEventWrapper
 	hdrs            metadata.MD
 	queueKey        *model.InQueueKey
 	exportVariables []string
-	messages        []model.MessageWrapper
+	messages        []model.IMEventWrapper
 	info            model.ThreadInfo
 }
 
-func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageWrapper) *Connection {
+func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	conn := &Connection{
 		id:       id,
-		threadId: msg.Message.ThreadID,
+		threadId: msg.GetPayload().GetThreadID(),
 		srv:      s,
-		from:     msg.Message.From,
+		from:     msg.GetPayload().Sender(),
 		to:       to,
-		lastMsg:  msg.Message,
+		lastMsg:  msg.GetPayload().Message(),
 		hdrs: metadata.New(map[string]string{
 			"x-webitel-type":   "schema",
-			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.DomainID, schemaId),
+			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:       msg.Message,
+		msg:       msg.GetPayload().Message(),
 		ctx:       context.Background(),
-		domainId:  msg.DomainID,
+		domainId:  msg.GetDomainID(),
 		variables: toVariables(nil), // todo
 		schemaId:  schemaId,
 		RWMutex:   sync.RWMutex{},
@@ -73,8 +73,8 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.MessageW
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
 			wlog.String("id", id),
-			wlog.String("thread_id", msg.Message.ThreadID),
-			wlog.Int64("domain_id", msg.DomainID),
+			wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+			wlog.Int64("domain_id", msg.GetDomainID()),
 			wlog.Int("schema_id", schemaId),
 		),
 	}
@@ -98,28 +98,78 @@ func (c *Connection) setupVariables() {
 	c.msg.Description = info.Description
 	raw, _ := json.Marshal(c.msg)
 	c.variables["thread"] = string(raw)
-	for k, v := range info.Variables {
-		c.variables[k] = v
-	}
+	maps.Copy(c.variables, info.Variables)
 	c.info = info
 }
 
-func (c *Connection) OnMessage(msg model.MessageWrapper) {
-	if msg.Message.From.Sub == c.to.Sub {
-		c.log.Debug("message from sub changed")
+func (c *Connection) processLastMessage(lastMessage model.IMEventWrapper) {
+	if lastMessage.GetType() != model.IMEventTypeMessage {
 		return
 	}
 
 	c.Lock()
-	c.messages = append(c.messages, msg)
-	ch := c.waitMsgChan
-	c.lastMsg = msg.Message
-	c.Unlock()
-	if ch != nil { // todo skip flow messages
-		ch <- msg
+	defer c.Unlock()
+
+	c.messages = append(c.messages, lastMessage)
+	c.lastMsg = lastMessage.GetPayload().Message()
+}
+
+func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrapper) {
+	if callback.GetType() != model.IMEventTypeCallback {
 		return
 	}
-	c.log.Debug("message "+msg.Message.Text, wlog.String("thread_id", msg.Message.ThreadID))
+
+	assertedCallback, ok := callback.GetPayload().(model.InteractiveCallback)
+	if !ok {
+		c.log.Warn("unsuccessfull assert from wrapper to callback")
+		return
+	}
+
+	serializedCallback, err := json.Marshal(assertedCallback)
+	if err != nil {
+		c.log.Error("serializing interactive callback for variable setting", wlog.Err(err))
+		return
+	}
+
+	c.Lock()
+	c.variables["clicked_button"] = string(serializedCallback)
+	c.Unlock()
+}
+
+func (c *Connection) pushMessageToWaitMessageChan(message model.IMEventWrapper) {
+	if message.GetPayload().Message().Sender().Issuer == "bot" {
+		return
+	}
+
+	c.RLock()
+	ch := c.waitMsgChan
+	c.RUnlock()
+
+	if ch != nil {
+		ch <- message
+	}
+}
+
+func (c *Connection) OnMessage(msg model.IMEventWrapper) {
+	log := c.log.With(
+		wlog.String("operation", "OnMessage"),
+		wlog.String("from_sub", msg.GetPayload().Sender().Sub),
+		wlog.String("to_sub", c.to.Sub),
+		wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+		wlog.String("message_id", msg.GetPayload().MessageID()),
+		wlog.Int64("domain_id", msg.GetDomainID()),
+	)
+
+	if msg.GetPayload().Sender().Sub == c.to.Sub {
+		log.Debug("message from sub changed")
+		return
+	}
+
+	c.processLastMessage(msg)
+	c.processLastInteractiveCallback(msg)
+	c.pushMessageToWaitMessageChan(msg)
+
+	log.Debug("processed on message event")
 }
 
 func (c *Connection) From() model.ImEndpoint {
@@ -138,7 +188,7 @@ func (c *Connection) LastMessage() model.Message {
 	return c.lastMsg
 }
 
-func (c *Connection) setStateWaitMessage(ch chan model.MessageWrapper) error {
+func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 	c.Lock()
 	defer c.Unlock()
 
@@ -156,7 +206,6 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	if msg.File != nil {
 		f := msg.File
 		docs = append(docs, &p.ImageInput{
-			// Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
@@ -178,7 +227,7 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 		},
 	})
 	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
+		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
 	}
 
 	return model.CallResponseOK, nil
@@ -375,21 +424,6 @@ func (c *Connection) UnSet(_ context.Context, varKeys []string) (model.Response,
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) LastMessages(limit int) []model.ChatMessage {
-	c.RLock()
-	msgs := slices.Clone(c.messages)
-	c.RUnlock()
-
-	if limit > 0 && len(msgs) > limit {
-		msgs = msgs[len(msgs)-limit:]
-	}
-	result := make([]model.ChatMessage, 0, len(msgs))
-	for _, m := range msgs {
-		result = append(result, model.ChatMessage{Text: m.Message.Text})
-	}
-	return result
-}
-
 func (c *Connection) GetQueueKey() *model.InQueueKey {
 	c.log.Info("GetQueueKey")
 	c.RLock()
@@ -429,16 +463,13 @@ func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, m
 	}
 
 	if messageTimeout > 0 {
-		var m []model.MessageWrapper
+		var m []model.IMEventWrapper
 		for err == nil {
 			m, err = c.receive(ctx, messageTimeout)
 			msgs = append(msgs, m...)
 		}
 	}
-	//if len(msgs) > 0 && name != "" {
-	//	c.storeMessages[name], _ = json.Marshal(msgs[0])
-	//}
-	//c.saveMessages(msgs...)
+
 	return messageToText(msgs...), nil
 }
 
@@ -471,7 +502,7 @@ func (connection *Connection) SendInteractive(ctx context.Context, interactive m
 	return model.CallResponseOK, nil
 }
 
-func convertToProtoInteractive(src *model.Interactive) *p.Interactive {
+func convertToProtoInteractive(src *model.InteractiveGeneric[model.KeyboardButton]) *p.Interactive {
 	if src == nil {
 		return nil
 	}
@@ -605,15 +636,15 @@ func (c *Connection) Stop(err error) {
 	c.srv.stopConnection(c)
 }
 
-func (c *Connection) receive(ctx context.Context, timeout int) ([]model.MessageWrapper, *model.AppError) {
-	ch := make(chan model.MessageWrapper)
+func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
+	ch := make(chan model.IMEventWrapper)
 	defer func() {
 		c.setStateWaitMessage(nil)
 	}()
 
 	err := c.setStateWaitMessage(ch)
 	if err != nil {
-		c.log.Warn("Failed to set wait message chan")
+		c.log.Warn("failed to set wait message chan")
 		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg", nil, "Timeout", http.StatusInternalServerError)
 	}
 
@@ -623,44 +654,24 @@ func (c *Connection) receive(ctx context.Context, timeout int) ([]model.MessageW
 
 	select {
 	case <-c.Context().Done():
-		c.log.Debug("cancel")
-		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, "Cancel", http.StatusInternalServerError)
+		c.log.Debug("context cancelled", wlog.Err(c.Context().Err()))
+		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, c.Context().Err().Error(), http.StatusInternalServerError)
 	case <-t:
-		c.log.Debug("timeout")
+		c.log.Debug("waiting message timeout", wlog.Int("timeout_sec", timeout))
 		return nil, ErrWaitMessageTimeout
 	case msgsProto := <-ch:
 		c.log.Debug(fmt.Sprintf("receive message: %v", msgsProto))
-		return []model.MessageWrapper{msgsProto}, nil
+		return []model.IMEventWrapper{msgsProto}, nil
 	}
 }
 
-func (c *Connection) Type() model.ConnectionType {
-	return model.ConnectionTypeIM
-}
-
-func (c *Connection) Log() *wlog.Logger {
-	return c.log
-}
-
-func (c *Connection) Id() string {
-	return c.id
-}
-
-func (c *Connection) SchemaId() int {
-	return c.schemaId
-}
-
-func (c *Connection) NodeId() string {
-	return ""
-}
-
-func (c *Connection) DomainId() int64 {
-	return c.domainId
-}
-
-func (c *Connection) Context() context.Context {
-	return c.ctx
-}
+func (c *Connection) Type() model.ConnectionType { return model.ConnectionTypeIM }
+func (c *Connection) Log() *wlog.Logger          { return c.log }
+func (c *Connection) Id() string                 { return c.id }
+func (c *Connection) SchemaId() int              { return c.schemaId }
+func (c *Connection) NodeId() string             { return "" }
+func (c *Connection) DomainId() int64            { return c.domainId }
+func (c *Connection) Context() context.Context   { return c.ctx }
 
 func (c *Connection) Get(key string) (string, bool) {
 	c.RLock()
@@ -704,9 +715,7 @@ func (c *Connection) Variables() map[string]string {
 	return maps.Clone(c.variables)
 }
 
-func (c *Connection) TreadInfo() model.ThreadInfo {
-	return c.info
-}
+func (c *Connection) TreadInfo() model.ThreadInfo { return c.info }
 
 func (c *Connection) treadInfo(ctx context.Context) (model.ThreadInfo, *model.AppError) {
 	var info model.ThreadInfo
@@ -720,7 +729,7 @@ func (c *Connection) treadInfo(ctx context.Context) (model.ThreadInfo, *model.Ap
 	}
 
 	if len(result.Items) == 0 {
-		return info, model.NewAppError("Connection.TreadInfo", "conv.thread_info.not_found", nil, err.Error(), http.StatusNotFound)
+		return info, model.NewAppError("Connection.TreadInfo", "conv.thread_info.not_found", nil, "result thread info set contains zero records", http.StatusNotFound)
 	}
 
 	infoResult := result.Items[0]
@@ -767,11 +776,11 @@ func toVariables(in map[string]json.RawMessage) map[string]string {
 	return vars
 }
 
-func messageToText(messages ...model.MessageWrapper) []string {
+func messageToText(messages ...model.IMEventWrapper) []string {
 	msgs := make([]string, 0, len(messages))
 
 	for _, m := range messages {
-		msgs = append(msgs, m.Message.Text)
+		msgs = append(msgs, m.GetPayload().Message().Text)
 	}
 
 	return msgs

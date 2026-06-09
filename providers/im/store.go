@@ -2,9 +2,10 @@ package im
 
 import (
 	"errors"
+	"time"
+
 	"github.com/hashicorp/golang-lru/v2/expirable"
 	"github.com/webitel/wlog"
-	"time"
 )
 
 const (
@@ -29,12 +30,13 @@ func NewConnectionStore(log *wlog.Logger) *ConnectionStore {
 }
 
 func (s *ConnectionStore) Get(id string) (*Connection, bool) {
-	conn, ok := s.conns.Get(id)
-	if ok {
+	if conn, ok := s.conns.Get(id); ok {
 		s.log.Debug("connection cache hit", wlog.String("id", id))
 		return conn, true
 	}
+
 	s.log.Debug("connection cache miss", wlog.String("id", id))
+
 	return nil, false
 }
 
@@ -44,6 +46,6 @@ func (s *ConnectionStore) Add(conn *Connection) {
 }
 
 func (s *ConnectionStore) Delete(conn *Connection) {
-	s.log.Debug("delete connection to cache", wlog.String("id", conn.Id()))
+	s.log.Debug("delete connection from cache", wlog.String("id", conn.Id()))
 	s.conns.Remove(conn.Id())
 }

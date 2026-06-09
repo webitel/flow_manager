@@ -39,9 +39,6 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["stt"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.sendSTT),
 	}
-	apps["joinQueue"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.joinQueue),
-	}
 	apps["cancelQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.cancelQueue),
 	}
@@ -58,6 +55,7 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		Handler: chatHandlerMiddleware(r.joinQueue),
 	}
 	apps["sendInteractive"] = &flow.Application{Handler: chatHandlerMiddleware(r.SendInteractive)}
+	apps["interactiveMenu"] = &flow.Application{Handler: chatHandlerMiddleware(r.MenuWithReceive)}
 
 	return apps
 }
