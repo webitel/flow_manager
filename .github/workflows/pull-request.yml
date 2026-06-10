@@ -52,6 +52,7 @@ jobs:
       package-description: ${{ github.event.repository.description }}
       package-contents: |
         src=deploy/systemd/webitel-flow-manager.service dst=/etc/systemd/system/webitel-flow-manager.service type=config
+        src=.env.example dst=/etc/default/webitel-flow-manager type=config
         
 
       scripts: |
