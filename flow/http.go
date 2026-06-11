@@ -7,11 +7,6 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/tidwall/gjson"
-	"github.com/webitel/flow_manager/app"
-	"github.com/webitel/flow_manager/model"
-	"github.com/webitel/wlog"
-	"gopkg.in/xmlpath.v2"
 	"io"
 	"io/ioutil"
 	"maps"
@@ -22,21 +17,27 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/tidwall/gjson"
+	"gopkg.in/xmlpath.v2"
+
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/app"
+	"github.com/webitel/flow_manager/model"
 )
 
-var (
-	rePathVars = regexp.MustCompile(`\$\{([^}]+)\}`)
-)
+var rePathVars = regexp.MustCompile(`\$\{([^}]+)\}`)
 
-func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
-	var props map[string]interface{}
+func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var props map[string]any
 	var ok bool
 	var res *http.Response
 	var str string
 	var httpErr error
 	var uri string
 
-	if props, ok = args.(map[string]interface{}); !ok {
+	if props, ok = args.(map[string]any); !ok {
 		return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, fmt.Sprintf("bad arguments %v", args), http.StatusBadRequest)
 	}
 	if uri = model.StringValueFromMap("url", props, ""); uri == "" {
@@ -74,7 +75,7 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 	defer res.Body.Close()
 
 	if str := model.StringValueFromMap("responseCode", props, ""); str != "" {
-		//TODO
+		// TODO
 		conn.Set(context.Background(), model.Variables{
 			str: strconv.Itoa(res.StatusCode),
 		})
@@ -115,15 +116,15 @@ func (r *router) httpRequest(ctx context.Context, scope *Flow, conn model.Connec
 		str = res.Header.Get("content-type")
 	}
 
-	var exp map[string]interface{}
-	if exp, ok = props["exportVariables"].(map[string]interface{}); ok {
+	var exp map[string]any
+	if exp, ok = props["exportVariables"].(map[string]any); ok {
 		return parseHttpResponse(conn, str, res.Body, exp)
 	}
 
 	return model.CallResponseOK, nil
 }
 
-func buildHttpClient(props map[string]interface{}) *http.Client {
+func buildHttpClient(props map[string]any) *http.Client {
 	client := &http.Client{
 		Timeout: time.Duration(model.IntValueFromMap("timeout", props, 1000)) * time.Millisecond,
 	}
@@ -153,13 +154,13 @@ func buildHttpClient(props map[string]interface{}) *http.Client {
 	return client
 }
 
-func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]interface{}) (*http.Request, *model.AppError) {
+func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]any) (*http.Request, *model.AppError) {
 	var ok bool
 	var rawUrl string
 	var err error
 	var urlParam *url.URL
 	var str, k, method string
-	var v interface{}
+	var v any
 	var body []byte
 	var req *http.Request
 	headers := make(map[string]string)
@@ -178,7 +179,6 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 		rawUrl = rawSubstitute(rawUrl, vars)
 		rawUrl = c.ParseText(rawUrl)
 		urlParam, err = url.Parse(rawUrl)
-
 		if err != nil {
 			return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse_path.args", nil, err.Error(), http.StatusBadRequest)
 		}
@@ -198,10 +198,9 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 	}
 
 	if _, ok = props["headers"]; ok {
-		if _, ok = props["headers"].(map[string]interface{}); ok {
-			for k, v = range props["headers"].(map[string]interface{}) {
-				headers[strings.ToLower(k)] = r.parseMapValue(c, v)
-			}
+		appErr := scope.Decode(props["headers"], headers)
+		if appErr != nil {
+			c.Log().Error("failed to decode headers: %v", wlog.Err(appErr))
 		}
 	}
 
@@ -210,7 +209,6 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 	}
 
 	if _, ok = props["data"]; ok {
-
 		if strings.Index(headers["content-type"], "text/xml") > -1 || strings.Index(headers["content-type"], "application/soap+xml") > -1 {
 			switch props["data"].(type) {
 			case string:
@@ -220,8 +218,8 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 			str = ""
 			urlEncodeData := url.Values{}
 			switch props["data"].(type) {
-			case map[string]interface{}:
-				for k, v = range props["data"].(map[string]interface{}) {
+			case map[string]any:
+				for k, v = range props["data"].(map[string]any) {
 					urlEncodeData.Set(k, r.parseMapValue(c, v))
 				}
 				str = urlEncodeData.Encode()
@@ -230,7 +228,7 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 			}
 			body = []byte(str)
 		} else {
-			//JSON default
+			// JSON default
 			switch pd := props["data"].(type) {
 			case string:
 				body = []byte(c.ParseText(pd))
@@ -254,7 +252,6 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 				return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.valid.args", nil, err.Error(), http.StatusBadRequest)
 			}
 		}
-
 	}
 
 	method = strings.ToUpper(model.StringValueFromMap("method", props, "POST"))
@@ -270,7 +267,7 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 	return req, nil
 }
 
-func parseHttpResponse(c model.Connection, contentType string, response io.ReadCloser, exportVariables map[string]interface{}) (model.Response, *model.AppError) {
+func parseHttpResponse(c model.Connection, contentType string, response io.ReadCloser, exportVariables map[string]any) (model.Response, *model.AppError) {
 	var err error
 	var body []byte
 
@@ -282,7 +279,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			}
 
 			vars := model.Variables{}
-			for k, _ := range exportVariables {
+			for k := range exportVariables {
 				// TODO DEV-4908
 				r := gjson.GetBytes(body, model.StringValueFromMap(k, exportVariables, ""))
 				if r.Type == gjson.JSON {
@@ -314,7 +311,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 			return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err", nil, err.Error(), http.StatusBadRequest)
 		}
 
-		for k, _ := range exportVariables {
+		for k := range exportVariables {
 			path, err = xmlpath.Compile(model.StringValueFromMap(k, exportVariables, ""))
 			if err != nil {
 				continue
@@ -343,7 +340,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 	return model.CallResponseOK, nil
 }
 
-func (r *router) parseMapValue(c model.Connection, v interface{}) (str string) {
+func (r *router) parseMapValue(c model.Connection, v any) (str string) {
 	str = model.InterfaceToString(v)
 	if strings.HasSuffix(str, "}") {
 		if strings.HasPrefix(str, "$${") {
@@ -391,5 +388,4 @@ func encode(v url.Values) string {
 	return buf.String()
 }
 
-type CookieCacheOptions struct {
-}
+type CookieCacheOptions struct{}
