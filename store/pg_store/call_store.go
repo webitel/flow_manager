@@ -311,7 +311,7 @@ from (
 				coalesce(t.p_vars, '{}') || coalesce((t.r).payload, '{}')  as p_vars,
 				t.search_number
          from (
-                  select c                                                             r,
+                  select c::call_center.cc_calls as                                    r,
                          array_agg(distinct ch.user_id)
                          filter ( where c.parent_id isnull and ch.user_id notnull )    user_ids,
                          array_agg(distinct ch.agent_id)
