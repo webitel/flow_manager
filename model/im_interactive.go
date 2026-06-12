@@ -1,19 +1,13 @@
 package model
 
-type SendInteractiveRequest struct {
-	Interactive Interactive    `json:"interactive"`
-	Body        string         `json:"body"`
-	Metadata    map[string]any `json:"metadata"`
-}
-
 type Interactive struct {
 	Documents *Documents `json:"documents,omitempty"`
 	Images    *Images    `json:"images,omitempty"`
 
-	SingleUse bool `json:"single_use"`
+	SingleUse bool `json:"singleUse"`
 
 	Markup    *KeyboardMarkup    `json:"markup,omitempty"`
-	ListReply *KeyboardListReply `json:"list_reply,omitempty"`
+	ListReply *KeyboardListReply `json:"listReply,omitempty"`
 }
 
 type Documents struct {
@@ -24,17 +18,8 @@ type Images struct {
 	Images []File `json:"images"`
 }
 
-type KeyboardMarkup struct {
-	Rows []KeyboardRow `json:"rows"`
-}
-
 type KeyboardRow struct {
 	Buttons []KeyboardButton `json:"buttons"`
-}
-
-type KeyboardListReply struct {
-	MainButtonTitle string                   `json:"main_button_title"`
-	Sections        []KeyboardRowWithSection `json:"sections"`
 }
 
 type KeyboardRowWithSection struct {
@@ -63,3 +48,40 @@ type KeyboardButtonCallback struct {
 type KeyboardButtonRequest struct {
 	Action string `json:"action"`
 }
+
+type KeyboardRowGeneric[B any] struct {
+	Buttons []B `json:"buttons"`
+}
+
+type KeyboardMarkupGeneric[B any] struct {
+	Rows []KeyboardRowGeneric[B] `json:"rows"`
+}
+
+type KeyboardRowWithSectionGeneric[B any] struct {
+	Section string `json:"section"`
+	Buttons []B    `json:"buttons"`
+}
+
+type KeyboardListReplyGeneric[B any] struct {
+	MainButtonTitle string                             `json:"mainButtonTitle"`
+	Sections        []KeyboardRowWithSectionGeneric[B] `json:"sections"`
+}
+
+type KeyboardMarkup = KeyboardMarkupGeneric[KeyboardButton]
+type KeyboardListReply = KeyboardListReplyGeneric[KeyboardButton]
+
+type InteractiveGeneric[B any] struct {
+	Documents *Documents                   `json:"documents,omitempty"`
+	Images    *Images                      `json:"images,omitempty"`
+	SingleUse bool                         `json:"singleUse"`
+	Markup    *KeyboardMarkupGeneric[B]    `json:"markup,omitempty"`
+	ListReply *KeyboardListReplyGeneric[B] `json:"listReply,omitempty"`
+}
+
+type SendInteractiveRequestGeneric[B any] struct {
+	Interactive InteractiveGeneric[B] `json:"interactive"`
+	Body        string                `json:"body"`
+	Metadata    map[string]any        `json:"metadata"`
+}
+
+type SendInteractiveRequest = SendInteractiveRequestGeneric[KeyboardButton]

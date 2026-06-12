@@ -2,12 +2,13 @@ package model
 
 import (
 	"regexp"
+	"slices"
 	"strings"
 )
 
 var compileVar *regexp.Regexp
 
-type Variables map[string]interface{}
+type Variables map[string]any
 
 type ParseOption uint
 
@@ -49,11 +50,5 @@ func ParseText(c Connection, text string, ops ...ParseOption) string {
 }
 
 func hasOption(o ParseOption, ops ...ParseOption) bool {
-	for _, v := range ops {
-		if o == v {
-			return true
-		}
-	}
-
-	return false
+	return slices.Contains(ops, o)
 }

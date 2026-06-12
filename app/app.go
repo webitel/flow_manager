@@ -217,8 +217,14 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if err != nil {
 		return nil, err
 	}
-	fm.imServer = im.NewServer(fm.id, fm.Config().DiscoverySettings.Url, fm.eventQueue.ConsumeIM(),
-		fm.log, t, fm.Store.Session())
+	fm.imServer = im.NewServer(
+		fm.id,
+		fm.Config().DiscoverySettings.Url,
+		fm.eventQueue.ConsumeIM(),
+		fm.log,
+		t,
+		fm.Store.Session(),
+	)
 
 	if len(fm.Config().WebHook.Addr) > 1 {
 		fm.httpServer = http.NewServer(fm, fm.Config().WebHook.Addr)
