@@ -82,6 +82,10 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		conn.variables = make(map[string]string)
 	}
 
+	if msg.JWTPayload() != "" {
+		conn.variables[JWTPayloadVar] = msg.JWTPayload()
+	}
+
 	return conn
 }
 
@@ -150,6 +154,16 @@ func (c *Connection) pushMessageToWaitMessageChan(message model.IMEventWrapper) 
 	}
 }
 
+func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
+	if msg.JWTPayload() == "" {
+		return
+	}
+
+	c.Lock()
+	c.variables[JWTPayloadVar] = msg.JWTPayload()
+	c.Unlock()
+}
+
 func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	log := c.log.With(
 		wlog.String("operation", "OnMessage"),
@@ -168,6 +182,7 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processLastMessage(msg)
 	c.processLastInteractiveCallback(msg)
 	c.pushMessageToWaitMessageChan(msg)
+	c.updateJWTPayloadVariable(msg)
 
 	log.Debug("processed on message event")
 }
