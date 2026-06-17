@@ -1,6 +1,7 @@
 package rabbit
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -67,6 +68,36 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 	return nil
 }
 
+const XJWTPayloadAMQPHeader string = "x-jwt-payload"
+
+func tryExtractJWTPayloadFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, ok := headers[XJWTPayloadAMQPHeader]
+	if !ok {
+		return "", nil
+	}
+
+	var jwtHeaderStr string
+	switch v := rawHeader.(type) {
+	case string:
+		jwtHeaderStr = v
+	case []byte:
+		jwtHeaderStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractJWTPayloadFromHeader", fmt.Sprintf("invalid jwt header type: %T", v))
+	}
+
+	if jwtHeaderStr == "" {
+		return "", model.NewRequestError("tryExtractJWTPayloadFromHeader", "empty jwt header value")
+	}
+
+	encodedHeader, err := base64.RawURLEncoding.DecodeString(jwtHeaderStr)
+	if err != nil {
+		return "", model.NewInternalError("tryExtractJWTPayloadFromHeader", fmt.Sprintf("decoding jwt header base64: %v", err))
+	}
+
+	return string(encodedHeader), nil
+}
+
 func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 	var messageWrapper model.MessageWrapper[model.Message]
 	if err := json.Unmarshal(event.Body, &messageWrapper); err != nil {
@@ -83,6 +114,15 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 		wlog.Info("skipping echo IM event", wlog.String("thread_id", messageWrapper.Message.ThreadID), wlog.String("message_id", messageWrapper.Message.ID))
 
 		return nil
+	}
+
+	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
+	if err != nil {
+		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
+	}
+
+	if jwtPayload != "" {
+		messageWrapper.SetJWTPayload(jwtPayload)
 	}
 
 	messageWrapper.Type = model.IMEventTypeMessage
@@ -102,6 +142,15 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 			err.Error(),
 			http.StatusBadRequest,
 		)
+	}
+
+	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
+	if err != nil {
+		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
+	}
+
+	if jwtPayload != "" {
+		interactiveCallbackWrapper.SetJWTPayload(jwtPayload)
 	}
 
 	interactiveCallbackWrapper.Type = model.IMEventTypeCallback

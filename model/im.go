@@ -66,6 +66,7 @@ type IMEventWrapper interface {
 	IsEcho() bool
 	GetPayload() IMEvent
 	GetType() string
+	JWTPayload() string
 }
 
 type IMEvent interface {
@@ -78,20 +79,23 @@ type IMEvent interface {
 
 // MessageWrapper представляє кореневий об'єкт
 type MessageWrapper[T IMEvent] struct {
-	ID       string `json:"id"`
-	Message  T      `json:"payload"`
-	UserID   string `json:"user_id"`
-	DomainID int64  `json:"domain_id"`
-	Echo     bool   `json:"echo"`
-	Type     string `json:"-"`
+	ID         string `json:"id"`
+	Message    T      `json:"payload"`
+	UserID     string `json:"user_id"`
+	DomainID   int64  `json:"domain_id"`
+	Echo       bool   `json:"echo"`
+	jwtPayload string `json:"-"`
+	Type       string `json:"-"`
 }
 
-func (w MessageWrapper[T]) GetID() string       { return w.ID }
-func (w MessageWrapper[T]) GetUserID() string   { return w.UserID }
-func (w MessageWrapper[T]) GetDomainID() int64  { return w.DomainID }
-func (w MessageWrapper[T]) IsEcho() bool        { return w.Echo }
-func (w MessageWrapper[T]) GetPayload() IMEvent { return w.Message }
-func (w MessageWrapper[T]) GetType() string     { return w.Type }
+func (w MessageWrapper[T]) GetID() string                 { return w.ID }
+func (w MessageWrapper[T]) GetUserID() string             { return w.UserID }
+func (w MessageWrapper[T]) GetDomainID() int64            { return w.DomainID }
+func (w MessageWrapper[T]) IsEcho() bool                  { return w.Echo }
+func (w MessageWrapper[T]) GetPayload() IMEvent           { return w.Message }
+func (w MessageWrapper[T]) GetType() string               { return w.Type }
+func (w MessageWrapper[T]) JWTPayload() string            { return w.jwtPayload }
+func (w *MessageWrapper[T]) SetJWTPayload(payload string) { w.jwtPayload = payload }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {

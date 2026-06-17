@@ -10,6 +10,8 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+const JWTPayloadVar string = "jwt"
+
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
