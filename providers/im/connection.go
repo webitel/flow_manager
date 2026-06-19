@@ -236,10 +236,8 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 				},
 			},
 		},
-		Image: &p.ImageRequest{
-			Images: docs,
-			Body:   msg.Text,
-		},
+		Images: docs,
+		Body:   msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
@@ -310,7 +308,8 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Image: &p.ImageRequest{Images: images, Body: msg.Text},
+		Images: images,
+		Body:   msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
@@ -334,7 +333,8 @@ func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMess
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Document: &p.DocumentRequest{Documents: docs, Body: msg.Text},
+		Documents: docs,
+		Body:      msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendDocumentMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
@@ -357,7 +357,8 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
 		}}},
-		Document: &p.DocumentRequest{Documents: docs, Body: text},
+		Documents: docs,
+		Body:      text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendFile", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
