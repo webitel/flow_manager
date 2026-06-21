@@ -8,6 +8,7 @@ StartLimitBurst=3
 Type=simple
 User=webitel
 Group=webitel
+LogsDirectory=webitel
 
 EnvironmentFile=/etc/default/webitel-flow-manager
 EnvironmentFile=-/etc/default/webitel-otel
