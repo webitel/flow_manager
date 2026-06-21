@@ -1,21 +1,71 @@
 [Unit]
-Description=FlowManager Startup process
-After=network.target
+Description=Webitel Flow Manager
+After=network.target consul.service rabbitmq-server.service postgresql.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
 
 [Service]
 Type=simple
-Restart=always
-LimitNOFILE=64000
+User=webitel
+Group=webitel
+
+EnvironmentFile=/etc/default/webitel-flow-manager
+EnvironmentFile=-/etc/default/webitel-otel
+EnvironmentFile=-/etc/default/webitel
+ExecStart=/usr/local/bin/webitel-flow-manager
+
+Restart=on-failure
+RestartSec=5
+KillMode=mixed
+KillSignal=SIGTERM
 TimeoutStartSec=0
-ExecStart=/usr/local/bin/flow_manager -id 20 \
-	-consul 127.0.0.1:8500 \
-	-grpc_addr 127.0.0.1 \
-	-esl_host 127.0.0.1 \
-	-presigned_cert /opt/storage/key.pem \
-	-amqp amqp://webitel:webitel@127.0.0.1:5672?heartbeat=10 \
-	-data_source postgres://opensips:webitel@127.0.0.1:5432/webitel?application_name=flow_manager&sslmode=disable&connect_timeout=10 \
-	-allow_use_mq 0 \
-	-external_sql 0
+TimeoutStopSec=30
+LimitNOFILE=64000
+LimitNPROC=4096
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=webitel-flow-manager
+
+# Filesystem isolation
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+NoExecPaths=/
+ExecPaths=/usr/local/bin/webitel-flow-manager
+ExecPaths=/lib64/ld-linux-x86-64.so.2
+ExecPaths=/lib/x86_64-linux-gnu/libc.so.6
+
+# Process isolation
+PrivateDevices=yes
+PrivateUsers=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectProc=invisible
+ProcSubset=pid
+NoNewPrivileges=yes
+PrivateMounts=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+RemoveIPC=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+ProtectClock=yes
+ProtectHostname=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+UMask=0077
+
+# Capabilities & syscalls
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged
+SystemCallFilter=~@resources
+SystemCallFilter=~@obsolete
+SystemCallErrorNumber=EPERM
 
 [Install]
-WantedBy=default.target
+WantedBy=multi-user.target
