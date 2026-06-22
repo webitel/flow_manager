@@ -29,12 +29,16 @@ var _ model.IMDialog = (*Connection)(nil)
 type Connection struct {
 	sync.RWMutex
 
-	id              string
-	threadId        string
-	ctx             context.Context
-	domainId        int64
-	schemaId        int
-	srv             *server
+	id       string
+	threadId string
+	ctx      context.Context
+	domainId int64
+	schemaId int
+	srv      *server
+
+	clientDeviceIDLock *sync.RWMutex
+	clientDeviceID     string
+
 	variables       map[string]string
 	msg             model.Message
 	lastMsg         model.Message
@@ -63,12 +67,13 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:       msg.GetPayload().Message(),
-		ctx:       context.Background(),
-		domainId:  msg.GetDomainID(),
-		variables: toVariables(nil), // todo
-		schemaId:  schemaId,
-		RWMutex:   sync.RWMutex{},
+		msg:                msg.GetPayload().Message(),
+		ctx:                context.Background(),
+		domainId:           msg.GetDomainID(),
+		variables:          toVariables(nil), // todo
+		schemaId:           schemaId,
+		RWMutex:            sync.RWMutex{},
+		clientDeviceIDLock: new(sync.RWMutex),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -86,7 +91,32 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		conn.variables[JWTPayloadVar] = msg.JWTPayload()
 	}
 
+	if msg.DeviceID() != "" { //first connection touch
+		conn.clientDeviceID = msg.DeviceID()
+	}
+
 	return conn
+}
+
+func (c *Connection) IMOugoingContext(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, c.hdrs)
+}
+
+func (c *Connection) setDeviceID(device string) {
+	if device == "" {
+		return
+	}
+
+	c.clientDeviceIDLock.Lock()
+	c.clientDeviceID = device
+	c.clientDeviceIDLock.Unlock()
+}
+
+func (c *Connection) DeviceID() string {
+	c.clientDeviceIDLock.RLock()
+	defer c.clientDeviceIDLock.RUnlock()
+
+	return c.clientDeviceID
 }
 
 func (c *Connection) setupVariables() {
@@ -183,6 +213,7 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processLastInteractiveCallback(msg)
 	c.pushMessageToWaitMessageChan(msg)
 	c.updateJWTPayloadVariable(msg)
+	c.setDeviceID(msg.DeviceID())
 
 	log.Debug("processed on message event")
 }
@@ -244,6 +275,58 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
+	response, err := c.srv.client.accountService.Api.AccountGetAuthorizations(
+		c.IMOugoingContext(ctx),
+		&p.AccountGetAuthorizationsRequest{
+			DeviceId: deviceID,
+			Size:     1,
+		},
+	)
+
+	if err != nil {
+		return model.IMUserInfo{}, model.NewAppError(
+			"GetAuthSession",
+			"providers.im.connection",
+			nil,
+			err.Error(),
+			model.ExtractHTPPStatusCodeFromGRPC(err),
+		)
+	}
+
+	if len(response.Items) == 0 {
+		return model.IMUserInfo{}, model.ErrAuthSesionNotFound
+	}
+
+	responsedUserInfo := response.GetItems()[0]
+
+	userInfo := model.IMUserInfo{
+		Session: model.IMUserSession{
+			Date:          responsedUserInfo.GetDate(),
+			Name:          responsedUserInfo.GetName(),
+			ApplicationID: responsedUserInfo.GetAppId(),
+			Current:       responsedUserInfo.GetCurrent(),
+			Device: model.IMUserDevice{
+				IP:   responsedUserInfo.GetDevice().GetIp(),
+				Push: responsedUserInfo.GetDevice().GetPush(),
+				App: model.IMUserAgent{
+					Name:    responsedUserInfo.GetDevice().GetApp().GetName(),
+					Version: responsedUserInfo.GetDevice().GetApp().GetVersion(),
+					OS:      responsedUserInfo.GetDevice().GetApp().GetOsVersion(),
+					Device:  responsedUserInfo.GetDevice().GetApp().GetDevice(),
+					Mobile:  responsedUserInfo.GetDevice().GetApp().GetMobile(),
+					Tablet:  responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Desktop: responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Bot:     responsedUserInfo.GetDevice().GetApp().GetBot(),
+					String:  responsedUserInfo.GetDevice().GetApp().GetString_(),
+				},
+			},
+		},
+	}
+
+	return userInfo, nil
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
