@@ -56,6 +56,7 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	}
 	apps["sendInteractive"] = &flow.Application{Handler: chatHandlerMiddleware(r.SendInteractive)}
 	apps["interactiveMenu"] = &flow.Application{Handler: chatHandlerMiddleware(r.MenuWithReceive)}
+	apps["imUserInfo"] = &flow.Application{Handler: chatHandlerMiddleware(r.IMUserInfo)}
 
 	return apps
 }

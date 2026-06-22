@@ -68,7 +68,51 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 	return nil
 }
 
-const XJWTPayloadAMQPHeader string = "x-jwt-payload"
+const (
+	XJWTPayloadAMQPHeader string = "x-jwt-payload"
+	XDeviceAMQPHeader     string = "x-webitel-device"
+)
+
+func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *model.MessageWrapper[T]) error {
+	jwtPayload, err := tryExtractJWTPayloadFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	device, err := tryExtractDeviceFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	if jwtPayload != "" {
+		wrapper.SetJWTPayload(jwtPayload)
+	}
+
+	if device != "" {
+		wrapper.SetDeviceID(device)
+	}
+
+	return nil
+}
+
+func tryExtractDeviceFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, ok := headers[XDeviceAMQPHeader]
+	if !ok {
+		return "", nil
+	}
+
+	var deviceStr string
+	switch v := rawHeader.(type) {
+	case string:
+		deviceStr = v
+	case []byte:
+		deviceStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractDeviceFromHeader", fmt.Sprintf("invalid device header type: %T", v))
+	}
+
+	return deviceStr, nil
+}
 
 func tryExtractJWTPayloadFromHeader(headers amqp.Table) (string, error) {
 	rawHeader, ok := headers[XJWTPayloadAMQPHeader]
@@ -110,22 +154,17 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 		)
 	}
 
+	messageWrapper.Type = model.IMEventTypeMessage
+
 	if messageWrapper.Echo {
 		wlog.Info("skipping echo IM event", wlog.String("thread_id", messageWrapper.Message.ThreadID), wlog.String("message_id", messageWrapper.Message.ID))
 
 		return nil
 	}
 
-	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
-	if err != nil {
-		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
+	if err := EnrichIMEventWithAMQPHeaders(event.Headers, &messageWrapper); err != nil {
+		wlog.Error("enriching interactive callback event with headers metadata", wlog.Err(err))
 	}
-
-	if jwtPayload != "" {
-		messageWrapper.SetJWTPayload(jwtPayload)
-	}
-
-	messageWrapper.Type = model.IMEventTypeMessage
 
 	a.imEvents <- messageWrapper
 
@@ -144,16 +183,11 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 		)
 	}
 
-	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
-	if err != nil {
-		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
-	}
-
-	if jwtPayload != "" {
-		interactiveCallbackWrapper.SetJWTPayload(jwtPayload)
-	}
-
 	interactiveCallbackWrapper.Type = model.IMEventTypeCallback
+
+	if err := EnrichIMEventWithAMQPHeaders(event.Headers, &interactiveCallbackWrapper); err != nil {
+		wlog.Error("enriching interactive callback event with headers metadata", wlog.Err(err))
+	}
 
 	a.imEvents <- interactiveCallbackWrapper
 

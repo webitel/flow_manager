@@ -12,6 +12,8 @@ const (
 
 type IMDialog interface {
 	Connection
+
+	DeviceID() string
 	ThreadId() string
 	From() ImEndpoint
 	To() ImEndpoint
@@ -34,6 +36,7 @@ type IMDialog interface {
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
 	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
+	GetAuthSession(ctx context.Context, deviceID string) (IMUserInfo, *AppError)
 }
 
 type ThreadMember struct {
@@ -67,6 +70,7 @@ type IMEventWrapper interface {
 	GetPayload() IMEvent
 	GetType() string
 	JWTPayload() string
+	DeviceID() string
 }
 
 type IMEvent interface {
@@ -85,6 +89,7 @@ type MessageWrapper[T IMEvent] struct {
 	DomainID   int64  `json:"domain_id"`
 	Echo       bool   `json:"echo"`
 	jwtPayload string `json:"-"`
+	deviceID   string `json:"-"`
 	Type       string `json:"-"`
 }
 
@@ -96,6 +101,8 @@ func (w MessageWrapper[T]) GetPayload() IMEvent           { return w.Message }
 func (w MessageWrapper[T]) GetType() string               { return w.Type }
 func (w MessageWrapper[T]) JWTPayload() string            { return w.jwtPayload }
 func (w *MessageWrapper[T]) SetJWTPayload(payload string) { w.jwtPayload = payload }
+func (w MessageWrapper[T]) DeviceID() string              { return w.deviceID }
+func (w *MessageWrapper[T]) SetDeviceID(deviceID string)  { w.deviceID = deviceID }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {

@@ -21,6 +21,7 @@ type Client struct {
 	startOnce      sync.Once
 	messageService *wbt.Client[p.MessageClient]
 	threadService  *wbt.Client[p.ThreadManagementClient]
+	accountService *wbt.Client[p.AccountClient]
 
 	log *wlog.Logger
 	ctx context.Context
@@ -50,15 +51,22 @@ func (cm *Client) Start() error {
 			))
 		}
 
-		cm.messageService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...)
-		if err != nil {
+		if cm.messageService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...); err != nil {
+			cm.log.Error("creating IM message service connection", wlog.Err(err))
 			return
 		}
-		cm.threadService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewThreadManagementClient, opts...)
-		if err != nil {
+
+		if cm.threadService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewThreadManagementClient, opts...); err != nil {
+			cm.log.Error("creating IM thread service connection", wlog.Err(err))
+			return
+		}
+
+		if cm.accountService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewAccountClient, opts...); err != nil {
+			cm.log.Error("creating IM account service connection", wlog.Err(err))
 			return
 		}
 	})
+
 	return err
 }
 
@@ -66,4 +74,8 @@ func (cm *Client) Stop() {
 	cm.log.Debug("stopping " + ServiceName + " client")
 	_ = cm.messageService.Close()
 	_ = cm.threadService.Close()
+
+	if err := cm.accountService.Close(); err != nil {
+		cm.log.Error("closing account service connection gracefully", wlog.Err(err))
+	}
 }
