@@ -292,31 +292,6 @@ func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMess
 	return model.CallResponseOK, nil
 }
 
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var images []*p.ImageInput
-	if msg.File != nil {
-		f := msg.File
-		images = append(images, &p.ImageInput{
-			Id:       string(f.Id),
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
-		})
-	}
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
-			Sub: c.msg.From.Sub,
-			Iss: c.msg.From.Issuer,
-		}}},
-		Images: images,
-		Body:   msg.Text,
-	})
-	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
-	}
-	return model.CallResponseOK, nil
-}
-
 func (c *Connection) SendDocumentMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
 	var docs []*p.DocumentInput
 	if msg.File != nil {
