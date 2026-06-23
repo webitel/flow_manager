@@ -1,12 +1,13 @@
 package email
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"mime"
 	"net"
 	"net/http"
 	"net/smtp"
@@ -17,6 +18,7 @@ import (
 
 	"github.com/emersion/go-imap"
 	"github.com/emersion/go-imap/client"
+	"github.com/emersion/go-message/charset"
 	"github.com/emersion/go-message/mail"
 	"github.com/k3a/html2text"
 	"golang.org/x/oauth2"
@@ -25,11 +27,11 @@ import (
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
-
-	_ "github.com/emersion/go-message/charset"
 )
 
 type Profile struct {
+	sync.RWMutex
+
 	Id        int
 	DomainId  int64
 	updatedAt int64
@@ -47,7 +49,6 @@ type Profile struct {
 	flowId int
 
 	server *MailServer
-	sync.RWMutex
 	client *client.Client
 
 	mbox        *imap.MailboxStatus
@@ -58,6 +59,7 @@ type Profile struct {
 	token       *oauth2.Token
 	Tls         bool
 	log         *wlog.Logger
+	decoder     *mime.WordDecoder
 }
 
 func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
@@ -84,12 +86,11 @@ func newProfile(srv *MailServer, params *model.EmailProfile) *Profile {
 			wlog.Int("profile_id", params.Id),
 			wlog.Int("schema_id", params.FlowId),
 		),
+		decoder: &mime.WordDecoder{CharsetReader: charset.Reader},
 	}
 }
 
-func (p *Profile) String() string {
-	return fmt.Sprintf("%s <%s>", p.name, p.login)
-}
+func (p *Profile) String() string { return fmt.Sprintf("%s <%s>", p.name, p.login) }
 
 func (p *Profile) Login() *model.AppError {
 	done := make(chan *model.AppError)
@@ -97,11 +98,13 @@ func (p *Profile) Login() *model.AppError {
 	go func() {
 		done <- p.clientLogin()
 	}()
+
 	select {
 	case err := <-done:
 		if err != nil {
 			return err
 		}
+
 		return nil
 	case <-time.After(time.Minute):
 		return model.NewAppError("Email", "email.login.timeout", nil, "Timeout", 500)
@@ -117,6 +120,7 @@ func (p *Profile) clientLogin() *model.AppError {
 	}
 
 	p.logged = false
+
 	var err error
 
 	var tlsConfig *tls.Config
@@ -128,6 +132,7 @@ func (p *Profile) clientLogin() *model.AppError {
 
 	dialer := new(net.Dialer)
 	dialer.Timeout = time.Second * 20
+
 	p.client, err = client.DialWithDialerTLS(dialer, fmt.Sprintf("%s:%d", p.imapHost, p.imapPort), tlsConfig)
 	if err != nil {
 		return model.NewAppError("Email", "email.dial.app_err", nil, err.Error(), http.StatusInternalServerError)
@@ -139,6 +144,7 @@ func (p *Profile) clientLogin() *model.AppError {
 
 	if p.authMethod == model.MailAuthTypeOAuth2 {
 		var ok bool
+
 		ok, err = p.client.SupportAuth(Xoauth2)
 		if err != nil {
 			return model.NewAppError("Email", "email.xoauth2.support", nil, err.Error(), http.StatusInternalServerError)
@@ -155,6 +161,7 @@ func (p *Profile) clientLogin() *model.AppError {
 		lastExpiry := p.token.Expiry
 
 		ts := p.oauthConfig.TokenSource(context.Background(), p.token)
+
 		newToken, err := ts.Token()
 		if err != nil {
 			return model.NewAppError("Email", "email.login.token", nil, err.Error(), http.StatusUnauthorized)
@@ -177,8 +184,10 @@ func (p *Profile) clientLogin() *model.AppError {
 			return model.NewAppError("Email", "email.login.unauthorized", nil, err.Error(), http.StatusUnauthorized)
 		}
 	}
+
 	p.log.Debug("logged in")
 	p.logged = true
+
 	return nil
 }
 
@@ -194,10 +203,12 @@ func (p *Profile) Logout() *model.AppError {
 	if err != nil {
 		return model.NewAppError("Email", "email.logout.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
 	p.logged = false
 	p.client.Close()
 	p.client = nil
 	p.log.Debug("logged out")
+
 	return nil
 }
 
@@ -210,6 +221,7 @@ func (p *Profile) UpdatedAt() int64 {
 
 func (p *Profile) selectMailBox() *model.AppError {
 	var err error
+
 	p.mbox, err = p.client.Select(p.Mailbox, false)
 	if err != nil {
 		return model.NewAppError("Email", "email.mailbox.app_err", nil, err.Error(), http.StatusInternalServerError)
@@ -218,21 +230,16 @@ func (p *Profile) selectMailBox() *model.AppError {
 	return nil
 }
 
-func (p *Profile) storeErr(err *model.AppError) {
-	p.server.storeError(p, err)
-}
-
-func (p *Profile) storeToken(token *oauth2.Token) {
-	p.server.storeToken(p, token)
-}
+func (p *Profile) storeErr(err *model.AppError)   { p.server.storeError(p, err) }
+func (p *Profile) storeToken(token *oauth2.Token) { p.server.storeToken(p, token) }
 
 func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	if !p.logged {
 		if err := p.Login(); err != nil {
 			return nil, err
 		}
-		// return nil, model.NewAppError("Email", "email.mailbox.not_logged", nil, "Profile not logged", http.StatusInternalServerError)
 	}
+
 	res := make([]*model.Email, 0)
 
 	criteria := imap.NewSearchCriteria()
@@ -240,6 +247,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 
 	if err := p.selectMailBox(); err != nil {
 		p.storeErr(err)
+
 		return nil, err
 	}
 
@@ -247,6 +255,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	if err != nil {
 		appErr := model.NewAppError("Email", "email.mailbox.search.app_err", nil, err.Error(), http.StatusInternalServerError)
 		p.storeErr(appErr)
+
 		return nil, appErr
 	}
 
@@ -256,6 +265,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 
 	seqSet := new(imap.SeqSet)
 	seqSet.AddNum(uids...)
+
 	section := &imap.BodySectionName{}
 	items := []imap.FetchItem{imap.FetchEnvelope, imap.FetchFlags, imap.FetchInternalDate, section.FetchItem()}
 	messages := make(chan *imap.Message)
@@ -264,8 +274,9 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 
 	go func() {
 		if err := p.client.UidFetch(seqSet, items, messages); err != nil {
-			// log.Fatal(err) //TODO
+			p.log.Error("fetching client UID", wlog.Err(err))
 		}
+
 		close(done)
 	}()
 
@@ -273,6 +284,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 		e, err := p.parseMessage(msg, section)
 		if err != nil {
 			p.log.Err(err)
+
 			continue
 		}
 
@@ -281,6 +293,7 @@ func (p *Profile) Read() ([]*model.Email, *model.AppError) {
 	}
 
 	<-done
+
 	return res, nil
 }
 
@@ -323,6 +336,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	}
 
 	mail.SetBody("text/html", string(rr.HtmlBody))
+
 	var dialer *gomail.Dialer
 
 	if p.authMethod == model.MailAuthTypeOAuth2 {
@@ -331,6 +345,7 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 			wlog.String("smtpHost", p.smtpHost),
 			wlog.Int("smtpPort", p.smtpPort),
 		)
+
 		dialer = gomail.NewDialer(p.smtpHost, p.smtpPort, p.login, "")
 		if p.token != nil && p.token.AccessToken != "" {
 			dialer.Auth = NewOAuth2Smtp(p.login, "Bearer", p.token.AccessToken)
@@ -353,136 +368,194 @@ func (p *Profile) Reply(parent *model.Email, data []byte) (*model.Email, *model.
 	return rr, nil
 }
 
-func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
-	m := &model.Email{
-		ProfileId: p.Id,
-		Direction: "inbound", // TODO
+func prepareBodySection(msg *imap.Message, section *imap.BodySectionName) (imap.Literal, *model.AppError) {
+	if msg == nil {
+		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message", http.StatusInternalServerError)
 	}
 
-	if msg == nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message",
-			http.StatusInternalServerError)
+	if msg.Envelope == nil {
+		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Message does`nt contain envelope", http.StatusInternalServerError)
 	}
 
 	r := msg.GetBody(section)
 	if r == nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message body",
-			http.StatusInternalServerError)
+		return nil, model.NewAppError("Email", "email.message.app_err", nil, "Server didn't returned message body", http.StatusInternalServerError)
 	}
 
-	m.Subject = msg.Envelope.Subject
-	for _, v := range msg.Envelope.From {
-		m.From = append(m.From, v.Address())
-	}
-	for _, v := range msg.Envelope.Sender {
-		m.Sender = append(m.Sender, v.Address())
-	}
-	for _, v := range msg.Envelope.ReplyTo {
-		m.ReplyTo = append(m.ReplyTo, v.Address())
-	}
-	for _, v := range msg.Envelope.To {
-		m.To = append(m.To, v.Address())
-	}
-	for _, v := range msg.Envelope.Cc {
-		m.CC = append(m.CC, v.Address())
-	}
-	m.InReplyTo = msg.Envelope.InReplyTo
-	m.MessageId = msg.Envelope.MessageId
+	return r, nil
+}
 
-	// Create a new mail reader
-	mr, err := mail.CreateReader(r)
+func decodeAddress(address []*imap.Address, decoder *mime.WordDecoder) []string {
+	strAddrs := make([]string, 0, len(address))
+	for _, a := range address {
+		s := a.Address()
+		if parser, err := decoder.DecodeHeader(s); err == nil {
+			strAddrs = append(strAddrs, parser)
+
+			continue
+		}
+
+		strAddrs = append(strAddrs, s)
+	}
+
+	return strAddrs
+}
+
+func decodeText(s string, decoder *mime.WordDecoder) string {
+	if d, err := decoder.DecodeHeader(s); err == nil {
+		return d
+	}
+
+	return s
+}
+
+func createEmailFromEnvelope(profileID int, envelope *imap.Envelope, decoder *mime.WordDecoder) *model.Email {
+	return &model.Email{
+		Direction: model.MailDirectionInbound,
+		MessageId: envelope.MessageId,
+		Subject:   decodeText(envelope.Subject, decoder),
+		ProfileId: profileID,
+		From:      decodeAddress(envelope.From, decoder),
+		To:        decodeAddress(envelope.To, decoder),
+		Sender:    decodeAddress(envelope.Sender, decoder),
+		ReplyTo:   decodeAddress(envelope.ReplyTo, decoder),
+		InReplyTo: decodeText(envelope.InReplyTo, decoder),
+		CC:        decodeAddress(envelope.Cc, decoder),
+		Cid:       make(map[string]model.EmailCid),
+	}
+}
+
+func (p *Profile) parseMessage(msg *imap.Message, section *imap.BodySectionName) (*model.Email, *model.AppError) {
+	bodySection, werr := prepareBodySection(msg, section)
+	if werr != nil {
+		return nil, werr
+	}
+
+	receivedMail := createEmailFromEnvelope(p.Id, msg.Envelope, p.decoder)
+	logger := p.log.With(wlog.String("message_id", receivedMail.MessageId), wlog.Any("from", receivedMail.From))
+
+	mr, err := mail.CreateReader(bodySection)
 	if err != nil {
-		return nil, model.NewAppError("Email", "email.message.app_err", nil, err.Error(),
-			http.StatusInternalServerError)
+		return nil, model.NewAppError("Email", "email.message.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+	defer mr.Close()
 
-	var text []byte
-	var html []byte
+	it := NewMailIterator(mr, logger)
 
-	m.Cid = make(map[string]model.EmailCid)
+	//	TODO: remove after creating high level context that will pass to this func,
+	// 	with span id for OTEL integrity
+	handlersCtx := context.TODO()
 
-	// Process each message's part
-	var part *mail.Part
-	for {
-		part, err = mr.NextPart()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			p.log.Error(err.Error(), wlog.String("message-id", m.MessageId),
-				wlog.Any("from", m.From),
-			)
-			break
-		}
+	var text, html []byte
 
-		if part == nil {
-			p.log.Error("empty part", wlog.String("message-id", m.MessageId),
-				wlog.Any("from", m.From),
-			)
-			break
-		}
+	for it.Next() {
+		part := it.Part()
 
 		switch h := part.Header.(type) {
 		case *mail.InlineHeader:
-			cid := h.Get("Content-ID")
-			if cid != "" {
-				var file model.File
-				cid = strings.Trim(cid, "<>")
-				file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
-					Name:     cid,
-					MimeType: h.Get("Content-Type"),
-					Channel:  model.FileChannelMail,
-				})
-				if err != nil {
-					p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
-					continue
-				}
-				m.Cid[cid] = model.EmailCid(file.Id)
-			}
-			ct := h.Get("Content-Type")
-			// This is the message's text (can be plain-text or HTML)
-			b, _ := ioutil.ReadAll(part.Body)
-			if strings.HasPrefix(ct, "text/html") {
-				html = b
-			} else if strings.HasPrefix(ct, "text/") {
-				text = append(text, b...)
-			}
-		case *mail.AttachmentHeader:
-			var fileName string
-			fileName, err = h.Filename()
+			bodyText, bodyHtml, err := p.inlineHeaderHandler(handlersCtx, h, part.Body, receivedMail)
 			if err != nil {
-				p.log.With(wlog.Any("from", m.From)).Err(err)
+				logger.Error("processing inline header, continue to next part", wlog.Err(err))
+
 				continue
-			}
-			if fileName == "" {
-				fileName = model.NewId()
 			}
 
-			var file model.File
-			file, err = p.server.storage.Upload(context.TODO(), p.DomainId, m.MessageId, part.Body, model.File{
-				Name:     fileName,
-				MimeType: h.Get("Content-Type"),
-				Channel:  model.FileChannelMail,
-			})
-			if err != nil {
-				p.log.With(wlog.Any("from", m.From)).Error(err.Error(), wlog.Err(err))
+			if len(bodyText) > 0 {
+				text = append(text, bodyText...)
+			}
+
+			if len(bodyHtml) > 0 {
+				html = bodyHtml
+			}
+		case *mail.AttachmentHeader:
+			if err := p.attachmentHeaderHandler(handlersCtx, h, part.Body, receivedMail); err != nil {
+				logger.Error("processing attachment header of mail, continue to next part", wlog.Err(err))
+
 				continue
 			}
-			m.Attachments = append(m.Attachments, file)
 		}
 	}
 
+	if err := it.Err(); err != nil {
+		return nil, err
+	}
+
+	text = resolveMailMessageText(text, html)
+
+	receivedMail.SetBody(text, html).SetHTMLBody(html)
+
+	return receivedMail, nil
+}
+
+func (p *Profile) inlineHeaderHandler(ctx context.Context, inlineHeader *mail.InlineHeader, body io.Reader, receivedMail *model.Email) ([]byte, []byte, error) {
+	b, err := io.ReadAll(body)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	contentType := inlineHeader.Get("Content-Type")
+
+	var text, html []byte
+	if strings.HasPrefix(contentType, "text/html") {
+		html = b
+	} else if strings.HasPrefix(contentType, "text/") {
+		text = append(text, b...)
+	}
+
+	cid := strings.Trim(inlineHeader.Get("Content-ID"), "<>")
+
+	if cid == "" {
+		return text, html, nil
+	}
+
+	file, err := p.server.storage.Upload(
+		ctx,
+		p.DomainId,
+		receivedMail.MessageId,
+		bytes.NewReader(b),
+		model.File{Name: cid, MimeType: contentType, Channel: model.FileChannelMail},
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	receivedMail.AddCID(cid, file.Id)
+
+	return text, html, nil
+}
+
+func (p *Profile) attachmentHeaderHandler(ctx context.Context, attachmentHeader *mail.AttachmentHeader, body io.Reader, receivedMail *model.Email) error {
+	fileName, err := attachmentHeader.Filename()
+	if err != nil {
+		return err
+	}
+
+	if fileName == "" {
+		fileName = model.NewId()
+	}
+
+	file, err := p.server.storage.Upload(
+		ctx,
+		p.DomainId,
+		receivedMail.MessageId,
+		body,
+		model.File{Name: fileName, MimeType: attachmentHeader.Get("Content-Type"), Channel: model.FileChannelMail},
+	)
+	if err != nil {
+		return err
+	}
+
+	receivedMail.AddAttachment(file)
+
+	return nil
+}
+
+func resolveMailMessageText(text, html []byte) []byte {
 	if len(text) == 0 && len(html) != 0 {
-		text = []byte(html2text.HTML2Text(string(html)))
+		return []byte(html2text.HTML2Text(string(html)))
 	}
 
-	if text != nil {
-		m.Body = text
-	} else {
-		m.Body = html
-	}
-	m.HtmlBody = html
-
-	return m, nil
+	return text
 }
 
 type OAuth2Smtp struct {
@@ -501,7 +574,9 @@ func (a *OAuth2Smtp) Start(server *smtp.ServerInfo) (string, []byte, error) {
 	if !server.TLS {
 		return "", nil, errors.New("unencrypted connection")
 	}
-	resp := []byte(fmt.Sprintf("user=%v\001auth=%v %v\001\001", a.user, "Bearer", a.token))
+
+	resp := fmt.Appendf(nil, "user=%v\001auth=%v %v\001\001", a.user, "Bearer", a.token)
+
 	return "XOAUTH2", resp, nil
 }
 
@@ -510,5 +585,6 @@ func (a *OAuth2Smtp) Next(fromServer []byte, more bool) ([]byte, error) {
 		// We've already sent everything.
 		return nil, fmt.Errorf("unexpected server challenge: %s", fromServer)
 	}
+
 	return nil, nil
 }

@@ -31,9 +31,9 @@ func (f *FlowManager) SmtpSettings(domainId int64, search *model.SearchEntity) (
 	})
 
 	if err != nil {
-		switch err.(type) {
+		switch err := err.(type) {
 		case *model.AppError:
-			return nil, err.(*model.AppError)
+			return nil, err
 		default:
 			return nil, model.NewAppError("Queue", "mail.smtp.settings.get", nil, err.Error(), http.StatusInternalServerError)
 		}
