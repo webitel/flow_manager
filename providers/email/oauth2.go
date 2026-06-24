@@ -30,7 +30,8 @@ type xoauth2Client struct {
 func (a *xoauth2Client) Start() (mech string, ir []byte, err error) {
 	mech = Xoauth2
 	ir = []byte("user=" + a.Username + "\x01auth=Bearer " + a.Token + "\x01\x01")
-	return
+
+	return mech, ir, err
 }
 
 func (a *xoauth2Client) Next(challenge []byte) ([]byte, error) {

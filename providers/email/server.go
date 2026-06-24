@@ -3,18 +3,19 @@ package email
 import (
 	"context"
 	"fmt"
-	"golang.org/x/sync/singleflight"
 	"io"
 	"net/http"
 	"sync"
 	"time"
 
 	"golang.org/x/oauth2"
+	"golang.org/x/sync/singleflight"
 
 	"github.com/webitel/engine/pkg/discovery"
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
-	"github.com/webitel/wlog"
 )
 
 var (
@@ -24,6 +25,8 @@ var (
 )
 
 type MailServer struct {
+	sync.RWMutex
+
 	store           store.EmailStore
 	storage         StorageApi
 	profiles        *model.Cache
@@ -33,8 +36,7 @@ type MailServer struct {
 	consume         chan model.Connection
 	running         map[int]bool
 	debug           bool
-	sync.RWMutex
-	log *wlog.Logger
+	log             *wlog.Logger
 }
 
 type StorageApi interface {
@@ -55,18 +57,15 @@ func New(storageApi StorageApi, s store.EmailStore, debug bool) model.Server {
 	}
 }
 
-func (s *MailServer) Name() string {
-	return "Email"
-}
+func (s *MailServer) Name() string { return "Email" }
 
-func (s *MailServer) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
-	return nil
-}
+func (s *MailServer) Cluster(discovery discovery.ServiceDiscovery) *model.AppError { return nil }
 
 func (s *MailServer) Start() *model.AppError {
 	s.startOnce.Do(func() {
 		go s.listen()
 	})
+
 	return nil
 }
 
@@ -75,21 +74,10 @@ func (s *MailServer) Stop() {
 	<-s.stopped
 }
 
-func (s *MailServer) Host() string {
-	return "" //TODO
-}
-
-func (s *MailServer) Port() int {
-	return 0
-}
-
-func (s *MailServer) Type() model.ConnectionType {
-	return model.ConnectionTypeEmail
-}
-
-func (s *MailServer) Consume() <-chan model.Connection {
-	return s.consume
-}
+func (s *MailServer) Host() string                     { return "" } // TODO
+func (s *MailServer) Port() int                        { return 0 }
+func (s *MailServer) Type() model.ConnectionType       { return model.ConnectionTypeEmail }
+func (s *MailServer) Consume() <-chan model.Connection { return s.consume }
 
 func (s *MailServer) startRunning(id int) {
 	s.Lock()
@@ -107,6 +95,7 @@ func (s *MailServer) hasRunning(id int) bool {
 	s.RLock()
 	_, ok := s.running[id]
 	s.RUnlock()
+
 	return ok
 }
 
@@ -117,6 +106,7 @@ func (s *MailServer) listen() {
 	}()
 
 	s.log.Debug("start listen emails")
+
 	for {
 		select {
 		case <-s.didFinishListen:
@@ -124,34 +114,35 @@ func (s *MailServer) listen() {
 		case <-time.After(FetchProfileInterval):
 			tasks, err := s.store.ProfileTaskFetch("")
 			if err != nil {
-				s.log.Error(err.Error())
+				s.log.Error("fetching profile tasks", wlog.Err(err))
 				time.Sleep(time.Second * 5)
-			} else {
-				for _, v := range tasks {
-					if !s.hasRunning(v.Id) {
-						s.startRunning(v.Id)
-						go func(p *model.EmailProfileTask) {
-							s.fetchNewMessageInProfile(p)
-							s.stopRunning(p.Id)
-						}(v)
-					}
+
+				break
+			}
+
+			for _, v := range tasks {
+				if s.hasRunning(v.Id) {
+					continue
 				}
+
+				s.startRunning(v.Id)
+				go func(p *model.EmailProfileTask) {
+					s.fetchNewMessageInProfile(p)
+					s.stopRunning(p.Id)
+				}(v)
 			}
 		}
 	}
 }
 
 func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppError) {
-	var pp *Profile
-	profile, ok := s.profiles.Get(id)
-	if ok {
-		pp = profile.(*Profile)
-		if updatedAt == pp.UpdatedAt() {
-			return pp, nil
+	if profile, ok := s.profiles.Get(id); ok {
+		if asserted, ok := profile.(*Profile); ok {
+			return asserted, nil
 		}
 	}
 
-	v, doErr, shared := profileSGroup.Do(fmt.Sprintf("%d-%d", id, updatedAt), func() (interface{}, error) {
+	v, doErr, shared := profileSGroup.Do(fmt.Sprintf("%d-%d", id, updatedAt), func() (any, error) {
 		params, err := s.store.GetProfile(id)
 		if err != nil {
 			return nil, err
@@ -159,17 +150,21 @@ func (s *MailServer) GetProfile(id int, updatedAt int64) (*Profile, *model.AppEr
 
 		return newProfile(s, params), nil
 	})
-
 	if doErr != nil {
-		switch doErr.(type) {
+		switch doErr := doErr.(type) {
 		case *model.AppError:
-			return nil, doErr.(*model.AppError)
+			return nil, doErr
 		default:
 			return nil, model.NewAppError("Email", "email.profile.create.app_err", nil, doErr.Error(), http.StatusInternalServerError)
 		}
 	}
 
-	pp = v.(*Profile)
+	pp, ok := v.(*Profile)
+	if !ok {
+		s.log.Error("asserting profile single flight group", wlog.String("v_type", fmt.Sprintf("%T", v)))
+
+		return nil, model.NewAppError("GetProfile", "email.server.profile_assert", nil, "asserting other type", 500)
+	}
 
 	if !shared {
 		s.profiles.Add(id, pp)
@@ -183,6 +178,7 @@ func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 	if err != nil {
 		s.storeError(profile, err)
 		s.log.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
+
 		return
 	}
 
@@ -190,29 +186,36 @@ func (s *MailServer) fetchNewMessageInProfile(p *model.EmailProfileTask) {
 
 retry:
 	err = profile.Login()
+
 	if err != nil {
 		s.storeError(profile, err)
 		s.log.Error(fmt.Sprintf("profile \"%s\", error: %s", profile, err.Error()))
 	}
 
 	var emails []*model.Email
+
 	emails, err = profile.Read()
 	if err != nil {
 		if err.DetailedError == "Not logged in" {
 			if attempts == 0 {
-				attempts = attempts + 1
+				attempts++
+
 				goto retry
 			}
 		}
+
 		s.log.Error(fmt.Sprintf("[%s] error: %s", profile, err.Error()))
+
 		return
 	}
 
 	for _, email := range emails {
 		if err = s.store.Save(profile.DomainId, email); err != nil {
 			s.log.Err(err)
+
 			continue
 		}
+
 		s.consume <- NewConnection(s, PKey{
 			Id:        profile.Id,
 			UpdatedAt: p.UpdatedAt,
@@ -220,6 +223,7 @@ retry:
 			DomainId:  profile.DomainId,
 		}, email)
 	}
+
 	err = profile.Logout()
 	if err != nil {
 		s.storeError(profile, err)
@@ -232,6 +236,7 @@ func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 	if saveErr != nil {
 		s.log.Err(saveErr)
 	}
+
 	s.profiles.Remove(p.Id)
 }
 
@@ -244,6 +249,7 @@ func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
 
 func (s *MailServer) TestProfile(domainId int64, profileId int) *model.AppError {
 	var profile *Profile
+
 	updatedAt, err := s.store.GetProfileUpdatedAt(domainId, profileId)
 	if err != nil {
 		return err
