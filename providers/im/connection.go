@@ -247,18 +247,19 @@ func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 }
 
 func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var docs []*p.ImageInput
+	var docs []*p.DocumentInput
 
 	if msg.File != nil {
 		f := msg.File
-		docs = append(docs, &p.ImageInput{
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
+		docs = append(docs, &p.DocumentInput{
+			FileName:  f.Name,
+			Url:       f.Url,
+			MimeType:  f.MimeType,
+			SizeBytes: &f.Size,
 		})
 	}
 
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+	_, err := c.srv.client.messageService.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
@@ -267,8 +268,8 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 				},
 			},
 		},
-		Images: docs,
-		Body:   msg.Text,
+		Documents: docs,
+		Body:      msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
@@ -372,31 +373,6 @@ func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMess
 		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return model.CallResponseOK, nil
-}
-
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var images []*p.ImageInput
-	if msg.File != nil {
-		f := msg.File
-		images = append(images, &p.ImageInput{
-			Id:       string(f.Id),
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
-		})
-	}
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
-			Sub: c.msg.From.Sub,
-			Iss: c.msg.From.Issuer,
-		}}},
-		Images: images,
-		Body:   msg.Text,
-	})
-	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
-	}
 	return model.CallResponseOK, nil
 }
 
