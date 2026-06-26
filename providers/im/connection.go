@@ -1,6 +1,7 @@
 package im
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -426,48 +427,71 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 }
 
 func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
-	rows := buildKeyboardRows(menu.Buttons)
-	if menu.Type == "inline" {
-		rows = buildKeyboardRows(menu.Inline)
-	}
-
-	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	peer := &p.Peer_Contact{
+		Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
-		}}},
+		},
+	}
+
+	src, inline := menu.Buttons, false
+	if len(src) == 0 && len(menu.Inline) > 0 {
+		src, inline = menu.Inline, true
+	}
+
+	req := &p.SendInteractiveMessageRequest{
+		To: &p.Peer{
+			Kind: peer,
+		},
 		Body: &menu.Text,
 		Interactive: &p.Interactive{
+			SingleUse: menu.NoInput, // force to block user keyboard
 			Kind: &p.Interactive_Markup{
-				Markup: &p.KeyboardMarkup{Rows: rows},
+				Markup: &p.KeyboardMarkup{Rows: buildKeyboardRows(src, inline)},
 			},
 		},
-	})
+	}
+
+	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), req)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("Connection.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
 	return model.CallResponseOK, nil
 }
 
-func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
+func buildKeyboardRows(src [][]model.ChatButton, inline bool) []*p.KeyboardRow {
 	rows := make([]*p.KeyboardRow, 0, len(src))
 	for _, row := range src {
 		buttons := make([]*p.KeyboardButton, 0, len(row))
 		for _, btn := range row {
-			kb := &p.KeyboardButton{Label: btn.Caption}
-			switch {
-			case btn.Type == "url":
-				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
-			case btn.Code != "":
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Code}}
-			default:
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
+			match := cmp.Or(btn.Text, btn.Code, btn.Caption)
+			if inline {
+				match = cmp.Or(btn.Code, btn.Text)
 			}
-			kb.Id = btn.Code
+
+			kb := &p.KeyboardButton{
+				Id:    match,
+				Label: cmp.Or(btn.Caption, btn.Text),
+			}
+
+			switch btn.Type {
+			case "url":
+				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
+
+			case "contact", "email", "location":
+				kb.Kind = &p.KeyboardButton_Request{Request: &p.KeyboardButtonRequest{Action: btn.Type}}
+
+			default:
+				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: match}}
+			}
+
 			buttons = append(buttons, kb)
 		}
+
 		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
 	}
+
 	return rows
 }
 
