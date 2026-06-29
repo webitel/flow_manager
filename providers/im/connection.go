@@ -32,6 +32,7 @@ type Connection struct {
 	id              string
 	threadId        string
 	ctx             context.Context
+	cancel          context.CancelFunc
 	domainId        int64
 	schemaId        int
 	srv             *server
@@ -64,7 +65,6 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
 		msg:       msg.GetPayload().Message(),
-		ctx:       context.Background(),
 		domainId:  msg.GetDomainID(),
 		variables: toVariables(nil), // todo
 		schemaId:  schemaId,
@@ -78,6 +78,10 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			wlog.Int("schema_id", schemaId),
 		),
 	}
+
+	// Cancelable context so the running schema can be torn down externally
+	conn.ctx, conn.cancel = context.WithCancel(context.Background())
+
 	if conn.variables == nil {
 		conn.variables = make(map[string]string)
 	}
@@ -648,7 +652,17 @@ func (c *Connection) IsTransfer() bool {
 	return false
 }
 
+func (c *Connection) Break() {
+	if c.cancel != nil {
+		c.cancel()
+	}
+}
+
 func (c *Connection) Stop(err error) {
+	if c.cancel != nil {
+		c.cancel()
+	}
+
 	c.srv.stopConnection(c)
 }
 

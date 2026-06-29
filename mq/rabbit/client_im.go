@@ -65,6 +65,10 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 		return a.handleIMInteractiveCallbackEvent(event)
 	}
 
+	if strings.HasPrefix(rk, "im_delivery.v1.") && strings.HasSuffix(rk, ".bot.control.released") {
+		return a.handleIMBotControlReleasedEvent(event)
+	}
+
 	return nil
 }
 
@@ -156,6 +160,25 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 	interactiveCallbackWrapper.Type = model.IMEventTypeCallback
 
 	a.imEvents <- interactiveCallbackWrapper
+
+	return nil
+}
+
+func (a *AMQP) handleIMBotControlReleasedEvent(event amqp.Delivery) error {
+	var wrapper model.MessageWrapper[model.BotControlReleased]
+	if err := json.Unmarshal(event.Body, &wrapper); err != nil {
+		return model.NewAppError(
+			"handleIMBotControlReleasedEvent",
+			"rabbit.client_im.handle_im_bot_control_released_event.unmarshal_event",
+			nil,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+	}
+
+	wrapper.Type = model.IMEventTypeBotControlReleased
+
+	a.imEvents <- wrapper
 
 	return nil
 }

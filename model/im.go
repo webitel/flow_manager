@@ -6,9 +6,15 @@ import (
 )
 
 const (
-	IMEventTypeMessage  string = "message"
-	IMEventTypeCallback string = "callback"
+	IMEventTypeMessage            string = "message"
+	IMEventTypeCallback           string = "callback"
+	IMEventTypeBotControlReleased string = "bot_control_released"
 )
+
+// BotControlReasonClientLeave marks a bot control release triggered by the user
+// (e.g. the "/close" command). It mirrors im-thread-service's reason of the same name
+// and is the only reason that should cancel a running schema.
+const BotControlReasonClientLeave string = "client_leave"
 
 type IMDialog interface {
 	Connection
@@ -149,3 +155,19 @@ func (c InteractiveCallback) MessageID() string       { return c.InReplyTo }
 func (c InteractiveCallback) Sender() ImEndpoint      { return c.ReactedBy }
 func (c InteractiveCallback) Message() Message        { return Message{Text: c.ButtonCode} }
 func (c InteractiveCallback) Receivers() []ImEndpoint { return []ImEndpoint{c.Receiver} }
+
+// BotControlReleased is delivered when a bot loses control of a thread (e.g. a user
+// "/close"). It carries no chat content — only enough to locate and stop the schema.
+type BotControlReleased struct {
+	ThreadID     string `json:"thread_id"`
+	DomainID     int64  `json:"domain_id"`
+	MemberID     string `json:"member_id"`
+	NextMemberID string `json:"next_member_id,omitempty"`
+	Reason       string `json:"reason"`
+}
+
+func (b BotControlReleased) GetThreadID() string     { return b.ThreadID }
+func (b BotControlReleased) MessageID() string       { return "" }
+func (b BotControlReleased) Sender() ImEndpoint      { return ImEndpoint{} }
+func (b BotControlReleased) Receivers() []ImEndpoint { return nil }
+func (b BotControlReleased) Message() Message        { return Message{} }

@@ -117,11 +117,40 @@ func (s *server) listen() {
 				continue
 			}
 
+			if c.GetType() == model.IMEventTypeBotControlReleased {
+				s.handleBotControlReleased(c)
+				continue
+			}
+
 			if err := s.nodeMessage(c); err != nil {
 				s.log.Error("handling message", wlog.String("message_id", c.GetPayload().MessageID()), wlog.Err(err))
 			}
 		}
 	}
+}
+
+// handleBotControlReleased stops the running schema(s) for a thread when a user releases
+// bot control (the "/close" command). Other release reasons (e.g. a schema that completed
+// on its own) are ignored — there is nothing left to cancel.
+func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
+	released, ok := msg.GetPayload().(model.BotControlReleased)
+	if !ok {
+		s.log.Warn("bot control released: unexpected payload type")
+
+		return
+	}
+
+	if released.Reason != model.BotControlReasonClientLeave {
+		return
+	}
+
+	threadID := released.GetThreadID()
+	broken := s.connectionStore.BreakByThread(threadID)
+
+	s.log.Debug("bot control released: stopped running schema",
+		wlog.String("thread_id", threadID),
+		wlog.Int("connections", broken),
+	)
 }
 
 func (s *server) stopConnection(c *Connection) {
