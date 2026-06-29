@@ -19,6 +19,7 @@ import (
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	t "github.com/webitel/flow_manager/gen/im/service/thread/v1"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -29,28 +30,33 @@ var _ model.IMDialog = (*Connection)(nil)
 type Connection struct {
 	sync.RWMutex
 
-	id              string
-	threadId        string
-	ctx             context.Context
-	domainId        int64
-	schemaId        int
-	srv             *server
-	variables       map[string]string
-	msg             model.Message
-	lastMsg         model.Message
-	from            model.ImEndpoint
-	to              model.ImEndpoint
-	log             *wlog.Logger
-	waitMsgChan     chan model.IMEventWrapper
-	hdrs            metadata.MD
-	queueKey        *model.InQueueKey
-	exportVariables []string
-	messages        []model.IMEventWrapper
-	info            model.ThreadInfo
+	id               string
+	threadId         string
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	domainId         int64
+	schemaId         int
+	srv              *server
+	variables        map[string]string
+	msg              model.Message
+	lastMsg          model.Message
+	from             model.ImEndpoint
+	to               model.ImEndpoint
+	log              *wlog.Logger
+	waitMsgChan      chan model.IMEventWrapper
+	hdrs             metadata.MD
+	queueKey         *model.InQueueKey
+	exportVariables  []string
+	messages         []model.IMEventWrapper
+	info             model.ThreadInfo
+	transferred      bool
+	transferSchemaId int
 }
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	conn := &Connection{
 		id:       id,
@@ -64,7 +70,8 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
 		msg:       msg.GetPayload().Message(),
-		ctx:       context.Background(),
+		ctx:       ctx,
+		cancelCtx: cancel,
 		domainId:  msg.GetDomainID(),
 		variables: toVariables(nil), // todo
 		schemaId:  schemaId,
@@ -164,6 +171,21 @@ func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
 	c.Unlock()
 }
 
+func (c *Connection) processSystemMessage(msg model.Message) {
+	c.Lock()
+	c.transferred = msg.System.Type == "transferred"
+	if c.transferred {
+		c.log.Debug("transferred")
+		// c.cancelCtx()
+	}
+
+	c.Unlock()
+}
+
+func (c *Connection) onTransfer(schemaId int) {
+	c.ResetForTransfer(schemaId)
+}
+
 func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	log := c.log.With(
 		wlog.String("operation", "OnMessage"),
@@ -173,6 +195,12 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 		wlog.String("message_id", msg.GetPayload().MessageID()),
 		wlog.Int64("domain_id", msg.GetDomainID()),
 	)
+
+	if msg.GetPayload().Message().System != nil {
+		c.processSystemMessage(msg.GetPayload().Message())
+		log.Debug("message system")
+		return
+	}
 
 	if msg.GetPayload().Sender().Sub == c.to.Sub {
 		log.Debug("message from sub changed")
@@ -645,11 +673,58 @@ func convertToProtoButtons(src []model.KeyboardButton) []*p.KeyboardButton {
 }
 
 func (c *Connection) IsTransfer() bool {
-	return false
+	c.RLock()
+	v := c.transferred
+	c.RUnlock()
+
+	return v
 }
 
 func (c *Connection) Stop(err error) {
+	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
+		ThreadId: c.threadId,
+		DomainId: int32(c.domainId),
+		MemberId: c.To().MemberID,
+	})
+
+	if e != nil {
+		c.log.Error(e.Error())
+	}
+
 	c.srv.stopConnection(c)
+}
+
+func (c *Connection) TransferredSchemaId() int {
+	c.Lock()
+	transferSchemaId := c.transferSchemaId
+	c.transferred = false
+	c.Unlock()
+	return transferSchemaId
+}
+
+func (c *Connection) NewContext() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = false
+	c.Unlock()
+	return ctx
+}
+
+func (c *Connection) ResetForTransfer(schemaId int) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	old := c.cancelCtx
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = true
+	c.transferSchemaId = schemaId // те що ти зберігатимеш
+	c.Unlock()
+
+	old()
+
+	return ctx
 }
 
 func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {

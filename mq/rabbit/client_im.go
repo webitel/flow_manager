@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/webitel/flow_manager/model"
+
 	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 func (a *AMQP) subscribeIM() {
@@ -29,6 +31,11 @@ func (a *AMQP) subscribeIM() {
 		panic("error during binding IM queue to delivery exchange")
 	}
 
+	if err = a.channel.QueueBind(imQueue.Name, "im_thread.*.bot.control.#", "im_message.events", true, nil); err != nil {
+		wlog.Critical("[AMQP] during binding IM queue to message exchange", wlog.String("queue", imQueue.Name), wlog.String("exchange", model.IMExchange), wlog.Err(err))
+		panic("error during binding IM queue to message exchange")
+	}
+
 	msgs, err := a.channel.Consume(imQueue.Name, "", false, false, false, false, nil)
 	if err != nil {
 		wlog.Critical("[AMQP] during starting consuming IM messages", wlog.String("queue", imQueue.Name), wlog.String("exchange", model.IMExchange), wlog.Err(err))
@@ -36,11 +43,14 @@ func (a *AMQP) subscribeIM() {
 	}
 
 	for m := range msgs {
-		if m.Exchange != model.IMExchange {
+		if m.Exchange != model.IMExchange && false {
 			wlog.Warn("[AMQP] received message from unexpected exchange", wlog.String("received_exchange", m.Exchange), wlog.String("expected_exchange", model.IMExchange))
 
 			continue
 		}
+
+		println(m.RoutingKey)
+		println(string(m.Body))
 
 		if err := a.processReceivedIMEvent(m); err != nil {
 			wlog.Error("[AMQP] processing received IM event", wlog.String("received_rk", m.RoutingKey), wlog.Err(err))
@@ -63,6 +73,10 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 
 	if strings.HasPrefix(rk, "im_delivery.v1.") && strings.HasSuffix(rk, ".interactive_callback.reacted") {
 		return a.handleIMInteractiveCallbackEvent(event)
+	}
+
+	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.granted.v1") {
+		return a.handleIMTransferEvent(event)
 	}
 
 	return nil
@@ -116,6 +130,13 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 		return nil
 	}
 
+	//if messageWrapper.GetPayload().Message().System != nil {
+	//	wlog.Info("skipping system IM event", wlog.String("thread_id", messageWrapper.Message.ThreadID), wlog.String("message_id", messageWrapper.Message.ID),
+	//		wlog.Any("message", messageWrapper.GetPayload().Message().System))
+	//
+	//	return nil
+	//}
+
 	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
 	if err != nil {
 		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
@@ -128,6 +149,23 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 	messageWrapper.Type = model.IMEventTypeMessage
 
 	a.imEvents <- messageWrapper
+
+	return nil
+}
+
+func (a *AMQP) handleIMTransferEvent(event amqp.Delivery) error {
+	var msg model.IMBotControlGrantedEvent
+	if err := json.Unmarshal(event.Body, &msg); err != nil {
+		return model.NewAppError(
+			"handleIMTransferEvent",
+			"rabbit.client_im.handleIMTransferEvent.unmarshal_event",
+			nil,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+	}
+
+	a.imEvents <- msg
 
 	return nil
 }

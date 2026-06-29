@@ -294,6 +294,12 @@ func (i *Flow) SetCancel() {
 	i.cancel = true
 }
 
+func (i *Flow) ClearCancel() {
+	i.Lock()
+	defer i.Unlock()
+	i.cancel = false
+}
+
 func (i *Flow) IsCancel() bool {
 	i.RLock()
 	defer i.RUnlock()
