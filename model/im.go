@@ -136,38 +136,6 @@ type MessageFile struct {
 	URL  string `json:"url"`
 }
 
-const (
-	MessageKindText        = "text"
-	MessageKindContact     = "contact"
-	MessageKindLocation    = "location"
-	MessageKindDocument    = "document"
-	MessageKindInteractive = "interactive"
-	MessageKindSystem      = "system"
-)
-
-//func (m Message) DeriveKind() string {
-//	if m.Type != "" {
-//		return m.Type // authoritative classification from im-delivery
-//	}
-//
-//	if m.Kind != "" {
-//		return m.Kind // legacy producers
-//	}
-//
-//	switch {
-//	case m.Contact != nil:
-//		return MessageKindContact
-//	case m.Location != nil:
-//		return MessageKindLocation
-//	case len(m.Images) > 0:
-//		return MessageKindImage
-//	case len(m.Documents) > 0:
-//		return MessageKindDocument
-//	default:
-//		return MessageKindText
-//	}
-//}
-
 func (m Message) GetThreadID() string     { return m.ThreadID }
 func (m Message) MessageID() string       { return m.ID }
 func (m Message) Sender() ImEndpoint      { return m.From }
