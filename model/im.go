@@ -113,7 +113,6 @@ type Message struct {
 	Contact     *Contact      `json:"contact,omitempty"`
 	Location    *Location     `json:"location,omitempty"`
 	Documents   []MessageFile `json:"documents,omitempty"`
-	Images      []MessageFile `json:"images,omitempty"`
 }
 
 type Contact struct {
@@ -141,7 +140,6 @@ const (
 	MessageKindText        = "text"
 	MessageKindContact     = "contact"
 	MessageKindLocation    = "location"
-	MessageKindImage       = "image"
 	MessageKindDocument    = "document"
 	MessageKindInteractive = "interactive"
 	MessageKindSystem      = "system"
