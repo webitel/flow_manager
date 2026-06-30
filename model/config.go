@@ -89,5 +89,5 @@ type WebHookSettings struct {
 
 type MQSettings struct {
 	Url   string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
-	UseIM bool   `json:"use_im" flag:"use_im|true|Use IM handlers" env:"USE_IM"`
+	UseIM bool   `json:"use_im" flag:"use_im|false|Use IM handlers" env:"USE_IM"`
 }
