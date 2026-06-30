@@ -10,6 +10,7 @@ import (
 const (
 	// TODO
 	ConversationStartMessageVariable = "start_message"
+	ConversationThreadVariable       = "thread"
 	ConversationSessionId            = "uuid"
 	ConversationProfileId            = "wbt_profile_id"
 

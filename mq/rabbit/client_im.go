@@ -128,7 +128,6 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 	}
 
 	messageWrapper.Type = model.IMEventTypeMessage
-	messageWrapper.Message.Kind = messageWrapper.Message.DeriveKind()
 
 	a.imEvents <- messageWrapper
 

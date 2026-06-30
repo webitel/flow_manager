@@ -90,25 +90,26 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 }
 
 func (c *Connection) setupVariables() {
-	c.msg.Kind = c.msg.DeriveKind()
-	c.variables[model.ConversationStartMessageVariable] = c.msg.Text
+	if raw, mErr := json.Marshal(c.msg); mErr != nil {
+		c.log.Error("failed to marshal start message", wlog.Err(mErr))
+	} else {
+		c.variables[model.ConversationStartMessageVariable] = string(raw)
+	}
 
 	c.variables["uuid"] = c.id
+
 	info, err := c.treadInfo(c.srv.client.ctx)
 	if err != nil {
 		c.log.Error("failed to get thread info", wlog.Err(err))
 		return
 	}
 
-	c.msg.Subject = info.Subject
-	c.msg.Description = info.Description
-	raw, mErr := json.Marshal(c.msg)
-	if mErr != nil {
-		c.log.Error("failed to marshal json", wlog.Err(mErr))
-		return
+	if raw, mErr := json.Marshal(info); mErr != nil {
+		c.log.Error("failed to marshal thread info", wlog.Err(mErr))
+	} else {
+		c.variables[model.ConversationThreadVariable] = string(raw)
 	}
 
-	c.variables["thread"] = string(raw)
 	maps.Copy(c.variables, info.Variables)
 	c.info = info
 }
@@ -493,11 +494,6 @@ func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, m
 		}
 	}
 
-	if name != "" && len(msgs) > 0 {
-		last := msgs[len(msgs)-1].GetPayload().Message()
-		last.Kind = last.DeriveKind()
-	}
-
 	return messageToText(msgs...), nil
 }
 
@@ -784,11 +780,18 @@ func (c *Connection) treadInfo(ctx context.Context) (model.ThreadInfo, *model.Ap
 	info.Variables = make(map[string]string)
 
 	for k, v := range infoResult.Variables.Variables {
-		if v.Value != nil {
-			if raw, err := v.Value.MarshalJSON(); err != nil {
-				info.Variables[k] = string(raw)
-			}
+		if v.Value == nil {
+			continue
 		}
+
+		raw, err := v.Value.MarshalJSON()
+		if err != nil {
+			c.log.Error("failed to marshal thread variable", wlog.String("key", k), wlog.Err(err))
+
+			continue
+		}
+
+		info.Variables[k] = string(raw)
 	}
 
 	return info, nil

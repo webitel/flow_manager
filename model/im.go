@@ -37,20 +37,20 @@ type IMDialog interface {
 }
 
 type ThreadMember struct {
-	Type     string
-	Name     string
-	Iss      string
-	Sub      string
-	MemberId string
-	Role     int
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Iss      string `json:"iss"`
+	Sub      string `json:"sub"`
+	MemberId string `json:"member_id"`
+	Role     int    `json:"role"`
 }
 
 type ThreadInfo struct {
-	Subject     string
-	Description string
-	Members     []ThreadMember
-	LastMessage string
-	Variables   map[string]string
+	Subject     string            `json:"subject"`
+	Description string            `json:"description"`
+	Members     []ThreadMember    `json:"members"`
+	LastMessage string            `json:"last_message"`
+	Variables   map[string]string `json:"variables"`
 }
 
 type CCQueueEvent struct {
@@ -109,7 +109,7 @@ type Message struct {
 	Subject     string        `json:"subject"`
 	Description string        `json:"description"`
 	Kind        string        `json:"kind"`
-	Type        int           `json:"type"`
+	Type        string        `json:"type"`
 	Contact     *Contact      `json:"contact,omitempty"`
 	Location    *Location     `json:"location,omitempty"`
 	Documents   []MessageFile `json:"documents,omitempty"`
@@ -138,31 +138,37 @@ type MessageFile struct {
 }
 
 const (
-	MessageKindText     = "text"
-	MessageKindContact  = "contact"
-	MessageKindLocation = "location"
-	MessageKindImage    = "image"
-	MessageKindDocument = "document"
+	MessageKindText        = "text"
+	MessageKindContact     = "contact"
+	MessageKindLocation    = "location"
+	MessageKindImage       = "image"
+	MessageKindDocument    = "document"
+	MessageKindInteractive = "interactive"
+	MessageKindSystem      = "system"
 )
 
-func (m Message) DeriveKind() string {
-	if m.Kind != "" {
-		return m.Kind
-	}
-
-	switch {
-	case m.Contact != nil:
-		return MessageKindContact
-	case m.Location != nil:
-		return MessageKindLocation
-	case len(m.Images) > 0:
-		return MessageKindImage
-	case len(m.Documents) > 0:
-		return MessageKindDocument
-	default:
-		return MessageKindText
-	}
-}
+//func (m Message) DeriveKind() string {
+//	if m.Type != "" {
+//		return m.Type // authoritative classification from im-delivery
+//	}
+//
+//	if m.Kind != "" {
+//		return m.Kind // legacy producers
+//	}
+//
+//	switch {
+//	case m.Contact != nil:
+//		return MessageKindContact
+//	case m.Location != nil:
+//		return MessageKindLocation
+//	case len(m.Images) > 0:
+//		return MessageKindImage
+//	case len(m.Documents) > 0:
+//		return MessageKindDocument
+//	default:
+//		return MessageKindText
+//	}
+//}
 
 func (m Message) GetThreadID() string     { return m.ThreadID }
 func (m Message) MessageID() string       { return m.ID }
