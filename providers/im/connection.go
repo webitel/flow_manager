@@ -36,6 +36,7 @@ type Connection struct {
 	schemaId        int
 	srv             *server
 	variables       map[string]string
+	storeMessages   map[string][]byte
 	msg             model.Message
 	lastMsg         model.Message
 	from            model.ImEndpoint
@@ -90,7 +91,12 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 }
 
 func (c *Connection) setupVariables() {
+	c.msg.Kind = c.msg.DeriveKind()
+	// Bare ${start_message} stays plain text (backward compatible). Dotted access —
+	// ${start_message.kind}, ${start_message.text}, ${start_message.contact.phone},
+	// ${start_message.location.latitude} — resolves against the structured JSON below.
 	c.variables[model.ConversationStartMessageVariable] = c.msg.Text
+	c.setStructuredMessage(model.ConversationStartMessageVariable, c.msg)
 
 	c.variables["uuid"] = c.id
 	info, err := c.treadInfo(c.srv.client.ctx)
@@ -297,7 +303,7 @@ func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessage
 	if msg.File != nil {
 		f := msg.File
 		images = append(images, &p.ImageInput{
-			Id:       string(f.Id),
+			Id:       strconv.Itoa(f.Id),
 			Name:     f.Name,
 			Link:     f.Url,
 			MimeType: f.MimeType,
@@ -484,6 +490,12 @@ func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, m
 			m, err = c.receive(ctx, messageTimeout)
 			msgs = append(msgs, m...)
 		}
+	}
+
+	if name != "" && len(msgs) > 0 {
+		last := msgs[len(msgs)-1].GetPayload().Message()
+		last.Kind = last.DeriveKind()
+		c.setStructuredMessage(name, last)
 	}
 
 	return messageToText(msgs...), nil
@@ -696,13 +708,36 @@ func (c *Connection) Get(key string) (string, bool) {
 	idx := strings.Index(key, ".")
 	if idx > 0 {
 		nameRoot := key[0:idx]
+		path := key[idx+1:]
+
+		// Dotted access resolves against the structured (JSON) store first, so typed
+		// message payloads are reachable (e.g. ${start_message.contact.phone}) even
+		// though the bare variable holds plain text.
+		if raw, ok := c.storeMessages[nameRoot]; ok {
+			return gjson.GetBytes(raw, path).String(), true
+		}
 
 		if v, ok := c.variables[nameRoot]; ok {
-			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
+			return gjson.GetBytes([]byte(v), path).String(), true
 		}
 	}
 	v, ok := c.variables[key]
 	return v, ok
+}
+
+func (c *Connection) setStructuredMessage(name string, msg model.Message) {
+	raw, err := json.Marshal(msg)
+	if err != nil {
+		c.log.Error("marshal structured message variable", wlog.String("name", name), wlog.Err(err))
+		return
+	}
+
+	c.Lock()
+	if c.storeMessages == nil {
+		c.storeMessages = make(map[string][]byte)
+	}
+	c.storeMessages[name] = raw
+	c.Unlock()
 }
 
 func (c *Connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {

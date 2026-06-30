@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/webitel/flow_manager/model"
+
 	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 func (a *AMQP) subscribeIM() {
@@ -126,6 +128,7 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 	}
 
 	messageWrapper.Type = model.IMEventTypeMessage
+	messageWrapper.Message.Kind = messageWrapper.Message.DeriveKind()
 
 	a.imEvents <- messageWrapper
 

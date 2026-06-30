@@ -99,15 +99,69 @@ func (w *MessageWrapper[T]) SetJWTPayload(payload string) { w.jwtPayload = paylo
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID          string       `json:"id"`
-	ThreadID    string       `json:"thread_id"`
-	DomainID    int          `json:"domain_id"`
-	From        ImEndpoint   `json:"from"`
-	To          []ImEndpoint `json:"to"`
-	Text        string       `json:"text"`
-	CreatedAt   int64        `json:"created_at"` // Unix timestamp у мілісекундах
-	Subject     string       `json:"subject"`
-	Description string       `json:"description"`
+	ID          string        `json:"id"`
+	ThreadID    string        `json:"thread_id"`
+	DomainID    int           `json:"domain_id"`
+	From        ImEndpoint    `json:"from"`
+	To          []ImEndpoint  `json:"to"`
+	Text        string        `json:"text"`
+	CreatedAt   int64         `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string        `json:"subject"`
+	Description string        `json:"description"`
+	Kind        string        `json:"kind"`
+	Type        int           `json:"type"`
+	Contact     *Contact      `json:"contact,omitempty"`
+	Location    *Location     `json:"location,omitempty"`
+	Documents   []MessageFile `json:"documents,omitempty"`
+	Images      []MessageFile `json:"images,omitempty"`
+}
+
+type Contact struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
+	Email string `json:"email"`
+}
+
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Address   string  `json:"address"`
+	Name      string  `json:"name"`
+}
+
+type MessageFile struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Mime string `json:"mime"`
+	Size int64  `json:"size"`
+	URL  string `json:"url"`
+}
+
+const (
+	MessageKindText     = "text"
+	MessageKindContact  = "contact"
+	MessageKindLocation = "location"
+	MessageKindImage    = "image"
+	MessageKindDocument = "document"
+)
+
+func (m Message) DeriveKind() string {
+	if m.Kind != "" {
+		return m.Kind
+	}
+
+	switch {
+	case m.Contact != nil:
+		return MessageKindContact
+	case m.Location != nil:
+		return MessageKindLocation
+	case len(m.Images) > 0:
+		return MessageKindImage
+	case len(m.Documents) > 0:
+		return MessageKindDocument
+	default:
+		return MessageKindText
+	}
 }
 
 func (m Message) GetThreadID() string     { return m.ThreadID }
