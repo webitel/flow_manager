@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 
 	"github.com/tidwall/gjson"
+
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/model"
@@ -21,14 +23,15 @@ type PKey struct {
 }
 
 type connection struct {
+	sync.RWMutex
+
 	id        string
 	srv       *MailServer
 	email     *model.Email
 	variables model.Variables
-	ctx       context.Context
+	ctx       context.Context //nolint:containedctx
 	pkey      PKey
-	sync.RWMutex
-	log *wlog.Logger
+	log       *wlog.Logger
 }
 
 func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
@@ -37,7 +40,7 @@ func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 		srv:       srv,
 		pkey:      pkey,
 		email:     email,
-		variables: make(map[string]interface{}),
+		variables: make(map[string]any),
 		ctx:       context.Background(),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
@@ -53,10 +56,12 @@ func NewConnection(srv *MailServer, pkey PKey, email *model.Email) *connection {
 	c.variables["cc"] = strings.Join(email.CC, ",")
 	c.variables["sender"] = strings.Join(email.Sender, ",")
 	c.variables["in_reply_to"] = email.InReplyTo
+
 	c.variables["body"] = string(email.Body)
 	if email.HtmlBody != nil {
 		c.variables["body_html"] = string(email.HtmlBody)
 	}
+
 	c.variables["subject"] = fmt.Sprintf("%v", email.Subject)
 	c.variables["id"] = fmt.Sprintf("%d", email.Id)
 
@@ -86,7 +91,7 @@ func (c *connection) Id() string {
 }
 
 func (c *connection) NodeId() string {
-	//TODO PROFILE NAME
+	// TODO PROFILE NAME
 	return c.id
 }
 
@@ -102,7 +107,9 @@ func (c *connection) Get(name string) (string, bool) {
 			return gjson.GetBytes([]byte(fmt.Sprintf("%v", v)), name[idx+1:]).String(), true
 		}
 	}
+
 	v, ok := c.variables[name]
+
 	return fmt.Sprintf("%v", v), ok
 }
 
@@ -113,11 +120,10 @@ func (c *connection) GetProfile() (*Profile, *model.AppError) {
 func (c *connection) Set(ctx context.Context, vars model.Variables) (model.Response, *model.AppError) {
 	c.Lock()
 	defer c.Unlock()
-	for k, v := range vars {
-		c.variables[k] = v
-	}
 
-	return model.CallResponseOK, nil //TODO
+	maps.Copy(c.variables, vars)
+
+	return model.CallResponseOK, nil // TODO
 }
 
 func (c *connection) ParseText(text string, ops ...model.ParseOption) string {

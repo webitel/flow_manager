@@ -125,7 +125,7 @@ func (r *Router) sendImage(ctx context.Context, scope *flow.Flow, conv Dialog, a
 		}
 	}
 
-	return conv.SendImageMessage(ctx, argv)
+	return conv.SendDocumentMessage(ctx, argv)
 }
 
 func (r *Router) sendFile(ctx context.Context, scope *flow.Flow, conv Dialog, args any) (model.Response, *model.AppError) {

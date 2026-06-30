@@ -1,6 +1,7 @@
 package im
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,12 +30,16 @@ var _ model.IMDialog = (*Connection)(nil)
 type Connection struct {
 	sync.RWMutex
 
-	id              string
-	threadId        string
-	ctx             context.Context
-	domainId        int64
-	schemaId        int
-	srv             *server
+	id       string
+	threadId string
+	ctx      context.Context
+	domainId int64
+	schemaId int
+	srv      *server
+
+	clientDeviceIDLock *sync.RWMutex
+	clientDeviceID     string
+
 	variables       map[string]string
 	msg             model.Message
 	lastMsg         model.Message
@@ -63,12 +68,13 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:       msg.GetPayload().Message(),
-		ctx:       context.Background(),
-		domainId:  msg.GetDomainID(),
-		variables: toVariables(nil), // todo
-		schemaId:  schemaId,
-		RWMutex:   sync.RWMutex{},
+		msg:                msg.GetPayload().Message(),
+		ctx:                context.Background(),
+		domainId:           msg.GetDomainID(),
+		variables:          toVariables(nil), // todo
+		schemaId:           schemaId,
+		RWMutex:            sync.RWMutex{},
+		clientDeviceIDLock: new(sync.RWMutex),
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -86,7 +92,32 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		conn.variables[JWTPayloadVar] = msg.JWTPayload()
 	}
 
+	if msg.DeviceID() != "" { //first connection touch
+		conn.clientDeviceID = msg.DeviceID()
+	}
+
 	return conn
+}
+
+func (c *Connection) IMOugoingContext(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, c.hdrs)
+}
+
+func (c *Connection) setDeviceID(device string) {
+	if device == "" {
+		return
+	}
+
+	c.clientDeviceIDLock.Lock()
+	c.clientDeviceID = device
+	c.clientDeviceIDLock.Unlock()
+}
+
+func (c *Connection) DeviceID() string {
+	c.clientDeviceIDLock.RLock()
+	defer c.clientDeviceIDLock.RUnlock()
+
+	return c.clientDeviceID
 }
 
 func (c *Connection) setupVariables() {
@@ -191,6 +222,7 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processLastInteractiveCallback(msg)
 	c.pushMessageToWaitMessageChan(msg)
 	c.updateJWTPayloadVariable(msg)
+	c.setDeviceID(msg.DeviceID())
 
 	log.Debug("processed on message event")
 }
@@ -224,18 +256,19 @@ func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 }
 
 func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var docs []*p.ImageInput
+	var docs []*p.DocumentInput
 
 	if msg.File != nil {
 		f := msg.File
-		docs = append(docs, &p.ImageInput{
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
+		docs = append(docs, &p.DocumentInput{
+			FileName:  f.Name,
+			Url:       f.Url,
+			MimeType:  f.MimeType,
+			SizeBytes: &f.Size,
 		})
 	}
 
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+	_, err := c.srv.client.messageService.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
@@ -244,14 +277,66 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 				},
 			},
 		},
-		Images: docs,
-		Body:   msg.Text,
+		Documents: docs,
+		Body:      msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
+	response, err := c.srv.client.accountService.Api.AccountGetAuthorizations(
+		c.IMOugoingContext(ctx),
+		&p.AccountGetAuthorizationsRequest{
+			DeviceId: deviceID,
+			Size:     1,
+		},
+	)
+
+	if err != nil {
+		return model.IMUserInfo{}, model.NewAppError(
+			"GetAuthSession",
+			"providers.im.connection",
+			nil,
+			err.Error(),
+			model.ExtractHTPPStatusCodeFromGRPC(err),
+		)
+	}
+
+	if len(response.Items) == 0 {
+		return model.IMUserInfo{}, model.ErrAuthSesionNotFound
+	}
+
+	responsedUserInfo := response.GetItems()[0]
+
+	userInfo := model.IMUserInfo{
+		Session: model.IMUserSession{
+			Date:          responsedUserInfo.GetDate(),
+			Name:          responsedUserInfo.GetName(),
+			ApplicationID: responsedUserInfo.GetAppId(),
+			Current:       responsedUserInfo.GetCurrent(),
+			Device: model.IMUserDevice{
+				IP:   responsedUserInfo.GetDevice().GetIp(),
+				Push: responsedUserInfo.GetDevice().GetPush(),
+				App: model.IMUserAgent{
+					Name:    responsedUserInfo.GetDevice().GetApp().GetName(),
+					Version: responsedUserInfo.GetDevice().GetApp().GetVersion(),
+					OS:      responsedUserInfo.GetDevice().GetApp().GetOsVersion(),
+					Device:  responsedUserInfo.GetDevice().GetApp().GetDevice(),
+					Mobile:  responsedUserInfo.GetDevice().GetApp().GetMobile(),
+					Tablet:  responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Desktop: responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Bot:     responsedUserInfo.GetDevice().GetApp().GetBot(),
+					String:  responsedUserInfo.GetDevice().GetApp().GetString_(),
+				},
+			},
+		},
+	}
+
+	return userInfo, nil
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
@@ -297,31 +382,6 @@ func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMess
 		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return model.CallResponseOK, nil
-}
-
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var images []*p.ImageInput
-	if msg.File != nil {
-		f := msg.File
-		images = append(images, &p.ImageInput{
-			Id:       strconv.Itoa(f.Id),
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
-		})
-	}
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
-			Sub: c.msg.From.Sub,
-			Iss: c.msg.From.Issuer,
-		}}},
-		Images: images,
-		Body:   msg.Text,
-	})
-	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
-	}
 	return model.CallResponseOK, nil
 }
 
@@ -375,48 +435,71 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 }
 
 func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
-	rows := buildKeyboardRows(menu.Buttons)
-	if menu.Type == "inline" {
-		rows = buildKeyboardRows(menu.Inline)
-	}
-
-	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	peer := &p.Peer_Contact{
+		Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
-		}}},
+		},
+	}
+
+	src, inline := menu.Buttons, false
+	if len(src) == 0 && len(menu.Inline) > 0 {
+		src, inline = menu.Inline, true
+	}
+
+	req := &p.SendInteractiveMessageRequest{
+		To: &p.Peer{
+			Kind: peer,
+		},
 		Body: &menu.Text,
 		Interactive: &p.Interactive{
+			SingleUse: menu.NoInput, // force to block user keyboard
 			Kind: &p.Interactive_Markup{
-				Markup: &p.KeyboardMarkup{Rows: rows},
+				Markup: &p.KeyboardMarkup{Rows: buildKeyboardRows(src, inline)},
 			},
 		},
-	})
+	}
+
+	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), req)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("Connection.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
 	return model.CallResponseOK, nil
 }
 
-func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
+func buildKeyboardRows(src [][]model.ChatButton, inline bool) []*p.KeyboardRow {
 	rows := make([]*p.KeyboardRow, 0, len(src))
 	for _, row := range src {
 		buttons := make([]*p.KeyboardButton, 0, len(row))
 		for _, btn := range row {
-			kb := &p.KeyboardButton{Label: btn.Caption}
-			switch {
-			case btn.Type == "url":
-				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
-			case btn.Code != "":
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Code}}
-			default:
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
+			match := cmp.Or(btn.Text, btn.Code, btn.Caption)
+			if inline {
+				match = cmp.Or(btn.Code, btn.Text)
 			}
-			kb.Id = btn.Code
+
+			kb := &p.KeyboardButton{
+				Id:    match,
+				Label: cmp.Or(btn.Caption, btn.Text),
+			}
+
+			switch btn.Type {
+			case "url":
+				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
+
+			case "contact", "email", "location":
+				kb.Kind = &p.KeyboardButton_Request{Request: &p.KeyboardButtonRequest{Action: btn.Type}}
+
+			default:
+				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: match}}
+			}
+
 			buttons = append(buttons, kb)
 		}
+
 		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
 	}
+
 	return rows
 }
 

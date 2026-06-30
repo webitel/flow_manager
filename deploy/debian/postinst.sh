@@ -36,7 +36,8 @@ create_user() {
 
     if ! getent passwd "$USER_NAME" >/dev/null 2>&1; then
         echo "Creating user: $USER_NAME"
-        adduser --system --no-create-home --ingroup "$GROUP_NAME" \
+        adduser --system --ingroup "$GROUP_NAME" \
+                --home /var/lib/webitel \
                 --disabled-password --disabled-login \
                 --shell /bin/false \
                 --gecos "Webitel service user" \
@@ -49,7 +50,7 @@ create_user() {
 # and run under `set -e`: a failing hook aborts the install, which is the
 # correct behaviour when e.g. a required certificate cannot be generated.
 run_postinst_hooks() {
-    local hook_dir="/usr/lib/$DPKG_MAINTSCRIPT_PACKAGE/deb/postinst.d"
+    local hook_dir="/usr/lib/webitel/$DPKG_MAINTSCRIPT_PACKAGE/deb/postinst.d"
     [ -d "$hook_dir" ] || return 0
 
     local hook
