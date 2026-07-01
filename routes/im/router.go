@@ -68,14 +68,14 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 
 func (r *Router) handle(conn model.Connection) {
 	conv := conn.(Dialog)
-	if err := r.runSchema(conn, conv, conv.SchemaId(), conn.Context()); err != nil {
+	if err := r.runSchema(conn, conv, conv.SchemaId(), conn.Context(), ""); err != nil {
 		conv.Stop(err)
 	} else {
 		conv.Stop(nil)
 	}
 }
 
-func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context) *model.AppError {
+func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context, cid string) *model.AppError {
 	var routing *model.Routing
 	var err *model.AppError
 
@@ -104,19 +104,19 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 
 	flow.Route(ctx, i, r)
 
-	cmplete := conv.CompleteId()
-
 	if conv.IsTransfer() {
 		newCtx := conv.NewContext()
-		schemaId, _ := conv.TransferredSchema()
-		if err = r.runSchema(conn, conv, schemaId, newCtx); err != nil {
+		schemaId, c2 := conv.TransferredSchema()
+		if err = r.runSchema(conn, conv, schemaId, newCtx, c2); err != nil {
 			return err
 		}
 		i.ClearCancel()
 		flow.Route(conv.NewContext(), i, r)
 	}
 
-	conv.Complete(cmplete)
+	if cid != "" {
+		conv.Complete(cid)
+	}
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
