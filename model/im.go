@@ -13,6 +13,7 @@ const (
 type IMDialog interface {
 	Connection
 
+	Via() string
 	DeviceID() string
 	ThreadId() string
 	From() ImEndpoint
@@ -40,6 +41,7 @@ type IMDialog interface {
 	DumpExportVariables() map[string]string
 	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
 	GetAuthSession(ctx context.Context, deviceID string) (IMUserInfo, *AppError)
+	HandleGateInfo(ctx context.Context, gateType IMGateType, id string) (*IMGate, *AppError)
 }
 
 type ThreadMember struct {
@@ -74,6 +76,7 @@ type IMEventWrapper interface {
 	GetType() string
 	JWTPayload() string
 	DeviceID() string
+	Via() string
 }
 
 type IMEvent interface {
@@ -94,6 +97,7 @@ type MessageWrapper[T IMEvent] struct {
 	jwtPayload string `json:"-"`
 	deviceID   string `json:"-"`
 	Type       string `json:"-"`
+	via        string `json:"-"`
 }
 
 type IMBotControlGrantedEvent struct {
@@ -116,6 +120,8 @@ func (w MessageWrapper[T]) JWTPayload() string            { return w.jwtPayload 
 func (w *MessageWrapper[T]) SetJWTPayload(payload string) { w.jwtPayload = payload }
 func (w MessageWrapper[T]) DeviceID() string              { return w.deviceID }
 func (w *MessageWrapper[T]) SetDeviceID(deviceID string)  { w.deviceID = deviceID }
+func (w *MessageWrapper[T]) SetVia(via string)            { w.via = via }
+func (w MessageWrapper[T]) Via() string                   { return w.via }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
@@ -159,7 +165,10 @@ type ImEndpoint struct {
 	Role     int    `json:"role"`
 }
 
+func (e *ImEndpoint) GateType() IMGateType { return IMGateTypeFromString(e.Issuer) }
+
 type InteractiveCallback struct {
+	DomainID     int
 	ReactedBy    ImEndpoint `json:"reacted_by"`
 	Receiver     ImEndpoint `json:"receiver"`
 	InReplyTo    string     `json:"in_reply_to"`
@@ -167,7 +176,6 @@ type InteractiveCallback struct {
 	ButtonCode   string     `json:"button_code"`
 	CallbackData string     `json:"callback_data"`
 	ReactedAt    time.Time  `json:"reacted_at"`
-	DomainID     int
 }
 
 func (c InteractiveCallback) GetThreadID() string     { return c.ThreadID }

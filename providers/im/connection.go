@@ -28,20 +28,23 @@ var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.time
 
 var _ model.IMDialog = (*Connection)(nil)
 
+const (
+	WebitelDeviceIDVariableKey      string = "wbt-device-id"
+	WebitelClickedButtonVariableKey string = "clicked_button"
+	WebitelJwtPayloadVariableKey    string = "jwt"
+	WebitelViaVariableKey           string = "via"
+)
+
 type Connection struct {
 	sync.RWMutex
 
-	id        string
-	threadId  string
-	ctx       context.Context
-	cancelCtx context.CancelFunc
-	domainId  int64
-	schemaId  int
-	srv       *server
-
-	clientDeviceIDLock *sync.RWMutex
-	clientDeviceID     string
-
+	id               string
+	threadId         string
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	domainId         int64
+	schemaId         int
+	srv              *server
 	variables        map[string]string
 	msg              model.Message
 	lastMsg          model.Message
@@ -75,15 +78,14 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:                msg.GetPayload().Message(),
-		ctx:                ctx,
-		cancelCtx:          cancel,
-		domainId:           msg.GetDomainID(),
-		variables:          toVariables(nil), // todo
-		schemaId:           schemaId,
-		RWMutex:            sync.RWMutex{},
-		clientDeviceIDLock: new(sync.RWMutex),
-		completeId:         to.MemberID,
+		completeId: to.MemberID,
+		msg:        msg.GetPayload().Message(),
+		ctx:        ctx,
+		cancelCtx:  cancel,
+		domainId:   msg.GetDomainID(),
+		variables:  toVariables(nil), // todo
+		schemaId:   schemaId,
+		RWMutex:    sync.RWMutex{},
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -98,11 +100,15 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 	}
 
 	if msg.JWTPayload() != "" {
-		conn.variables[JWTPayloadVar] = msg.JWTPayload()
+		conn.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
 	}
 
-	if msg.DeviceID() != "" { // first connection touch
-		conn.clientDeviceID = msg.DeviceID()
+	if msg.DeviceID() != "" {
+		conn.variables[WebitelDeviceIDVariableKey] = msg.DeviceID()
+	}
+
+	if msg.Via() != "" {
+		conn.variables[WebitelViaVariableKey] = msg.Via()
 	}
 
 	return conn
@@ -117,16 +123,20 @@ func (c *Connection) setDeviceID(device string) {
 		return
 	}
 
-	c.clientDeviceIDLock.Lock()
-	c.clientDeviceID = device
-	c.clientDeviceIDLock.Unlock()
+	c.Lock()
+	c.variables[WebitelDeviceIDVariableKey] = device
+	c.Unlock()
 }
 
 func (c *Connection) DeviceID() string {
-	c.clientDeviceIDLock.RLock()
-	defer c.clientDeviceIDLock.RUnlock()
+	c.RLock()
+	defer c.RUnlock()
 
-	return c.clientDeviceID
+	if id, exists := c.variables[WebitelDeviceIDVariableKey]; exists {
+		return id
+	}
+
+	return ""
 }
 
 func (c *Connection) setupVariables() {
@@ -158,6 +168,16 @@ func (c *Connection) processLastMessage(lastMessage model.IMEventWrapper) {
 	c.lastMsg = lastMessage.GetPayload().Message()
 }
 
+func (c *Connection) processViaMetadata(via string) {
+	if via == "" {
+		return
+	}
+
+	c.Lock()
+	c.variables[WebitelViaVariableKey] = via
+	c.Unlock()
+}
+
 func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrapper) {
 	if callback.GetType() != model.IMEventTypeCallback {
 		return
@@ -176,8 +196,19 @@ func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrappe
 	}
 
 	c.Lock()
-	c.variables["clicked_button"] = string(serializedCallback)
+	c.variables[WebitelClickedButtonVariableKey] = string(serializedCallback)
 	c.Unlock()
+}
+
+func (c *Connection) Via() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	if v, exists := c.variables[WebitelViaVariableKey]; exists {
+		return v
+	}
+
+	return ""
 }
 
 func (c *Connection) pushMessageToWaitMessageChan(message model.IMEventWrapper) {
@@ -200,7 +231,7 @@ func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
 	}
 
 	c.Lock()
-	c.variables[JWTPayloadVar] = msg.JWTPayload()
+	c.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
 	c.Unlock()
 }
 
@@ -249,25 +280,15 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.pushMessageToWaitMessageChan(msg)
 	c.updateJWTPayloadVariable(msg)
 	c.setDeviceID(msg.DeviceID())
+	c.processViaMetadata(msg.Via())
 
 	log.Debug("processed on message event")
 }
 
-func (c *Connection) From() model.ImEndpoint {
-	return c.from
-}
-
-func (c *Connection) To() model.ImEndpoint {
-	return c.to
-}
-
-func (c *Connection) ThreadId() string {
-	return c.threadId
-}
-
-func (c *Connection) LastMessage() model.Message {
-	return c.lastMsg
-}
+func (c *Connection) From() model.ImEndpoint     { return c.from }
+func (c *Connection) To() model.ImEndpoint       { return c.to }
+func (c *Connection) ThreadId() string           { return c.threadId }
+func (c *Connection) LastMessage() model.Message { return c.lastMsg }
 
 func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 	c.Lock()
@@ -311,6 +332,10 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) HandleGateInfo(ctx context.Context, gateType model.IMGateType, id string) (*model.IMGate, *model.AppError) {
+	return c.srv.gateFactory.Handle(metadata.NewOutgoingContext(ctx, c.hdrs), gateType, id)
 }
 
 func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
@@ -888,9 +913,7 @@ func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
 	return model.ParseText(c, text, ops...)
 }
 
-func (c *Connection) Close() *model.AppError {
-	return nil
-}
+func (c *Connection) Close() *model.AppError { return nil }
 
 func (c *Connection) Variables() map[string]string {
 	c.RLock()

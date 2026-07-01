@@ -11,8 +11,6 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-const JWTPayloadVar string = "jwt"
-
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
@@ -30,19 +28,26 @@ type server struct {
 	log             *wlog.Logger
 	connectionStore *ConnectionStore
 	sessionStore    SessionStore
+	gateFactory     *GateHandlerFactory
 }
 
 func NewServer(id, consulAddr string, receiver <-chan any, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
+	client := NewClient(consulAddr, log, t)
+	fabric := NewGateHandlerFactory(
+		NewFacebookGateHandler(client),
+	)
+
 	return &server{
 		id:              id,
 		receiver:        receiver,
 		consume:         make(chan model.Connection, 100),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
-		client:          NewClient(consulAddr, log, t),
+		client:          client,
 		sessionStore:    store,
 		connectionStore: NewConnectionStore(log),
 		log:             log,
+		gateFactory:     fabric,
 	}
 }
 

@@ -85,6 +85,7 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 const (
 	XJWTPayloadAMQPHeader string = "x-jwt-payload"
 	XDeviceAMQPHeader     string = "x-webitel-device"
+	XWebitelViaAMQPHeader string = "x-webitel-via"
 )
 
 func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *model.MessageWrapper[T]) error {
@@ -106,7 +107,35 @@ func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *
 		wrapper.SetDeviceID(device)
 	}
 
+	via, err := tryExtractViaFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	if via != "" {
+		wrapper.SetVia(via)
+	}
+
 	return nil
+}
+
+func tryExtractViaFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, exists := headers[XWebitelViaAMQPHeader]
+	if !exists {
+		return "", nil
+	}
+
+	var viaStr string
+	switch v := rawHeader.(type) {
+	case string:
+		viaStr = v
+	case []byte:
+		viaStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractViaFromHeader", fmt.Sprintf("invalid via header type: %T", v))
+	}
+
+	return viaStr, nil
 }
 
 func tryExtractDeviceFromHeader(headers amqp.Table) (string, error) {
