@@ -12,9 +12,13 @@ import (
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	t "github.com/webitel/flow_manager/gen/im/service/thread/v1"
 )
 
-const ServiceName = "im-gateway-service"
+const (
+	ServiceNameGateway = "im-gateway-service"
+	ServiceNameThread  = "im-thread-service"
+)
 
 type Client struct {
 	consulAddr     string
@@ -22,6 +26,7 @@ type Client struct {
 	messageService *wbt.Client[p.MessageClient]
 	threadService  *wbt.Client[p.ThreadManagementClient]
 	accountService *wbt.Client[p.AccountClient]
+	th             *wbt.Client[t.ThreadManagementClient]
 
 	log *wlog.Logger
 	ctx context.Context
@@ -40,29 +45,31 @@ func NewClient(consulAddr string, log *wlog.Logger, t *tls.Config) *Client {
 }
 
 func (cm *Client) Start() error {
-	cm.log.Debug("starting " + ServiceName + " client")
+	cm.log.Debug("starting " + ServiceNameGateway + " client")
 
 	var err error
+
 	cm.startOnce.Do(func() {
 		var opts []wbt.Option
+
 		if cm.tls != nil {
+			cm.tls.InsecureSkipVerify = true
 			opts = append(opts, wbt.WithGrpcOptions(
 				grpc.WithTransportCredentials(credentials.NewTLS(cm.tls)),
 			))
 		}
 
-		if cm.messageService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewMessageClient, opts...); err != nil {
-			cm.log.Error("creating IM message service connection", wlog.Err(err))
+		cm.messageService, err = wbt.NewClient(cm.consulAddr, ServiceNameGateway, p.NewMessageClient, opts...)
+		if err != nil {
+			return
+		}
+		cm.threadService, err = wbt.NewClient(cm.consulAddr, ServiceNameGateway, p.NewThreadManagementClient, opts...)
+		if err != nil {
 			return
 		}
 
-		if cm.threadService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewThreadManagementClient, opts...); err != nil {
-			cm.log.Error("creating IM thread service connection", wlog.Err(err))
-			return
-		}
-
-		if cm.accountService, err = wbt.NewClient(cm.consulAddr, ServiceName, p.NewAccountClient, opts...); err != nil {
-			cm.log.Error("creating IM account service connection", wlog.Err(err))
+		cm.th, err = wbt.NewClient(cm.consulAddr, ServiceNameThread, t.NewThreadManagementClient, opts...)
+		if err != nil {
 			return
 		}
 	})
@@ -71,7 +78,7 @@ func (cm *Client) Start() error {
 }
 
 func (cm *Client) Stop() {
-	cm.log.Debug("stopping " + ServiceName + " client")
+	cm.log.Debug("stopping " + ServiceNameGateway + " client")
 	_ = cm.messageService.Close()
 	_ = cm.threadService.Close()
 
