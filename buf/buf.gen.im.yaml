@@ -25,8 +25,3 @@ inputs:
   - git_repo: https://github.com/webitel/protos.git
     branch: main
     subdir: im
-    depth: 1
-    types:
-      - webitel.im.api.gateway.v1.Message
-      - webitel.im.api.gateway.v1.ThreadManagement
-      - webitel.im.api.gateway.v1.Account

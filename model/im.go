@@ -20,7 +20,11 @@ type IMDialog interface {
 	LastMessage() Message
 	SchemaId() int
 	Stop(err error)
+	Complete(id string)
 	IsTransfer() bool
+	TransferredSchema() (int, string)
+	CompleteId() string
+	NewContext() context.Context
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
@@ -92,6 +96,16 @@ type MessageWrapper[T IMEvent] struct {
 	Type       string `json:"-"`
 }
 
+type IMBotControlGrantedEvent struct {
+	ThreadID    string `json:"thread_id"`
+	DomainID    int    `json:"domain_id"`
+	MemberID    string `json:"member_id"`
+	AutoLeave   bool   `json:"auto_leave"`
+	IsResume    bool   `json:"is_resume"`
+	ReleasedSub int    `json:"released_sub"`
+	Sub         int    `json:"sub"`
+}
+
 func (w MessageWrapper[T]) GetID() string                 { return w.ID }
 func (w MessageWrapper[T]) GetUserID() string             { return w.UserID }
 func (w MessageWrapper[T]) GetDomainID() int64            { return w.DomainID }
@@ -105,15 +119,21 @@ func (w *MessageWrapper[T]) SetDeviceID(deviceID string)  { w.deviceID = deviceI
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID          string       `json:"id"`
-	ThreadID    string       `json:"thread_id"`
-	DomainID    int          `json:"domain_id"`
-	From        ImEndpoint   `json:"from"`
-	To          []ImEndpoint `json:"to"`
-	Text        string       `json:"text"`
-	CreatedAt   int64        `json:"created_at"` // Unix timestamp у мілісекундах
-	Subject     string       `json:"subject"`
-	Description string       `json:"description"`
+	ID          string           `json:"id"`
+	ThreadID    string           `json:"thread_id"`
+	DomainID    int              `json:"domain_id"`
+	From        ImEndpoint       `json:"from"`
+	To          []ImEndpoint     `json:"to"`
+	Text        string           `json:"text"`
+	CreatedAt   int64            `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string           `json:"subject"`
+	Description string           `json:"description"`
+	System      *SystemIMMessage `json:"system,omitempty"`
+}
+
+type SystemIMMessage struct {
+	Type string `json:"type,omitempty"`
+	Sub  int    `json:"sub"`
 }
 
 func (m Message) GetThreadID() string     { return m.ThreadID }
@@ -155,3 +175,4 @@ func (c InteractiveCallback) MessageID() string       { return c.InReplyTo }
 func (c InteractiveCallback) Sender() ImEndpoint      { return c.ReactedBy }
 func (c InteractiveCallback) Message() Message        { return Message{Text: c.ButtonCode} }
 func (c InteractiveCallback) Receivers() []ImEndpoint { return []ImEndpoint{c.Receiver} }
+func (c InteractiveCallback) System() any             { return nil }

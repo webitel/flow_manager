@@ -48,7 +48,7 @@ type AMQP struct {
 	stopping           bool
 	callEvent          chan model.CallActionData
 	execEvent          chan model.ChannelExec
-	imEvents           chan model.IMEventWrapper
+	imEvents           chan any
 	ccEvents           chan model.CCQueueEvent
 	queueEvent         mq.QueueEvent
 	sync.RWMutex
@@ -59,7 +59,7 @@ func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 		settings:  &settings,
 		callEvent: make(chan model.CallActionData, CallChanBufferCount),
 		execEvent: make(chan model.ChannelExec, CallChanBufferCount),
-		imEvents:  make(chan model.IMEventWrapper, CallChanBufferCount),
+		imEvents:  make(chan any, CallChanBufferCount),
 		ccEvents:  make(chan model.CCQueueEvent, CallChanBufferCount),
 		nodeName:  nodeName,
 	}
@@ -474,7 +474,7 @@ func (a *AMQP) ConsumeExec() <-chan model.ChannelExec {
 	return a.execEvent
 }
 
-func (a *AMQP) ConsumeIM() <-chan model.IMEventWrapper {
+func (a *AMQP) ConsumeIM() <-chan any {
 	return a.imEvents
 }
 
