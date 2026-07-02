@@ -95,6 +95,7 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			wlog.Int("schema_id", schemaId),
 		),
 	}
+
 	if conn.variables == nil {
 		conn.variables = make(map[string]string)
 	}
@@ -814,7 +815,17 @@ func (c *Connection) Complete(id string) {
 	}
 }
 
+func (c *Connection) Break() {
+	if c.cancelCtx != nil {
+		c.cancelCtx()
+	}
+}
+
 func (c *Connection) Stop(err error) {
+	if c.cancelCtx != nil {
+		c.cancelCtx()
+	}
+
 	c.srv.stopConnection(c)
 }
 

@@ -6,9 +6,12 @@ import (
 )
 
 const (
-	IMEventTypeMessage  string = "message"
-	IMEventTypeCallback string = "callback"
+	IMEventTypeMessage            string = "message"
+	IMEventTypeCallback           string = "callback"
+	IMEventTypeBotControlReleased string = "bot_control_released"
 )
+
+const BotControlReasonClientLeave string = "client_leave"
 
 type IMDialog interface {
 	Connection
@@ -209,3 +212,17 @@ func (c InteractiveCallback) Sender() ImEndpoint      { return c.ReactedBy }
 func (c InteractiveCallback) Message() Message        { return Message{Text: c.ButtonCode} }
 func (c InteractiveCallback) Receivers() []ImEndpoint { return []ImEndpoint{c.Receiver} }
 func (c InteractiveCallback) System() any             { return nil }
+
+type BotControlReleased struct {
+	ThreadID     string `json:"thread_id"`
+	DomainID     int64  `json:"domain_id"`
+	MemberID     string `json:"member_id"`
+	NextMemberID string `json:"next_member_id,omitempty"`
+	Reason       string `json:"reason"`
+}
+
+func (b BotControlReleased) GetThreadID() string     { return b.ThreadID }
+func (b BotControlReleased) MessageID() string       { return "" }
+func (b BotControlReleased) Sender() ImEndpoint      { return ImEndpoint{} }
+func (b BotControlReleased) Receivers() []ImEndpoint { return nil }
+func (b BotControlReleased) Message() Message        { return Message{} }
