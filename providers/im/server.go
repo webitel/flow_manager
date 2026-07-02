@@ -129,18 +129,21 @@ func (s *server) listen() {
 				}
 
 			case model.IMEventWrapper:
+				if m.GetType() == model.IMEventTypeBotControlReleased {
+					s.handleBotControlReleased(m)
+
+					continue
+				}
+
 				if m.GetPayload().GetThreadID() == "" {
 					s.log.Warn("received message with empty thread ID", wlog.String("message_id", m.GetPayload().MessageID()))
+
 					continue
 				}
 
 				if err := s.nodeMessage(m); err != nil {
 					s.log.Error("handling message", wlog.String("message_id", m.GetPayload().MessageID()), wlog.Err(err))
 				}
-
-			case model.IMEventTypeBotControlReleased:
-				s.handleBotControlReleased(c)
-				continue
 			}
 		}
 	}
