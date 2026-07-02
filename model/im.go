@@ -45,20 +45,20 @@ type IMDialog interface {
 }
 
 type ThreadMember struct {
-	Type     string
-	Name     string
-	Iss      string
-	Sub      string
-	MemberId string
-	Role     int
+	Type     string `json:"type"`
+	Name     string `json:"name"`
+	Iss      string `json:"iss"`
+	Sub      string `json:"sub"`
+	MemberId string `json:"member_id"`
+	Role     int    `json:"role"`
 }
 
 type ThreadInfo struct {
-	Subject     string
-	Description string
-	Members     []ThreadMember
-	LastMessage string
-	Variables   map[string]string
+	Subject     string            `json:"subject"`
+	Description string            `json:"description"`
+	Members     []ThreadMember    `json:"members"`
+	LastMessage string            `json:"last_message"`
+	Variables   map[string]string `json:"variables"`
 }
 
 type CCQueueEvent struct {
@@ -125,16 +125,41 @@ func (w MessageWrapper[T]) Via() string                   { return w.via }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID          string           `json:"id"`
-	ThreadID    string           `json:"thread_id"`
-	DomainID    int              `json:"domain_id"`
-	From        ImEndpoint       `json:"from"`
-	To          []ImEndpoint     `json:"to"`
-	Text        string           `json:"text"`
-	CreatedAt   int64            `json:"created_at"` // Unix timestamp у мілісекундах
-	Subject     string           `json:"subject"`
-	Description string           `json:"description"`
-	System      *SystemIMMessage `json:"system,omitempty"`
+	ID          string        `json:"id"`
+	ThreadID    string        `json:"thread_id"`
+	DomainID    int           `json:"domain_id"`
+	From        ImEndpoint    `json:"from"`
+	To          []ImEndpoint  `json:"to"`
+	Text        string        `json:"text"`
+	CreatedAt   int64         `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string        `json:"subject"`
+	Description string        `json:"description"`
+	Type        string        `json:"type"`
+	Contact     *Contact      `json:"contact,omitempty"`
+	Location    *Location     `json:"location,omitempty"`
+	Documents   []MessageFile `json:"documents,omitempty"`
+  System      *SystemIMMessage `json:"system,omitempty"`
+}
+
+type Contact struct {
+	Name  string `json:"name"`
+	Phone string `json:"phone"`
+	Email string `json:"email"`
+}
+
+type Location struct {
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Address   string  `json:"address"`
+	Name      string  `json:"name"`
+}
+
+type MessageFile struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Mime string `json:"mime"`
+	Size int64  `json:"size"`
+	URL  string `json:"url"`
 }
 
 type SystemIMMessage struct {
