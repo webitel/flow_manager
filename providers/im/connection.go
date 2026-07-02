@@ -20,6 +20,7 @@ import (
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	t "github.com/webitel/flow_manager/gen/im/service/thread/v1"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -27,35 +28,44 @@ var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.time
 
 var _ model.IMDialog = (*Connection)(nil)
 
+const (
+	WebitelDeviceIDVariableKey      string = "wbt-device-id"
+	WebitelClickedButtonVariableKey string = "clicked_button"
+	WebitelJwtPayloadVariableKey    string = "jwt"
+	WebitelViaVariableKey           string = "via"
+)
+
 type Connection struct {
 	sync.RWMutex
 
-	id       string
-	threadId string
-	ctx      context.Context
-	domainId int64
-	schemaId int
-	srv      *server
-
-	clientDeviceIDLock *sync.RWMutex
-	clientDeviceID     string
-
-	variables       map[string]string
-	msg             model.Message
-	lastMsg         model.Message
-	from            model.ImEndpoint
-	to              model.ImEndpoint
-	log             *wlog.Logger
-	waitMsgChan     chan model.IMEventWrapper
-	hdrs            metadata.MD
-	queueKey        *model.InQueueKey
-	exportVariables []string
-	messages        []model.IMEventWrapper
-	info            model.ThreadInfo
+	id               string
+	threadId         string
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	domainId         int64
+	schemaId         int
+	srv              *server
+	variables        map[string]string
+	msg              model.Message
+	lastMsg          model.Message
+	from             model.ImEndpoint
+	to               model.ImEndpoint
+	log              *wlog.Logger
+	waitMsgChan      chan model.IMEventWrapper
+	hdrs             metadata.MD
+	queueKey         *model.InQueueKey
+	exportVariables  []string
+	messages         []model.IMEventWrapper
+	info             model.ThreadInfo
+	transferred      bool
+	transferSchemaId int
+	completeId       string
 }
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	conn := &Connection{
 		id:       id,
@@ -68,13 +78,14 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:                msg.GetPayload().Message(),
-		ctx:                context.Background(),
-		domainId:           msg.GetDomainID(),
-		variables:          toVariables(nil), // todo
-		schemaId:           schemaId,
-		RWMutex:            sync.RWMutex{},
-		clientDeviceIDLock: new(sync.RWMutex),
+		completeId: to.MemberID,
+		msg:        msg.GetPayload().Message(),
+		ctx:        ctx,
+		cancelCtx:  cancel,
+		domainId:   msg.GetDomainID(),
+		variables:  toVariables(nil), // todo
+		schemaId:   schemaId,
+		RWMutex:    sync.RWMutex{},
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -89,11 +100,15 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 	}
 
 	if msg.JWTPayload() != "" {
-		conn.variables[JWTPayloadVar] = msg.JWTPayload()
+		conn.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
 	}
 
-	if msg.DeviceID() != "" { //first connection touch
-		conn.clientDeviceID = msg.DeviceID()
+	if msg.DeviceID() != "" {
+		conn.variables[WebitelDeviceIDVariableKey] = msg.DeviceID()
+	}
+
+	if msg.Via() != "" {
+		conn.variables[WebitelViaVariableKey] = msg.Via()
 	}
 
 	return conn
@@ -108,16 +123,20 @@ func (c *Connection) setDeviceID(device string) {
 		return
 	}
 
-	c.clientDeviceIDLock.Lock()
-	c.clientDeviceID = device
-	c.clientDeviceIDLock.Unlock()
+	c.Lock()
+	c.variables[WebitelDeviceIDVariableKey] = device
+	c.Unlock()
 }
 
 func (c *Connection) DeviceID() string {
-	c.clientDeviceIDLock.RLock()
-	defer c.clientDeviceIDLock.RUnlock()
+	c.RLock()
+	defer c.RUnlock()
 
-	return c.clientDeviceID
+	if id, exists := c.variables[WebitelDeviceIDVariableKey]; exists {
+		return id
+	}
+
+	return ""
 }
 
 func (c *Connection) setupVariables() {
@@ -157,6 +176,16 @@ func (c *Connection) processLastMessage(lastMessage model.IMEventWrapper) {
 	c.lastMsg = lastMessage.GetPayload().Message()
 }
 
+func (c *Connection) processViaMetadata(via string) {
+	if via == "" {
+		return
+	}
+
+	c.Lock()
+	c.variables[WebitelViaVariableKey] = via
+	c.Unlock()
+}
+
 func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrapper) {
 	if callback.GetType() != model.IMEventTypeCallback {
 		return
@@ -175,8 +204,19 @@ func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrappe
 	}
 
 	c.Lock()
-	c.variables["clicked_button"] = string(serializedCallback)
+	c.variables[WebitelClickedButtonVariableKey] = string(serializedCallback)
 	c.Unlock()
+}
+
+func (c *Connection) Via() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	if v, exists := c.variables[WebitelViaVariableKey]; exists {
+		return v
+	}
+
+	return ""
 }
 
 func (c *Connection) pushMessageToWaitMessageChan(message model.IMEventWrapper) {
@@ -199,8 +239,33 @@ func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
 	}
 
 	c.Lock()
-	c.variables[JWTPayloadVar] = msg.JWTPayload()
+	c.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
 	c.Unlock()
+}
+
+func (c *Connection) processSystemMessage(msg model.Message) {
+	c.Lock()
+	c.transferred = msg.System.Type == "transferred"
+	if c.transferred {
+		c.log.Debug("transferred")
+		// c.cancelCtx()
+	}
+
+	c.Unlock()
+}
+
+func (c *Connection) onTransfer(m model.IMBotControlGrantedEvent) {
+	c.ResetForTransfer(m.Sub)
+	c.Lock()
+	c.completeId = m.MemberID
+	c.Unlock()
+}
+
+func (c *Connection) CompleteId() string {
+	c.RLock()
+	id := c.completeId
+	c.RUnlock()
+	return id
 }
 
 func (c *Connection) OnMessage(msg model.IMEventWrapper) {
@@ -223,25 +288,15 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.pushMessageToWaitMessageChan(msg)
 	c.updateJWTPayloadVariable(msg)
 	c.setDeviceID(msg.DeviceID())
+	c.processViaMetadata(msg.Via())
 
 	log.Debug("processed on message event")
 }
 
-func (c *Connection) From() model.ImEndpoint {
-	return c.from
-}
-
-func (c *Connection) To() model.ImEndpoint {
-	return c.to
-}
-
-func (c *Connection) ThreadId() string {
-	return c.threadId
-}
-
-func (c *Connection) LastMessage() model.Message {
-	return c.lastMsg
-}
+func (c *Connection) From() model.ImEndpoint     { return c.from }
+func (c *Connection) To() model.ImEndpoint       { return c.to }
+func (c *Connection) ThreadId() string           { return c.threadId }
+func (c *Connection) LastMessage() model.Message { return c.lastMsg }
 
 func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 	c.Lock()
@@ -287,6 +342,10 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 	return model.CallResponseOK, nil
 }
 
+func (c *Connection) HandleGateInfo(ctx context.Context, gateType model.IMGateType, id string) (*model.IMGate, *model.AppError) {
+	return c.srv.gateFactory.Handle(metadata.NewOutgoingContext(ctx, c.hdrs), gateType, id)
+}
+
 func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
 	response, err := c.srv.client.accountService.Api.AccountGetAuthorizations(
 		c.IMOugoingContext(ctx),
@@ -295,7 +354,6 @@ func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model
 			Size:     1,
 		},
 	)
-
 	if err != nil {
 		return model.IMUserInfo{}, model.NewAppError(
 			"GetAuthSession",
@@ -736,11 +794,63 @@ func convertToProtoButtons(src []model.KeyboardButton) []*p.KeyboardButton {
 }
 
 func (c *Connection) IsTransfer() bool {
-	return false
+	c.RLock()
+	v := c.transferred
+	c.RUnlock()
+
+	return v
+}
+
+func (c *Connection) Complete(id string) {
+	println("complete", id)
+	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
+		ThreadId: c.threadId,
+		DomainId: int32(c.domainId),
+		MemberId: id,
+	})
+
+	if e != nil {
+		c.log.Error(e.Error())
+	}
 }
 
 func (c *Connection) Stop(err error) {
 	c.srv.stopConnection(c)
+}
+
+func (c *Connection) TransferredSchema() (int, string) {
+	c.Lock()
+	transferSchemaId := c.transferSchemaId
+	completeId := c.completeId
+	c.transferred = false
+	c.Unlock()
+
+	return transferSchemaId, completeId
+}
+
+func (c *Connection) NewContext() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = false
+	c.Unlock()
+	return ctx
+}
+
+func (c *Connection) ResetForTransfer(schemaId int) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	old := c.cancelCtx
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = true
+	c.transferSchemaId = schemaId
+	c.Unlock()
+
+	old()
+
+	return ctx
 }
 
 func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
@@ -811,9 +921,7 @@ func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
 	return model.ParseText(c, text, ops...)
 }
 
-func (c *Connection) Close() *model.AppError {
-	return nil
-}
+func (c *Connection) Close() *model.AppError { return nil }
 
 func (c *Connection) Variables() map[string]string {
 	c.RLock()

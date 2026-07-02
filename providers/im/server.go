@@ -2,6 +2,7 @@ package im
 
 import (
 	"crypto/tls"
+	"strconv"
 	"sync"
 
 	"github.com/webitel/engine/pkg/discovery"
@@ -9,8 +10,6 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 )
-
-const JWTPayloadVar string = "jwt"
 
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
@@ -20,7 +19,7 @@ type SessionStore interface {
 
 type server struct {
 	id              string
-	receiver        <-chan model.IMEventWrapper
+	receiver        <-chan any
 	consume         chan model.Connection
 	didFinishListen chan struct{}
 	stopped         chan struct{}
@@ -29,19 +28,26 @@ type server struct {
 	log             *wlog.Logger
 	connectionStore *ConnectionStore
 	sessionStore    SessionStore
+	gateFactory     *GateHandlerFactory
 }
 
-func NewServer(id, consulAddr string, receiver <-chan model.IMEventWrapper, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
+func NewServer(id, consulAddr string, receiver <-chan any, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
+	client := NewClient(consulAddr, log, t)
+	fabric := NewGateHandlerFactory(
+		NewFacebookGateHandler(client),
+	)
+
 	return &server{
 		id:              id,
 		receiver:        receiver,
 		consume:         make(chan model.Connection, 100),
 		didFinishListen: make(chan struct{}),
 		stopped:         make(chan struct{}),
-		client:          NewClient(consulAddr, log, t),
+		client:          client,
 		sessionStore:    store,
 		connectionStore: NewConnectionStore(log),
 		log:             log,
+		gateFactory:     fabric,
 	}
 }
 
@@ -112,14 +118,27 @@ func (s *server) listen() {
 				continue //? switch to return or break to skip infinity loop?
 			}
 
-			if c.GetPayload().GetThreadID() == "" {
-				s.log.Warn("received message with empty thread ID", wlog.String("message_id", c.GetPayload().MessageID()))
-				continue
+			switch m := c.(type) {
+			case model.IMBotControlGrantedEvent:
+
+				compositeSessionID := m.ThreadID + "." + strconv.Itoa(m.ReleasedSub) // todo
+
+				if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
+					conn.onTransfer(m)
+					continue
+				}
+
+			case model.IMEventWrapper:
+				if m.GetPayload().GetThreadID() == "" {
+					s.log.Warn("received message with empty thread ID", wlog.String("message_id", m.GetPayload().MessageID()))
+					continue
+				}
+
+				if err := s.nodeMessage(m); err != nil {
+					s.log.Error("handling message", wlog.String("message_id", m.GetPayload().MessageID()), wlog.Err(err))
+				}
 			}
 
-			if err := s.nodeMessage(c); err != nil {
-				s.log.Error("handling message", wlog.String("message_id", c.GetPayload().MessageID()), wlog.Err(err))
-			}
 		}
 	}
 }

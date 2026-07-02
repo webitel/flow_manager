@@ -7,8 +7,6 @@ managed:
     - file_option: go_package
       module: buf.build/googleapis/googleapis
   override:
-    # Forces all generated files into a single Go package,
-    # merging 'internal' and 'shared' protos into one directory.
     - file_option: go_package
       value: github.com/webitel/protos/gen/go/im/thread/v1;thread
 
@@ -25,8 +23,3 @@ inputs:
   - git_repo: https://github.com/webitel/protos.git
     branch: main
     subdir: im
-    depth: 1
-    types:
-      - webitel.im.api.gateway.v1.Message
-      - webitel.im.api.gateway.v1.ThreadManagement
-      - webitel.im.api.gateway.v1.Account

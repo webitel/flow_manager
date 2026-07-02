@@ -37,12 +37,20 @@ func (a *AMQP) subscribeIM() {
 		panic("error during starting consuming IM messages")
 	}
 
+	if err = a.channel.QueueBind(imQueue.Name, "im_thread.*.bot.control.#", "im_message.events", true, nil); err != nil {
+		wlog.Critical("[AMQP] during binding IM queue to message exchange", wlog.String("queue", imQueue.Name), wlog.String("exchange", model.IMExchange), wlog.Err(err))
+		panic("error during binding IM queue to message exchange")
+	}
+
 	for m := range msgs {
-		if m.Exchange != model.IMExchange {
+		if m.Exchange != model.IMExchange && false {
 			wlog.Warn("[AMQP] received message from unexpected exchange", wlog.String("received_exchange", m.Exchange), wlog.String("expected_exchange", model.IMExchange))
 
 			continue
 		}
+
+		println(m.RoutingKey)
+		println(string(m.Body))
 
 		if err := a.processReceivedIMEvent(m); err != nil {
 			wlog.Error("[AMQP] processing received IM event", wlog.String("received_rk", m.RoutingKey), wlog.Err(err))
@@ -67,12 +75,17 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 		return a.handleIMInteractiveCallbackEvent(event)
 	}
 
+	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.granted.v1") {
+		return a.handleIMTransferEvent(event)
+	}
+
 	return nil
 }
 
 const (
 	XJWTPayloadAMQPHeader string = "x-jwt-payload"
 	XDeviceAMQPHeader     string = "x-webitel-device"
+	XWebitelViaAMQPHeader string = "x-webitel-via"
 )
 
 func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *model.MessageWrapper[T]) error {
@@ -94,7 +107,35 @@ func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *
 		wrapper.SetDeviceID(device)
 	}
 
+	via, err := tryExtractViaFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	if via != "" {
+		wrapper.SetVia(via)
+	}
+
 	return nil
+}
+
+func tryExtractViaFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, exists := headers[XWebitelViaAMQPHeader]
+	if !exists {
+		return "", nil
+	}
+
+	var viaStr string
+	switch v := rawHeader.(type) {
+	case string:
+		viaStr = v
+	case []byte:
+		viaStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractViaFromHeader", fmt.Sprintf("invalid via header type: %T", v))
+	}
+
+	return viaStr, nil
 }
 
 func tryExtractDeviceFromHeader(headers amqp.Table) (string, error) {
@@ -169,6 +210,23 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 	}
 
 	a.imEvents <- messageWrapper
+
+	return nil
+}
+
+func (a *AMQP) handleIMTransferEvent(event amqp.Delivery) error {
+	var msg model.IMBotControlGrantedEvent
+	if err := json.Unmarshal(event.Body, &msg); err != nil {
+		return model.NewAppError(
+			"handleIMTransferEvent",
+			"rabbit.client_im.handleIMTransferEvent.unmarshal_event",
+			nil,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+	}
+
+	a.imEvents <- msg
 
 	return nil
 }

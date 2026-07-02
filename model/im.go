@@ -13,6 +13,7 @@ const (
 type IMDialog interface {
 	Connection
 
+	Via() string
 	DeviceID() string
 	ThreadId() string
 	From() ImEndpoint
@@ -20,7 +21,11 @@ type IMDialog interface {
 	LastMessage() Message
 	SchemaId() int
 	Stop(err error)
+	Complete(id string)
 	IsTransfer() bool
+	TransferredSchema() (int, string)
+	CompleteId() string
+	NewContext() context.Context
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
@@ -36,6 +41,7 @@ type IMDialog interface {
 	DumpExportVariables() map[string]string
 	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
 	GetAuthSession(ctx context.Context, deviceID string) (IMUserInfo, *AppError)
+	HandleGateInfo(ctx context.Context, gateType IMGateType, id string) (*IMGate, *AppError)
 }
 
 type ThreadMember struct {
@@ -70,6 +76,7 @@ type IMEventWrapper interface {
 	GetType() string
 	JWTPayload() string
 	DeviceID() string
+	Via() string
 }
 
 type IMEvent interface {
@@ -90,6 +97,17 @@ type MessageWrapper[T IMEvent] struct {
 	jwtPayload string `json:"-"`
 	deviceID   string `json:"-"`
 	Type       string `json:"-"`
+	via        string `json:"-"`
+}
+
+type IMBotControlGrantedEvent struct {
+	ThreadID    string `json:"thread_id"`
+	DomainID    int    `json:"domain_id"`
+	MemberID    string `json:"member_id"`
+	AutoLeave   bool   `json:"auto_leave"`
+	IsResume    bool   `json:"is_resume"`
+	ReleasedSub int    `json:"released_sub"`
+	Sub         int    `json:"sub"`
 }
 
 func (w MessageWrapper[T]) GetID() string                 { return w.ID }
@@ -102,6 +120,8 @@ func (w MessageWrapper[T]) JWTPayload() string            { return w.jwtPayload 
 func (w *MessageWrapper[T]) SetJWTPayload(payload string) { w.jwtPayload = payload }
 func (w MessageWrapper[T]) DeviceID() string              { return w.deviceID }
 func (w *MessageWrapper[T]) SetDeviceID(deviceID string)  { w.deviceID = deviceID }
+func (w *MessageWrapper[T]) SetVia(via string)            { w.via = via }
+func (w MessageWrapper[T]) Via() string                   { return w.via }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
@@ -118,6 +138,7 @@ type Message struct {
 	Contact     *Contact      `json:"contact,omitempty"`
 	Location    *Location     `json:"location,omitempty"`
 	Documents   []MessageFile `json:"documents,omitempty"`
+  System      *SystemIMMessage `json:"system,omitempty"`
 }
 
 type Contact struct {
@@ -139,6 +160,11 @@ type MessageFile struct {
 	Mime string `json:"mime"`
 	Size int64  `json:"size"`
 	URL  string `json:"url"`
+}
+
+type SystemIMMessage struct {
+	Type string `json:"type,omitempty"`
+	Sub  int    `json:"sub"`
 }
 
 func (m Message) GetThreadID() string     { return m.ThreadID }
@@ -164,7 +190,10 @@ type ImEndpoint struct {
 	Role     int    `json:"role"`
 }
 
+func (e *ImEndpoint) GateType() IMGateType { return IMGateTypeFromString(e.Issuer) }
+
 type InteractiveCallback struct {
+	DomainID     int
 	ReactedBy    ImEndpoint `json:"reacted_by"`
 	Receiver     ImEndpoint `json:"receiver"`
 	InReplyTo    string     `json:"in_reply_to"`
@@ -172,7 +201,6 @@ type InteractiveCallback struct {
 	ButtonCode   string     `json:"button_code"`
 	CallbackData string     `json:"callback_data"`
 	ReactedAt    time.Time  `json:"reacted_at"`
-	DomainID     int
 }
 
 func (c InteractiveCallback) GetThreadID() string     { return c.ThreadID }
@@ -180,3 +208,4 @@ func (c InteractiveCallback) MessageID() string       { return c.InReplyTo }
 func (c InteractiveCallback) Sender() ImEndpoint      { return c.ReactedBy }
 func (c InteractiveCallback) Message() Message        { return Message{Text: c.ButtonCode} }
 func (c InteractiveCallback) Receivers() []ImEndpoint { return []ImEndpoint{c.Receiver} }
+func (c InteractiveCallback) System() any             { return nil }
