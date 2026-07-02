@@ -8,11 +8,12 @@ import (
 
 	"github.com/robertkrimen/otto"
 
-	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/model"
 )
 
-const MAX_GOTO = 1000 //32767
+const MAX_GOTO = 1000 // 32767
 
 const (
 	ApplicationFlagBreakEnabled ApplicationFlag = 1 << iota
@@ -167,7 +168,7 @@ type Log struct {
 
 type ApplicationRequest struct {
 	BaseNode
-	args    interface{}
+	args    any
 	Flags   ApplicationFlag
 	Name    string
 	DebugId string
@@ -189,6 +190,12 @@ func (l *Limiter) AddIteration() {
 	l.count++
 }
 
+func (i *Flow) ClearCancel() {
+	i.Lock()
+	defer i.Unlock()
+	i.cancel = false
+}
+
 func (a *ApplicationRequest) IsCancel() bool {
 	return a.Flags&ApplicationFlagBreakEnabled == ApplicationFlagBreakEnabled
 }
@@ -197,7 +204,7 @@ func (a *ApplicationRequest) Id() string {
 	return a.Name
 }
 
-func (a *ApplicationRequest) Args() interface{} {
+func (a *ApplicationRequest) Args() any {
 	return a.args
 }
 
@@ -241,7 +248,6 @@ func (i *Flow) setPreviousRequest() {
 	if len(i.currentNode.children) != 0 {
 		i.prevRequest = i.currentNode.children[pos]
 	}
-
 }
 
 func (i *Flow) getPreviousRequest() *ApplicationRequest {
@@ -377,11 +383,11 @@ func parseReq(m model.ApplicationObject) ApplicationRequest {
 				req.Tag = strconv.Itoa(fieldValue.(int))
 			}
 		case "limit":
-			if lim, ok := fieldValue.(map[string]interface{}); ok && lim != nil {
+			if lim, ok := fieldValue.(map[string]any); ok && lim != nil {
 				req.limiter = newLimiter(lim)
 			}
 		case "trace":
-			if l, ok := fieldValue.(map[string]interface{}); ok && l != nil {
+			if l, ok := fieldValue.(map[string]any); ok && l != nil {
 				req.log = newLog(l)
 			}
 		default:
@@ -389,7 +395,7 @@ func parseReq(m model.ApplicationObject) ApplicationRequest {
 				req.Name = fieldName
 
 				if m, ok := fieldValue.(model.ApplicationObject); ok {
-					tmp := make(map[string]interface{})
+					tmp := make(map[string]any)
 					for argK, argV := range m {
 						tmp[argK] = argV
 					}
@@ -399,18 +405,17 @@ func parseReq(m model.ApplicationObject) ApplicationRequest {
 				}
 			}
 		}
-
 	}
 
 	if req.Name == "" && req.Flags&ApplicationFlagBreakEnabled == ApplicationFlagBreakEnabled {
 		req.Name = "break"
 	}
-	//FIXME
-	//req.setParentNode(root)
+	// FIXME
+	// req.setParentNode(root)
 	return req
 }
 
-func newLimiter(args map[string]interface{}) *Limiter {
+func newLimiter(args map[string]any) *Limiter {
 	max, _ := args["max"].(float64)
 	failover, _ := args["failover"].(string)
 
@@ -425,7 +430,7 @@ func newLimiter(args map[string]interface{}) *Limiter {
 	return nil
 }
 
-func newLog(args map[string]interface{}) *Log {
+func newLog(args map[string]any) *Log {
 	name, _ := args["name"].(string)
 	if name != "" {
 		return &Log{
@@ -436,13 +441,13 @@ func newLog(args map[string]interface{}) *Log {
 	return nil
 }
 
-func ArrInterfaceToArrayApplication(src []interface{}) model.Applications {
+func ArrInterfaceToArrayApplication(src []any) model.Applications {
 	res := make(model.Applications, len(src))
 	var ok bool
-	var tmp map[string]interface{}
+	var tmp map[string]any
 
 	for k, v := range src {
-		if tmp, ok = v.(map[string]interface{}); ok {
+		if tmp, ok = v.(map[string]any); ok {
 			res[k] = tmp
 		}
 	}

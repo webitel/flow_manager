@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	amqp "github.com/rabbitmq/amqp091-go"
-	"github.com/webitel/flow_manager/model"
+
 	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/model"
 )
 
 func (a *AMQP) subscribeIM() {
@@ -35,8 +37,13 @@ func (a *AMQP) subscribeIM() {
 		panic("error during starting consuming IM messages")
 	}
 
+	if err = a.channel.QueueBind(imQueue.Name, "im_thread.*.bot.control.#", "im_message.events", true, nil); err != nil {
+		wlog.Critical("[AMQP] during binding IM queue to message exchange", wlog.String("queue", imQueue.Name), wlog.String("exchange", model.IMExchange), wlog.Err(err))
+		panic("error during binding IM queue to message exchange")
+	}
+
 	for m := range msgs {
-		if m.Exchange != model.IMExchange {
+		if m.Exchange != model.IMExchange && false {
 			wlog.Warn("[AMQP] received message from unexpected exchange", wlog.String("received_exchange", m.Exchange), wlog.String("expected_exchange", model.IMExchange))
 
 			continue
@@ -69,10 +76,87 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 		return a.handleIMBotControlReleasedEvent(event)
 	}
 
+	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.granted.v1") {
+		return a.handleIMTransferEvent(event)
+	}
+
 	return nil
 }
 
-const XJWTPayloadAMQPHeader string = "x-jwt-payload"
+const (
+	XJWTPayloadAMQPHeader string = "x-jwt-payload"
+	XDeviceAMQPHeader     string = "x-webitel-device"
+	XWebitelViaAMQPHeader string = "x-webitel-via"
+)
+
+func EnrichIMEventWithAMQPHeaders[T model.IMEvent](headers amqp.Table, wrapper *model.MessageWrapper[T]) error {
+	jwtPayload, err := tryExtractJWTPayloadFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	device, err := tryExtractDeviceFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	if jwtPayload != "" {
+		wrapper.SetJWTPayload(jwtPayload)
+	}
+
+	if device != "" {
+		wrapper.SetDeviceID(device)
+	}
+
+	via, err := tryExtractViaFromHeader(headers)
+	if err != nil {
+		return err
+	}
+
+	if via != "" {
+		wrapper.SetVia(via)
+	}
+
+	return nil
+}
+
+func tryExtractViaFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, exists := headers[XWebitelViaAMQPHeader]
+	if !exists {
+		return "", nil
+	}
+
+	var viaStr string
+	switch v := rawHeader.(type) {
+	case string:
+		viaStr = v
+	case []byte:
+		viaStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractViaFromHeader", fmt.Sprintf("invalid via header type: %T", v))
+	}
+
+	return viaStr, nil
+}
+
+func tryExtractDeviceFromHeader(headers amqp.Table) (string, error) {
+	rawHeader, ok := headers[XDeviceAMQPHeader]
+	if !ok {
+		return "", nil
+	}
+
+	var deviceStr string
+	switch v := rawHeader.(type) {
+	case string:
+		deviceStr = v
+	case []byte:
+		deviceStr = string(v)
+	default:
+		return "", model.NewRequestError("tryExtractDeviceFromHeader", fmt.Sprintf("invalid device header type: %T", v))
+	}
+
+	return deviceStr, nil
+}
 
 func tryExtractJWTPayloadFromHeader(headers amqp.Table) (string, error) {
 	rawHeader, ok := headers[XJWTPayloadAMQPHeader]
@@ -114,24 +198,36 @@ func (a *AMQP) handleIMMessageEvent(event amqp.Delivery) error {
 		)
 	}
 
+	messageWrapper.Type = model.IMEventTypeMessage
+
 	if messageWrapper.Echo {
 		wlog.Info("skipping echo IM event", wlog.String("thread_id", messageWrapper.Message.ThreadID), wlog.String("message_id", messageWrapper.Message.ID))
 
 		return nil
 	}
 
-	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
-	if err != nil {
-		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
+	if err := EnrichIMEventWithAMQPHeaders(event.Headers, &messageWrapper); err != nil {
+		wlog.Error("enriching interactive callback event with headers metadata", wlog.Err(err))
 	}
-
-	if jwtPayload != "" {
-		messageWrapper.SetJWTPayload(jwtPayload)
-	}
-
-	messageWrapper.Type = model.IMEventTypeMessage
 
 	a.imEvents <- messageWrapper
+
+	return nil
+}
+
+func (a *AMQP) handleIMTransferEvent(event amqp.Delivery) error {
+	var msg model.IMBotControlGrantedEvent
+	if err := json.Unmarshal(event.Body, &msg); err != nil {
+		return model.NewAppError(
+			"handleIMTransferEvent",
+			"rabbit.client_im.handleIMTransferEvent.unmarshal_event",
+			nil,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+	}
+
+	a.imEvents <- msg
 
 	return nil
 }
@@ -148,16 +244,11 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 		)
 	}
 
-	jwtPayload, err := tryExtractJWTPayloadFromHeader(event.Headers)
-	if err != nil {
-		wlog.Error("extracting jwt payload from event headers", wlog.Err(err))
-	}
-
-	if jwtPayload != "" {
-		interactiveCallbackWrapper.SetJWTPayload(jwtPayload)
-	}
-
 	interactiveCallbackWrapper.Type = model.IMEventTypeCallback
+
+	if err := EnrichIMEventWithAMQPHeaders(event.Headers, &interactiveCallbackWrapper); err != nil {
+		wlog.Error("enriching interactive callback event with headers metadata", wlog.Err(err))
+	}
 
 	a.imEvents <- interactiveCallbackWrapper
 

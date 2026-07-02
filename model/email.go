@@ -58,6 +58,44 @@ type Email struct {
 	Cid         map[string]EmailCid
 }
 
+const MailDirectionInbound string = "inbound"
+
+func (e *Email) AddAttachment(attachment File) *Email {
+	if e == nil {
+		return nil
+	}
+
+	e.Attachments = append(e.Attachments, attachment)
+
+	return e
+}
+
+func (e *Email) SetBody(text, html []byte) *Email {
+	if e == nil {
+		return nil
+	}
+
+	if text != nil {
+		e.Body = text
+	} else {
+		e.Body = html
+	}
+
+	return e
+}
+
+func (e *Email) SetHTMLBody(html []byte) *Email {
+	if e == nil {
+		return nil
+	}
+
+	e.HtmlBody = html
+
+	return e
+}
+
+func (e *Email) AddCID(cid string, fileID int) { e.Cid[cid] = EmailCid(fileID) }
+
 type EmailAction struct {
 	FlowId    int   `json:"flow_id"`
 	AttemptId int64 `json:"attempt_id"`
@@ -118,7 +156,7 @@ func (p *EmailProfile) Tls() bool {
 }
 
 func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
-	if strings.Index(host, MailGmail+".com") > -1 {
+	if strings.Contains(host, MailGmail+".com") {
 		return oauth2.Config{
 			ClientID:     config.ClientId,
 			ClientSecret: config.ClientSecret,
@@ -131,7 +169,7 @@ func OAuthConfig(host string, config *OAuth2Config) oauth2.Config {
 				"https://mail.google.com/",
 			},
 		}
-	} else if strings.Index(host, "office365") > -1 && config != nil {
+	} else if strings.Contains(host, "office365") && config != nil {
 		return oauth2.Config{
 			ClientID:     config.ClientId,
 			ClientSecret: config.ClientSecret,

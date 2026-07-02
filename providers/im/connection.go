@@ -1,6 +1,7 @@
 package im
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,6 +20,7 @@ import (
 	"github.com/webitel/wlog"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	t "github.com/webitel/flow_manager/gen/im/service/thread/v1"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -26,32 +28,44 @@ var ErrWaitMessageTimeout = model.NewAppError("Dialog.WaitMessage", "dialog.time
 
 var _ model.IMDialog = (*Connection)(nil)
 
+const (
+	WebitelDeviceIDVariableKey      string = "wbt-device-id"
+	WebitelClickedButtonVariableKey string = "clicked_button"
+	WebitelJwtPayloadVariableKey    string = "jwt"
+	WebitelViaVariableKey           string = "via"
+)
+
 type Connection struct {
 	sync.RWMutex
 
-	id              string
-	threadId        string
-	ctx             context.Context
-	cancel          context.CancelFunc
-	domainId        int64
-	schemaId        int
-	srv             *server
-	variables       map[string]string
-	msg             model.Message
-	lastMsg         model.Message
-	from            model.ImEndpoint
-	to              model.ImEndpoint
-	log             *wlog.Logger
-	waitMsgChan     chan model.IMEventWrapper
-	hdrs            metadata.MD
-	queueKey        *model.InQueueKey
-	exportVariables []string
-	messages        []model.IMEventWrapper
-	info            model.ThreadInfo
+	id               string
+	threadId         string
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	domainId         int64
+	schemaId         int
+	srv              *server
+	variables        map[string]string
+	msg              model.Message
+	lastMsg          model.Message
+	from             model.ImEndpoint
+	to               model.ImEndpoint
+	log              *wlog.Logger
+	waitMsgChan      chan model.IMEventWrapper
+	hdrs             metadata.MD
+	queueKey         *model.InQueueKey
+	exportVariables  []string
+	messages         []model.IMEventWrapper
+	info             model.ThreadInfo
+	transferred      bool
+	transferSchemaId int
+	completeId       string
 }
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	conn := &Connection{
 		id:       id,
@@ -64,11 +78,14 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		msg:       msg.GetPayload().Message(),
-		domainId:  msg.GetDomainID(),
-		variables: toVariables(nil), // todo
-		schemaId:  schemaId,
-		RWMutex:   sync.RWMutex{},
+		completeId: to.MemberID,
+		msg:        msg.GetPayload().Message(),
+		ctx:        ctx,
+		cancelCtx:  cancel,
+		domainId:   msg.GetDomainID(),
+		variables:  toVariables(nil), // todo
+		schemaId:   schemaId,
+		RWMutex:    sync.RWMutex{},
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -79,18 +96,48 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		),
 	}
 
-	// Cancelable context so the running schema can be torn down externally
-	conn.ctx, conn.cancel = context.WithCancel(context.Background())
-
 	if conn.variables == nil {
 		conn.variables = make(map[string]string)
 	}
 
 	if msg.JWTPayload() != "" {
-		conn.variables[JWTPayloadVar] = msg.JWTPayload()
+		conn.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
+	}
+
+	if msg.DeviceID() != "" {
+		conn.variables[WebitelDeviceIDVariableKey] = msg.DeviceID()
+	}
+
+	if msg.Via() != "" {
+		conn.variables[WebitelViaVariableKey] = msg.Via()
 	}
 
 	return conn
+}
+
+func (c *Connection) IMOugoingContext(ctx context.Context) context.Context {
+	return metadata.NewOutgoingContext(ctx, c.hdrs)
+}
+
+func (c *Connection) setDeviceID(device string) {
+	if device == "" {
+		return
+	}
+
+	c.Lock()
+	c.variables[WebitelDeviceIDVariableKey] = device
+	c.Unlock()
+}
+
+func (c *Connection) DeviceID() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	if id, exists := c.variables[WebitelDeviceIDVariableKey]; exists {
+		return id
+	}
+
+	return ""
 }
 
 func (c *Connection) setupVariables() {
@@ -122,6 +169,16 @@ func (c *Connection) processLastMessage(lastMessage model.IMEventWrapper) {
 	c.lastMsg = lastMessage.GetPayload().Message()
 }
 
+func (c *Connection) processViaMetadata(via string) {
+	if via == "" {
+		return
+	}
+
+	c.Lock()
+	c.variables[WebitelViaVariableKey] = via
+	c.Unlock()
+}
+
 func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrapper) {
 	if callback.GetType() != model.IMEventTypeCallback {
 		return
@@ -140,8 +197,19 @@ func (c *Connection) processLastInteractiveCallback(callback model.IMEventWrappe
 	}
 
 	c.Lock()
-	c.variables["clicked_button"] = string(serializedCallback)
+	c.variables[WebitelClickedButtonVariableKey] = string(serializedCallback)
 	c.Unlock()
+}
+
+func (c *Connection) Via() string {
+	c.RLock()
+	defer c.RUnlock()
+
+	if v, exists := c.variables[WebitelViaVariableKey]; exists {
+		return v
+	}
+
+	return ""
 }
 
 func (c *Connection) pushMessageToWaitMessageChan(message model.IMEventWrapper) {
@@ -164,8 +232,33 @@ func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
 	}
 
 	c.Lock()
-	c.variables[JWTPayloadVar] = msg.JWTPayload()
+	c.variables[WebitelJwtPayloadVariableKey] = msg.JWTPayload()
 	c.Unlock()
+}
+
+func (c *Connection) processSystemMessage(msg model.Message) {
+	c.Lock()
+	c.transferred = msg.System.Type == "transferred"
+	if c.transferred {
+		c.log.Debug("transferred")
+		// c.cancelCtx()
+	}
+
+	c.Unlock()
+}
+
+func (c *Connection) onTransfer(m model.IMBotControlGrantedEvent) {
+	c.ResetForTransfer(m.Sub)
+	c.Lock()
+	c.completeId = m.MemberID
+	c.Unlock()
+}
+
+func (c *Connection) CompleteId() string {
+	c.RLock()
+	id := c.completeId
+	c.RUnlock()
+	return id
 }
 
 func (c *Connection) OnMessage(msg model.IMEventWrapper) {
@@ -187,25 +280,16 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processLastInteractiveCallback(msg)
 	c.pushMessageToWaitMessageChan(msg)
 	c.updateJWTPayloadVariable(msg)
+	c.setDeviceID(msg.DeviceID())
+	c.processViaMetadata(msg.Via())
 
 	log.Debug("processed on message event")
 }
 
-func (c *Connection) From() model.ImEndpoint {
-	return c.from
-}
-
-func (c *Connection) To() model.ImEndpoint {
-	return c.to
-}
-
-func (c *Connection) ThreadId() string {
-	return c.threadId
-}
-
-func (c *Connection) LastMessage() model.Message {
-	return c.lastMsg
-}
+func (c *Connection) From() model.ImEndpoint     { return c.from }
+func (c *Connection) To() model.ImEndpoint       { return c.to }
+func (c *Connection) ThreadId() string           { return c.threadId }
+func (c *Connection) LastMessage() model.Message { return c.lastMsg }
 
 func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 	c.Lock()
@@ -220,18 +304,19 @@ func (c *Connection) setStateWaitMessage(ch chan model.IMEventWrapper) error {
 }
 
 func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var docs []*p.ImageInput
+	var docs []*p.DocumentInput
 
 	if msg.File != nil {
 		f := msg.File
-		docs = append(docs, &p.ImageInput{
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
+		docs = append(docs, &p.DocumentInput{
+			FileName:  f.Name,
+			Url:       f.Url,
+			MimeType:  f.MimeType,
+			SizeBytes: &f.Size,
 		})
 	}
 
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
+	_, err := c.srv.client.messageService.Api.SendDocument(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendDocumentRequest{
 		To: &p.Peer{
 			Kind: &p.Peer_Contact{
 				Contact: &p.PeerIdentity{
@@ -240,14 +325,69 @@ func (c *Connection) SendMessage(ctx context.Context, msg model.ChatMessageOutbo
 				},
 			},
 		},
-		Images: docs,
-		Body:   msg.Text,
+		Documents: docs,
+		Body:      msg.Text,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("SendMessage", "conv.msg", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
 	}
 
 	return model.CallResponseOK, nil
+}
+
+func (c *Connection) HandleGateInfo(ctx context.Context, gateType model.IMGateType, id string) (*model.IMGate, *model.AppError) {
+	return c.srv.gateFactory.Handle(metadata.NewOutgoingContext(ctx, c.hdrs), gateType, id)
+}
+
+func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
+	response, err := c.srv.client.accountService.Api.AccountGetAuthorizations(
+		c.IMOugoingContext(ctx),
+		&p.AccountGetAuthorizationsRequest{
+			DeviceId: deviceID,
+			Size:     1,
+		},
+	)
+	if err != nil {
+		return model.IMUserInfo{}, model.NewAppError(
+			"GetAuthSession",
+			"providers.im.connection",
+			nil,
+			err.Error(),
+			model.ExtractHTPPStatusCodeFromGRPC(err),
+		)
+	}
+
+	if len(response.Items) == 0 {
+		return model.IMUserInfo{}, model.ErrAuthSesionNotFound
+	}
+
+	responsedUserInfo := response.GetItems()[0]
+
+	userInfo := model.IMUserInfo{
+		Session: model.IMUserSession{
+			Date:          responsedUserInfo.GetDate(),
+			Name:          responsedUserInfo.GetName(),
+			ApplicationID: responsedUserInfo.GetAppId(),
+			Current:       responsedUserInfo.GetCurrent(),
+			Device: model.IMUserDevice{
+				IP:   responsedUserInfo.GetDevice().GetIp(),
+				Push: responsedUserInfo.GetDevice().GetPush(),
+				App: model.IMUserAgent{
+					Name:    responsedUserInfo.GetDevice().GetApp().GetName(),
+					Version: responsedUserInfo.GetDevice().GetApp().GetVersion(),
+					OS:      responsedUserInfo.GetDevice().GetApp().GetOsVersion(),
+					Device:  responsedUserInfo.GetDevice().GetApp().GetDevice(),
+					Mobile:  responsedUserInfo.GetDevice().GetApp().GetMobile(),
+					Tablet:  responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Desktop: responsedUserInfo.GetDevice().GetApp().GetTablet(),
+					Bot:     responsedUserInfo.GetDevice().GetApp().GetBot(),
+					String:  responsedUserInfo.GetDevice().GetApp().GetString_(),
+				},
+			},
+		},
+	}
+
+	return userInfo, nil
 }
 
 func (c *Connection) SendTextMessage(ctx context.Context, text string) (model.Response, *model.AppError) {
@@ -293,31 +433,6 @@ func (c *Connection) SendSystemMessage(ctx context.Context, msg model.SystemMess
 		return model.CallResponseError, model.NewAppError("SendSystemMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
 	}
 
-	return model.CallResponseOK, nil
-}
-
-func (c *Connection) SendImageMessage(ctx context.Context, msg model.ChatMessageOutbound) (model.Response, *model.AppError) {
-	var images []*p.ImageInput
-	if msg.File != nil {
-		f := msg.File
-		images = append(images, &p.ImageInput{
-			Id:       string(f.Id),
-			Name:     f.Name,
-			Link:     f.Url,
-			MimeType: f.MimeType,
-		})
-	}
-	_, err := c.srv.client.messageService.Api.SendImage(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendImageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
-			Sub: c.msg.From.Sub,
-			Iss: c.msg.From.Issuer,
-		}}},
-		Images: images,
-		Body:   msg.Text,
-	})
-	if err != nil {
-		return model.CallResponseError, model.NewAppError("SendImageMessage", "conv.msg", nil, err.Error(), http.StatusInternalServerError)
-	}
 	return model.CallResponseOK, nil
 }
 
@@ -371,48 +486,71 @@ func (c *Connection) SendFile(ctx context.Context, text string, f *model.File, k
 }
 
 func (c *Connection) SendMenu(ctx context.Context, menu *model.ChatMenuArgs) (model.Response, *model.AppError) {
-	rows := buildKeyboardRows(menu.Buttons)
-	if menu.Type == "inline" {
-		rows = buildKeyboardRows(menu.Inline)
-	}
-
-	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), &p.SendInteractiveMessageRequest{
-		To: &p.Peer{Kind: &p.Peer_Contact{Contact: &p.PeerIdentity{
+	peer := &p.Peer_Contact{
+		Contact: &p.PeerIdentity{
 			Sub: c.msg.From.Sub,
 			Iss: c.msg.From.Issuer,
-		}}},
+		},
+	}
+
+	src, inline := menu.Buttons, false
+	if len(src) == 0 && len(menu.Inline) > 0 {
+		src, inline = menu.Inline, true
+	}
+
+	req := &p.SendInteractiveMessageRequest{
+		To: &p.Peer{
+			Kind: peer,
+		},
 		Body: &menu.Text,
 		Interactive: &p.Interactive{
+			SingleUse: menu.NoInput, // force to block user keyboard
 			Kind: &p.Interactive_Markup{
-				Markup: &p.KeyboardMarkup{Rows: rows},
+				Markup: &p.KeyboardMarkup{Rows: buildKeyboardRows(src, inline)},
 			},
 		},
-	})
+	}
+
+	_, err := c.srv.client.messageService.Api.SendInteractive(metadata.NewOutgoingContext(ctx, c.hdrs), req)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("Connection.SendMenu", "conv.send.menu.app_err", nil, err.Error(), http.StatusInternalServerError)
 	}
+
 	return model.CallResponseOK, nil
 }
 
-func buildKeyboardRows(src [][]model.ChatButton) []*p.KeyboardRow {
+func buildKeyboardRows(src [][]model.ChatButton, inline bool) []*p.KeyboardRow {
 	rows := make([]*p.KeyboardRow, 0, len(src))
 	for _, row := range src {
 		buttons := make([]*p.KeyboardButton, 0, len(row))
 		for _, btn := range row {
-			kb := &p.KeyboardButton{Label: btn.Caption}
-			switch {
-			case btn.Type == "url":
-				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
-			case btn.Code != "":
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Code}}
-			default:
-				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: btn.Text}}
+			match := cmp.Or(btn.Text, btn.Code, btn.Caption)
+			if inline {
+				match = cmp.Or(btn.Code, btn.Text)
 			}
-			kb.Id = btn.Code
+
+			kb := &p.KeyboardButton{
+				Id:    match,
+				Label: cmp.Or(btn.Caption, btn.Text),
+			}
+
+			switch btn.Type {
+			case "url":
+				kb.Kind = &p.KeyboardButton_Url{Url: &p.KeyboardButtonURL{Url: btn.Url}}
+
+			case "contact", "email", "location":
+				kb.Kind = &p.KeyboardButton_Request{Request: &p.KeyboardButtonRequest{Action: btn.Type}}
+
+			default:
+				kb.Kind = &p.KeyboardButton_Callback{Callback: &p.KeyboardButtonCallback{Data: match}}
+			}
+
 			buttons = append(buttons, kb)
 		}
+
 		rows = append(rows, &p.KeyboardRow{Buttons: buttons})
 	}
+
 	return rows
 }
 
@@ -649,21 +787,73 @@ func convertToProtoButtons(src []model.KeyboardButton) []*p.KeyboardButton {
 }
 
 func (c *Connection) IsTransfer() bool {
-	return false
+	c.RLock()
+	v := c.transferred
+	c.RUnlock()
+
+	return v
+}
+
+func (c *Connection) Complete(id string) {
+	println("complete", id)
+	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
+		ThreadId: c.threadId,
+		DomainId: int32(c.domainId),
+		MemberId: id,
+	})
+
+	if e != nil {
+		c.log.Error(e.Error())
+	}
 }
 
 func (c *Connection) Break() {
-	if c.cancel != nil {
-		c.cancel()
+	if c.cancelCtx != nil {
+		c.cancelCtx()
 	}
 }
 
 func (c *Connection) Stop(err error) {
-	if c.cancel != nil {
-		c.cancel()
+	if c.cancelCtx != nil {
+		c.cancelCtx()
 	}
 
 	c.srv.stopConnection(c)
+}
+
+func (c *Connection) TransferredSchema() (int, string) {
+	c.Lock()
+	transferSchemaId := c.transferSchemaId
+	completeId := c.completeId
+	c.transferred = false
+	c.Unlock()
+
+	return transferSchemaId, completeId
+}
+
+func (c *Connection) NewContext() context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = false
+	c.Unlock()
+	return ctx
+}
+
+func (c *Connection) ResetForTransfer(schemaId int) context.Context {
+	ctx, cancel := context.WithCancel(context.Background())
+	old := c.cancelCtx
+	c.Lock()
+	c.ctx = ctx
+	c.cancelCtx = cancel
+	c.transferred = true
+	c.transferSchemaId = schemaId
+	c.Unlock()
+
+	old()
+
+	return ctx
 }
 
 func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
@@ -734,9 +924,7 @@ func (c *Connection) ParseText(text string, ops ...model.ParseOption) string {
 	return model.ParseText(c, text, ops...)
 }
 
-func (c *Connection) Close() *model.AppError {
-	return nil
-}
+func (c *Connection) Close() *model.AppError { return nil }
 
 func (c *Connection) Variables() map[string]string {
 	c.RLock()
