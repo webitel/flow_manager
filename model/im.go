@@ -114,7 +114,6 @@ type Message struct {
 	CreatedAt   int64         `json:"created_at"` // Unix timestamp у мілісекундах
 	Subject     string        `json:"subject"`
 	Description string        `json:"description"`
-	Kind        string        `json:"kind"`
 	Type        string        `json:"type"`
 	Contact     *Contact      `json:"contact,omitempty"`
 	Location    *Location     `json:"location,omitempty"`
