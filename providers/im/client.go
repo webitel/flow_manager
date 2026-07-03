@@ -69,6 +69,12 @@ func (cm *Client) Start() error {
 			return
 		}
 
+		if cm.accountService, err = wbt.NewClient(cm.consulAddr, ServiceNameGateway, p.NewAccountClient, opts...); err != nil {
+			cm.log.Error("creating IM account service connection", wlog.Err(err))
+
+			return
+		}
+
 		cm.th, err = wbt.NewClient(cm.consulAddr, ServiceNameThread, t.NewThreadManagementClient, opts...)
 		if err != nil {
 			return
