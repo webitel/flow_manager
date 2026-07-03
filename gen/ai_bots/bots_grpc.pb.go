@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion7
 const (
 	BotsService_Gemini_FullMethodName           = "/ai_bots.BotsService/Gemini"
 	BotsService_OpenAI_FullMethodName           = "/ai_bots.BotsService/OpenAI"
+	BotsService_Pipeline_FullMethodName         = "/ai_bots.BotsService/Pipeline"
 	BotsService_STT_FullMethodName              = "/ai_bots.BotsService/STT"
 	BotsService_STTUpdateSession_FullMethodName = "/ai_bots.BotsService/STTUpdateSession"
 )
@@ -31,6 +32,10 @@ const (
 type BotsServiceClient interface {
 	Gemini(ctx context.Context, in *GeminiRequest, opts ...grpc.CallOption) (*GeminiResponse, error)
 	OpenAI(ctx context.Context, in *OpenAIRequest, opts ...grpc.CallOption) (*OpenAIResponse, error)
+	// Pipeline prepares a composable STT+LLM+TTS session. After Prepare,
+	// the caller uses the existing ConverseService.Converse stream with the
+	// returned dialog_id to pump audio.
+	Pipeline(ctx context.Context, in *PipelineRequest, opts ...grpc.CallOption) (*PipelineResponse, error)
 	STT(ctx context.Context, in *STTRequest, opts ...grpc.CallOption) (*STTResponse, error)
 	STTUpdateSession(ctx context.Context, in *STTUpdateSessionRequest, opts ...grpc.CallOption) (*STTUpdateSessionResponse, error)
 }
@@ -61,6 +66,15 @@ func (c *botsServiceClient) OpenAI(ctx context.Context, in *OpenAIRequest, opts 
 	return out, nil
 }
 
+func (c *botsServiceClient) Pipeline(ctx context.Context, in *PipelineRequest, opts ...grpc.CallOption) (*PipelineResponse, error) {
+	out := new(PipelineResponse)
+	err := c.cc.Invoke(ctx, BotsService_Pipeline_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *botsServiceClient) STT(ctx context.Context, in *STTRequest, opts ...grpc.CallOption) (*STTResponse, error) {
 	out := new(STTResponse)
 	err := c.cc.Invoke(ctx, BotsService_STT_FullMethodName, in, out, opts...)
@@ -85,6 +99,10 @@ func (c *botsServiceClient) STTUpdateSession(ctx context.Context, in *STTUpdateS
 type BotsServiceServer interface {
 	Gemini(context.Context, *GeminiRequest) (*GeminiResponse, error)
 	OpenAI(context.Context, *OpenAIRequest) (*OpenAIResponse, error)
+	// Pipeline prepares a composable STT+LLM+TTS session. After Prepare,
+	// the caller uses the existing ConverseService.Converse stream with the
+	// returned dialog_id to pump audio.
+	Pipeline(context.Context, *PipelineRequest) (*PipelineResponse, error)
 	STT(context.Context, *STTRequest) (*STTResponse, error)
 	STTUpdateSession(context.Context, *STTUpdateSessionRequest) (*STTUpdateSessionResponse, error)
 	mustEmbedUnimplementedBotsServiceServer()
@@ -99,6 +117,9 @@ func (UnimplementedBotsServiceServer) Gemini(context.Context, *GeminiRequest) (*
 }
 func (UnimplementedBotsServiceServer) OpenAI(context.Context, *OpenAIRequest) (*OpenAIResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method OpenAI not implemented")
+}
+func (UnimplementedBotsServiceServer) Pipeline(context.Context, *PipelineRequest) (*PipelineResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Pipeline not implemented")
 }
 func (UnimplementedBotsServiceServer) STT(context.Context, *STTRequest) (*STTResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method STT not implemented")
@@ -155,6 +176,24 @@ func _BotsService_OpenAI_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BotsService_Pipeline_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PipelineRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BotsServiceServer).Pipeline(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BotsService_Pipeline_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BotsServiceServer).Pipeline(ctx, req.(*PipelineRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _BotsService_STT_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(STTRequest)
 	if err := dec(in); err != nil {
@@ -205,6 +244,10 @@ var BotsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "OpenAI",
 			Handler:    _BotsService_OpenAI_Handler,
+		},
+		{
+			MethodName: "Pipeline",
+			Handler:    _BotsService_Pipeline_Handler,
 		},
 		{
 			MethodName: "STT",
