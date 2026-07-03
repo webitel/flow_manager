@@ -129,8 +129,15 @@ func (s *server) listen() {
 				}
 
 			case model.IMEventWrapper:
+				if m.GetType() == model.IMEventTypeBotControlReleased {
+					s.handleBotControlReleased(m)
+
+					continue
+				}
+
 				if m.GetPayload().GetThreadID() == "" {
 					s.log.Warn("received message with empty thread ID", wlog.String("message_id", m.GetPayload().MessageID()))
+
 					continue
 				}
 
@@ -138,9 +145,29 @@ func (s *server) listen() {
 					s.log.Error("handling message", wlog.String("message_id", m.GetPayload().MessageID()), wlog.Err(err))
 				}
 			}
-
 		}
 	}
+}
+
+func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
+	released, ok := msg.GetPayload().(model.BotControlReleased)
+	if !ok {
+		s.log.Warn("bot control released: unexpected payload type")
+
+		return
+	}
+
+	if released.Reason != model.BotControlReasonClientLeave {
+		return
+	}
+
+	threadID := released.GetThreadID()
+	broken := s.connectionStore.BreakByThread(threadID)
+
+	s.log.Debug("bot control released: stopped running schema",
+		wlog.String("thread_id", threadID),
+		wlog.Int("connections", broken),
+	)
 }
 
 func (s *server) stopConnection(c *Connection) {

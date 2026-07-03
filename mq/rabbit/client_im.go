@@ -49,9 +49,6 @@ func (a *AMQP) subscribeIM() {
 			continue
 		}
 
-		println(m.RoutingKey)
-		println(string(m.Body))
-
 		if err := a.processReceivedIMEvent(m); err != nil {
 			wlog.Error("[AMQP] processing received IM event", wlog.String("received_rk", m.RoutingKey), wlog.Err(err))
 		}
@@ -73,6 +70,10 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 
 	if strings.HasPrefix(rk, "im_delivery.v1.") && strings.HasSuffix(rk, ".interactive_callback.reacted") {
 		return a.handleIMInteractiveCallbackEvent(event)
+	}
+
+	if strings.HasPrefix(rk, "im_delivery.v1.") && strings.HasSuffix(rk, ".bot.control.released") {
+		return a.handleIMBotControlReleasedEvent(event)
 	}
 
 	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.granted.v1") {
@@ -250,6 +251,25 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 	}
 
 	a.imEvents <- interactiveCallbackWrapper
+
+	return nil
+}
+
+func (a *AMQP) handleIMBotControlReleasedEvent(event amqp.Delivery) error {
+	var wrapper model.MessageWrapper[model.BotControlReleased]
+	if err := json.Unmarshal(event.Body, &wrapper); err != nil {
+		return model.NewAppError(
+			"handleIMBotControlReleasedEvent",
+			"rabbit.client_im.handle_im_bot_control_released_event.unmarshal_event",
+			nil,
+			err.Error(),
+			http.StatusBadRequest,
+		)
+	}
+
+	wrapper.Type = model.IMEventTypeBotControlReleased
+
+	a.imEvents <- wrapper
 
 	return nil
 }
