@@ -2,6 +2,7 @@ package email
 
 import (
 	"bytes"
+	"cmp"
 	"context"
 	"crypto/tls"
 	"errors"
@@ -493,35 +494,45 @@ func (p *Profile) inlineHeaderHandler(ctx context.Context, inlineHeader *mail.In
 		return nil, nil, err
 	}
 
-	contentType := inlineHeader.Get("Content-Type")
+	contentType, contentTypeParams, err := inlineHeader.ContentType()
+	if err != nil {
+		contentTypeParams = make(map[string]string)
+		p.log.Error("retriving content type from inline header", wlog.String("message_id", receivedMail.MessageId), wlog.Any("from", receivedMail.From))
+	}
 
-	var text, html []byte
 	if strings.HasPrefix(contentType, "text/html") {
-		html = b
+		return nil, b, nil
 	} else if strings.HasPrefix(contentType, "text/") {
-		text = append(text, b...)
+		return b, nil, nil
 	}
 
-	cid := strings.Trim(inlineHeader.Get("Content-ID"), "<>")
-
-	if cid == "" {
-		return text, html, nil
+	_, dispositionParams, err := inlineHeader.ContentDisposition()
+	if err != nil {
+		dispositionParams = make(map[string]string)
+		p.log.Error("retriving content disposition from inline header", wlog.String("message_id", receivedMail.MessageId), wlog.Any("from", receivedMail.From))
 	}
+
+	fileName := cmp.Or(dispositionParams["filename"], contentTypeParams["name"], "unnamed_inline_file")
 
 	file, err := p.server.storage.Upload(
 		ctx,
 		p.DomainId,
 		receivedMail.MessageId,
 		bytes.NewReader(b),
-		model.File{Name: cid, MimeType: contentType, Channel: model.FileChannelMail},
+		model.File{Name: fileName, MimeType: contentType, Channel: model.FileChannelMail},
 	)
+
 	if err != nil {
 		return nil, nil, err
 	}
 
-	receivedMail.AddCID(cid, file.Id)
+	if cid := strings.Trim(inlineHeader.Get("Content-ID"), "<>"); cid != "" {
+		receivedMail.AddCID(cid, file.Id)
+	} else {
+		receivedMail.AddAttachment(file)
+	}
 
-	return text, html, nil
+	return nil, nil, nil
 }
 
 func (p *Profile) attachmentHeaderHandler(ctx context.Context, attachmentHeader *mail.AttachmentHeader, body io.Reader, receivedMail *model.Email) error {
@@ -541,6 +552,7 @@ func (p *Profile) attachmentHeaderHandler(ctx context.Context, attachmentHeader 
 		body,
 		model.File{Name: fileName, MimeType: attachmentHeader.Get("Content-Type"), Channel: model.FileChannelMail},
 	)
+
 	if err != nil {
 		return err
 	}
