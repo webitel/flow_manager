@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"net/http"
+
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
-	"google.golang.org/protobuf/types/known/structpb"
-	"maps"
-	"net/http"
 )
 
 type GeminiPart struct {
@@ -36,8 +38,8 @@ type BotParams struct {
 	Timeout       map[string]BotTimeout `json:"timeout"`
 	Functions     []*BotFunction        `json:"functions"`
 	TranscribeVar string                `json:"transcribeVar"`
-	//TranscribeModel  string                `json:"transcribeModel"`
-	//TranscribeClient string                `json:"transcribeClient"`
+	// TranscribeModel  string                `json:"transcribeModel"`
+	// TranscribeClient string                `json:"transcribeClient"`
 	Variables    map[string]string `json:"variables"`
 	StartMessage string            `json:"startMessage"`
 	Model        string            `json:"model"`
@@ -49,6 +51,7 @@ type GeminiVad struct {
 	EndOfSpeechSensitivity   string `json:"endOfSpeechSensitivity"`
 	PrefixPaddingMs          int32  `json:"prefixPaddingMs"`
 	SilenceDurationMs        int32  `json:"silenceDurationMs"`
+	ActivityHandling         string `json:"activityHandling"`
 }
 
 type Gemini struct {
@@ -109,7 +112,7 @@ type Embed struct {
 	Set       string
 }
 
-func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv Embed
 	if err := scope.Decode(args, &argv); err != nil {
 		return model.CallResponseError, err
@@ -136,7 +139,7 @@ func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, 
 	})
 }
 
-func (r *router) botReturnResult(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) botReturnResult(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv BotResult
 
 	argsArr, ok := args.([]any)
@@ -275,8 +278,8 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 		ProfileId:        argv.Profile.Id,
 		CallId:           conn.Id(),
 		Functions:        jsonFunctions,
-		TranscribeClient: "todo", //argv.TranscribeClient,
-		TranscribeModel:  "todo", //argv.TranscribeModel,
+		TranscribeClient: "todo", // argv.TranscribeClient,
+		TranscribeModel:  "todo", // argv.TranscribeModel,
 		TranscribeVar:    argv.TranscribeVar,
 
 		SystemInstruction: &ai_bots.GeminiRequest_SystemInstruction{
@@ -311,6 +314,7 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 			EndOfSpeechSensitivity:   argv.Vad.EndOfSpeechSensitivity,
 			PrefixPaddingMs:          argv.Vad.PrefixPaddingMs,
 			SilenceDurationMs:        argv.Vad.SilenceDurationMs,
+			ActivityHandling:         argv.Vad.ActivityHandling,
 		}
 	}
 
@@ -416,8 +420,8 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 		TextBot:        textBot,
 		Channel:        channel,
 		CallId:         conn.Id(),
-		//TranscribeClient: argv.TranscribeClient,
-		//TranscribeModel:  argv.TranscribeModel,
+		// TranscribeClient: argv.TranscribeClient,
+		// TranscribeModel:  argv.TranscribeModel,
 		TranscribeVar: argv.TranscribeVar,
 		Functions:     jsonFunctions,
 		StartMessage:  argv.StartMessage,
@@ -482,7 +486,6 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 }
 
 func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams) (model.Response, *model.AppError) {
-
 	if len(argv.Functions) > 0 || len(argv.Timeout) > 0 {
 		cb := func(ctx context.Context, v any) (any, error) {
 			req, ok := v.(*workflow.BotExecuteRequest)
@@ -522,7 +525,7 @@ func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, co
 	case model.ConnectionTypeCall:
 		return conn.(model.Call).Bot(ctx, connection, 16000, dialogId, argv.Variables)
 	case model.ConnectionTypeChat:
-		//ctx2 := r.fm.AiBots.WithConnection(ctx, connection)
+		// ctx2 := r.fm.AiBots.WithConnection(ctx, connection)
 		return conn.(model.Conversation).Bot(ctx, r.fm.AiBots.Converse(), dialogId)
 	default:
 		return model.CallResponseError, nil
@@ -537,7 +540,7 @@ func parseOutputs(propertyName string, props map[string]any) (model.Applications
 }
 
 func (bp *BotParams) setupFunctions(m map[string]any) (err *model.AppError) {
-	//m := args.(map[string]any)
+	// m := args.(map[string]any)
 	if f, ok := m["functions"].([]any); bp.Functions != nil && ok {
 		for i, fn := range f {
 			fnObj := fn.(map[string]any)
