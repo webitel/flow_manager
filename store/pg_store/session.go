@@ -51,6 +51,22 @@ where id = :Id
 	return nil
 }
 
+func (s *SQLSessionStore) RemoveByThread(threadID string) error {
+	if threadID == "" {
+		return nil
+	}
+
+	_, err := s.GetMaster().Exec(`delete from flow.session
+where id like :Prefix`, map[string]any{
+		"Prefix": threadID + ".%",
+	})
+	if err != nil {
+		return model.NewAppError("SQLSessionStore.RemoveByThread", "store.sql_session.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	return nil
+}
+
 func (s *SQLSessionStore) RemoveAll(appId string) error {
 	_, err := s.GetMaster().Exec(`delete from flow.session
 where  app_id = :AppId`, map[string]any{

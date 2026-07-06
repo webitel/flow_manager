@@ -72,8 +72,8 @@ func (a *AMQP) processReceivedIMEvent(event amqp.Delivery) error {
 		return a.handleIMInteractiveCallbackEvent(event)
 	}
 
-	if strings.HasPrefix(rk, "im_delivery.v1.") && strings.HasSuffix(rk, ".bot.control.released") {
-		return a.handleIMBotControlReleasedEvent(event)
+	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.released.v1") {
+		return a.handleIMThreadBotControlReleasedEvent(event)
 	}
 
 	if strings.HasPrefix(rk, "im_thread.") && strings.HasSuffix(rk, ".bot.control.granted.v1") {
@@ -255,12 +255,12 @@ func (a *AMQP) handleIMInteractiveCallbackEvent(event amqp.Delivery) error {
 	return nil
 }
 
-func (a *AMQP) handleIMBotControlReleasedEvent(event amqp.Delivery) error {
+func (a *AMQP) handleIMThreadBotControlReleasedEvent(event amqp.Delivery) error {
 	var wrapper model.MessageWrapper[model.BotControlReleased]
-	if err := json.Unmarshal(event.Body, &wrapper); err != nil {
+	if err := json.Unmarshal(event.Body, &wrapper.Message); err != nil {
 		return model.NewAppError(
-			"handleIMBotControlReleasedEvent",
-			"rabbit.client_im.handle_im_bot_control_released_event.unmarshal_event",
+			"handleIMThreadBotControlReleasedEvent",
+			"rabbit.client_im.handle_im_thread_bot_control_released_event.unmarshal_event",
 			nil,
 			err.Error(),
 			http.StatusBadRequest,

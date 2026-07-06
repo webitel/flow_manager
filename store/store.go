@@ -40,6 +40,7 @@ type SocketSessionStore interface {
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
+	RemoveByThread(threadID string) error
 	RemoveAll(appId string) error
 }
 
