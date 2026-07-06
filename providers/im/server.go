@@ -14,6 +14,7 @@ import (
 type SessionStore interface {
 	Touch(id, appId string) (*int, error)
 	Remove(id, appId string) error
+	RemoveByThread(threadID string) error
 	RemoveAll(appId string) error
 }
 
@@ -164,6 +165,13 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 	threadID := released.GetThreadID()
 	broken := s.connectionStore.BreakByThread(threadID)
 
+	if err := s.sessionStore.RemoveByThread(threadID); err != nil {
+		s.log.Error("bot control released: failed to clear sessions",
+			wlog.String("thread_id", threadID),
+			wlog.Err(err),
+		)
+	}
+
 	s.log.Debug("bot control released: stopped running schema",
 		wlog.String("thread_id", threadID),
 		wlog.Int("connections", broken),
@@ -203,7 +211,13 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 		}
 
 		if seq == nil {
-			return nil
+			s.log.Warn("session owned by another node, skipping dialog start",
+				wlog.String("id", compositeSessionID),
+				wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+				wlog.String("message_id", msg.GetPayload().MessageID()),
+			)
+
+			continue
 		}
 
 		if *seq > 1 {
