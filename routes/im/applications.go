@@ -40,18 +40,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["cancelQueue"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.cancelQueue),
 	}
-	apps["export"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.export),
-	}
-	apps["menu"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.Menu),
-	}
-	apps["unSet"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.UnSet),
-	}
-	apps["joinQueue"] = &flow.Application{
-		Handler: chatHandlerMiddleware(r.joinQueue),
-	}
+	apps["export"] = &flow.Application{Handler: chatHandlerMiddleware(r.export)}
+	apps["menu"] = &flow.Application{Handler: chatHandlerMiddleware(r.Menu)}
+	apps["unSet"] = &flow.Application{Handler: chatHandlerMiddleware(r.UnSet)}
+	apps["joinQueue"] = &flow.Application{Handler: chatHandlerMiddleware(r.joinQueue)}
 	apps["sendInteractive"] = &flow.Application{Handler: chatHandlerMiddleware(r.SendInteractive)}
 	apps["interactiveMenu"] = &flow.Application{Handler: chatHandlerMiddleware(r.MenuWithReceive)}
 	apps["imUserInfo"] = &flow.Application{Handler: chatHandlerMiddleware(r.IMUserInfo)}
