@@ -14,7 +14,9 @@ import (
 	"time"
 
 	"github.com/tidwall/gjson"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/webitel/wlog"
@@ -562,8 +564,54 @@ func buildKeyboardRows(src [][]model.ChatButton, inline bool) []*p.KeyboardRow {
 	return rows
 }
 
+func (c *Connection) convertInternalVariablesToIMCore(exportVariables map[string]any) []*p.VariableEntryRequest {
+	coreVarables := make([]*p.VariableEntryRequest, 0, len(exportVariables))
+
+	for k, v := range exportVariables {
+		variableValue, err := structpb.NewValue(v)
+		if err != nil {
+			c.log.Error("converting internal variable to structpn value", wlog.Err(err))
+
+			continue
+		}
+
+		coreVarables = append(coreVarables, &p.VariableEntryRequest{
+			Key:   k,
+			Value: variableValue,
+		})
+	}
+
+	return coreVarables
+}
+
+func (c *Connection) exportToIMCore(ctx context.Context, exportVariables map[string]any) *model.AppError {
+	variables := c.convertInternalVariablesToIMCore(exportVariables)
+
+	_, err := c.srv.client.threadService.Api.SetVariables(
+		c.IMOugoingContext(ctx),
+		&p.SetVariablesRequest{
+			ThreadId:  c.threadId,
+			Variables: variables,
+		},
+	)
+
+	if err != nil {
+		if s, ok := status.FromError(err); ok {
+			if s.Code() == codes.PermissionDenied {
+				c.log.Warn("trying to set variable setted by other user", wlog.Err(err), wlog.String("caller_iss", c.to.Issuer), wlog.String("caller_sub", c.to.Sub))
+				return nil
+			}
+		}
+		c.log.Error("executing set thread variable request to IM core", wlog.Err(err))
+
+		return model.NewAppError("Connection.exportToIMCore", "im.connection.export_to_im_core.execute_request", nil, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
+	}
+
+	return nil
+}
+
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	exp := make(map[string]any)
+	exp := make(map[string]any, len(vars))
 	for _, v := range vars {
 		tmp, _ := c.Get(v)
 		tmp = strings.ToValidUTF8(tmp, "")
@@ -575,7 +623,13 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 	c.Unlock()
 
 	if len(exp) > 0 {
-		return c.Set(ctx, exp)
+		if r, err := c.Set(ctx, exp); r != model.CallResponseOK || err != nil {
+			return r, err
+		}
+	}
+
+	if err := c.exportToIMCore(ctx, exp); err != nil {
+		return model.CallResponseError, err
 	}
 
 	return model.CallResponseOK, nil
