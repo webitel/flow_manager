@@ -53,6 +53,7 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 		DomainId:  call.DomainId(),
 		Variables: vars,
 		Processing: &cc.OutboundCallRequest_Processing{
+			Autosave:   argv.Processing.Autosave,
 			Enabled:    argv.Processing.Enabled,
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
@@ -75,15 +76,12 @@ func (r *Router) ccOutbound(ctx context.Context, scope *flow.Flow, call model.Ca
 	}
 
 	res, err := r.fm.CallOutboundQueue(ctx, ocr)
-
 	if err != nil {
-		call.Log().Err(err)
+		call.Log().Error("executing outbound call queue request", wlog.Err(err))
 		return model.CallResponseOK, nil
 	}
 
-	call.Log().Debug("accept outbound queue call",
-		wlog.Int64("attempt_id", res.AttemptId),
-	)
+	call.Log().Debug("accept outbound queue call", wlog.Int64("attempt_id", res.AttemptId))
 
 	return call.Set(ctx, model.Variables{
 		"cc_attempt_id": res.AttemptId,

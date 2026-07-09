@@ -73,6 +73,7 @@ func (r *router) joinAgentToTask(ctx context.Context, scope *Flow, c model.Conne
 			Enabled:    true,
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
+			Autosave:   argv.Processing.Autosave,
 		}
 
 		if argv.Processing.Form.Id > 0 {

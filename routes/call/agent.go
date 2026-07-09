@@ -24,14 +24,12 @@ type JoinAgentArgs struct {
 }
 
 func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
-	var argv JoinAgentArgs
-	var agentId *int32
-
 	if call.Direction() != model.CallDirectionInbound {
 		// todo
 		// error
 	}
 
+	var argv JoinAgentArgs
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
@@ -40,6 +38,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 		return model.CallResponseError, ErrorRequiredParameter("joinAgent", "agent")
 	}
 
+	var agentId *int32
 	if argv.Agent.Id == nil && argv.Agent.Extension != nil {
 		agentId, _ = r.fm.GetAgentIdByExtension(call.DomainId(), *argv.Agent.Extension)
 	} else {
@@ -84,6 +83,7 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 
 	if argv.Processing != nil && argv.Processing.Enabled {
 		req.Processing = &cc.CallJoinToAgentRequest_Processing{
+			Autosave:   argv.Processing.Autosave,
 			Enabled:    true,
 			RenewalSec: argv.Processing.RenewalSec,
 			Sec:        argv.Processing.Sec,
@@ -139,14 +139,9 @@ func (r *Router) joinAgent(ctx context.Context, scope *flow.Flow, call model.Cal
 			}
 
 		case *cc.QueueEvent_Leaving:
-			call.Set(ctx, model.Variables{
-				"cc_result": e.Leaving.Result,
-			})
-			break
+			call.Set(ctx, model.Variables{"cc_result": e.Leaving.Result})
 		}
 	}
-
-	//call.Dump()
 
 	if t != call.GetVariable("variable_transfer_history") {
 		scope.SetCancel()
