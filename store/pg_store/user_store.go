@@ -120,7 +120,7 @@ from directory.wbt_user u
     inner join call_center.cc_agent a on a.user_id = u.id
 where u.dc = :DomainId
     and u.extension = :Extension
-limit 1`, map[string]interface{}{
+limit 1`, map[string]any{
 		"DomainId":  domainId,
 		"Extension": extension,
 	})

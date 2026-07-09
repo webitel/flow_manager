@@ -3,6 +3,7 @@ package model
 // ProcessingWithoutAnswer extends the base Processing configuration with answer-specific rules.
 type ProcessingWithoutAnswer struct {
 	Enabled       bool                    `json:"enabled"`
+	Autosave      bool                    `json:"autosave"`
 	RenewalSec    uint32                  `json:"renewalSec"`
 	WithoutAnswer bool                    `json:"withoutAnswer"`
 	Sec           uint32                  `json:"sec"`
@@ -14,6 +15,7 @@ type ProcessingWithoutAnswer struct {
 // Used to control how processing occurs after the main action is performed.
 type Processing struct {
 	Enabled      bool                    `json:"enabled"`
+	Autosave     bool                    `json:"autosave"`
 	RenewalSec   uint32                  `json:"renewal_sec"`
 	Sec          uint32                  `json:"sec"`
 	Form         ProcessingForm          `json:"form"`
