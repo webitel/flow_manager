@@ -10,6 +10,7 @@ import (
 
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/webitel-go-kit/infra/httpproxy"
 	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
 	"github.com/webitel/wlog"
 
@@ -95,6 +96,9 @@ type FlowManager struct {
 	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
 	AiBots            *bots_client.Client
 
+	ProxyManager   *httpproxy.Manager
+	proxyWatchStop context.CancelFunc
+
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
 	cbr              *CallbackResolver
@@ -157,6 +161,31 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	wlog.RedirectStdLog(fm.log)
 	wlog.InitGlobalLogger(fm.log)
+
+	// Bind http.DefaultTransport to the proxy manager before any outbound
+	// client is built, so every default-transport call site follows the
+	// watched proxy settings without a restart.
+	fm.ProxyManager = httpproxy.NewManager(httpproxy.WithLogger(newSlogLogger(fm.log)))
+	if err := fm.ProxyManager.HookDefaultTransport(); err != nil {
+		return nil, err
+	}
+
+	watchCtx, watchCancel := context.WithCancel(fm.ctx)
+	fm.proxyWatchStop = watchCancel
+
+	// NewFlowManager has no deferred Shutdown, so release the watcher
+	// ourselves when a later initialization step fails.
+	defer func() {
+		if outErr != nil {
+			watchCancel()
+		}
+	}()
+
+	go func() {
+		// WatchFile logs its own setup failures; empty path keeps
+		// environment-based settings.
+		_ = fm.ProxyManager.WatchFile(watchCtx, config.ProxyConfigFile)
+	}()
 
 	wlog.Info(fmt.Sprintf("version: %s", Version()))
 	wlog.Info("server is initializing...")
@@ -288,6 +317,11 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 func (f *FlowManager) Shutdown() {
 	wlog.Info("stopping Server...")
+
+	if f.proxyWatchStop != nil {
+		f.proxyWatchStop()
+	}
+
 	if f.cluster != nil {
 		f.cluster.Stop()
 	}

@@ -26,6 +26,7 @@ type Config struct {
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 	Log                   LogSettings           `json:"log"`
 	Tls                   TLSConfig             `json:"tls"`
+	ProxyConfigFile       string                `json:"proxy_config_file" flag:"proxy_config_file||Proxy settings file (http_proxy/https_proxy/no_proxy) watched for changes" env:"PROXY_CONFIG_FILE"`
 }
 
 type LogSettings struct {
