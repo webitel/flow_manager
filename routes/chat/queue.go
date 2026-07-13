@@ -62,7 +62,8 @@ type QueueJoinArg struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
-	Timers   []flow.TimerArgs `json:"timers"`
+	ExtraChatCount bool             `json:"extra_chat_count"`
+	Timers         []flow.TimerArgs `json:"timers"`
 	Offering []any            `json:"offering"`
 	Missed   []any            `json:"missed"`
 	Bridged  []any            `json:"bridged"`
@@ -140,7 +141,8 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 		BucketId:      q.Bucket.Id,
 		Variables:     conv.DumpExportVariables(),
 		DomainId:      conv.DomainId(),
-		StickyAgentId: stickyAgentId,
+		StickyAgentId:  stickyAgentId,
+		ExtraChatCount: q.ExtraChatCount,
 	})
 	if err != nil {
 		conv.Log().Error(err.Error())
