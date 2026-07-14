@@ -75,6 +75,8 @@ type BotFunction struct {
 	Behavior    string             `json:"behavior"`
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
+	Idempotent  bool               `json:"idempotent"`
+	TimeoutMs   int32              `json:"timeoutMs"`
 	Parameters  any                `json:"parameters"`
 }
 
@@ -247,21 +249,93 @@ func botOnlyText(conn model.Connection) (bool, *model.AppError) {
 	}
 }
 
-func (r *router) pipeline(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+type Pipeline struct {
+	BotParams
+	Tts struct {
+		Id    int64   `json:"id"`
+		Extra any     `json:"extra,omitempty"`
+		Voice string  `json:"voice,omitempty"`
+		Speed float32 `json:"speed,omitempty"`
+	} `json:"tts"`
+	Stt struct {
+		Id          int64  `json:"id"`
+		Language    string `json:"language"`
+		Punctuation bool   `json:"punctuation"`
+		Extra       any    `json:"extra,omitempty"`
+	}
+	Llm struct {
+		Id    int64  `json:"id"`
+		Extra any    `json:"extra,omitempty"`
+		Model string `json:"model"`
+	} `json:"llm"`
+	System       string `json:"system,omitempty"`
+	StartMessage string `json:"startMessage,omitempty"`
+}
+
+func (r *router) cascadeVoice(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv Pipeline
+	var aerr *model.AppError
+	if aerr = scope.Decode(args, &argv); aerr != nil {
+		return nil, aerr
+	}
+	if aerr = scope.Decode(args, &argv.BotParams); aerr != nil {
+		return nil, aerr
+	}
+
+	tools := make([]*ai_bots.PipelineTool, 0, len(argv.BotParams.Functions))
+
+	for _, tool := range argv.BotParams.Functions {
+		j, _ := json.Marshal(tool.Parameters)
+
+		tools = append(tools, &ai_bots.PipelineTool{
+			Name:        tool.Name,
+			Description: tool.Description,
+			SchemaJson:  string(j),
+			Idempotent:  tool.Idempotent,
+			TimeoutMs:   int32(1000 * 1000 * 5), // todo
+		})
+	}
+
+	var extraTssJson, extraSttJson, extraLmmJson []byte
+
+	if argv.Tts.Extra != nil {
+		extraTssJson, _ = json.Marshal(argv.Tts.Extra)
+	}
+	if argv.Stt.Extra != nil {
+		extraSttJson, _ = json.Marshal(argv.Stt.Extra)
+	}
+
+	if argv.Llm.Extra != nil {
+		extraLmmJson, _ = json.Marshal(argv.Llm.Extra)
+	}
+
 	result, err := r.fm.AiBots.Bot().Pipeline(ctx, &ai_bots.PipelineRequest{
 		Input: &ai_bots.PipelineRequest_Initial_{
 			Initial: &ai_bots.PipelineRequest_Initial{
 				DomainId:       conn.DomainId(),
 				CallId:         conn.Id(),
 				FlowConnection: r.fm.ConnectionString(),
-				SttProfileId:   8,
-				LlmProfileId:   2,
-				TtsProfileId:   8,
-				Stt:            nil,
-				Llm:            nil,
-				Tts:            nil,
-				System:         "Ти телефонний асистент компанії X. Відповідай коротко українською. Якщо не розумієш — перепитай.",
-				Tools:          nil,
+				SttProfileId:   argv.Stt.Id,
+				LlmProfileId:   argv.Llm.Id,
+				TtsProfileId:   argv.Tts.Id,
+				StartMessage:   argv.StartMessage,
+				Stt: &ai_bots.PipelineSTTParams{
+					Language:    argv.Stt.Language,
+					Punctuation: argv.Stt.Punctuation,
+					ExtraJson:   string(extraSttJson),
+				},
+				Llm: &ai_bots.PipelineLLMParams{
+					Model:     argv.Llm.Model,
+					ExtraJson: string(extraLmmJson),
+				},
+				Tts: &ai_bots.PipelineTTSParams{
+					Voice: argv.Tts.Voice,
+					// SampleRate: 0,
+					Speed:     argv.Tts.Speed,
+					ExtraJson: string(extraTssJson),
+				},
+				Tools:  tools,
+				System: argv.System,
 			},
 		},
 	},
@@ -272,17 +346,12 @@ func (r *router) pipeline(ctx context.Context, scope *Flow, conn model.Connectio
 
 	dialog := result.GetConnected()
 
-	return r.bot(ctx, scope, conn, dialog.GetConnection(), dialog.GetDialogId(), BotParams{
-		Profile: struct {
-			Id int64 `json:"id"`
-		}{},
-		Timeout:       nil,
-		Functions:     nil,
-		TranscribeVar: "",
-		Variables:     nil,
-		StartMessage:  "",
-		Model:         "",
-	})
+	m := args.(map[string]any)
+	if aerr = argv.setupFunctions(m); aerr != nil {
+		return nil, aerr
+	}
+
+	return r.bot(ctx, scope, conn, dialog.GetConnection(), dialog.GetDialogId(), argv.BotParams, int(dialog.GetInputRate()))
 }
 
 func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
@@ -385,15 +454,21 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 	}
 
 	var connection, dialogId string
+	var rate int64
 	switch out := res.Output.(type) {
 	case *ai_bots.GeminiResponse_Connected:
 		connection = out.Connected.Connection
 		dialogId = out.Connected.DialogId
+		rate = out.Connected.InputRate
 	default:
 		return nil, model.NewAppError("gemini", "gemini.gemini", nil, "failed to get connected response", http.StatusInternalServerError)
 	}
 
-	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams)
+	if rate == 0 {
+		rate = 16000
+	}
+
+	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, int(rate))
 }
 
 type OpenAi struct {
@@ -520,10 +595,10 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 		return nil, model.NewAppError("openai", "bot.openai", nil, "failed to get connected response", http.StatusInternalServerError)
 	}
 
-	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams)
+	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, 16000)
 }
 
-func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams) (model.Response, *model.AppError) {
+func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams, inputRate int) (model.Response, *model.AppError) {
 	if len(argv.Functions) > 0 || len(argv.Timeout) > 0 {
 		cb := func(ctx context.Context, v any) (any, error) {
 			req, ok := v.(*workflow.BotExecuteRequest)
@@ -561,7 +636,7 @@ func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, co
 
 	switch conn.Type() {
 	case model.ConnectionTypeCall:
-		return conn.(model.Call).Bot(ctx, connection, 16000, dialogId, argv.Variables)
+		return conn.(model.Call).Bot(ctx, connection, inputRate, dialogId, argv.Variables)
 	case model.ConnectionTypeChat:
 		// ctx2 := r.fm.AiBots.WithConnection(ctx, connection)
 		return conn.(model.Conversation).Bot(ctx, r.fm.AiBots.Converse(), dialogId)
