@@ -146,9 +146,18 @@ func buildHttpClient(props map[string]any) *http.Client {
 			t.Renegotiation = tls.RenegotiateFreelyAsClient
 		}
 
-		client.Transport = &http.Transport{
-			TLSClientConfig: t,
+		// Clone the default transport instead of building a bare one: the
+		// clone inherits the proxy manager hook and the default dial/HTTP2
+		// tunables, which a bare &http.Transport{} would silently drop.
+		transport, ok := http.DefaultTransport.(*http.Transport)
+		if ok {
+			transport = transport.Clone()
+		} else {
+			transport = &http.Transport{}
 		}
+		transport.TLSClientConfig = t
+
+		client.Transport = transport
 	}
 
 	return client
