@@ -615,7 +615,7 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 	for _, v := range vars {
 		tmp, _ := c.Get(v)
 		tmp = strings.ToValidUTF8(tmp, "")
-		exp[fmt.Sprintf("usr_%s", v)] = tmp
+		exp[v] = tmp
 	}
 
 	c.Lock()
