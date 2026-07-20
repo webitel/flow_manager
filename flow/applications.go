@@ -285,6 +285,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        r.doExecute(r.gemini),
 	}
+	apps["cascadeVoice"] = &Application{
+		AllowNoConnect: false,
+		Handler:        r.doExecute(r.cascadeVoice),
+	}
 	apps["openai"] = &Application{
 		AllowNoConnect: false,
 		Handler:        r.doExecute(r.openai),

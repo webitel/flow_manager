@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
+	"net/http"
+
+	"google.golang.org/protobuf/types/known/structpb"
+
 	"github.com/webitel/flow_manager/gen/ai_bots"
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
-	"google.golang.org/protobuf/types/known/structpb"
-	"maps"
-	"net/http"
 )
 
 type GeminiPart struct {
@@ -36,8 +38,8 @@ type BotParams struct {
 	Timeout       map[string]BotTimeout `json:"timeout"`
 	Functions     []*BotFunction        `json:"functions"`
 	TranscribeVar string                `json:"transcribeVar"`
-	//TranscribeModel  string                `json:"transcribeModel"`
-	//TranscribeClient string                `json:"transcribeClient"`
+	// TranscribeModel  string                `json:"transcribeModel"`
+	// TranscribeClient string                `json:"transcribeClient"`
 	Variables    map[string]string `json:"variables"`
 	StartMessage string            `json:"startMessage"`
 	Model        string            `json:"model"`
@@ -49,6 +51,7 @@ type GeminiVad struct {
 	EndOfSpeechSensitivity   string `json:"endOfSpeechSensitivity"`
 	PrefixPaddingMs          int32  `json:"prefixPaddingMs"`
 	SilenceDurationMs        int32  `json:"silenceDurationMs"`
+	ActivityHandling         string `json:"activityHandling"`
 }
 
 type Gemini struct {
@@ -72,6 +75,8 @@ type BotFunction struct {
 	Behavior    string             `json:"behavior"`
 	Name        string             `json:"name"`
 	Description string             `json:"description"`
+	Idempotent  bool               `json:"idempotent"`
+	TimeoutMs   int32              `json:"timeoutMs"`
 	Parameters  any                `json:"parameters"`
 }
 
@@ -109,7 +114,7 @@ type Embed struct {
 	Set       string
 }
 
-func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv Embed
 	if err := scope.Decode(args, &argv); err != nil {
 		return model.CallResponseError, err
@@ -136,7 +141,7 @@ func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, 
 	})
 }
 
-func (r *router) botReturnResult(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
+func (r *router) botReturnResult(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv BotResult
 
 	argsArr, ok := args.([]any)
@@ -244,6 +249,111 @@ func botOnlyText(conn model.Connection) (bool, *model.AppError) {
 	}
 }
 
+type Pipeline struct {
+	BotParams
+	Tts struct {
+		Id    int64   `json:"id"`
+		Extra any     `json:"extra,omitempty"`
+		Voice string  `json:"voice,omitempty"`
+		Speed float32 `json:"speed,omitempty"`
+	} `json:"tts"`
+	Stt struct {
+		Id          int64  `json:"id"`
+		Language    string `json:"language"`
+		Punctuation bool   `json:"punctuation"`
+		Extra       any    `json:"extra,omitempty"`
+	}
+	Llm struct {
+		Id    int64  `json:"id"`
+		Extra any    `json:"extra,omitempty"`
+		Model string `json:"model"`
+	} `json:"llm"`
+	System       string `json:"system,omitempty"`
+	StartMessage string `json:"startMessage,omitempty"`
+}
+
+func (r *router) cascadeVoice(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
+	var argv Pipeline
+	var aerr *model.AppError
+	if aerr = scope.Decode(args, &argv); aerr != nil {
+		return nil, aerr
+	}
+	if aerr = scope.Decode(args, &argv.BotParams); aerr != nil {
+		return nil, aerr
+	}
+
+	tools := make([]*ai_bots.PipelineTool, 0, len(argv.BotParams.Functions))
+
+	for _, tool := range argv.BotParams.Functions {
+		j, _ := json.Marshal(tool.Parameters)
+
+		tools = append(tools, &ai_bots.PipelineTool{
+			Name:        tool.Name,
+			Description: tool.Description,
+			SchemaJson:  string(j),
+			Idempotent:  tool.Idempotent,
+			TimeoutMs:   int32(1000 * 1000 * 5), // todo
+		})
+	}
+
+	var extraTssJson, extraSttJson, extraLmmJson []byte
+
+	if argv.Tts.Extra != nil {
+		extraTssJson, _ = json.Marshal(argv.Tts.Extra)
+	}
+	if argv.Stt.Extra != nil {
+		extraSttJson, _ = json.Marshal(argv.Stt.Extra)
+	}
+
+	if argv.Llm.Extra != nil {
+		extraLmmJson, _ = json.Marshal(argv.Llm.Extra)
+	}
+
+	result, err := r.fm.AiBots.Bot().Pipeline(ctx, &ai_bots.PipelineRequest{
+		Input: &ai_bots.PipelineRequest_Initial_{
+			Initial: &ai_bots.PipelineRequest_Initial{
+				DomainId:       conn.DomainId(),
+				CallId:         conn.Id(),
+				FlowConnection: r.fm.ConnectionString(),
+				SttProfileId:   argv.Stt.Id,
+				LlmProfileId:   argv.Llm.Id,
+				TtsProfileId:   argv.Tts.Id,
+				StartMessage:   argv.StartMessage,
+				Stt: &ai_bots.PipelineSTTParams{
+					Language:    argv.Stt.Language,
+					Punctuation: argv.Stt.Punctuation,
+					ExtraJson:   string(extraSttJson),
+				},
+				Llm: &ai_bots.PipelineLLMParams{
+					Model:     argv.Llm.Model,
+					ExtraJson: string(extraLmmJson),
+				},
+				Tts: &ai_bots.PipelineTTSParams{
+					Voice: argv.Tts.Voice,
+					// SampleRate: 0,
+					Speed:     argv.Tts.Speed,
+					ExtraJson: string(extraTssJson),
+				},
+				Tools:  tools,
+				System: argv.System,
+			},
+		},
+	},
+	)
+	if err != nil {
+		return nil, model.NewInternalError("pipeline.connect", err.Error())
+	}
+
+	dialog := result.GetConnected()
+
+	m := args.(map[string]any)
+	if aerr = argv.setupFunctions(m); aerr != nil {
+		return nil, aerr
+	}
+
+	return r.bot(ctx, scope, conn, dialog.GetConnection(), dialog.GetDialogId(), argv.BotParams, int(dialog.GetInputRate()))
+}
+
 func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
 	var argv Gemini
 	var textBot bool
@@ -275,8 +385,8 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 		ProfileId:        argv.Profile.Id,
 		CallId:           conn.Id(),
 		Functions:        jsonFunctions,
-		TranscribeClient: "todo", //argv.TranscribeClient,
-		TranscribeModel:  "todo", //argv.TranscribeModel,
+		TranscribeClient: "todo", // argv.TranscribeClient,
+		TranscribeModel:  "todo", // argv.TranscribeModel,
 		TranscribeVar:    argv.TranscribeVar,
 
 		SystemInstruction: &ai_bots.GeminiRequest_SystemInstruction{
@@ -311,6 +421,7 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 			EndOfSpeechSensitivity:   argv.Vad.EndOfSpeechSensitivity,
 			PrefixPaddingMs:          argv.Vad.PrefixPaddingMs,
 			SilenceDurationMs:        argv.Vad.SilenceDurationMs,
+			ActivityHandling:         argv.Vad.ActivityHandling,
 		}
 	}
 
@@ -343,15 +454,21 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 	}
 
 	var connection, dialogId string
+	var rate int64
 	switch out := res.Output.(type) {
 	case *ai_bots.GeminiResponse_Connected:
 		connection = out.Connected.Connection
 		dialogId = out.Connected.DialogId
+		rate = out.Connected.InputRate
 	default:
 		return nil, model.NewAppError("gemini", "gemini.gemini", nil, "failed to get connected response", http.StatusInternalServerError)
 	}
 
-	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams)
+	if rate == 0 {
+		rate = 16000
+	}
+
+	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, int(rate))
 }
 
 type OpenAi struct {
@@ -416,8 +533,8 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 		TextBot:        textBot,
 		Channel:        channel,
 		CallId:         conn.Id(),
-		//TranscribeClient: argv.TranscribeClient,
-		//TranscribeModel:  argv.TranscribeModel,
+		// TranscribeClient: argv.TranscribeClient,
+		// TranscribeModel:  argv.TranscribeModel,
 		TranscribeVar: argv.TranscribeVar,
 		Functions:     jsonFunctions,
 		StartMessage:  argv.StartMessage,
@@ -478,11 +595,10 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 		return nil, model.NewAppError("openai", "bot.openai", nil, "failed to get connected response", http.StatusInternalServerError)
 	}
 
-	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams)
+	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, 16000)
 }
 
-func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams) (model.Response, *model.AppError) {
-
+func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams, inputRate int) (model.Response, *model.AppError) {
 	if len(argv.Functions) > 0 || len(argv.Timeout) > 0 {
 		cb := func(ctx context.Context, v any) (any, error) {
 			req, ok := v.(*workflow.BotExecuteRequest)
@@ -520,9 +636,9 @@ func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, co
 
 	switch conn.Type() {
 	case model.ConnectionTypeCall:
-		return conn.(model.Call).Bot(ctx, connection, 16000, dialogId, argv.Variables)
+		return conn.(model.Call).Bot(ctx, connection, inputRate, dialogId, argv.Variables)
 	case model.ConnectionTypeChat:
-		//ctx2 := r.fm.AiBots.WithConnection(ctx, connection)
+		// ctx2 := r.fm.AiBots.WithConnection(ctx, connection)
 		return conn.(model.Conversation).Bot(ctx, r.fm.AiBots.Converse(), dialogId)
 	default:
 		return model.CallResponseError, nil
@@ -537,7 +653,7 @@ func parseOutputs(propertyName string, props map[string]any) (model.Applications
 }
 
 func (bp *BotParams) setupFunctions(m map[string]any) (err *model.AppError) {
-	//m := args.(map[string]any)
+	// m := args.(map[string]any)
 	if f, ok := m["functions"].([]any); bp.Functions != nil && ok {
 		for i, fn := range f {
 			fnObj := fn.(map[string]any)
