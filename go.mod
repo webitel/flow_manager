@@ -30,7 +30,7 @@ require (
 	github.com/pborman/uuid v1.2.1
 	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.5.5
-	github.com/robertkrimen/otto v0.3.0
+	github.com/robertkrimen/otto v0.5.1
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
 	github.com/webitel/engine/pkg/discovery v0.0.0-20250925090335-284caa978daa
