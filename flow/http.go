@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"maps"
 	"net/http"
 	"net/url"
@@ -218,7 +217,7 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 	}
 
 	if _, ok = props["data"]; ok {
-		if strings.Index(headers["content-type"], "text/xml") > -1 || strings.Index(headers["content-type"], "application/soap+xml") > -1 {
+		if strings.Contains(headers["content-type"], "text/xml") || strings.Contains(headers["content-type"], "application/soap+xml") {
 			switch props["data"].(type) {
 			case string:
 				body = []byte(c.ParseText(model.StringValueFromMap("data", props, "")))
@@ -240,20 +239,19 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 			// JSON default
 			switch pd := props["data"].(type) {
 			case string:
-				body = []byte(c.ParseText(pd))
-				// TODO WTEL-4905 bug parse nested object
-				/*
-					case map[string]interface{}:
-						var b model.JsonView
-						if appErr := scope.Decode(props["data"], &b); appErr == nil {
-							body, err = json.Marshal(b)
-						} else {
-							err = appErr
-						}*/
+				body = []byte(c.ParseText(pd)) // TODO WTEL-4905 bug parse nested object
 			default:
-				body, err = json.Marshal(props["data"])
-				if err == nil {
-					body = []byte(model.ParseText(c, string(body), model.ParseOptionJson))
+				if body, err = json.Marshal(props["data"]); err == nil {
+					body = []byte(
+						model.ParseTextWithConfig(
+							c,
+							string(body),
+							model.ParseOptionsConfig{
+								ParseOptions: []model.ParseOption{model.ParseOptionJson},
+								TextParsers:  []model.TextParser{scope.parseGlobalVariables},
+							},
+						),
+					)
 				}
 			}
 
@@ -280,9 +278,9 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 	var err error
 	var body []byte
 
-	if strings.Index(contentType, "application/json") > -1 {
+	if strings.Contains(contentType, "application/json") {
 		if len(exportVariables) > 0 {
-			body, err = ioutil.ReadAll(response)
+			body, err = io.ReadAll(response)
 			if err != nil {
 				return nil, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err", nil, err.Error(), http.StatusBadRequest)
 			}
@@ -307,7 +305,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 				return model.CallResponseError, err
 			}
 		}
-	} else if strings.Index(contentType, "text/xml") > -1 {
+	} else if strings.Contains(contentType, "text/xml") {
 		var xml *xmlpath.Node
 		var path *xmlpath.Path
 
@@ -336,7 +334,7 @@ func parseHttpResponse(c model.Connection, contentType string, response io.ReadC
 		}
 
 	} else {
-		body, err = ioutil.ReadAll(response)
+		body, err = io.ReadAll(response)
 		if err != nil {
 			return model.CallResponseError, model.NewAppError("Flow.HttpRequest", "flow.app.http_request.parse.err", nil, err.Error(), http.StatusBadRequest)
 		}
@@ -363,7 +361,7 @@ func (r *router) parseMapValue(c model.Connection, v any) (str string) {
 
 func encodeURIComponent(str string) string {
 	r := url.QueryEscape(str)
-	r = strings.Replace(r, "+", "%20", -1)
+	r = strings.ReplaceAll(r, "+", "%20")
 	return r
 }
 
