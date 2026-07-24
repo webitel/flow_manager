@@ -270,6 +270,7 @@ type Pipeline struct {
 	} `json:"llm"`
 	System       string `json:"system,omitempty"`
 	StartMessage string `json:"startMessage,omitempty"`
+	HalfDuplex   bool   `json:"halfDuplex,omitempty"`
 }
 
 func (r *router) cascadeVoice(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
@@ -292,7 +293,7 @@ func (r *router) cascadeVoice(ctx context.Context, scope *Flow, conn model.Conne
 			Description: tool.Description,
 			SchemaJson:  string(j),
 			Idempotent:  tool.Idempotent,
-			TimeoutMs:   int32(1000 * 1000 * 5), // todo
+			TimeoutMs:   int32(1000 * 1000 * 7), // todo
 		})
 	}
 
@@ -323,19 +324,20 @@ func (r *router) cascadeVoice(ctx context.Context, scope *Flow, conn model.Conne
 					Language:    argv.Stt.Language,
 					Punctuation: argv.Stt.Punctuation,
 					ExtraJson:   string(extraSttJson),
+					// SampleRate:  8000,
 				},
 				Llm: &ai_bots.PipelineLLMParams{
 					Model:     argv.Llm.Model,
 					ExtraJson: string(extraLmmJson),
 				},
 				Tts: &ai_bots.PipelineTTSParams{
-					Voice: argv.Tts.Voice,
-					// SampleRate: 0,
+					Voice:     argv.Tts.Voice,
 					Speed:     argv.Tts.Speed,
 					ExtraJson: string(extraTssJson),
 				},
-				Tools:  tools,
-				System: argv.System,
+				Tools:      tools,
+				System:     argv.System,
+				HalfDuplex: argv.HalfDuplex,
 			},
 		},
 	},
