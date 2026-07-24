@@ -20,6 +20,27 @@ func init() {
 	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 }
 
+type TextParser func(string) string
+
+type ParseOptionsConfig struct {
+	ParseOptions []ParseOption
+	TextParsers  []TextParser
+}
+
+func (c *ParseOptionsConfig) HasParseOption(o ParseOption) bool {
+	return slices.Contains(c.ParseOptions, o)
+}
+
+func ParseTextWithConfig(c Connection, text string, cfg ParseOptionsConfig) string {
+	for _, parser := range cfg.TextParsers {
+		if parser != nil {
+			text = parser(text)
+		}
+	}
+
+	return ParseText(c, text, cfg.ParseOptions...)
+}
+
 func ParseText(c Connection, text string, ops ...ParseOption) string {
 	jsonString := hasOption(ParseOptionJson, ops...)
 	uri := false
