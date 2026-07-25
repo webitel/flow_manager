@@ -79,3 +79,38 @@ func (f *FacebookGateHandler) Handle(ctx context.Context, id string) (*model.IMG
 		Payload: facebookInfo,
 	}, nil
 }
+
+type ViberGateHandler struct {
+	client *Client
+}
+
+func NewViberGateHandler(client *Client) *ViberGateHandler {
+	return &ViberGateHandler{client: client}
+}
+
+func (v *ViberGateHandler) Type() model.IMGateType { return model.IMGateTypeViber }
+func (v *ViberGateHandler) Handle(ctx context.Context, id string) (*model.IMGate, *model.AppError) {
+	response, err := v.client.viberService.Api.GetViberGate(ctx, &providers.ProviderGetViberGateRequest{Id: id})
+	if err != nil {
+		return nil, model.NewAppError(
+			"ViberGateHandler.Handle",
+			"providers.im.providers_factory.request",
+			nil,
+			err.Error(),
+			model.ExtractHTPPStatusCodeFromGRPC(err),
+		)
+	}
+
+	viberInfo := &model.GateViber{
+		ID:         response.GetItem().GetId(),
+		Name:       response.GetItem().GetName(),
+		BotID:      response.GetItem().GetBotId(),
+		BotURI:     response.GetItem().GetBotUri(),
+		SenderName: response.GetItem().GetSenderName(),
+	}
+
+	return &model.IMGate{
+		Type:    model.IMGateTypeViber,
+		Payload: viberInfo,
+	}, nil
+}

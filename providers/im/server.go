@@ -36,6 +36,7 @@ func NewServer(id, consulAddr string, receiver <-chan any, log *wlog.Logger, t *
 	client := NewClient(consulAddr, log, t)
 	fabric := NewGateHandlerFactory(
 		NewFacebookGateHandler(client),
+		NewViberGateHandler(client),
 	)
 
 	return &server{
