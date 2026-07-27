@@ -5,15 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"strings"
-	"time"
-
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/gen/chat"
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
 	"google.golang.org/grpc/metadata"
+	"net/http"
+	"strings"
+	"time"
 )
 
 const (
@@ -234,11 +233,7 @@ func messageToText(messages ...*chat.Message) []string {
 				msgs = append(msgs, m.Contact.Contact)
 			}
 		default:
-			if m.Text == "" && m.File != nil {
-				msgs = append(msgs, m.File.Url)
-			} else {
-				msgs = append(msgs, m.Text)
-			}
+			msgs = append(msgs, m.Text)
 		}
 	}
 
