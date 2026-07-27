@@ -48,6 +48,7 @@ type Connection struct {
 	schemaId         int
 	srv              *server
 	variables        map[string]string
+	storeMessages    map[string][]byte
 	msg              model.Message
 	lastMsg          model.Message
 	from             model.ImEndpoint
@@ -80,14 +81,15 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-type":   "schema",
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
-		completeId: to.MemberID,
-		msg:        msg.GetPayload().Message(),
-		ctx:        ctx,
-		cancelCtx:  cancel,
-		domainId:   msg.GetDomainID(),
-		variables:  toVariables(nil), // todo
-		schemaId:   schemaId,
-		RWMutex:    sync.RWMutex{},
+		completeId:    to.MemberID,
+		msg:           msg.GetPayload().Message(),
+		ctx:           ctx,
+		cancelCtx:     cancel,
+		domainId:      msg.GetDomainID(),
+		variables:     toVariables(nil), // todo
+		storeMessages: make(map[string][]byte),
+		schemaId:      schemaId,
+		RWMutex:       sync.RWMutex{},
 		log: wlog.GlobalLogger().With(
 			wlog.Namespace("context"),
 			wlog.String("scope", "im"),
@@ -690,7 +692,24 @@ func (c *Connection) ReceiveMessage(ctx context.Context, name string, timeout, m
 		}
 	}
 
+	if len(msgs) > 0 && name != "" {
+		if raw, mErr := json.Marshal(storeMessage(msgs).GetPayload().Message()); mErr == nil {
+			c.Lock()
+			c.storeMessages[name] = raw
+			c.Unlock()
+		}
+	}
+
 	return messageToText(msgs...), nil
+}
+
+func storeMessage(msgs []model.IMEventWrapper) model.IMEventWrapper {
+	for _, m := range msgs {
+		if len(m.GetPayload().Message().Documents) > 0 {
+			return m
+		}
+	}
+	return msgs[0]
 }
 
 func (connection *Connection) SendInteractive(ctx context.Context, interactive model.SendInteractiveRequest) (model.Response, *model.AppError) {
@@ -963,6 +982,10 @@ func (c *Connection) Get(key string) (string, bool) {
 	if idx > 0 {
 		nameRoot := key[0:idx]
 
+		if m, ok := c.storeMessages[nameRoot]; ok {
+			return gjson.GetBytes(m, key[idx+1:]).String(), true
+		}
+
 		if v, ok := c.variables[nameRoot]; ok {
 			return gjson.GetBytes([]byte(v), key[idx+1:]).String(), true
 		}
@@ -1067,7 +1090,14 @@ func messageToText(messages ...model.IMEventWrapper) []string {
 	msgs := make([]string, 0, len(messages))
 
 	for _, m := range messages {
-		msgs = append(msgs, m.GetPayload().Message().Text)
+		msg := m.GetPayload().Message()
+		// File-only messages (image/document) carry no text. Fall back to the
+		// attachment URL so the recv variable is not empty for such messages.
+		if msg.Text == "" && len(msg.Documents) > 0 {
+			msgs = append(msgs, msg.Documents[0].URL)
+			continue
+		}
+		msgs = append(msgs, msg.Text)
 	}
 
 	return msgs
