@@ -386,10 +386,19 @@ func (c *conversation) ReceiveMessage(ctx context.Context, name string, timeout,
 		}
 	}
 	if len(msgs) > 0 && name != "" {
-		c.storeMessages[name], _ = json.Marshal(msgs[0])
+		c.storeMessages[name], _ = json.Marshal(storeMessage(msgs))
 	}
 	c.saveMessages(msgs...)
 	return messageToText(msgs...), nil
+}
+
+func storeMessage(msgs []*proto.Message) *proto.Message {
+	for _, m := range msgs {
+		if m.File != nil {
+			return m
+		}
+	}
+	return msgs[0]
 }
 
 func (c *conversation) receive(ctx context.Context, timeout int) ([]*proto.Message, *model.AppError) {
