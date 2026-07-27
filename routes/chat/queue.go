@@ -62,7 +62,7 @@ type QueueJoinArg struct {
 		Id        *int32  `json:"id"`
 		Extension *string `json:"extension"`
 	}
-	ExtraChatCount bool             `json:"extra_chat_count"`
+	ExtraChatCount bool             `json:"extraChatCount"`
 	Timers         []flow.TimerArgs `json:"timers"`
 	Offering []any            `json:"offering"`
 	Missed   []any            `json:"missed"`
