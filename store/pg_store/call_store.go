@@ -445,49 +445,61 @@ from (select `+strings.Join(f, ", ")+`
                    h.payload                                as         variables,
 				   h.id,
 			       h.destination
-            from call_center.cc_calls_history h
+            from (select h.created_at,
+                         h.direction,
+                         h.to_number,
+                         h.from_number,
+                         h.queue_id,
+                         h.gateway_id,
+                         h.payload,
+                         h.id,
+                         h.destination,
+                         h.domain_id
+                  from call_center.cc_calls_history h
+                  where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
+                    and (:QueueIds::int[] isnull or (h.queue_id = any (:QueueIds) or h.queue_id isnull))
+                    and (
+                          (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
+                          or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
+                          or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
+                      )
+                    and h.parent_id isnull
+                    and (
+                          ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
+                           (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
+                           (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
+                          (
+                                  case
+                                      when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
+                                              h.attempt_id notnull and case :Dialer
+                                                                           when 'bridged' then h.bridged_at notnull
+                                                                           when 'attempt' then h.bridged_at isnull
+                                                                           else true end
+                                      else false end
+                                  or case
+                                         when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
+                                                     h.direction = 'inbound' and case :Inbound
+                                                                                     when 'bridged' then h.bridged_at notnull
+                                                                                     when 'attempt' then h.bridged_at isnull
+                                                                                     else true end
+                                         else false end
+                                  or case
+                                         when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
+                                                     h.direction = 'outbound' and case :Outbound
+                                                                                      when 'bridged' then h.bridged_at notnull
+                                                                                      when 'attempt' then h.bridged_at isnull
+                                                                                      else true end
+                                         else false end
+                              )
+                      )
+                  order by h.created_at + interval '0' desc
+                  limit 1) h
                      left join call_center.cc_queue q on q.id = h.queue_id
-                     left join call_center.cc_member_attempt_history ah
-                               on ah.domain_id = h.domain_id and ah.member_call_id = h.id::text
-            where (h.domain_id = :DomainId and h.created_at > now() - (:Hours::varchar || ' hours')::interval)
-              and (:QueueIds::int[] isnull or (h.queue_id = any (:QueueIds) or h.queue_id isnull))
-              and (
-                    (h.domain_id = :DomainId and h.destination ~~* :Number::varchar)
-                    or (h.domain_id = :DomainId and h.to_number ~~* :Number::varchar)
-                    or (h.domain_id = :DomainId and h.from_number ~~* :Number::varchar)
-                )
-              and h.parent_id isnull
-              and (
-                    ((:Dialer::varchar isnull or :Dialer::varchar = 'false') and
-                     (:Inbound::varchar isnull or :Inbound::varchar = 'false') and
-                     (:Outbound::varchar isnull or :Outbound::varchar = 'false')) or
-                    (
-                            case
-                                when :Dialer::varchar notnull and :Dialer::varchar != 'false' then
-                                        h.attempt_id notnull and case :Dialer
-                                                                     when 'bridged' then h.bridged_at notnull
-                                                                     when 'attempt' then h.bridged_at isnull
-                                                                     else true end
-                                else false end
-                            or case
-                                   when :Inbound::varchar notnull and :Inbound::varchar != 'false' then
-                                               h.direction = 'inbound' and case :Inbound
-                                                                               when 'bridged' then h.bridged_at notnull
-                                                                               when 'attempt' then h.bridged_at isnull
-                                                                               else true end
-                                   else false end
-                            or case
-                                   when :Outbound::varchar notnull and :Outbound::varchar != 'false' then
-                                               h.direction = 'outbound' and case :Outbound
-                                                                                when 'bridged' then h.bridged_at notnull
-                                                                                when 'attempt' then h.bridged_at isnull
-                                                                                else true end
-                                   else false end
-                        )
-                )
-            order by h.created_at desc) h
-      order by h.created_at desc
-      limit 1) t`, map[string]any{
+                     left join lateral (select ah.agent_id, ah.description
+                                        from call_center.cc_member_attempt_history ah
+                                        where ah.domain_id = h.domain_id
+                                          and ah.member_call_id = h.id::text
+                                        limit 1) ah on true) h) t`, map[string]any{
 		"DomainId": domainId,
 		"Hours":    hours,
 		"Number":   number,
