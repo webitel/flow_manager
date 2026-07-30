@@ -112,6 +112,7 @@ type Embed struct {
 	Threshold float32 `json:"threshold"`
 	Limit     int32   `json:"limit"`
 	Set       string
+	Tags      []string `json:"tags"`
 }
 
 func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, args any) (model.Response, *model.AppError) {
@@ -120,12 +121,16 @@ func (r *router) embed(ctx context.Context, scope *Flow, conn model.Connection, 
 		return model.CallResponseError, err
 	}
 
+	dialogId, _ := r.fm.Callback().DialogByCall(conn.Id())
+
 	embed, err := r.fm.AiBots.Embed().GetContent(ctx, &ai_bots.GetContentRequest{
 		DomainId:  conn.DomainId(),
 		ProfileId: argv.Profile.Id,
 		Query:     argv.Query,
 		Threshold: argv.Threshold,
 		Limit:     argv.Limit,
+		DialogId:  dialogId,
+		Tag:       argv.Tags,
 	})
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("embed", "bot.embed.get_content", nil, err.Error(), http.StatusInternalServerError)
@@ -601,6 +606,9 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 }
 
 func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams, inputRate int) (model.Response, *model.AppError) {
+	r.fm.Callback().BindDialog(conn.Id(), dialogId)
+	defer r.fm.Callback().UnbindDialog(conn.Id())
+
 	if len(argv.Functions) > 0 || len(argv.Timeout) > 0 {
 		cb := func(ctx context.Context, v any) (any, error) {
 			req, ok := v.(*workflow.BotExecuteRequest)
