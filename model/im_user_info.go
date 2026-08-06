@@ -64,6 +64,7 @@ const (
 	IMGateTypeUnspecified IMGateType = "unspecified"
 	IMGateTypeFacebook    IMGateType = "facebook"
 	IMGateTypeWhatsapp    IMGateType = "whatsapp"
+	IMGateTypeViber       IMGateType = "viber"
 )
 
 func IsIMGateTypeUnspecified(t IMGateType) bool { return t == IMGateTypeUnspecified }
@@ -74,6 +75,8 @@ func IMGateTypeFromString(in string) IMGateType {
 		return IMGateTypeFacebook
 	case "whatsapp":
 		return IMGateTypeWhatsapp
+	case "viber":
+		return IMGateTypeViber
 	default:
 		return IMGateTypeUnspecified
 	}
@@ -99,6 +102,21 @@ func (g *IMGate) Facebook() (*GateFacebook, *AppError) {
 	return f, nil
 }
 
+func (g *IMGate) Viber() (*GateViber, *AppError) {
+	v, ok := g.Payload.(*GateViber)
+	if !ok {
+		return nil, NewAppError(
+			"Viber",
+			"model.im_user_info.viber.assert",
+			nil,
+			fmt.Sprintf("asserting different type from expected gate viber: %T", g.Payload),
+			400,
+		)
+	}
+
+	return v, nil
+}
+
 func (g *IMGate) MarshalJSON() ([]byte, error) {
 	switch p := g.Payload.(type) {
 	case *GateFacebook:
@@ -108,6 +126,15 @@ func (g *IMGate) MarshalJSON() ([]byte, error) {
 		}{
 			Type:     g.Type,
 			Facebook: p,
+		})
+
+	case *GateViber:
+		return json.Marshal(struct {
+			Type  IMGateType `json:"type"`
+			Viber *GateViber `json:"viber"`
+		}{
+			Type:  g.Type,
+			Viber: p,
 		})
 
 	default:
@@ -122,4 +149,12 @@ type GateFacebook struct {
 	MetaAppID string `json:"meta_app_id"`
 	PageID    string `json:"page"`
 	PageName  string `json:"page_name"`
+}
+
+type GateViber struct {
+	ID         string `json:"id"`
+	Name       string `json:"name"`
+	BotID      string `json:"bot_id"`
+	BotURI     string `json:"bot_uri"`
+	SenderName string `json:"sender_name"`
 }
