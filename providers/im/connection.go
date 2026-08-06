@@ -728,7 +728,9 @@ func convertToProtoInteractive(src *model.InteractiveGeneric[model.KeyboardButto
 	}
 
 	dst := &p.Interactive{
-		SingleUse: src.SingleUse,
+		SingleUse:       src.SingleUse,
+		Placement:       protoMenuPlacement(src.Placement),
+		InputFieldState: protoInputFieldState(src.InputFieldState),
 	}
 
 	if src.Documents != nil {
@@ -752,6 +754,30 @@ func convertToProtoInteractive(src *model.InteractiveGeneric[model.KeyboardButto
 	}
 
 	return dst
+}
+
+func protoMenuPlacement(src string) p.MenuPlacement {
+	switch strings.ToLower(strings.TrimSpace(src)) {
+	case model.MenuPlacementInline:
+		return p.MenuPlacement_MENU_PLACEMENT_INLINE
+	case model.MenuPlacementPersistent:
+		return p.MenuPlacement_MENU_PLACEMENT_PERSISTENT
+	default:
+		return p.MenuPlacement_MENU_PLACEMENT_UNSPECIFIED
+	}
+}
+
+func protoInputFieldState(src string) p.InputFieldState {
+	switch strings.ToLower(strings.TrimSpace(src)) {
+	case model.InputFieldStateRegular:
+		return p.InputFieldState_INPUT_FIELD_STATE_REGULAR
+	case model.InputFieldStateMinimized:
+		return p.InputFieldState_INPUT_FIELD_STATE_MINIMIZED
+	case model.InputFieldStateHidden:
+		return p.InputFieldState_INPUT_FIELD_STATE_HIDDEN
+	default:
+		return p.InputFieldState_INPUT_FIELD_STATE_UNSPECIFIED
+	}
 }
 
 func convertToProtoImages(src *model.Images) *p.Images {

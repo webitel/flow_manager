@@ -83,11 +83,13 @@ func ConvertMenuRequestToStandard(menuReq model.SendInteractiveRequestGeneric[Me
 		Body:     menuReq.Body,
 		Metadata: menuReq.Metadata,
 		Interactive: model.InteractiveGeneric[model.KeyboardButton]{
-			Documents: menuReq.Interactive.Documents,
-			Images:    menuReq.Interactive.Images,
-			SingleUse: menuReq.Interactive.SingleUse,
-			Markup:    standardMarkup,
-			ListReply: standardListReply,
+			Documents:       menuReq.Interactive.Documents,
+			Images:          menuReq.Interactive.Images,
+			SingleUse:       menuReq.Interactive.SingleUse,
+			Markup:          standardMarkup,
+			ListReply:       standardListReply,
+			Placement:       menuReq.Interactive.Placement,
+			InputFieldState: menuReq.Interactive.InputFieldState,
 		},
 	}
 }

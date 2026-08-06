@@ -10,6 +10,17 @@ type Interactive struct {
 	ListReply *KeyboardListReply `json:"listReply,omitempty"`
 }
 
+const (
+	MenuPlacementInline     = "inline"
+	MenuPlacementPersistent = "persistent"
+)
+
+const (
+	InputFieldStateRegular   = "regular"
+	InputFieldStateMinimized = "minimized"
+	InputFieldStateHidden    = "hidden"
+)
+
 type Documents struct {
 	Documents []File `json:"documents"`
 }
@@ -76,6 +87,10 @@ type InteractiveGeneric[B any] struct {
 	SingleUse bool                         `json:"singleUse"`
 	Markup    *KeyboardMarkupGeneric[B]    `json:"markup,omitempty"`
 	ListReply *KeyboardListReplyGeneric[B] `json:"listReply,omitempty"`
+
+	Placement string `json:"placement,omitempty"`
+
+	InputFieldState string `json:"inputFieldState,omitempty"`
 }
 
 type SendInteractiveRequestGeneric[B any] struct {
