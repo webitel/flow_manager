@@ -477,14 +477,12 @@ func (c *conversation) Export(ctx context.Context, vars []string) (model.Respons
 	}
 
 	if len(exp) > 0 {
-		if c.BreakCause() == "" {
-			_, err := c.client.api.SetVariables(ctx, &proto.SetVariablesRequest{
-				ChannelId: c.id,
-				Variables: transferVars,
-			})
-			if err != nil {
-				c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
-			}
+		_, err := c.client.api.SetVariables(ctx, &proto.SetVariablesRequest{
+			ChannelId: c.id,
+			Variables: transferVars,
+		})
+		if err != nil {
+			c.log.Warn(fmt.Sprintf("set variables error: %s", err.Error()))
 		}
 		return c.Set(ctx, exp)
 	}
