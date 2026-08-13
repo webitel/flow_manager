@@ -15,17 +15,35 @@ const (
 type CbFunc func(ctx context.Context, data any) (any, error)
 
 type CallbackResolver struct {
-	cb *expirable.LRU[string, CbFunc]
+	cb           *expirable.LRU[string, CbFunc]
+	dialogByCall *expirable.LRU[string, string] // callId -> dialogId, bound for the bot session lifetime
 }
 
 func NewCallbackResolver() *CallbackResolver {
 	return &CallbackResolver{
-		cb: expirable.NewLRU[string, CbFunc](callbackSize, nil, callbackExpire),
+		cb:           expirable.NewLRU[string, CbFunc](callbackSize, nil, callbackExpire),
+		dialogByCall: expirable.NewLRU[string, string](callbackSize, nil, callbackExpire),
 	}
 }
 
 func (c *CallbackResolver) Register(id string, fn CbFunc) {
 	c.cb.Add(id, fn)
+}
+
+// BindDialog indexes the ai_bots dialog id by the flow call id (conn.Id()) so
+// applications running inside the live bot session (e.g. embed) can resolve it.
+func (c *CallbackResolver) BindDialog(callId, dialogId string) {
+	c.dialogByCall.Add(callId, dialogId)
+}
+
+// UnbindDialog drops the call -> dialog mapping when the bot session ends.
+func (c *CallbackResolver) UnbindDialog(callId string) {
+	c.dialogByCall.Remove(callId)
+}
+
+// DialogByCall resolves the dialog id bound to a call id; ok=false if none is live.
+func (c *CallbackResolver) DialogByCall(callId string) (string, bool) {
+	return c.dialogByCall.Get(callId)
 }
 
 func (c *CallbackResolver) Unregister(id string) error {
