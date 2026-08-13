@@ -5,13 +5,14 @@ import (
 	b64 "encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/h2non/filetype"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/h2non/filetype"
 
 	"github.com/webitel/flow_manager/model"
 )
@@ -21,9 +22,7 @@ const (
 	HANGUP_NO_ROUTE_DESTINATION     = "NO_ROUTE_DESTINATION"
 )
 
-var (
-	fixNamePattern = regexp.MustCompile(`'|"|,`)
-)
+var fixNamePattern = regexp.MustCompile(`'|"|,`)
 
 func (c *Connection) Answer(ctx context.Context) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "answer", "")
@@ -73,7 +72,6 @@ func (c *Connection) BackgroundPlayback(ctx context.Context, file *model.Playbac
 }
 
 func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (model.Response, *model.AppError) {
-
 	if len(name) > 10 {
 		name = name[0:10]
 	}
@@ -89,7 +87,8 @@ func (c *Connection) BackgroundPlaybackStop(ctx context.Context, name string) (m
 
 // FIXME GLOBAL VARS
 func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy string, vars map[string]string,
-	endpoints []*model.Endpoint, codecs []string, hook chan struct{}, pickup string) (model.Response, *model.AppError) {
+	endpoints []*model.Endpoint, codecs []string, hook chan struct{}, pickup string,
+) (model.Response, *model.AppError) {
 	var dialString, separator string
 
 	if strategy == "failover" {
@@ -102,7 +101,7 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 
 	var from string
 	// FIXME
-	//origination_callee_id_name
+	// origination_callee_id_name
 
 	from = fmt.Sprintf("sip_copy_custom_headers=false,sip_h_X-Webitel-Domain-Id=%d,sip_h_X-Webitel-Origin=flow,wbt_parent_id=%s,wbt_from_type=%s,wbt_from_id=%s,wbt_destination='%s'"+
 		",wbt_from_number='%s',wbt_from_name='%s'",
@@ -194,7 +193,7 @@ func (c *Connection) Echo(ctx context.Context, delay int) (model.Response, *mode
 }
 
 func (c *Connection) Export(ctx context.Context, vars []string) (model.Response, *model.AppError) {
-	exp := make(map[string]interface{})
+	exp := make(map[string]any)
 	for _, v := range vars {
 		if v == "" {
 			continue
@@ -224,7 +223,6 @@ func (c *Connection) Conference(ctx context.Context, name, profile, pin string, 
 }
 
 func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
-
 	if c.resample != 0 && !c.IsSetResample() {
 		c.Set(ctx, model.Variables{
 			"record_sample_rate": c.resample,
@@ -242,7 +240,6 @@ type SpeechAiMessage struct {
 }
 
 func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
-
 	if c.resample != 0 && !c.IsSetResample() {
 		c.Set(ctx, model.Variables{
 			"record_sample_rate": c.resample,
@@ -331,7 +328,7 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
 	// FIXME SET
 
-	vrs := map[string]interface{}{
+	vrs := map[string]any{
 		"RECORD_MIN_SEC":            minSec,
 		"RECORD_STEREO":             stereo,
 		"RECORD_BRIDGE_REQ":         bridged,
@@ -344,7 +341,6 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 	}
 
 	_, err := c.Set(ctx, vrs)
-
 	if err != nil {
 		return nil, err
 	}
@@ -380,7 +376,7 @@ func (c *Connection) Intercept(ctx context.Context, id string) (model.Response, 
 }
 
 func (c *Connection) Park(ctx context.Context, name string, in bool, lotFrom, lotTo string) (model.Response, *model.AppError) {
-	var req = fmt.Sprintf("%s@%s ", c.DomainName(), name)
+	req := fmt.Sprintf("%s@%s ", c.DomainName(), name)
 	if in {
 		req += "in"
 	} else {
@@ -421,7 +417,7 @@ func (c *Connection) SetTransferAfterBridge(ctx context.Context, schemaId int) (
 	})
 }
 
-func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
+func ttsGetCodecSettings(writeRateVar string) (rate, format string) {
 	rate = "8000"
 	format = "mp3"
 
@@ -429,13 +425,13 @@ func ttsGetCodecSettings(writeRateVar string) (rate string, format string) {
 		if i, err := strconv.Atoi(writeRateVar); err == nil {
 			if i == 8000 || i == 16000 {
 				format = "wav"
-				return
+				return rate, format
 			} else if i >= 22050 {
 				rate = "22050"
 			}
 		}
 	}
-	return
+	return rate, format
 }
 
 func (c *Connection) PushSpeechMessage(msg model.SpeechMessage) {
@@ -487,7 +483,7 @@ func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings
 }
 
 func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
-	var tmp = "http_cache://http://$${cdr_url}/sys/tts"
+	tmp := "http_cache://http://$${cdr_url}/sys/tts"
 
 	path += "&format=opus"
 
@@ -611,7 +607,7 @@ func (c *Connection) Amd(ctx context.Context, params model.AmdParameters) (model
 
 func (c *Connection) Cv(ctx context.Context) (model.Response, *model.AppError) {
 	return c.executeWithContext(ctx, "cv_bug", "start zidx=0 debug=0 neighbors=1 skip=1 abs=9 scaleto=wh allclear png=igor.png ticker=#cccccc:#54d41e:/usr/share/fonts/truetype/dejavu/DejaVuSerifCondensed.ttf:4%:1:igor:'Hello test test' allflat")
-	//return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
+	// return c.executeWithContext(ctx, "cv_bug", "start zidx=1 debug=1 neighbors=1 skip=1 abs=4 scaleto=wh allclear")
 }
 
 func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpeech) (model.Response, *model.AppError) {
@@ -634,7 +630,7 @@ func (c *Connection) GoogleTranscribe(ctx context.Context, config *model.GetSpee
 				return " false"
 			}
 		}
-		vars := map[string]interface{}{
+		vars := map[string]any{
 			"GOOGLE_SPEECH_CLOUD_SERVICES_VERSION": "v2",
 			"GOOGLE_SPEECH_RECOGNIZER_PARENT":      config.Recognizer,
 			"GOOGLE_SPEECH_TO_TEXT_URI":            config.Uri,
@@ -690,7 +686,7 @@ func (c *Connection) GoogleTranscribeStop(ctx context.Context) (model.Response, 
 StartRecognize(ctx context.Context, connection, dialogId string, rate int) error
 StopRecognize(ctx context.Context, dialogId string)
 */
-func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate int, vadTimeout int) (model.Response, *model.AppError) {
+func (c *Connection) StartRecognize(ctx context.Context, connection, dialogId string, rate, vadTimeout int) (model.Response, *model.AppError) {
 	args := fmt.Sprintf("uuid_wbt_stt %s start %s %d %s %d", c.id, connection, rate, dialogId, vadTimeout)
 
 	_, err := c.Api(args)
@@ -737,7 +733,7 @@ func (c *Connection) UpdateCid(ctx context.Context, name, number, destination *s
 		c.destination = *destination
 	}
 
-	return
+	return res, err
 }
 
 func (c *Connection) AmdML(ctx context.Context, params model.AmdMLParameters) (model.Response, *model.AppError) {
@@ -816,7 +812,6 @@ func (c *Connection) IsPlayBackground() bool {
 }
 
 func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
-
 	if file == nil || file.Type == nil {
 		return "", false
 	}
@@ -853,9 +848,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		return fmt.Sprintf("silence_stream://%s", *file.Name), true
 
 	case "http_audio":
-		var (
-			args model.HttpFileArgs
-		)
+		var args model.HttpFileArgs
 		if file.Args == nil {
 			return "", false
 		}
@@ -911,7 +904,7 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 		return "", false
 	}
 	var protocol string
-	var q = fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
+	q := fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
 
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
 	if tts.Format == "ulaw" { // todo 11lab test

@@ -2,10 +2,12 @@ package bots_client
 
 import (
 	"context"
-	"github.com/webitel/engine/pkg/wbt"
-	"github.com/webitel/flow_manager/gen/ai_bots"
-	"github.com/webitel/wlog"
 	"sync"
+
+	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/wlog"
+
+	"github.com/webitel/flow_manager/gen/ai_bots"
 )
 
 type Client struct {
@@ -61,5 +63,4 @@ func (cm *Client) WithConnection(ctx context.Context, connection string) context
 }
 
 func (cm *Client) Stop() {
-
 }

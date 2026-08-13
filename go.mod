@@ -1,6 +1,6 @@
 module github.com/webitel/flow_manager
 
-go 1.24.3
+go 1.25.0
 
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
