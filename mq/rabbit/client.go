@@ -249,10 +249,10 @@ func (a *AMQP) subscribeExec() {
 
 	go func() {
 		for m := range msgs {
-			if m.ContentType != "text/json" {
-				wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
-				continue
-			}
+			// if m.ContentType != "text/json" {
+			// 	wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
+			// 	continue
+			// }
 
 			switch m.Exchange {
 			case model.FlowExchange:
