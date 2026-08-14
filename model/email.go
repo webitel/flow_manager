@@ -122,7 +122,7 @@ type EmailProfile struct {
 	Name      string        `json:"name" db:"name"`
 	FlowId    int           `json:"flow_id" db:"flow_id"`
 	Login     string        `json:"login" db:"login"`
-	Password  string        `json:"password" db:"password"`
+	Password  UserPassword  `json:"password" db:"password"`
 	Mailbox   string        `json:"mailbox" db:"mailbox"`
 	SmtpHost  string        `json:"smtp_host" db:"smtp_host"`
 	SmtpPort  int           `json:"smtp_port" db:"smtp_port"`
@@ -133,6 +133,9 @@ type EmailProfile struct {
 	Token     *oauth2.Token `json:"token" db:"token"`
 	AuthType  string        `json:"auth_type" db:"auth_type"`
 }
+
+// Email account password
+type UserPassword = string
 
 func (e *Email) CIDJson() *[]byte {
 	if len(e.Cid) == 0 {

@@ -118,7 +118,7 @@ set updated_at = now(),
     token = :Token
 where id = :Id`, map[string]interface{}{
 		"Id":    id,
-		"Token": data,
+		"Token": encryptJSONSchema(data, schemaTableEmailAccount, "token"),
 	})
 
 	if err != nil {

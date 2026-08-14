@@ -2,6 +2,10 @@ version: v2
 managed:
   enabled: true
   disable:
+    - module: protoc-gen-openapiv2/options/annotations.proto
+    - module: google/api/visibility.proto
+    - path: protoc-gen-openapiv2/options/annotations.proto
+    - path: github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2/options
     - file_option: go_package
       module: buf.build/bufbuild/protovalidate
     - file_option: go_package
