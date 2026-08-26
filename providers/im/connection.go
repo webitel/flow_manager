@@ -351,12 +351,20 @@ func (c *Connection) HandleGateInfo(ctx context.Context, gateType model.IMGateTy
 	return c.srv.gateFactory.Handle(metadata.NewOutgoingContext(ctx, c.hdrs), gateType, id)
 }
 
-func (c *Connection) GetAuthSession(ctx context.Context, deviceID string) (model.IMUserInfo, *model.AppError) {
+func (c *Connection) GetAuthSession(ctx context.Context, query *model.AuthSessionQuery) (model.IMUserInfo, *model.AppError) {
 	response, err := c.srv.client.accountService.Api.AccountGetAuthorizations(
 		c.IMOugoingContext(ctx),
 		&p.AccountGetAuthorizationsRequest{
-			DeviceId: deviceID,
+			DeviceId: query.DeviceID,
 			Size:     1,
+			Contact: &p.InputContact{
+				Input: &p.InputContact_Source{
+					Source: &p.SourceId{
+						Iss: query.AuthIputContact.Iss,
+						Sub: query.AuthIputContact.Sub,
+					},
+				},
+			},
 		},
 	)
 	if err != nil {
