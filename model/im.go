@@ -43,8 +43,32 @@ type IMDialog interface {
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
 	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
-	GetAuthSession(ctx context.Context, deviceID string) (IMUserInfo, *AppError)
+	GetAuthSession(ctx context.Context, query *AuthSessionQuery) (IMUserInfo, *AppError)
 	HandleGateInfo(ctx context.Context, gateType IMGateType, id string) (*IMGate, *AppError)
+}
+
+type AuthSessionQuery struct {
+	DeviceID        string
+	AuthIputContact *AuthIputContact
+}
+
+func NewAuthSessionQuery(deviceID string, authIputContact *AuthIputContact) *AuthSessionQuery {
+	return &AuthSessionQuery{
+		DeviceID:        deviceID,
+		AuthIputContact: authIputContact,
+	}
+}
+
+type AuthIputContact struct {
+	Sub string
+	Iss string
+}
+
+func NewAuthIputContact(sub, iss string) *AuthIputContact {
+	return &AuthIputContact{
+		Sub: sub,
+		Iss: iss,
+	}
 }
 
 type ThreadMember struct {
@@ -128,20 +152,20 @@ func (w MessageWrapper[T]) Via() string                   { return w.via }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID          string        `json:"id"`
-	ThreadID    string        `json:"thread_id"`
-	DomainID    int           `json:"domain_id"`
-	From        ImEndpoint    `json:"from"`
-	To          []ImEndpoint  `json:"to"`
-	Text        string        `json:"text"`
-	CreatedAt   int64         `json:"created_at"` // Unix timestamp у мілісекундах
-	Subject     string        `json:"subject"`
-	Description string        `json:"description"`
-	Type        string        `json:"type"`
-	Contact     *Contact      `json:"contact,omitempty"`
-	Location    *Location     `json:"location,omitempty"`
-	Documents   []MessageFile `json:"documents,omitempty"`
-  System      *SystemIMMessage `json:"system,omitempty"`
+	ID          string           `json:"id"`
+	ThreadID    string           `json:"thread_id"`
+	DomainID    int              `json:"domain_id"`
+	From        ImEndpoint       `json:"from"`
+	To          []ImEndpoint     `json:"to"`
+	Text        string           `json:"text"`
+	CreatedAt   int64            `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string           `json:"subject"`
+	Description string           `json:"description"`
+	Type        string           `json:"type"`
+	Contact     *Contact         `json:"contact,omitempty"`
+	Location    *Location        `json:"location,omitempty"`
+	Documents   []MessageFile    `json:"documents,omitempty"`
+	System      *SystemIMMessage `json:"system,omitempty"`
 }
 
 type Contact struct {
