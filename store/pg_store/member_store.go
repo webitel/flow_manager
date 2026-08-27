@@ -211,6 +211,7 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     )
     and (:Name::varchar isnull or m.name ilike :Name)
     and (:Id::int8 isnull or m.id = :Id::int8)
+    and m.created_at >= case when :Today::bool then now() - interval '2 days' else '-infinity'::timestamptz end
     and (:Today::bool isnull or not :Today::bool
         or (m.created_at at time zone coalesce(tz.sys_name, qtz.sys_name, 'UTC'))::date = (now() at time zone coalesce(tz.sys_name, qtz.sys_name, 'UTC'))::date)
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
