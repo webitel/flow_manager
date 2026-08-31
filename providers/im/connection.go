@@ -910,7 +910,6 @@ func (c *Connection) IsTransfer() bool {
 }
 
 func (c *Connection) Complete(id string) {
-	println("complete", id)
 	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
 		ThreadId: c.threadId,
 		DomainId: int32(c.domainId),
