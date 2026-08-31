@@ -195,6 +195,10 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
         variables = case when (:UVariables::jsonb) notnull then coalesce(mu.variables, '{}'::jsonb) || :UVariables::jsonb else mu.variables end,
         communications = case when :Communications::jsonb notnull and x.v notnull then x.v else mu.communications end
     from call_center.cc_member m
+        left join flow.calendar_timezones tz on tz.id = m.timezone_id
+        left join call_center.cc_queue q on q.id = m.queue_id
+        left join flow.calendar c on c.id = q.calendar_id
+        left join flow.calendar_timezones qtz on qtz.id = c.timezone_id
         left join lateral (
             select
                 jsonb_agg(case when d notnull then x.comm || (d - '{"id"}') else x.comm end order by idx) v
@@ -207,7 +211,9 @@ func (s SqlMemberStore) PatchMembers(domainId int64, req *model.SearchMember, pa
     )
     and (:Name::varchar isnull or m.name ilike :Name)
     and (:Id::int8 isnull or m.id = :Id::int8)
-    and (:Today::bool isnull or not :Today::bool or (:Today and m.created_at >= now()::date))
+    and m.created_at >= case when :Today::bool then now() - interval '2 days' else '-infinity'::timestamptz end
+    and (:Today::bool isnull or not :Today::bool
+        or (m.created_at at time zone coalesce(tz.sys_name, qtz.sys_name, 'UTC'))::date = (now() at time zone coalesce(tz.sys_name, qtz.sys_name, 'UTC'))::date)
     and (:Completed::bool isnull or ( case when :Completed then not m.stop_at isnull else m.stop_at isnull end ))
     and (:BucketId::int isnull or m.bucket_id = :BucketId)
     and (:Destination::varchar isnull or m.communications @>  any (array((select jsonb_build_array(jsonb_build_object('destination', :Destination::varchar))))))
