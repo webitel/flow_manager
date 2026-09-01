@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	p "github.com/webitel/flow_manager/gen/im/api/gateway/v1"
+	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/wlog"
 )
 
 // Covers CW-60 Bug 1: on a bot.control.granted event the schema is started for
@@ -68,5 +70,41 @@ func TestSelectCustomerPeer(t *testing.T) {
 				t.Fatalf("selectCustomerPeer sub = %q, want %q", got.Sub, tt.wantSub)
 			}
 		})
+	}
+}
+
+// Covers CW-60 Bug 1: a schema must start ONLY on bot.control.granted, never from an
+// inbound message. A bot receiver without a live connection (e.g. the owner suspended
+// lower in the control stack while another bot holds the top) must be skipped by
+// nodeMessage — otherwise it would run in parallel with the active controller.
+func TestNodeMessage_DoesNotStartSchemaWithoutLiveConnection(t *testing.T) {
+	log := wlog.NewLogger(&wlog.LoggerConfiguration{EnableConsole: false})
+	s := &server{
+		log:             log,
+		connectionStore: NewConnectionStore(log),
+		consume:         make(chan model.Connection, 1),
+	}
+
+	msg := model.MessageWrapper[model.Message]{
+		Type: model.IMEventTypeMessage,
+		Message: model.Message{
+			ThreadID: "thread-1",
+			From:     model.ImEndpoint{Sub: "cust-1", Issuer: "webitel"},
+			To:       []model.ImEndpoint{{Sub: "2614", Issuer: IMUserTypeBot}},
+		},
+	}
+
+	if err := s.nodeMessage(msg); err != nil {
+		t.Fatalf("nodeMessage returned error: %v", err)
+	}
+
+	if _, ok := s.connectionStore.Get("thread-1.2614"); ok {
+		t.Fatal("nodeMessage started a schema for a bot without a live connection")
+	}
+
+	select {
+	case <-s.consume:
+		t.Fatal("nodeMessage dispatched a dialog to the schema runner; it must only deliver to live connections")
+	default:
 	}
 }

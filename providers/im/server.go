@@ -193,22 +193,44 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error {
 	compositeSessionID := m.ThreadID + "." + strconv.Itoa(m.Sub)
 
+	s.log.Debug("bot control granted",
+		wlog.String("thread_id", m.ThreadID),
+		wlog.Int("bot_sub", m.Sub),
+		wlog.Int("released_sub", m.ReleasedSub),
+		wlog.String("member_id", m.MemberID),
+		wlog.Any("is_resume", m.IsResume),
+		wlog.Any("auto_leave", m.AutoLeave),
+		wlog.String("session_id", compositeSessionID),
+	)
+
+	// The granted event names the bot being released (ReleasedSub). Tear its
+	// connection down here so a superseded bot never keeps running alongside the new
+	// controller. The schema goroutine unwinds and removes itself from the cache.
+	if m.ReleasedSub != 0 && m.ReleasedSub != m.Sub {
+		releasedSessionID := m.ThreadID + "." + strconv.Itoa(m.ReleasedSub)
+		if released, ok := s.connectionStore.Get(releasedSessionID); ok {
+			s.log.Debug("releasing previous bot connection on grant",
+				wlog.String("released_session_id", releasedSessionID),
+				wlog.Int("released_sub", m.ReleasedSub),
+			)
+			released.Break()
+		}
+	}
+
 	if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
+		s.log.Debug("live connection exists, resuming instead of starting a fresh schema",
+			wlog.String("session_id", compositeSessionID),
+		)
 		conn.onTransfer(m)
 
 		return nil
 	}
 
-	if m.IsResume {
-		// Resume of a schema this node does not currently hold a live connection for:
-		// keep prior behavior and let the next inbound message re-establish it.
-		s.log.Debug("bot control granted: resume without live connection, skipping start",
-			wlog.String("thread_id", m.ThreadID),
-			wlog.Int("sub", m.Sub),
-		)
-
-		return nil
-	}
+	// No live connection for this session. Schemas start ONLY from a grant (never from
+	// an inbound message), so both a first-time grant and a resume (pop of the control
+	// stack) fall through to the fresh-start path below. Previously resume deferred to
+	// the next inbound message to re-establish the schema; that is gone now that
+	// nodeMessage only delivers to already-live connections.
 
 	to := model.ImEndpoint{
 		Sub:      strconv.Itoa(m.Sub),
@@ -218,12 +240,31 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 
 	from, err := s.resolveCustomerPeer(m, to)
 	if err != nil {
+		s.log.Error("resolve customer peer failed, schema will not start",
+			wlog.String("thread_id", m.ThreadID),
+			wlog.Int("bot_sub", m.Sub),
+			wlog.Err(err),
+		)
+
 		return err
 	}
 
 	if from.Sub == "" {
+		s.log.Error("no customer peer in thread, schema will not start",
+			wlog.String("thread_id", m.ThreadID),
+			wlog.Int("bot_sub", m.Sub),
+		)
+
 		return fmt.Errorf("bot control granted: no customer peer resolved for thread %s", m.ThreadID)
 	}
+
+	s.log.Debug("starting schema on grant",
+		wlog.String("thread_id", m.ThreadID),
+		wlog.Int("bot_sub", m.Sub),
+		wlog.String("customer_sub", from.Sub),
+		wlog.String("customer_name", from.Name),
+		wlog.String("session_id", compositeSessionID),
+	)
 
 	msg := s.synthesizeGrantMessage(m, from, to)
 
@@ -255,7 +296,18 @@ func (s *server) resolveCustomerPeer(m model.IMBotControlGrantedEvent, to model.
 		return model.ImEndpoint{}, fmt.Errorf("thread %s not found", m.ThreadID)
 	}
 
-	return selectCustomerPeer(result.GetItems()[0].GetMembers(), to.Sub), nil
+	members := result.GetItems()[0].GetMembers()
+
+	peer := selectCustomerPeer(members, to.Sub)
+	s.log.Debug("resolved customer peer from thread members",
+		wlog.String("thread_id", m.ThreadID),
+		wlog.String("bot_sub", to.Sub),
+		wlog.String("customer_sub", peer.Sub),
+		wlog.Any("found", peer.Sub != ""),
+		wlog.Int("members_count", len(members)),
+	)
+
+	return peer, nil
 }
 
 // selectCustomerPeer returns the first human (non-bot) participant that is not the
@@ -329,6 +381,10 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 			continue
 		}
 
+		// No live connection for this bot receiver: start a fresh schema straight from the
+		// inbound message. This covers a plain thread start (no transfer/grant) where the
+		// first customer message is what kicks the bot off. startDialog is idempotent and
+		// claims the session, so it will not double-start or run on another node's session.
 		if err := s.startDialog(compositeSessionID, endpoint, msg); err != nil {
 			return err
 		}
@@ -371,7 +427,10 @@ func (s *server) startDialog(compositeSessionID string, to model.ImEndpoint, msg
 	dialog.setupVariables()
 
 	s.connectionStore.Add(dialog)
-	dialog.log.Debug("start dialog " + compositeSessionID)
+	dialog.log.Debug("dispatched dialog to schema runner",
+		wlog.String("session_id", compositeSessionID),
+		wlog.String("bot_sub", to.Sub),
+	)
 	s.consume <- dialog
 
 	return nil
