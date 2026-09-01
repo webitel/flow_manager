@@ -910,6 +910,12 @@ func (c *Connection) IsTransfer() bool {
 }
 
 func (c *Connection) Complete(id string) {
+	c.log.Debug("completing bot control (bot finished, auto-leave)",
+		wlog.String("thread_id", c.threadId),
+		wlog.String("member_id", id),
+		wlog.Int64("domain_id", c.domainId),
+	)
+
 	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
 		ThreadId: c.threadId,
 		DomainId: int32(c.domainId),
@@ -917,7 +923,11 @@ func (c *Connection) Complete(id string) {
 	})
 
 	if e != nil {
-		c.log.Error(e.Error())
+		c.log.Error("complete bot control failed",
+			wlog.String("thread_id", c.threadId),
+			wlog.String("member_id", id),
+			wlog.Err(e),
+		)
 	}
 }
 
