@@ -369,6 +369,27 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 		return nil
 	}
 
+	// System messages (member added/removed, transfer notice, bot_stopped, ...) are
+	// administrative events, not customer input. They must never trigger a bot schema
+	// (startDialog) nor be delivered to a live schema as a reply — otherwise a bot waiting
+	// in ReceiveMessage would treat a system notice as the customer's answer. Detected by
+	// either the nested system payload or the top-level type, so ANY system notice is skipped.
+	if m := msg.GetPayload().Message(); m.System != nil || m.Type == model.IMMessageTypeSystem {
+		systemType := ""
+		if m.System != nil {
+			systemType = m.System.Type
+		}
+
+		s.log.Debug("skipping system message (not a bot trigger)",
+			wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+			wlog.String("message_id", msg.GetPayload().MessageID()),
+			wlog.String("message_type", m.Type),
+			wlog.String("system_type", systemType),
+		)
+
+		return nil
+	}
+
 	for _, endpoint := range msg.GetPayload().Receivers() {
 		if endpoint.Issuer != IMUserTypeBot {
 			continue
