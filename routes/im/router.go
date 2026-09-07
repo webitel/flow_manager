@@ -70,23 +70,10 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 func (r *Router) handle(conn model.Connection) {
 	conv := conn.(Dialog)
 	if err := r.runSchema(conn, conv, conv.SchemaId(), conn.Context(), ""); err != nil {
-		// Schema was cancelled (e.g. control transferred/superseded by a grant). Do not
-		// signal completion — the bot is only suspended, not finished.
 		conv.Stop(err)
-
-		return
+	} else {
+		conv.Stop(nil)
 	}
-
-	// Schema reached its natural end. Tell thread-service this bot finished its turn so the
-	// control stack advances: a transient (auto-leave) bot is popped and removed from the
-	// thread, and the owner bot is marked idle. thread-service decides which case applies from
-	// its own owner_bot_id, so we signal for every completed bot. Without this the transient
-	// bot lingers as a thread member after it finished.
-	if id := conv.CompleteId(); id != "" {
-		conv.Complete(id)
-	}
-
-	conv.Stop(nil)
 }
 
 func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context, cid string) *model.AppError {
