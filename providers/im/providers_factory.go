@@ -114,3 +114,36 @@ func (v *ViberGateHandler) Handle(ctx context.Context, id string) (*model.IMGate
 		Payload: viberInfo,
 	}, nil
 }
+
+type CustomGateHandler struct {
+	client *Client
+}
+
+func NewCustomGateHandler(client *Client) *CustomGateHandler {
+	return &CustomGateHandler{client: client}
+}
+
+func (c *CustomGateHandler) Type() model.IMGateType { return model.IMGateTypeCustom }
+func (c *CustomGateHandler) Handle(ctx context.Context, id string) (*model.IMGate, *model.AppError) {
+	response, err := c.client.customService.Api.GetCustomGate(ctx, &providers.ProviderGetCustomGateRequest{Id: id})
+	if err != nil {
+		return nil, model.NewAppError(
+			"CustomGateHandler.Handle",
+			"providers.im.providers_factory.request",
+			nil,
+			err.Error(),
+			model.ExtractHTPPStatusCodeFromGRPC(err),
+		)
+	}
+
+	customInfo := &model.GateCustom{
+		ID:          response.GetItem().GetId(),
+		Name:        response.GetItem().GetName(),
+		CallbackURL: response.GetItem().GetCallbackUrl(),
+	}
+
+	return &model.IMGate{
+		Type:    model.IMGateTypeCustom,
+		Payload: customInfo,
+	}, nil
+}
