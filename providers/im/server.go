@@ -381,13 +381,17 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 			continue
 		}
 
-		// No live connection for this bot receiver: start a fresh schema straight from the
-		// inbound message. This covers a plain thread start (no transfer/grant) where the
-		// first customer message is what kicks the bot off. startDialog is idempotent and
-		// claims the session, so it will not double-start or run on another node's session.
-		if err := s.startDialog(compositeSessionID, endpoint, msg); err != nil {
-			return err
-		}
+		// No live connection for this bot receiver. Schemas start ONLY on bot.control.granted
+		// (CW-60), never from an inbound message — otherwise a bot suspended lower in the
+		// control stack would run in parallel with the active controller. The controller
+		// whose flow has ended (e.g. the owner bot) is restarted by thread-service clearing
+		// its controller and re-granting on the next message, which arrives here as a grant
+		// event and starts a fresh schema. So skip the message.
+		s.log.Debug("no live connection for bot receiver, skipping (schema starts on grant only)",
+			wlog.String("session_id", compositeSessionID),
+			wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+			wlog.String("message_id", msg.GetPayload().MessageID()),
+		)
 	}
 
 	return nil
