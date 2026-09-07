@@ -54,7 +54,7 @@ type IMUserAgent struct {
 	Desktop bool   `json:"desktop"`
 	Bot     bool   `json:"bot"`
 
-	//ua source string
+	// ua source string
 	String string `json:"string"`
 }
 
@@ -65,6 +65,7 @@ const (
 	IMGateTypeFacebook    IMGateType = "facebook"
 	IMGateTypeWhatsapp    IMGateType = "whatsapp"
 	IMGateTypeViber       IMGateType = "viber"
+	IMGateTypeCustom      IMGateType = "custom"
 )
 
 func IsIMGateTypeUnspecified(t IMGateType) bool { return t == IMGateTypeUnspecified }
@@ -77,6 +78,8 @@ func IMGateTypeFromString(in string) IMGateType {
 		return IMGateTypeWhatsapp
 	case "viber":
 		return IMGateTypeViber
+	case "custom":
+		return IMGateTypeCustom
 	default:
 		return IMGateTypeUnspecified
 	}
@@ -117,6 +120,21 @@ func (g *IMGate) Viber() (*GateViber, *AppError) {
 	return v, nil
 }
 
+func (g *IMGate) Custom() (*GateCustom, *AppError) {
+	c, ok := g.Payload.(*GateCustom)
+	if !ok {
+		return nil, NewAppError(
+			"Custom",
+			"model.im_user_info.custom.assert",
+			nil,
+			fmt.Sprintf("asserting different type from expected gate custom: %T", g.Payload),
+			400,
+		)
+	}
+
+	return c, nil
+}
+
 func (g *IMGate) MarshalJSON() ([]byte, error) {
 	switch p := g.Payload.(type) {
 	case *GateFacebook:
@@ -135,6 +153,15 @@ func (g *IMGate) MarshalJSON() ([]byte, error) {
 		}{
 			Type:  g.Type,
 			Viber: p,
+		})
+
+	case *GateCustom:
+		return json.Marshal(struct {
+			Type   IMGateType  `json:"type"`
+			Custom *GateCustom `json:"custom"`
+		}{
+			Type:   g.Type,
+			Custom: p,
 		})
 
 	default:
@@ -157,4 +184,10 @@ type GateViber struct {
 	BotID      string `json:"bot_id"`
 	BotURI     string `json:"bot_uri"`
 	SenderName string `json:"sender_name"`
+}
+
+type GateCustom struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	CallbackURL string `json:"callback_url"`
 }
