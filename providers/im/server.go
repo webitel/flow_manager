@@ -370,25 +370,11 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 	}
 
 	// System messages (member added/removed, transfer notice, bot_stopped, ...) are
-	// administrative events, not customer input. They must never trigger a bot schema
-	// (startDialog) nor be delivered to a live schema as a reply — otherwise a bot waiting
-	// in ReceiveMessage would treat a system notice as the customer's answer. Detected by
-	// either the nested system payload or the top-level type, so ANY system notice is skipped.
-	if m := msg.GetPayload().Message(); m.System != nil || m.Type == model.IMMessageTypeSystem {
-		systemType := ""
-		if m.System != nil {
-			systemType = m.System.Type
-		}
-
-		s.log.Debug("skipping system message (not a bot trigger)",
-			wlog.String("thread_id", msg.GetPayload().GetThreadID()),
-			wlog.String("message_id", msg.GetPayload().MessageID()),
-			wlog.String("message_type", m.Type),
-			wlog.String("system_type", systemType),
-		)
-
-		return nil
-	}
+	// administrative events, not customer input. They must never START a bot schema, but a
+	// bot that is already running still needs to observe them (e.g. to react to a close and
+	// finish/leave). So we only guard the startDialog path below, never OnMessage.
+	m := msg.GetPayload().Message()
+	isSystem := m.System != nil || m.Type == model.IMMessageTypeSystem
 
 	for _, endpoint := range msg.GetPayload().Receivers() {
 		if endpoint.Issuer != IMUserTypeBot {
@@ -402,10 +388,27 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 			continue
 		}
 
-		// No live connection for this bot receiver: start a fresh schema straight from the
-		// inbound message. This covers a plain thread start (no transfer/grant) where the
-		// first customer message is what kicks the bot off. startDialog is idempotent and
-		// claims the session, so it will not double-start or run on another node's session.
+		// No live connection for this bot receiver. A system notice must NOT start a fresh
+		// schema — only real customer input does.
+		if isSystem {
+			systemType := ""
+			if m.System != nil {
+				systemType = m.System.Type
+			}
+
+			s.log.Debug("skipping start on system message (not a bot trigger)",
+				wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+				wlog.String("message_id", msg.GetPayload().MessageID()),
+				wlog.String("message_type", m.Type),
+				wlog.String("system_type", systemType),
+			)
+
+			continue
+		}
+
+		// Plain thread start (no transfer/grant): the first customer message kicks the bot
+		// off. startDialog is idempotent and claims the session, so it will not double-start
+		// or run on another node's session.
 		if err := s.startDialog(compositeSessionID, endpoint, msg); err != nil {
 			return err
 		}
