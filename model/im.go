@@ -13,6 +13,11 @@ const (
 
 const BotControlReasonClientLeave string = "client_leave"
 
+// IMMessageTypeSystem is the payload-level Message.Type for administrative system
+// notices (member added/removed, transfer, bot_stopped, ...). Such messages must never
+// trigger or feed a bot schema.
+const IMMessageTypeSystem string = "system"
+
 type IMDialog interface {
 	Connection
 
