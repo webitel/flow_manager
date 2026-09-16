@@ -212,9 +212,7 @@ func (r *router) buildRequest(c model.Connection, scope *Flow, props map[string]
 		}
 	}
 
-	if _, ok = headers["content-type"]; !ok {
-		headers["content-type"] = "application/json"
-	}
+	headers["content-type"] = contentTypeFromHeaders(headers)
 
 	if _, ok = props["data"]; ok {
 		if strings.Contains(headers["content-type"], "text/xml") || strings.Contains(headers["content-type"], "application/soap+xml") {
@@ -373,6 +371,16 @@ func rawSubstitute(template string, vars map[string]string) string {
 		}
 		return match // parse global
 	})
+}
+
+func contentTypeFromHeaders(headers map[string]string) string {
+	for k, v := range headers {
+		if strings.EqualFold(k, "content-type") {
+			return v
+		}
+	}
+
+	return "application/json"
 }
 
 func encode(v url.Values) string {
