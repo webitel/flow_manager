@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/tidwall/gjson"
@@ -40,35 +41,51 @@ const (
 type Connection struct {
 	sync.RWMutex
 
-	id               string
-	threadId         string
-	ctx              context.Context
-	cancelCtx        context.CancelFunc
-	domainId         int64
-	schemaId         int
-	srv              *server
-	variables        map[string]string
-	storeMessages    map[string][]byte
-	msg              model.Message
-	lastMsg          model.Message
-	from             model.ImEndpoint
-	to               model.ImEndpoint
-	log              *wlog.Logger
-	waitMsgChan      chan model.IMEventWrapper
-	hdrs             metadata.MD
-	queueKey         *model.InQueueKey
-	exportVariables  []string
-	messages         []model.IMEventWrapper
-	info             model.ThreadInfo
-	transferred      bool
-	transferSchemaId int
-	completeId       string
+	id       string
+	threadId string
+	// ctx/cancelCtx — lifetime контекст конекшна: живе весь час, поки жива
+	// схема, і рветься лише термінально (Break/Stop).
+	ctx       context.Context
+	cancelCtx context.CancelFunc
+	// runCtx/runCancel — контекст ПОТОЧНОГО прогону схеми: рветься на Suspend()
+	// (розкручує joinQueue/receive), Resume() створює новий. Природний кінець
+	// схеми його не чіпає.
+	runCtx    context.Context
+	runCancel context.CancelFunc
+	// state: 0=running, 1=suspended, 2=terminating (atomic).
+	state int32
+	// resumeCh — буферизований (1) сигнал park-loop продовжити після Resume().
+	resumeCh        chan struct{}
+	domainId        int64
+	schemaId        int
+	srv             *server
+	variables       map[string]string
+	storeMessages   map[string][]byte
+	msg             model.Message
+	lastMsg         model.Message
+	from            model.ImEndpoint
+	to              model.ImEndpoint
+	log             *wlog.Logger
+	waitMsgChan     chan model.IMEventWrapper
+	hdrs            metadata.MD
+	queueKey        *model.InQueueKey
+	exportVariables []string
+	messages        []model.IMEventWrapper
+	info            model.ThreadInfo
+	completeId      string
 }
+
+const (
+	connStateRunning     int32 = 0
+	connStateSuspended   int32 = 1
+	connStateTerminating int32 = 2
+)
 
 func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	runCtx, runCancel := context.WithCancel(context.Background())
 
 	conn := &Connection{
 		id:       id,
@@ -85,6 +102,9 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		msg:           msg.GetPayload().Message(),
 		ctx:           ctx,
 		cancelCtx:     cancel,
+		runCtx:        runCtx,
+		runCancel:     runCancel,
+		resumeCh:      make(chan struct{}, 1),
 		domainId:      msg.GetDomainID(),
 		variables:     toVariables(nil), // todo
 		storeMessages: make(map[string][]byte),
@@ -249,21 +269,11 @@ func (c *Connection) updateJWTPayloadVariable(msg model.IMEventWrapper) {
 }
 
 func (c *Connection) processSystemMessage(msg model.Message) {
-	c.Lock()
-	c.transferred = msg.System.Type == "transferred"
-	if c.transferred {
-		c.log.Debug("transferred")
-		// c.cancelCtx()
+	// transferred тепер обробляється подієво через bot.control.granted
+	// (server.handleBotControlGranted → Suspend/Resume), а не через прапорець тут.
+	if msg.System != nil && msg.System.Type == "transferred" {
+		c.log.Debug("transferred system message observed")
 	}
-
-	c.Unlock()
-}
-
-func (c *Connection) onTransfer(m model.IMBotControlGrantedEvent) {
-	c.ResetForTransfer(m.Sub)
-	c.Lock()
-	c.completeId = m.MemberID
-	c.Unlock()
 }
 
 func (c *Connection) CompleteId() string {
@@ -604,7 +614,6 @@ func (c *Connection) exportToIMCore(ctx context.Context, exportVariables map[str
 			Variables: variables,
 		},
 	)
-
 	if err != nil {
 		if s, ok := status.FromError(err); ok {
 			if s.Code() == codes.PermissionDenied {
@@ -875,16 +884,7 @@ func convertToProtoButtons(src []model.KeyboardButton) []*p.KeyboardButton {
 	return res
 }
 
-func (c *Connection) IsTransfer() bool {
-	c.RLock()
-	v := c.transferred
-	c.RUnlock()
-
-	return v
-}
-
 func (c *Connection) Complete(id string) {
-	println("complete", id)
 	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
 		ThreadId: c.threadId,
 		DomainId: int32(c.domainId),
@@ -896,53 +896,95 @@ func (c *Connection) Complete(id string) {
 	}
 }
 
+// RunContext повертає контекст поточного прогону схеми (рветься на Suspend()).
+func (c *Connection) RunContext() context.Context {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.runCtx
+}
+
+// ResumeChan — сигнал park-loop продовжити виконання після Resume().
+func (c *Connection) ResumeChan() <-chan struct{} {
+	return c.resumeCh
+}
+
+func (c *Connection) IsSuspended() bool {
+	return atomic.LoadInt32(&c.state) == connStateSuspended
+}
+
+func (c *Connection) IsTerminating() bool {
+	return atomic.LoadInt32(&c.state) == connStateTerminating
+}
+
+// Suspend призупиняє поточний прогін схеми: виставляє state=suspended ПЕРЕД
+// скасуванням runCtx (щоб park-loop надійно побачив suspend, а не сплутав із
+// природним break), потім рве runCtx — joinQueue/receive розкручуються, а сама
+// конекшн лишається живою.
+func (c *Connection) Suspend() {
+	atomic.StoreInt32(&c.state, connStateSuspended)
+
+	c.Lock()
+	cancel := c.runCancel
+	c.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
+}
+
+// Resume готує новий runCtx, перемикає state=running і штовхає токен у
+// буферизований resumeCh (ранній сигнал не губиться).
+func (c *Connection) Resume() {
+	ctx, cancel := context.WithCancel(context.Background())
+
+	c.Lock()
+	c.runCtx = ctx
+	c.runCancel = cancel
+	c.Unlock()
+
+	atomic.StoreInt32(&c.state, connStateRunning)
+
+	select {
+	case c.resumeCh <- struct{}{}:
+	default:
+	}
+}
+
+// Break термінально знищує конекшн: state=terminating + скасування ОБОХ
+// контекстів (run і lifetime), щоб park-loop гарантовано вийшов.
 func (c *Connection) Break() {
-	if c.cancelCtx != nil {
-		c.cancelCtx()
+	atomic.StoreInt32(&c.state, connStateTerminating)
+
+	c.Lock()
+	rc := c.runCancel
+	lc := c.cancelCtx
+	c.Unlock()
+
+	if rc != nil {
+		rc()
+	}
+	if lc != nil {
+		lc()
 	}
 }
 
 func (c *Connection) Stop(err error) {
-	if c.cancelCtx != nil {
-		c.cancelCtx()
+	atomic.StoreInt32(&c.state, connStateTerminating)
+
+	c.Lock()
+	rc := c.runCancel
+	lc := c.cancelCtx
+	c.Unlock()
+
+	if rc != nil {
+		rc()
+	}
+	if lc != nil {
+		lc()
 	}
 
 	c.srv.stopConnection(c)
-}
-
-func (c *Connection) TransferredSchema() (int, string) {
-	c.Lock()
-	transferSchemaId := c.transferSchemaId
-	completeId := c.completeId
-	c.transferred = false
-	c.Unlock()
-
-	return transferSchemaId, completeId
-}
-
-func (c *Connection) NewContext() context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	c.Lock()
-	c.ctx = ctx
-	c.cancelCtx = cancel
-	c.transferred = false
-	c.Unlock()
-	return ctx
-}
-
-func (c *Connection) ResetForTransfer(schemaId int) context.Context {
-	ctx, cancel := context.WithCancel(context.Background())
-	old := c.cancelCtx
-	c.Lock()
-	c.ctx = ctx
-	c.cancelCtx = cancel
-	c.transferred = true
-	c.transferSchemaId = schemaId
-	c.Unlock()
-
-	old()
-
-	return ctx
 }
 
 func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {

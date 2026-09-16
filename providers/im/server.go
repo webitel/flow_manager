@@ -182,13 +182,16 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 	)
 }
 
-// handleBotControlGranted reacts to a bot.control.granted.v1 event. When an existing
-// connection already owns the thread (bot->bot resume, or the client message already
-// started the schema), it just re-points that connection at the new bot via onTransfer.
-// Otherwise — the human->bot case — it starts a fresh schema for the granted bot
-// IMMEDIATELY, without waiting for the next inbound client message. The grant event
-// carries no customer peer, so the thread participants are fetched to synthesize the
-// start message (from = customer, to = bot).
+// handleBotControlGranted reacts to a bot.control.granted.v1 event. Push vs pop is
+// derived from LOCAL state (no is_resume flag):
+//   - a suspended connection already exists for the granted Sub  -> POP: resume it and
+//     tear down the released (finished) bot;
+//   - a live non-suspended connection exists for the Sub         -> duplicate grant, no-op;
+//   - no connection for the Sub                                  -> PUSH: suspend the
+//     released bot (the transfer source) and start a fresh schema for the granted bot
+//     IMMEDIATELY, without waiting for the next inbound client message.
+// The grant event carries no customer peer, so the thread participants are fetched to
+// synthesize the start message (from = customer, to = bot).
 func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error {
 	compositeSessionID := m.ThreadID + "." + strconv.Itoa(m.Sub)
 
@@ -202,34 +205,63 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 		wlog.String("session_id", compositeSessionID),
 	)
 
-	// The granted event names the bot being released (ReleasedSub). Tear its
-	// connection down here so a superseded bot never keeps running alongside the new
-	// controller. The schema goroutine unwinds and removes itself from the cache.
+	releasedSessionID := ""
 	if m.ReleasedSub != 0 && m.ReleasedSub != m.Sub {
-		releasedSessionID := m.ThreadID + "." + strconv.Itoa(m.ReleasedSub)
-		if released, ok := s.connectionStore.Get(releasedSessionID); ok {
-			s.log.Debug("releasing previous bot connection on grant",
-				wlog.String("released_session_id", releasedSessionID),
-				wlog.Int("released_sub", m.ReleasedSub),
-			)
-			released.Break()
-		}
+		releasedSessionID = m.ThreadID + "." + strconv.Itoa(m.ReleasedSub)
 	}
 
+	// Розрізняємо push vs pop з ЛОКАЛЬНОГО стану (без is_resume):
+	//   POP  — призупинена конекшн для Sub уже існує → повертаємось на неї
+	//          (Resume), а released-бота (що завершився) зносимо.
+	//   PUSH — новий бот зверху → призупиняємо released-бота (джерело трансфера)
+	//          і стартуємо Sub свіжою схемою.
 	if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
-		s.log.Debug("live connection exists, resuming instead of starting a fresh schema",
+		if conn.IsSuspended() {
+			// POP: повертаємось на призупинену схему.
+			s.log.Debug("resuming suspended connection on grant (pop)",
+				wlog.String("session_id", compositeSessionID),
+			)
+
+			if releasedSessionID != "" {
+				if released, ok := s.connectionStore.Get(releasedSessionID); ok {
+					s.log.Debug("breaking released bot on pop",
+						wlog.String("released_session_id", releasedSessionID),
+						wlog.Int("released_sub", m.ReleasedSub),
+					)
+					released.Break()
+				}
+			}
+
+			conn.Resume()
+
+			return nil
+		}
+
+		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
+		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
+		s.log.Debug("grant for already-active connection, ignoring",
 			wlog.String("session_id", compositeSessionID),
 		)
-		conn.onTransfer(m)
 
 		return nil
 	}
 
-	// No live connection for this session. Schemas start ONLY from a grant (never from
-	// an inbound message), so both a first-time grant and a resume (pop of the control
-	// stack) fall through to the fresh-start path below. Previously resume deferred to
-	// the next inbound message to re-establish the schema; that is gone now that
-	// nodeMessage only delivers to already-live connections.
+	// PUSH: живої конекшн для Sub немає. Призупиняємо released-бота (джерело
+	// трансфера) — це головне виправлення: Suspend, а не Break, щоб потім
+	// відновитись на pop. Далі стартуємо Sub свіжою схемою.
+	if releasedSessionID != "" {
+		if released, ok := s.connectionStore.Get(releasedSessionID); ok {
+			s.log.Debug("suspending source bot on push",
+				wlog.String("released_session_id", releasedSessionID),
+				wlog.Int("released_sub", m.ReleasedSub),
+			)
+			released.Suspend()
+		}
+	}
+
+	s.log.Debug("no live connection, starting a fresh schema (push)",
+		wlog.String("session_id", compositeSessionID),
+	)
 
 	to := model.ImEndpoint{
 		Sub:      strconv.Itoa(m.Sub),
