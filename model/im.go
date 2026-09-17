@@ -30,10 +30,13 @@ type IMDialog interface {
 	SchemaId() int
 	Stop(err error)
 	Complete(id string)
-	IsTransfer() bool
-	TransferredSchema() (int, string)
 	CompleteId() string
-	NewContext() context.Context
+	RunContext() context.Context
+	ResumeChan() <-chan struct{}
+	IsSuspended() bool
+	IsTerminating() bool
+	Suspend()
+	Resume()
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
