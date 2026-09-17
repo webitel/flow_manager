@@ -34,6 +34,12 @@ type server struct {
 	connectionStore *ConnectionStore
 	sessionStore    SessionStore
 	gateFactory     *GateHandlerFactory
+	// pushParent тримає зв'язок child→parent для локального pop без гранта від
+	// thread-service: ключ — sessionID пушнутої (вкладеної) схеми, значення —
+	// sessionID призупиненої джерельної схеми. Коли child завершується природно,
+	// FM локально резюмить parent (див. resumeParentOf). Ідемпотентно з майбутнім
+	// owner-грантом (той побачить parent уже running → no-op).
+	pushParent sync.Map // map[string]string
 }
 
 func NewServer(id, consulAddr string, receiver <-chan any, log *wlog.Logger, t *tls.Config, store SessionStore) model.Server {
@@ -257,6 +263,9 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 				wlog.Int("released_sub", m.ReleasedSub),
 			)
 			released.Suspend()
+			// Запам'ятовуємо parent, щоб на природному завершенні Sub локально
+			// повернутись на призупинену джерельну схему (без гранта на pop).
+			s.pushParent.Store(compositeSessionID, releasedSessionID)
 		}
 	}
 
@@ -300,7 +309,9 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 
 	msg := s.synthesizeGrantMessage(m, from, to)
 
-	return s.startDialog(compositeSessionID, to, msg)
+	// nested=true, якщо це push над іншою схемою (є released_sub); owner
+	// (released_sub=0) стартує як не-nested і не шле Complete на завершенні.
+	return s.startDialog(compositeSessionID, to, msg, releasedSessionID != "")
 }
 
 // resolveCustomerPeer loads the thread participants and returns the customer endpoint —
@@ -388,10 +399,55 @@ func (s *server) synthesizeGrantMessage(m model.IMBotControlGrantedEvent, from, 
 
 func (s *server) stopConnection(c *Connection) {
 	c.srv.connectionStore.Delete(c)
+	// Прибираємо будь-який висячий parent-запис для цієї конекшн (на випадок
+	// термінального Break без природного pop).
+	s.pushParent.Delete(c.id)
 	err := s.sessionStore.Remove(c.id, s.id)
 	if err != nil {
 		s.log.Warn("failed to remove session store connection")
 	}
+}
+
+// resumeParentOf викликається, коли схема childID завершилася природно (pop зі
+// стека контролю). Якщо для неї збережено призупинену джерельну схему — локально
+// її резюмимо, не чекаючи grant від im-thread-service. Ідемпотентно: якщо parent
+// уже не suspended (напр. грант випередив), нічого не робимо.
+func (s *server) resumeParentOf(childID string) {
+	v, ok := s.pushParent.LoadAndDelete(childID)
+	if !ok {
+		return
+	}
+
+	parentID, _ := v.(string)
+	if parentID == "" {
+		return
+	}
+
+	parent, ok := s.connectionStore.Get(parentID)
+	if !ok {
+		s.log.Debug("parent connection gone, nothing to resume",
+			wlog.String("child_session_id", childID),
+			wlog.String("parent_session_id", parentID),
+		)
+
+		return
+	}
+
+	if !parent.IsSuspended() {
+		s.log.Debug("parent not suspended, skip local resume",
+			wlog.String("child_session_id", childID),
+			wlog.String("parent_session_id", parentID),
+		)
+
+		return
+	}
+
+	s.log.Debug("locally resuming parent schema on child completion",
+		wlog.String("child_session_id", childID),
+		wlog.String("parent_session_id", parentID),
+	)
+
+	parent.Resume()
 }
 
 const IMUserTypeBot string = "bot"
@@ -441,7 +497,7 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 		// Plain thread start (no transfer/grant): the first customer message kicks the bot
 		// off. startDialog is idempotent and claims the session, so it will not double-start
 		// or run on another node's session.
-		if err := s.startDialog(compositeSessionID, endpoint, msg); err != nil {
+		if err := s.startDialog(compositeSessionID, endpoint, msg, false); err != nil {
 			return err
 		}
 	}
@@ -454,7 +510,7 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 // it to the schema runner via s.consume. It is shared by the inbound-message path
 // (nodeMessage) and the bot-control-granted path (handleBotControlGranted) so a fresh
 // schema starts identically regardless of what triggered it.
-func (s *server) startDialog(compositeSessionID string, to model.ImEndpoint, msg model.IMEventWrapper) error {
+func (s *server) startDialog(compositeSessionID string, to model.ImEndpoint, msg model.IMEventWrapper, nested bool) error {
 	if _, ok := s.connectionStore.Get(compositeSessionID); ok {
 		// A dialog for this thread+bot already exists: do not double-start.
 		return nil
@@ -479,7 +535,7 @@ func (s *server) startDialog(compositeSessionID string, to model.ImEndpoint, msg
 		s.log.Warn("received message with sequance thread ID", wlog.Int("sequance", *seq))
 	}
 
-	dialog := newConnection(s, compositeSessionID, to, msg)
+	dialog := newConnection(s, compositeSessionID, to, msg, nested)
 	dialog.setupVariables()
 
 	s.connectionStore.Add(dialog)

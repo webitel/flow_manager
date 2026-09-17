@@ -73,6 +73,10 @@ type Connection struct {
 	messages        []model.IMEventWrapper
 	info            model.ThreadInfo
 	completeId      string
+	// nested — схема стартувала як push над іншою (grant з released_sub != 0).
+	// Лише для таких на природному завершенні шлемо CompleteBotControl (pop).
+	// Owner/стартова схема не комплітиться (підтверджено thread-service).
+	nested bool
 }
 
 const (
@@ -81,7 +85,7 @@ const (
 	connStateTerminating int32 = 2
 )
 
-func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
+func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper, nested bool) *Connection {
 	schemaId, _ := strconv.Atoi(to.Sub)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -99,6 +103,7 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 			"x-webitel-schema": fmt.Sprintf("%d.%d", msg.GetDomainID(), schemaId),
 		}),
 		completeId:    to.MemberID,
+		nested:        nested,
 		msg:           msg.GetPayload().Message(),
 		ctx:           ctx,
 		cancelCtx:     cancel,
@@ -894,6 +899,17 @@ func (c *Connection) Complete(id string) {
 	if e != nil {
 		c.log.Error(e.Error())
 	}
+}
+
+// IsNested повідомляє, чи ця схема була пушнута над іншою (grant з
+// released_sub != 0). Лише для таких шлемо Complete на природному завершенні.
+func (c *Connection) IsNested() bool { return c.nested }
+
+// ResumeParent локально повертає контроль на призупинену джерельну схему, якщо
+// ця конекшн була пушнута над нею (див. server.resumeParentOf). Викликається на
+// природному завершенні схеми.
+func (c *Connection) ResumeParent() {
+	c.srv.resumeParentOf(c.id)
 }
 
 // RunContext повертає контекст поточного прогону схеми (рветься на Suspend()).
