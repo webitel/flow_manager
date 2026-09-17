@@ -128,10 +128,26 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 		}
 	}
 
-	// Природний кінець схеми → pop зі стека контролю.
-	if id := conv.CompleteId(); id != "" {
-		conv.Complete(id)
+	// Guard проти гонки: Break/Stop (client_leave) міг виставити terminating саме
+	// коли перевірялася умова циклу (IsSuspended()==false, але не природний кінець).
+	// Без цього ми б помилково виконали Complete/ResumeParent на leave і воскресили
+	// джерельну схему.
+	if conv.IsTerminating() {
+		return nil
 	}
+
+	// Природний кінець схеми → pop зі стека контролю. Complete шлемо лише для
+	// пушнутих (вкладених) схем; owner/стартова не комплітиться на боці
+	// thread-service, тож зайвий виклик пропускаємо.
+	if conv.IsNested() {
+		if id := conv.CompleteId(); id != "" {
+			conv.Complete(id)
+		}
+	}
+
+	// Локально повертаємо контроль на призупинену джерельну схему (якщо ця була
+	// пушнута над нею). Ідемпотентно з майбутнім grant від thread-service.
+	conv.ResumeParent()
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))

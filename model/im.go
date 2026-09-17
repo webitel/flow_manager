@@ -37,6 +37,8 @@ type IMDialog interface {
 	IsTerminating() bool
 	Suspend()
 	Resume()
+	ResumeParent()
+	IsNested() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
