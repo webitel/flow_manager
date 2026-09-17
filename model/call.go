@@ -200,6 +200,7 @@ type CallActionInfo struct {
 	Queue            *QueueInfo     `json:"queue"`
 	GranteeId        *int           `json:"grantee_id"`
 	SipId            *string        `json:"sip_id"`
+	UserAgent        string         `json:"ua"`
 	Heartbeat        int            `json:"heartbeat,omitempty"`
 	Video            string         `json:"video,omitempty"`
 	MeetingId        string         `json:"meeting_id,omitempty"`
@@ -291,6 +292,10 @@ func (r *CallActionRinging) GetParams() []byte {
 
 	if r.IsConsultToQueue != nil {
 		res["is_consult_to_queue"] = *r.IsConsultToQueue
+	}
+
+	if ua := r.UserAgent; ua != "" {
+		res["ua"] = ua
 	}
 
 	data, _ := json.Marshal(res)
