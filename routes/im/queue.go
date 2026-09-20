@@ -3,11 +3,20 @@ package im
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
 )
+
+// transferJoinDelay — ТИМЧАСОВИЙ обхід гонки на боці call_center: для трансфер-плеча
+// (nested-схема) застаріла подія member_removed старого оператора інколи гасить щойно
+// створену CC-сесію нового плеча (leaving=abandoned/cancel). Невелика затримка перед
+// joinQueue дає тій події пройти до створення сесії. Справжній фікс — коректний member
+// для трансфер-плеча у joinQueue та/або leg-scoped cancel на боці CC; після нього це
+// прибрати.
+const transferJoinDelay = time.Second
 
 type Queue struct {
 	Id   int32  `json:"id"`
@@ -52,6 +61,16 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 
 	if err := r.Decode(scope, args, &q); err != nil {
 		return nil, err
+	}
+
+	// TEMP: лише для трансфер-плеча (див. transferJoinDelay). ctx-aware — suspend/leave
+	// під час затримки коректно перерве (Route підхопить ctx.Done).
+	if conn.IsNested() {
+		select {
+		case <-time.After(transferJoinDelay):
+		case <-ctx.Done():
+			return model.CallResponseOK, nil
+		}
 	}
 
 	if q.Queue.Id == 0 && q.Queue.Name != "" {
