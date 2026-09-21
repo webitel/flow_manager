@@ -30,6 +30,7 @@ type Client struct {
 	th              *wbt.Client[t.ThreadManagementClient]
 	facebookService *wbt.Client[providers.FacebookServiceClient]
 	viberService    *wbt.Client[providers.ViberServiceClient]
+	customService   *wbt.Client[providers.CustomServiceClient]
 	log             *wlog.Logger
 	ctx             context.Context
 	tls             *tls.Config
@@ -90,6 +91,11 @@ func (cm *Client) Start() error {
 			cm.log.Error("creating IM viber service connection", wlog.Err(err))
 			return
 		}
+
+		if cm.customService, err = wbt.NewClient(cm.consulAddr, ServiceNameGateway, providers.NewCustomServiceClient, opts...); err != nil {
+			cm.log.Error("creating IM custom service connection", wlog.Err(err))
+			return
+		}
 	})
 
 	return err
@@ -110,5 +116,9 @@ func (cm *Client) Stop() {
 
 	if err := cm.viberService.Close(); err != nil {
 		cm.log.Error("closing viber service connection gracefully", wlog.Err(err))
+	}
+
+	if err := cm.customService.Close(); err != nil {
+		cm.log.Error("closing custom service connection gracefully", wlog.Err(err))
 	}
 }
