@@ -1,6 +1,7 @@
 package sqlstore
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -642,17 +643,44 @@ where id = :Id`, map[string]any{
 	return nil
 }
 
+func (s SqlCallStore) SaveProgress(ctx context.Context, p *model.CallActionProgress) *model.AppError {
+	const query = `
+		update call_center.cc_calls
+		set params = coalesce(params, '{}'::jsonb) || jsonb_strip_nulls(
+			jsonb_build_object('ua', :UserAgent::text)
+		)
+		where id = :ID::uuid;
+	`
+
+	args := map[string]any{
+		"ID":        p.Id,
+		"UserAgent": p.UserAgentOrNil(),
+	}
+
+	if _, err := s.GetMaster().WithContext(ctx).Exec(query, args); err != nil {
+		return model.NewAppError(
+			"SqlCallStore.SaveProgress",
+			"store.sql_call.progress.error",
+			nil,
+			fmt.Sprintf("ID=%s %+v", p.Id, err),
+			extractCodeFromErr(err),
+		)
+	}
+
+	return nil
+}
+
 func (s SqlCallStore) SaveMediaStats(stats *model.CallActionMediaStats) *model.AppError {
-	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, user_id, 
+	_, err := s.GetMaster().Exec(`insert into call_center.cc_calls_media_stats (created_at, sip_id, domain_id, user_id,
   mos_avg, mos_min, mos_min_at, mos_max,
-                                                mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max, 
+                                                mos_max_at, jitter_avg, jitter_min, jitter_min_at, jitter_max,
   jitter_max_at,
-                                                packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max, 
+                                                packetloss_avg, packetloss_min, packetloss_min_at, packetloss_max,
   packetloss_max_at,
-                                                roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min, 
+                                                roundtrip_avg, roundtrip_max, roundtrip_max_at, roundtrip_min,
   roundtrip_min_at)
   values (now(), :SipId, :DomainId, :UserId, :MosAvg, :MosMin, :MosMinAt, :MosMax, :MosMaxAt, :JitterAvg, :JitterMin,
-          :JitterMinAt, :JitterMax, :JitterMaxAt, :PacketlossAvg, :PacketlossMin, :PacketlossMinAt, :PacketlossMax, 
+          :JitterMinAt, :JitterMax, :JitterMaxAt, :PacketlossAvg, :PacketlossMin, :PacketlossMinAt, :PacketlossMax,
   :PacketlossMaxAt,
           :RoundtripAvg, :RoundtripMax, :RoundtripMaxAt, :RoundtripMin, :RoundtripMinAt)
   on conflict (sip_id, domain_id) do update set

@@ -61,6 +61,7 @@ const (
 	CallActionHeartbeatName  = "heartbeat"
 	CallActionTranscriptName = "transcript"
 	CallActionStatsName      = "stats"
+	CallActionProgressName   = "progress"
 )
 
 type OutboundCallRequest struct {
@@ -358,6 +359,21 @@ type CallActionMediaStats struct {
 	CallMediaStats
 }
 
+type CallActionProgress struct {
+	CallAction `json:",inline"`
+
+	UserAgent string `json:"ua"`
+	UserID    int64  `json:"user_id"`
+}
+
+func (p *CallActionProgress) UserAgentOrNil() *string {
+	if p == nil || p.UserAgent == "" {
+		return nil
+	}
+
+	return &p.UserAgent
+}
+
 func (h *CallActionHangup) VariablesToJson() []byte {
 	if h.Payload == nil {
 		return []byte("{}") // FIXME
@@ -470,11 +486,20 @@ func (c *CallActionData) GetEvent() any {
 		c.parsed = &CallActionMediaStats{
 			CallAction: c.CallAction,
 		}
+	case CallActionProgressName:
+		c.parsed = &CallActionProgress{
+			CallAction: c.CallAction,
+		}
 	}
 
 	if c.Data != nil {
 		if err := json.Unmarshal([]byte(*c.Data), &c.parsed); err != nil {
-			wlog.Error(fmt.Sprintf("parse call %s [%s] error: %s", c.Id, c.Event, err.Error()))
+			wlog.Error(
+				"parsing call event data",
+				wlog.String("call_id", c.Id),
+				wlog.String("call_event", c.Event),
+				wlog.Err(err),
+			)
 		}
 	}
 	return c.parsed
