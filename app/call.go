@@ -1,7 +1,6 @@
 package app
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
@@ -49,8 +48,9 @@ func (c *callWatcher) Stop() {
 }
 
 func (f *FlowManager) listenCallEvents(stop chan struct{}) {
-	f.log.Info(fmt.Sprintf("listen call events..."))
-	defer f.log.Debug(fmt.Sprintf("stop listening call events..."))
+	f.log.Info("listen call events...")
+	defer f.log.Debug("stop listening call events...")
+
 	for {
 		select {
 		case <-stop:
@@ -120,12 +120,16 @@ func (f *FlowManager) handleCallAction(data model.CallActionData) {
 		if err != nil {
 			log.Error(err.Error())
 		}
-
+	case *model.CallActionProgress:
+		if err := f.Store.Call().SaveProgress(f.ctx, call); err != nil {
+			log.Error("saving progress into database", wlog.Err(err))
+		}
 	default:
-		if data.Event == "eavesdrop" || data.Event == "dtmf" || data.Event == "update" || data.Event == "transcript" {
-			// skip that events
+		switch data.Event {
+		case "eavesdrop", "dtmf", "update", "transcript":
 			return
 		}
+
 		if err := f.Store.Call().SetState(&data.CallAction); err != nil {
 			log.Error(err.Error())
 		}

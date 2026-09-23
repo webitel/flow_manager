@@ -84,6 +84,7 @@ type CallStore interface {
 	SetContactId(domainId int64, id string, contactId int64) *model.AppError
 	SetVariables(id string, vars *model.CallVariables) *model.AppError
 	SaveMediaStats(stats *model.CallActionMediaStats) *model.AppError
+	SaveProgress(ctx context.Context, p *model.CallActionProgress) *model.AppError
 }
 
 type SchemaStore interface {
