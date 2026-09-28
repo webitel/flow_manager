@@ -49,3 +49,7 @@ func (l *LayeredMQ) QueueEvent() QueueEvent {
 func (l *LayeredMQ) ConsumeCCEvents() <-chan model.CCQueueEvent {
 	return l.MQLayer.ConsumeCCEvents()
 }
+
+func (l *LayeredMQ) ConsumeSystemSettingsEvents() <-chan model.SystemSettingEvent {
+	return l.MQLayer.ConsumeSystemSettingsEvents()
+}

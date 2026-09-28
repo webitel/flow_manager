@@ -37,6 +37,8 @@ const (
 	IMExchange         = "im_delivery.broadcast"
 	CallCenterExchange = "callcenter"
 	CallCenterPrefix   = "workflow-cc"
+	EventExchange      = "event"
+	SysSettingsPrefix  = "workflow-system-settings"
 )
 
 const (

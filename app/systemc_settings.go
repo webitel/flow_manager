@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+
 	"github.com/webitel/flow_manager/model"
 	"golang.org/x/sync/singleflight"
 )
@@ -23,13 +23,13 @@ func (fm *FlowManager) GetSystemSettingsString(ctx context.Context, domainId int
 }
 
 func (fm *FlowManager) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError) {
-	key := fmt.Sprintf("%d-%s", domainId, name)
+	key := model.SystemSettingCacheKey(domainId, name)
 	c, ok := systemCache.Get(key)
 	if ok {
 		return c.(model.SysValue), nil
 	}
 
-	v, err, share := systemGroup.Do(fmt.Sprintf("%d-%s", domainId, name), func() (interface{}, error) {
+	v, err, share := systemGroup.Do(key, func() (interface{}, error) {
 		res, err := fm.Store.SystemcSettings().Get(ctx, domainId, name)
 		if err != nil {
 			return model.SysValue{}, err
@@ -61,4 +61,12 @@ func (fm *FlowManager) GetSystemSettings(ctx context.Context, domainId int64, na
 	}
 
 	return v.(model.SysValue), nil
+}
+
+func (fm *FlowManager) listenSystemSettingsEvents(events <-chan model.SystemSettingEvent) {
+	for e := range events {
+		key := model.SystemSettingCacheKey(e.DomainID, e.Name)
+		systemCache.Remove(key)
+		systemGroup.Forget(key)
+	}
 }
