@@ -88,14 +88,13 @@ func (fm *FlowManager) AttemptResult(result *model.AttemptResult) *model.AppErro
 	return nil
 }
 
-func (fm *FlowManager) JoinIMToInboundQueue(ctx context.Context, in *cc.IMJoinToQueueRequest) (int64, <-chan model.CCQueueEvent, error) {
+func (fm *FlowManager) JoinIMToInboundQueue(ctx context.Context, in *cc.IMJoinToQueueRequest) (*cc.IMJoinToQueueResponse, <-chan model.CCQueueEvent, error) {
 	res, err := fm.cc.Member().JoinIMToQueue(ctx, in)
 	if err != nil {
-		return 0, nil, err
+		return nil, nil, err
 	}
 
-	ch := fm.cc.SubscribeAttempt(res.AttemptId)
-	return res.AttemptId, ch, err
+	return res, fm.cc.SubscribeAttempt(res.GetAttemptId()), nil
 }
 
 func (fm *FlowManager) LeavingIMToInboundQueue(attId int64) {
