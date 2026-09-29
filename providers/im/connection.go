@@ -73,6 +73,7 @@ type Connection struct {
 	messages        []model.IMEventWrapper
 	info            model.ThreadInfo
 	completeId      string
+	queueReturn     chan struct{}
 	// nested — схема стартувала як push над іншою (grant з released_sub != 0).
 	// Лише для таких на природному завершенні шлемо CompleteBotControl (pop).
 	// Owner/стартова схема не комплітиться (підтверджено thread-service).
@@ -303,6 +304,11 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 		return
 	}
 
+	if c.fromOperator(msg) {
+		log.Debug("message from an operator, not fed to the schema")
+		return
+	}
+
 	c.processLastMessage(msg)
 	c.processLastInteractiveCallback(msg)
 	c.pushMessageToWaitMessageChan(msg)
@@ -311,6 +317,15 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processViaMetadata(msg.Via())
 
 	log.Debug("processed on message event")
+}
+
+func (c *Connection) fromOperator(msg model.IMEventWrapper) bool {
+	m := msg.GetPayload().Message()
+	if m.System != nil || m.Type == model.IMMessageTypeSystem {
+		return false
+	}
+
+	return c.from.Sub != "" && msg.GetPayload().Sender().Sub != c.from.Sub
 }
 
 func (c *Connection) From() model.ImEndpoint     { return c.from }
@@ -967,6 +982,42 @@ func (c *Connection) Resume() {
 	}
 }
 
+func (c *Connection) EnterQueue() <-chan struct{} {
+	c.Lock()
+	defer c.Unlock()
+
+	c.queueReturn = make(chan struct{})
+
+	return c.queueReturn
+}
+
+func (c *Connection) LeaveQueue() {
+	c.Lock()
+	c.queueReturn = nil
+	c.Unlock()
+}
+
+func (c *Connection) InQueue() bool {
+	c.RLock()
+	defer c.RUnlock()
+
+	return c.queueReturn != nil
+}
+
+func (c *Connection) ReturnFromQueue() bool {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.queueReturn == nil {
+		return false
+	}
+
+	close(c.queueReturn)
+	c.queueReturn = nil
+
+	return true
+}
+
 // Break термінально знищує конекшн: state=terminating + скасування ОБОХ
 // контекстів (run і lifetime), щоб park-loop гарантовано вийшов.
 func (c *Connection) Break() {
@@ -1003,7 +1054,7 @@ func (c *Connection) Stop(err error) {
 	c.srv.stopConnection(c)
 }
 
-func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
+func (c *Connection) receive(ctx context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
 	ch := make(chan model.IMEventWrapper)
 	defer func() {
 		c.setStateWaitMessage(nil)
@@ -1023,6 +1074,9 @@ func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWra
 	case <-c.Context().Done():
 		c.log.Debug("context cancelled", wlog.Err(c.Context().Err()))
 		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, c.Context().Err().Error(), http.StatusInternalServerError)
+	case <-ctx.Done():
+		c.log.Debug("run cancelled", wlog.Err(ctx.Err()))
+		return nil, model.NewAppError("Conversation.WaitMessage", "conv.timeout.msg.app_err", nil, ctx.Err().Error(), http.StatusInternalServerError)
 	case <-t:
 		c.log.Debug("waiting message timeout", wlog.Int("timeout_sec", timeout))
 		return nil, ErrWaitMessageTimeout

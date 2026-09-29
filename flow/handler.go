@@ -33,6 +33,8 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 	i.log.Debug("start flow " + i.name)
 	defer i.log.Debug("stop flow " + i.name)
 
+	i.setInterrupted(nil)
+
 	for {
 		req = i.NextRequest()
 		if req == nil {
@@ -60,6 +62,7 @@ func Route(ctx context.Context, i *Flow, handler Handler) {
 
 		select {
 		case <-ctx.Done():
+			i.setInterrupted(req)
 			i.SetCancel()
 			return
 		case res := <-handler.Request(ctx, i, req):

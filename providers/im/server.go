@@ -169,6 +169,12 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 		return
 	}
 
+	if released.Reason == model.BotControlReasonAgentTakeover {
+		s.suspendForAgent(released)
+
+		return
+	}
+
 	if released.Reason != model.BotControlReasonClientLeave {
 		return
 	}
@@ -197,6 +203,7 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 //   - no connection for the Sub                                  -> PUSH: suspend the
 //     released bot (the transfer source) and start a fresh schema for the granted bot
 //     IMMEDIATELY, without waiting for the next inbound client message.
+//
 // The grant event carries no customer peer, so the thread participants are fetched to
 // synthesize the start message (from = customer, to = bot).
 func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error {
@@ -244,10 +251,27 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 			return nil
 		}
 
+		if m.Reason == model.BotControlReasonAgentHandback && conn.ReturnFromQueue() {
+			s.log.Debug("operator handed the thread back, returning schema from queue",
+				wlog.String("session_id", compositeSessionID),
+			)
+
+			return nil
+		}
+
 		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
 		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
 		s.log.Debug("grant for already-active connection, ignoring",
 			wlog.String("session_id", compositeSessionID),
+		)
+
+		return nil
+	}
+
+	if m.Reason == model.BotControlReasonAgentHandback || m.Reason == model.BotControlReasonAgentLeft {
+		s.log.Debug("no live schema to hand the thread back to, next customer message starts it",
+			wlog.String("session_id", compositeSessionID),
+			wlog.String("reason", m.Reason),
 		)
 
 		return nil
@@ -312,6 +336,25 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 	// nested=true, якщо це push над іншою схемою (є released_sub); owner
 	// (released_sub=0) стартує як не-nested і не шле Complete на завершенні.
 	return s.startDialog(compositeSessionID, to, msg, releasedSessionID != "")
+}
+
+func (s *server) suspendForAgent(released model.BotControlReleased) {
+	if released.Sub == 0 {
+		return
+	}
+
+	sessionID := released.GetThreadID() + "." + strconv.Itoa(released.Sub)
+
+	conn, ok := s.connectionStore.Get(sessionID)
+	if !ok || conn.IsSuspended() || conn.IsTerminating() || conn.InQueue() {
+		return
+	}
+
+	s.log.Debug("operator took the thread over, suspending schema",
+		wlog.String("session_id", sessionID),
+	)
+
+	conn.Suspend()
 }
 
 // resolveCustomerPeer loads the thread participants and returns the customer endpoint —

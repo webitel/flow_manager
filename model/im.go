@@ -11,7 +11,14 @@ const (
 	IMEventTypeBotControlReleased string = "bot_control_released"
 )
 
-const BotControlReasonClientLeave string = "client_leave"
+const (
+	BotControlReasonClientLeave   string = "client_leave"
+	BotControlReasonAgentTakeover string = "agent_takeover"
+	BotControlReasonAgentHandback string = "agent_handback"
+	BotControlReasonAgentLeft     string = "agent_left"
+)
+
+const CCResultBot string = "bot"
 
 // IMMessageTypeSystem is the payload-level Message.Type for administrative system
 // notices (member added/removed, transfer, bot_stopped, ...). Such messages must never
@@ -37,6 +44,8 @@ type IMDialog interface {
 	IsTerminating() bool
 	Suspend()
 	Resume()
+	EnterQueue() <-chan struct{}
+	LeaveQueue()
 	ResumeParent()
 	IsNested() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
@@ -145,6 +154,7 @@ type IMBotControlGrantedEvent struct {
 	IsResume    bool   `json:"is_resume"`
 	ReleasedSub int    `json:"released_sub"`
 	Sub         int    `json:"sub"`
+	Reason      string `json:"reason"`
 }
 
 func (w MessageWrapper[T]) GetID() string                 { return w.ID }
@@ -253,6 +263,7 @@ type BotControlReleased struct {
 	MemberID     string `json:"member_id"`
 	NextMemberID string `json:"next_member_id,omitempty"`
 	Reason       string `json:"reason"`
+	Sub          int    `json:"sub"`
 }
 
 func (b BotControlReleased) GetThreadID() string     { return b.ThreadID }
