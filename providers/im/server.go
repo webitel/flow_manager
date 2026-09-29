@@ -352,10 +352,15 @@ func (s *server) resolveCustomerPeer(m model.IMBotControlGrantedEvent, to model.
 	return peer, nil
 }
 
-// selectCustomerPeer returns the first human (non-bot) participant that is not the
-// granted bot itself, mapped to an ImEndpoint. Returns a zero endpoint (Sub == "")
+// selectCustomerPeer returns the customer of the thread, mapped to an ImEndpoint: the human
+// (non-bot) owner. On a transfer the operator who handed the thread over is still a member
+// when the grant arrives (call_center removes it only after closing its attempt), and the
+// members come in no particular order, so "the first human" may be that operator. Falls back
+// to the first human when the thread has no human owner. Returns a zero endpoint (Sub == "")
 // when the thread carries no resolvable customer.
 func selectCustomerPeer(members []*p.ThreadMember, botSub string) model.ImEndpoint {
+	var fallback *p.ThreadMember
+
 	for _, member := range members {
 		contact := member.GetContact()
 		if contact == nil {
@@ -367,16 +372,32 @@ func selectCustomerPeer(members []*p.ThreadMember, botSub string) model.ImEndpoi
 			continue
 		}
 
-		return model.ImEndpoint{
-			Sub:      contact.GetSub(),
-			Issuer:   contact.GetIss(),
-			Name:     contact.GetName(),
-			MemberID: member.GetId(),
-			Role:     int(member.GetRole()),
+		if member.GetRole() == p.ThreadRole_ROLE_OWNER {
+			return customerEndpoint(member)
+		}
+
+		if fallback == nil {
+			fallback = member
 		}
 	}
 
-	return model.ImEndpoint{}
+	if fallback == nil {
+		return model.ImEndpoint{}
+	}
+
+	return customerEndpoint(fallback)
+}
+
+func customerEndpoint(member *p.ThreadMember) model.ImEndpoint {
+	contact := member.GetContact()
+
+	return model.ImEndpoint{
+		Sub:      contact.GetSub(),
+		Issuer:   contact.GetIss(),
+		Name:     contact.GetName(),
+		MemberID: member.GetId(),
+		Role:     int(member.GetRole()),
+	}
 }
 
 // synthesizeGrantMessage builds a MessageWrapper that mimics an inbound customer
