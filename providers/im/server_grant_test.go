@@ -9,8 +9,8 @@ import (
 )
 
 // Covers CW-60 Bug 1: on a bot.control.granted event the schema is started for
-// the customer peer. This locks the participant-selection: pick the first human
-// member that is not the granted bot.
+// the customer peer. This locks the participant-selection: pick the human owner
+// that is not the granted bot, falling back to the first such human member.
 func TestSelectCustomerPeer(t *testing.T) {
 	member := func(id, sub, iss, name string, isBot bool, role p.ThreadRole) *p.ThreadMember {
 		return &p.ThreadMember{
@@ -47,6 +47,18 @@ func TestSelectCustomerPeer(t *testing.T) {
 				member("m-cust", "cust-2", "webitel", "Customer", false, p.ThreadRole_ROLE_MEMBER),
 			},
 			wantSub: "cust-2",
+		},
+		{
+			// On a transfer the operator who handed the thread over is still a member
+			// when the grant arrives, and members come in no particular order.
+			name: "picks the customer over the transferring operator listed first",
+			members: []*p.ThreadMember{
+				member("m-op", "30", "webitel", "Operator", false, p.ThreadRole_ROLE_MEMBER),
+				member("m-bot", botSub, "bot", "QueueBot", true, p.ThreadRole_ROLE_MEMBER),
+				member("m-owner-bot", "122", "bot", "OwnerBot", true, p.ThreadRole_ROLE_OWNER),
+				member("m-cust", "cust-3", "https://idp.example/", "Customer", false, p.ThreadRole_ROLE_OWNER),
+			},
+			wantSub: "cust-3",
 		},
 		{
 			name: "only bots present resolves nothing",
