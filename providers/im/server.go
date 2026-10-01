@@ -202,7 +202,9 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 //   - a live non-suspended connection exists for the Sub         -> duplicate grant, no-op;
 //   - no connection for the Sub                                  -> PUSH: suspend the
 //     released bot (the transfer source) and start a fresh schema for the granted bot
-//     IMMEDIATELY, without waiting for the next inbound client message.
+//     IMMEDIATELY, without waiting for the next inbound client message;
+//   - no connection and reason=initial (thread just created)     -> no-op: the thread has
+//     no messages yet, the first customer message starts the schema via nodeMessage.
 //
 // The grant event carries no customer peer, so the thread participants are fetched to
 // synthesize the start message (from = customer, to = bot).
@@ -214,6 +216,7 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 		wlog.Int("bot_sub", m.Sub),
 		wlog.Int("released_sub", m.ReleasedSub),
 		wlog.String("member_id", m.MemberID),
+		wlog.String("reason", m.Reason),
 		wlog.Any("is_resume", m.IsResume),
 		wlog.Any("auto_leave", m.AutoLeave),
 		wlog.String("session_id", compositeSessionID),
@@ -262,6 +265,14 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
 		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
 		s.log.Debug("grant for already-active connection, ignoring",
+			wlog.String("session_id", compositeSessionID),
+		)
+
+		return nil
+	}
+
+	if m.Reason == model.BotControlReasonInitial {
+		s.log.Debug("initial grant on thread creation, schema starts only on first message",
 			wlog.String("session_id", compositeSessionID),
 		)
 
