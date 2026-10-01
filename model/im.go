@@ -16,7 +16,7 @@ const (
 	BotControlReasonAgentTakeover string = "agent_takeover"
 	BotControlReasonAgentHandback string = "agent_handback"
 	BotControlReasonAgentLeft     string = "agent_left"
-	BotControlReasonInitial string = "initial"
+	BotControlReasonInitial       string = "initial"
 )
 
 const CCResultBot string = "bot"
