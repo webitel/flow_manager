@@ -42,14 +42,6 @@ func (s *server) Stop() {
 	<-s.stopped
 }
 
-func (s *server) Host() string {
-	return ""
-}
-
-func (s *server) Port() int {
-	return 0
-}
-
 func (s *server) Consume() <-chan model.Connection {
 	return s.consume
 }

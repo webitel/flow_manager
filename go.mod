@@ -1,6 +1,6 @@
 module github.com/webitel/flow_manager
 
-go 1.25.0
+go 1.25.4
 
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
@@ -33,13 +33,14 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/engine/pkg/discovery v0.0.0-20250925090335-284caa978daa
+	github.com/webitel/engine/pkg/discovery v0.0.0-20260826062815-ac09649ed0d9
 	github.com/webitel/engine/pkg/presign v0.0.0-20250512130121-81caadba224c
 	github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0
 	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
+	github.com/webitel/webitel-go-kit/infra/health v0.2.0
 	github.com/webitel/webitel-go-kit/infra/httpproxy v0.0.0-20260707115612-427dabf84692
-	github.com/webitel/wlog v0.0.0-20250325101442-de4f125c1ec7
+	github.com/webitel/wlog v0.0.0-20260929140055-f81a38037840
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/sdk v1.35.0
 	golang.org/x/oauth2 v0.32.0
