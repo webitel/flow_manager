@@ -11,7 +11,10 @@ const (
 	IMEventTypeBotControlReleased string = "bot_control_released"
 )
 
-const BotControlReasonClientLeave string = "client_leave"
+const (
+	BotControlReasonClientLeave string = "client_leave"
+	BotControlReasonInitial     string = "initial"
+)
 
 // IMMessageTypeSystem is the payload-level Message.Type for administrative system
 // notices (member added/removed, transfer, bot_stopped, ...). Such messages must never
@@ -145,6 +148,7 @@ type IMBotControlGrantedEvent struct {
 	IsResume    bool   `json:"is_resume"`
 	ReleasedSub int    `json:"released_sub"`
 	Sub         int    `json:"sub"`
+	Reason      string `json:"reason"`
 }
 
 func (w MessageWrapper[T]) GetID() string                 { return w.ID }
