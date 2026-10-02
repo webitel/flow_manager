@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
@@ -15,7 +16,8 @@ import (
 	healthhttp "github.com/webitel/webitel-go-kit/infra/health/http"
 	"github.com/webitel/webitel-go-kit/infra/health/sdnotify"
 	"github.com/webitel/webitel-go-kit/infra/httpproxy"
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	otelhealth "github.com/webitel/webitel-go-kit/infra/otel/instrumentation/health"
+	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app/bots_client"
@@ -39,12 +41,12 @@ import (
 
 	_ "github.com/mbobakov/grpc-consul-resolver"
 	// -------------------- plugin(s) -------------------- //
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/stdout"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/stdout"
 )
 
 type FlowManager struct {
@@ -105,6 +107,7 @@ type FlowManager struct {
 
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
+	otelHealth       metric.Registration
 	cbr              *CallbackResolver
 	health           *health.Registry
 }
@@ -296,6 +299,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		fm.health.Informational("redis", redisCache.Ping)
 	}
 
+	if config.Log.Otel {
+		if fm.otelHealth, err = otelhealth.Start(fm.health); err != nil {
+			return nil, fmt.Errorf("unable to register health metrics: %w", err)
+		}
+	}
+
 	if err = fm.cluster.Start(); err != nil {
 		return nil, err
 	}
@@ -399,6 +408,12 @@ func (f *FlowManager) Shutdown() {
 
 	if f.otelShutdownFunc != nil {
 		f.otelShutdownFunc(f.ctx)
+	}
+
+	if f.otelHealth != nil {
+		if err := f.otelHealth.Unregister(); err != nil {
+			f.log.Error(fmt.Sprintf("health metrics unregister: %s", err.Error()), wlog.Err(err))
+		}
 	}
 }
 
