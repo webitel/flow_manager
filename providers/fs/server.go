@@ -37,7 +37,7 @@ type server struct {
 	log *wlog.Logger
 }
 
-func NewServer(cfg *Config) model.Server {
+func NewServer(cfg *Config) model.NetServer {
 	return &server{
 		cfg:             cfg,
 		didFinishListen: make(chan struct{}),
@@ -76,6 +76,10 @@ func (s *server) Start() *model.AppError {
 	s.listener = lis
 	go s.listen(lis)
 	return nil
+}
+
+func (s *server) Listener() net.Listener {
+	return s.listener
 }
 
 func (s *server) listen(lis net.Listener) {

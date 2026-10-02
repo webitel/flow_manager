@@ -74,8 +74,6 @@ func (s *MailServer) Stop() {
 	<-s.stopped
 }
 
-func (s *MailServer) Host() string                     { return "" } // TODO
-func (s *MailServer) Port() int                        { return 0 }
 func (s *MailServer) Type() model.ConnectionType       { return model.ConnectionTypeEmail }
 func (s *MailServer) Consume() <-chan model.Connection { return s.consume }
 

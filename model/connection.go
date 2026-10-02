@@ -3,6 +3,8 @@ package model
 import (
 	"context"
 	"encoding/json"
+	"net"
+
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/engine/pkg/discovery"
@@ -25,11 +27,16 @@ type Server interface {
 	Name() string
 	Start() *AppError
 	Stop()
-	Host() string
-	Port() int
 	Consume() <-chan Connection
 	Type() ConnectionType
 	Cluster(discovery discovery.ServiceDiscovery) *AppError
+}
+
+type NetServer interface {
+	Server
+	Host() string
+	Port() int
+	Listener() net.Listener
 }
 
 type Connection interface {

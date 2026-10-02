@@ -1,7 +1,9 @@
 package rabbit
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,6 +20,8 @@ import (
 )
 
 const CallChanBufferCount = 100
+
+var errChannelClosed = errors.New("amqp channel is closed")
 
 const (
 	MAX_ATTEMPTS_CONNECT = 100
@@ -448,6 +452,15 @@ func (a *AMQP) getChannel() *amqp.Channel {
 	defer a.RUnlock()
 
 	return a.channel
+}
+
+func (a *AMQP) Ping(context.Context) error {
+	ch := a.getChannel()
+	if ch == nil || ch.IsClosed() {
+		return errChannelClosed
+	}
+
+	return nil
 }
 
 func (a *AMQP) SendJSON(exchange, key string, data []byte) *model.AppError {
