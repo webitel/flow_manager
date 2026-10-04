@@ -1,6 +1,6 @@
 module github.com/webitel/flow_manager
 
-go 1.25.0
+go 1.26.0
 
 replace github.com/emersion/go-imap v1.2.1 => github.com/navrotskyj/go-imap v1.2.2-0.20240927130548-8f6fa2edadb3
 
@@ -43,7 +43,7 @@ require (
 	go.opentelemetry.io/otel v1.35.0
 	go.opentelemetry.io/otel/sdk v1.35.0
 	golang.org/x/oauth2 v0.32.0
-	golang.org/x/sync v0.19.0
+	golang.org/x/sync v0.23.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250303144028-a0af3efb3deb
 	google.golang.org/grpc v1.72.1
