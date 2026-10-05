@@ -65,8 +65,47 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 }
 
 func (r *Router) Handle(emailConnection model.Connection) *model.AppError {
+	if conn, ok := emailConnection.(model.EmailLaunchConnection); ok {
+		go r.launch(conn)
+		return nil
+	}
+
 	go r.handle(emailConnection)
 	return nil
+}
+
+// launch starts the Flow of an email-service event and reports it to the worker
+// waiting for the launch; the IMAP path keeps handle.
+func (r *Router) launch(conn model.EmailLaunchConnection) {
+	// Closed or abandoned by the worker already.
+	if conn.Context().Err() != nil {
+		return
+	}
+
+	s, err := r.fm.GetSchemaById(conn.DomainId(), conn.SchemaId())
+	if err != nil {
+		conn.ReportLaunch(err)
+		return
+	}
+
+	f := flow.New(r, flow.Config{
+		SchemaId: s.Id,
+		Name:     s.Name,
+		Handler:  r,
+		Schema:   s.Schema,
+		Conn:     &emailParser{EmailConnection: conn},
+	})
+
+	if !conn.MarkStarted() {
+		return
+	}
+
+	// Reported only once the Flow goroutine exists, so accepted never precedes it.
+	go func() {
+		defer conn.Close()
+		flow.Route(conn.Context(), f, r)
+	}()
+	conn.ReportLaunch(nil)
 }
 
 func (r *Router) handle(emailConnection model.Connection) {

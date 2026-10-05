@@ -108,6 +108,17 @@ type EmailConnection interface {
 	Email() *Email
 }
 
+// EmailLaunchConnection is an EmailConnection whose source waits for the Flow
+// launch: the router reports it instead of starting the Flow in the background.
+type EmailLaunchConnection interface {
+	EmailConnection
+	// MarkStarted is called right before the Flow starts; false means the source
+	// gave up on the launch and the Flow must not start.
+	MarkStarted() bool
+	// ReportLaunch tells the source the Flow started (nil) or could not start.
+	ReportLaunch(err *AppError)
+}
+
 type ReplyEmail struct {
 }
 

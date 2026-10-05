@@ -8,7 +8,7 @@ import (
 )
 
 func (f *FlowManager) RegisterServers() *model.AppError {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer, f.emailEventServer}
 
 	for _, v := range servers {
 		if err := startServer(v); err != nil {
@@ -20,7 +20,7 @@ func (f *FlowManager) RegisterServers() *model.AppError {
 }
 
 func (f *FlowManager) StopServers() {
-	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer}
+	servers := []model.Server{f.grpcServer, f.eslServer, f.mailServer, f.channelServer, f.httpServer, f.imServer, f.emailEventServer}
 
 	for _, v := range servers {
 		stopServer(v)
