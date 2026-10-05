@@ -240,6 +240,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
+	go fm.listenSystemSettingsEvents(fm.eventQueue.ConsumeSystemSettingsEvents())
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 
 	t, err := LoadTlsCreds(config.Tls)
