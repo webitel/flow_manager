@@ -85,6 +85,8 @@ type FlowManager struct {
 	cert        presign.PreSign
 	listWatcher *listWatcher
 
+	userNotificationWatcher *userNotificationWatcher
+
 	cacheStore map[CacheType]cachelayer.CacheStore
 
 	//------------- Contacts GRPC Client -------------//
@@ -158,6 +160,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	fm.callWatcher = NewCallWatcher(fm)
 	fm.listWatcher = NewListWatcher(fm)
+	fm.userNotificationWatcher = NewUserNotificationWatcher(fm)
 
 	wlog.RedirectStdLog(fm.log)
 	wlog.InitGlobalLogger(fm.log)
@@ -332,6 +335,10 @@ func (f *FlowManager) Shutdown() {
 
 	if f.listWatcher != nil {
 		f.listWatcher.Stop()
+	}
+
+	if f.userNotificationWatcher != nil {
+		f.userNotificationWatcher.Stop()
 	}
 
 	if f.cc != nil {

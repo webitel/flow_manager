@@ -16,6 +16,7 @@ func (f *FlowManager) Listen() {
 
 	f.callWatcher.Start()
 	f.listWatcher.Start()
+	f.userNotificationWatcher.Start()
 
 	go f.listenCallEvents(f.stop)
 
