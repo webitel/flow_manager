@@ -24,6 +24,7 @@ type server struct {
 	startOnce       sync.Once
 
 	Server     *http.Server
+	listener   net.Listener
 	ListenAddr *net.TCPAddr
 	RootRouter *mux.Router
 	Router     *mux.Router
@@ -35,7 +36,7 @@ func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 	panic("implement me")
 }
 
-func NewServer(a App, addr string) model.Server {
+func NewServer(a App, addr string) model.NetServer {
 	s := &server{
 		addr:       addr,
 		consume:    make(chan model.Connection),
@@ -65,6 +66,7 @@ func (s *server) Start() *model.AppError {
 		return model.NewAppError("http", "http.server.start", nil, err.Error(), http.StatusInternalServerError)
 	}
 
+	s.listener = listener
 	s.ListenAddr = listener.Addr().(*net.TCPAddr)
 	s.didFinishListen = make(chan struct{})
 
@@ -83,13 +85,17 @@ func (s *server) Start() *model.AppError {
 	return nil
 }
 
+func (s *server) Listener() net.Listener {
+	return s.listener
+}
+
 func (s *server) Stop() {
 	s.Server.Close()
 	<-s.didFinishListen
 }
 
 func (s *server) Host() string {
-	return s.ListenAddr.Network()
+	return s.ListenAddr.IP.String()
 }
 
 func (s *server) Port() int {
