@@ -40,7 +40,10 @@ type Connection struct {
 	log       *wlog.Logger
 }
 
-var _ model.EmailLaunchConnection = (*Connection)(nil)
+var (
+	_ model.EmailLaunchConnection = (*Connection)(nil)
+	_ model.EmailEventConnection  = (*Connection)(nil)
+)
 
 // NewConnection needs an event with flow_id. ctx belongs to the server, so the
 // Flow outlives the worker and its handshake.
@@ -161,6 +164,18 @@ func (c *Connection) NodeId() string {
 
 func (c *Connection) DomainId() int64 {
 	return c.event.DomainId
+}
+
+func (c *Connection) EventId() string {
+	return c.event.EventId
+}
+
+func (c *Connection) ThreadId() int64 {
+	return c.event.ThreadId
+}
+
+func (c *Connection) MessageId() int64 {
+	return c.event.MessageId
 }
 
 func (c *Connection) SchemaId() int {

@@ -108,6 +108,15 @@ type EmailConnection interface {
 	Email() *Email
 }
 
+// EmailEventConnection is an EmailConnection started by an email-service event;
+// its ids come from the event, not from editable Flow variables.
+type EmailEventConnection interface {
+	EmailConnection
+	EventId() string
+	ThreadId() int64
+	MessageId() int64
+}
+
 // EmailLaunchConnection is an EmailConnection whose source waits for the Flow
 // launch: the router reports it instead of starting the Flow in the background.
 type EmailLaunchConnection interface {

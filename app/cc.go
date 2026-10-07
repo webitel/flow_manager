@@ -17,6 +17,11 @@ func (fm *FlowManager) CallOutboundQueue(ctx context.Context, in *cc.OutboundCal
 	return fm.cc.Member().CallOutbound(ctx, in)
 }
 
+// EmailJoinToQueue is a unary join: it neither streams queue events nor waits for an agent.
+func (fm *FlowManager) EmailJoinToQueue(ctx context.Context, in *cc.EmailJoinToQueueRequest) (*cc.EmailJoinToQueueResponse, error) {
+	return fm.cc.Member().EmailJoinToQueue(ctx, in)
+}
+
 func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error) {
 	return fm.cc.Member().JoinChatToQueue(ctx, in)
 }

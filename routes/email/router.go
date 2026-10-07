@@ -93,7 +93,8 @@ func (r *Router) launch(conn model.EmailLaunchConnection) {
 		Name:     s.Name,
 		Handler:  r,
 		Schema:   s.Schema,
-		Conn:     &emailParser{EmailConnection: conn},
+		// Not wrapped in emailParser: joinQueue needs the event ids of the connection itself.
+		Conn: conn,
 	})
 
 	if !conn.MarkStarted() {
