@@ -193,6 +193,12 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
+	if recordAll, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysRecordAllCalls); recordAll.BoolValue && !schemaRecordsSession(routing.Schema) {
+		if _, rerr := r.forceRecordAllCalls(call.Context(), call); rerr != nil {
+			call.Log().Err(rerr)
+		}
+	}
+
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(r, flow.Config{
