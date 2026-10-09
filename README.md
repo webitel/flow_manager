@@ -49,9 +49,11 @@ comes from email-service.
 ### Joining a queue
 
 `joinQueue` puts the email-service Thread of the event into an Inbound Email
-Queue of `call_center`, given as `queue.id` or `queue.name`. It is a single call:
-the Flow neither waits for an agent nor receives queue events, and goes on with
-its next step.
+Queue of `call_center`, given as `queue.id` or `queue.name`. It returns as soon
+as `call_center` creates the `waiting` attempt or finds the existing active
+attempt of the Thread, and the Flow goes on with its next step. When Email
+distribution is enabled, `call_center` assigns the attempt asynchronously; the
+Flow neither waits for an agent nor receives queue events.
 
 The Thread and `email_event_id` come from the event, never from Flow variables.
 `call_center` keeps one active attempt per Thread and one result per event, so a
@@ -60,7 +62,8 @@ already queued, creates no second attempt and moves no queue.
 
 On success the Flow gets `cc_attempt_id`, `cc_queue_id` (the queue of the
 attempt, which may differ from the requested one) and `cc_join_result`:
-`created`, `already_active` or `replayed`. `call_center` being unavailable is
+`created`, `already_active` or `replayed`; an `already_active` or `replayed`
+attempt may already be assigned to an agent. `call_center` being unavailable is
 retried up to 5 times within 25 seconds; any other error, and the IMAP path,
 fail the application.
 
