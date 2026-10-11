@@ -54,6 +54,8 @@ type SqlSupplierOldStores struct {
 	sysSettings   store.SystemcSettings
 	socketSession store.SocketSessionStore
 	session       store.SessionStore
+
+	userNotification store.UserNotificationStore
 }
 
 type SqlSupplier struct {
@@ -93,6 +95,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.sysSettings = NewSqlSysSettingsStore(supplier)
 	supplier.oldStores.socketSession = NewSQLSocketSessionStore(supplier)
 	supplier.oldStores.session = NewSQLSessionStore(supplier)
+	supplier.oldStores.userNotification = NewSqlUserNotificationStore(supplier)
 
 	err := supplier.GetMaster().CreateTablesIfNotExists()
 	if err != nil {
@@ -305,4 +308,8 @@ func (ss *SqlSupplier) SocketSession() store.SocketSessionStore {
 
 func (ss *SqlSupplier) Session() store.SessionStore {
 	return ss.oldStores.session
+}
+
+func (ss *SqlSupplier) UserNotification() store.UserNotificationStore {
+	return ss.oldStores.userNotification
 }
