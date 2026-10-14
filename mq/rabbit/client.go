@@ -50,6 +50,7 @@ type AMQP struct {
 	execEvent          chan model.ChannelExec
 	imEvents           chan any
 	ccEvents           chan model.CCQueueEvent
+	sysSettingsEvents  chan model.SystemSettingEvent
 	queueEvent         mq.QueueEvent
 	sync.RWMutex
 }
@@ -62,6 +63,8 @@ func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 		imEvents:  make(chan any, CallChanBufferCount),
 		ccEvents:  make(chan model.CCQueueEvent, CallChanBufferCount),
 		nodeName:  nodeName,
+
+		sysSettingsEvents: make(chan model.SystemSettingEvent, CallChanBufferCount),
 	}
 	mq_.queueEvent = NewQueueMQ(mq_)
 	mq_.initConnection()
@@ -131,6 +134,20 @@ func (a *AMQP) initExchange() {
 		time.Sleep(time.Second)
 		os.Exit(1)
 	}
+
+	if err := a.channel.ExchangeDeclare(
+		model.EventExchange,
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange %s to err:%v", model.EventExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(1)
+	}
 }
 
 func (a *AMQP) initQueues() {
@@ -167,6 +184,7 @@ func (a *AMQP) initQueues() {
 	a.subscribeCall()
 	a.subscribeExec()
 	a.subscribeCC()
+	a.subscribeSystemSettings()
 
 	if a.settings.UseIM {
 		go a.subscribeIM()
@@ -343,6 +361,61 @@ func (a *AMQP) subscribeCC() {
 	}()
 }
 
+func (a *AMQP) subscribeSystemSettings() {
+	queueName := fmt.Sprintf("%s.%s", model.SysSettingsPrefix, model.NewId()[0:8])
+
+	queue, err := a.channel.QueueDeclare(
+		queueName,
+		true,
+		false,
+		false,
+		true,
+		amqp.Table{
+			"x-queue-type": "quorum",
+			"x-expires":    10000,
+		},
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", queueName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_DECLARE_QUEUE)
+	}
+
+	if err = a.channel.QueueBind(queue.Name, model.SystemSettingsObjectName+".#", model.EventExchange, true, nil); err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queue.Name, model.EventExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	msgs, err := a.channel.Consume(
+		queue.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", queue.Name, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	go func() {
+		for m := range msgs {
+			ev, appErr := model.NewSystemSettingEventFromRoutingKey(m.RoutingKey)
+			if appErr != nil {
+				wlog.Warn(fmt.Sprintf("unable to parse system settings event, %s", appErr.Error()))
+			} else {
+				a.sysSettingsEvents <- *ev
+			}
+
+			m.Ack(false)
+		}
+	}()
+}
+
 func (a *AMQP) handleCallMediaStats(data []byte) {
 	var jsonrpc JsonRPCCallStats
 	err := json.Unmarshal(data, &jsonrpc)
@@ -480,4 +553,8 @@ func (a *AMQP) ConsumeIM() <-chan any {
 
 func (a *AMQP) ConsumeCCEvents() <-chan model.CCQueueEvent {
 	return a.ccEvents
+}
+
+func (a *AMQP) ConsumeSystemSettingsEvents() <-chan model.SystemSettingEvent {
+	return a.sysSettingsEvents
 }
