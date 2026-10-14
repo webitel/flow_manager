@@ -1,5 +1,12 @@
 package model
 
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
 const (
 	DATABASE_DRIVER_POSTGRES = "postgres"
 )
@@ -26,6 +33,7 @@ type Config struct {
 	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
 	Log                   LogSettings           `json:"log"`
 	Tls                   TLSConfig             `json:"tls"`
+	ExternalSQLSettings   ExternalSQLSettings   `json:"external_sql_settings"`
 	ProxyConfigFile       string                `json:"proxy_config_file" flag:"proxy_config_file||Proxy settings file (http_proxy/https_proxy/no_proxy) watched for changes" env:"PROXY_CONFIG_FILE"`
 	Health                HealthSettings        `json:"health"`
 }
@@ -98,4 +106,44 @@ type WebHookSettings struct {
 type MQSettings struct {
 	Url   string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
 	UseIM bool   `json:"use_im" flag:"use_im|false|Use IM handlers" env:"USE_IM"`
+}
+
+type ExternalSQLSettings struct {
+	Enabled              bool   `json:"enabled" flag:"external_sql|false|Enable use of external SQL stores" env:"EXTERNAL_SQL"`
+	SandboxRootDirectory string `json:"root_directory" flag:"external_sql_sandbox_directory|/var/lib/webitel/webitel-flow-manager/sqlite|Root path for sandbox SQLLite access directory" env:"EXTERNAL_SQL_SANDBOX_DIRECTORY"`
+	WriteEnabled         bool   `json:"writable" flag:"external_sql_write_enabled|false|Is enabled write operations with external SQL stores" env:"EXTERNAL_SQL_WRITE_ENABLED"`
+}
+
+var ErrEmptyExternalSQLSandbox = NewAppError("Config", "model.config.external_sql_settings.empty", nil, "empty external sql sandbox dir", 400)
+
+func (s *ExternalSQLSettings) Prepare() *AppError {
+	if strings.TrimSpace(s.SandboxRootDirectory) == "" {
+		return ErrEmptyExternalSQLSandbox
+	}
+
+	if !filepath.IsAbs(s.SandboxRootDirectory) {
+		return NewAppError("Config", "model.config.external_sql_settings.not_absolute", nil, "sandbox root must be absolute", 400)
+	}
+
+	real, err := filepath.EvalSymlinks(filepath.Clean(s.SandboxRootDirectory))
+	if err != nil {
+		return NewAppError("Config", "model.config.external_sql_settings.sandbox_root", nil, fmt.Sprintf("sandbox root %+v", err), 400)
+	}
+
+	fi, err := os.Stat(real)
+	if err != nil || !fi.IsDir() {
+		return NewAppError("Config", "model.config.external_sql_settings.sandbox_not_dir", nil, "sandbox root path must be an existing directory", 400)
+	}
+
+	if fi.Mode().Perm()&0o002 != 0 {
+		return NewAppError("Config", "model.config.external_sql_settings.word_writable", nil, "sandbox root must not be a world writable", 400)
+	}
+
+	s.SandboxRootDirectory = real
+
+	return nil
+}
+
+func (s *ExternalSQLSettings) SanitazeOnPrepareFailure() {
+	s.SandboxRootDirectory = ""
 }
