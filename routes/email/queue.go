@@ -170,30 +170,36 @@ func invalidJoinResponse(res *cc.EmailJoinToQueueResponse) *model.AppError {
 }
 
 func callEmailJoin(ctx context.Context, cli emailQueueJoiner, req *cc.EmailJoinToQueueRequest, rt joinRetry, log *wlog.Logger) (*cc.EmailJoinToQueueResponse, error) {
+	return callEmailRetry(ctx, cli.EmailJoinToQueue, req, rt, log, "email join to queue")
+}
+
+// callEmailRetry repeats the same request on transient errors; call_center deduplicates it by email_event_id.
+func callEmailRetry[Req, Res any](ctx context.Context, call func(context.Context, Req) (Res, error), req Req, rt joinRetry, log *wlog.Logger, what string) (Res, error) {
 	ctx, cancel := context.WithTimeout(ctx, rt.budget)
 	defer cancel()
 
 	for attempt := 1; ; attempt++ {
 		callCtx, callCancel := context.WithTimeout(ctx, rt.callTimeout)
-		res, err := cli.EmailJoinToQueue(callCtx, req)
+		res, err := call(callCtx, req)
 		callCancel()
 		if err == nil {
 			return res, nil
 		}
 
+		var none Res
 		code := status.Code(err)
 		if (code != codes.Unavailable && code != codes.DeadlineExceeded) || attempt >= rt.attempts || ctx.Err() != nil {
-			return nil, err
+			return none, err
 		}
 
 		delay := min(rt.baseDelay<<(attempt-1), rt.maxDelay)
 		delay = delay/2 + rand.N(delay/2+1)
-		log.Warn("email join to queue failed, retrying", wlog.Err(err), wlog.Int("attempt", attempt),
+		log.Warn(what+" failed, retrying", wlog.Err(err), wlog.Int("attempt", attempt),
 			wlog.Duration("delay", delay))
 
 		select {
 		case <-ctx.Done():
-			return nil, err
+			return none, err
 		case <-time.After(delay):
 		}
 	}

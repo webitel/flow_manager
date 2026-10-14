@@ -243,7 +243,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
 	if config.EmailEvents.Enabled {
-		srv, err := emailevent.NewServer(fm.id, config.EmailEvents, config.MQSettings.Url, fm.Store.EmailEvent(), fm.log)
+		srv, err := emailevent.NewServer(fm.id, config.EmailEvents, config.MQSettings.Url, fm.Store.EmailEvent(), fm, fm.log)
 		if err != nil {
 			return nil, err
 		}

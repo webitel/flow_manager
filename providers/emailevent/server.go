@@ -10,6 +10,7 @@ import (
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/wlog"
 
+	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/store"
 )
@@ -18,8 +19,14 @@ const (
 	pollInterval     = time.Second
 	leaseDuration    = time.Minute
 	handshakeTimeout = 10 * time.Second
+	wakeUpTimeout    = 5 * time.Second
 	recoverInterval  = 5 * time.Second
 )
+
+// AttemptWaker wakes the active Email attempt of a Thread in call_center.
+type AttemptWaker interface {
+	EmailWakeUp(ctx context.Context, in *cc.EmailWakeUpRequest) (*cc.EmailWakeUpResponse, error)
+}
 
 // Server consumes email-service events into the Inbox and hands them to the
 // email router as connections; workers start with the first Consume call.
@@ -28,6 +35,7 @@ type Server struct {
 	runId    string
 	cfg      model.EmailEventsSettings
 	store    store.EmailEventStore
+	waker    AttemptWaker
 	consumer *consumer
 	log      *wlog.Logger
 	conns    chan model.Connection
@@ -44,7 +52,7 @@ type Server struct {
 
 var _ model.Server = (*Server)(nil)
 
-func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st store.EmailEventStore, log *wlog.Logger) (*Server, error) {
+func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st store.EmailEventStore, waker AttemptWaker, log *wlog.Logger) (*Server, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("email events: %w", err)
 	}
@@ -59,6 +67,7 @@ func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st 
 		runId:    runId,
 		cfg:      cfg,
 		store:    st,
+		waker:    waker,
 		consumer: newConsumer(amqpUrl, nodeId, runId, cfg, st, log),
 		log:      log.With(wlog.String("component", "email_events")),
 		conns:    make(chan model.Connection),

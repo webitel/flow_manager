@@ -7,7 +7,10 @@ import (
 	"time"
 
 	"github.com/webitel/wlog"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
+	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -88,24 +91,99 @@ func (w *worker) process(ctx context.Context, row *model.EmailEvent) {
 		return
 	}
 
-	log.Debug("waking a deferred email attempt is not implemented yet")
+	wakeup, appErr := w.wakeUp(ctx, event)
+	if appErr != nil {
+		switch {
+		case ctx.Err() != nil:
+			// The lease returns the row; a shutdown does not spend an attempt.
+		case appErr.StatusCode == http.StatusConflict || appErr.StatusCode == http.StatusBadRequest:
+			w.fail(ctx, row, appErr.Error(), log)
+		default:
+			w.retry(ctx, row, appErr, "email attempt wake-up failed", log)
+		}
+		return
+	}
+	if wakeup == wakeUpNoop || wakeup == wakeUpNotActive {
+		log.Debug("email attempt wake-up", wlog.String("result", wakeup))
+	} else {
+		log.Info("email attempt wake-up", wlog.String("result", wakeup))
+	}
 
 	if event.FlowId == nil {
-		if w.accept(ctx, row, nil, log) {
+		if !w.accept(ctx, row, nil, log) {
+			return
+		}
+		// A Thread with an attempt needs no route: the wake-up handled the email.
+		if wakeup == wakeUpNotActive {
 			log.Info("email thread has no route")
+		} else {
+			log.Info("email event accepted without a flow", wlog.String("result", wakeup))
 		}
 		return
 	}
 
 	conn := NewConnection(w.ctx, w.nodeId, event, w.Server.log)
+	conn.Set(ctx, model.Variables{"cc_wakeup_result": wakeup})
 	switch outcome, launchErr := w.launch(ctx, conn); outcome {
 	case outcomeStarted:
 		w.accept(ctx, row, conn, log)
 	case outcomeFailed:
-		w.retry(ctx, row, launchErr, log)
+		w.retry(ctx, row, launchErr, "email flow launch failed", log)
 	case outcomeStopped:
 		// The lease returns the row; a shutdown does not spend an attempt.
 	}
+}
+
+const (
+	wakeUpNoop      = "noop"
+	wakeUpNotActive = "not_active"
+)
+
+var wakeUpResults = map[cc.EmailWakeUpResponse_Result]string{
+	cc.EmailWakeUpResponse_RESULT_WOKEN:      "woken",
+	cc.EmailWakeUpResponse_RESULT_QUEUED:     "queued",
+	cc.EmailWakeUpResponse_RESULT_REOPENED:   "reopened",
+	cc.EmailWakeUpResponse_RESULT_NOOP:       wakeUpNoop,
+	cc.EmailWakeUpResponse_RESULT_NOT_ACTIVE: wakeUpNotActive,
+}
+
+// wakeUp runs before the Flow and without one; call_center keeps the result by event id,
+// so a retried event does not wake the attempt again.
+func (w *worker) wakeUp(ctx context.Context, event *InboundMessage) (string, *model.AppError) {
+	ctx, cancel := context.WithTimeout(ctx, wakeUpTimeout)
+	defer cancel()
+
+	res, err := w.waker.EmailWakeUp(ctx, &cc.EmailWakeUpRequest{
+		DomainId:     event.DomainId,
+		ThreadId:     event.ThreadId,
+		EmailEventId: event.EventId,
+	})
+	if err != nil {
+		return "", wakeUpError(err)
+	}
+
+	result, ok := wakeUpResults[res.GetResult()]
+	if !ok {
+		return "", model.NewAppError("EmailEvents.WakeUp", "email_events.wakeup.invalid_response", nil,
+			"call_center returned an unknown wake-up result "+res.GetResult().String(), http.StatusBadGateway)
+	}
+
+	return result, nil
+}
+
+// wakeUpError keeps 400 and 409 for errors a retry cannot fix; the worker fails those events.
+func wakeUpError(err error) *model.AppError {
+	id, code := "app_error", http.StatusInternalServerError
+	switch status.Code(err) {
+	case codes.InvalidArgument:
+		id, code = "invalid", http.StatusBadRequest
+	case codes.AlreadyExists:
+		id, code = "event_conflict", http.StatusConflict
+	case codes.Unavailable, codes.DeadlineExceeded:
+		id, code = "unavailable", http.StatusServiceUnavailable
+	}
+
+	return model.NewAppError("EmailEvents.WakeUp", "email_events.wakeup."+id, nil, err.Error(), code)
 }
 
 // launch hands the connection to the email router and waits for the Flow to
@@ -178,9 +256,9 @@ func (w *worker) accept(ctx context.Context, row *model.EmailEvent, conn *Connec
 	}
 }
 
-// retry returns the row to pending after a failed launch, or fails it once a
+// retry returns the row to pending after a failed wake-up or launch, or fails it once a
 // missing schema outlasts replica lag.
-func (w *worker) retry(ctx context.Context, row *model.EmailEvent, launchErr *model.AppError, log *wlog.Logger) {
+func (w *worker) retry(ctx context.Context, row *model.EmailEvent, launchErr *model.AppError, msg string, log *wlog.Logger) {
 	attempts := row.Attempts + 1
 	if launchErr.StatusCode == http.StatusNotFound && attempts >= missingSchemaAttempts {
 		w.fail(ctx, row, launchErr.Error(), log)
@@ -193,7 +271,7 @@ func (w *worker) retry(ctx context.Context, row *model.EmailEvent, launchErr *mo
 		return
 	}
 
-	log.Warn("email flow launch failed", wlog.Int("attempt", int(attempts)),
+	log.Warn(msg, wlog.Int("attempt", int(attempts)),
 		wlog.String("retry_at", next.Format(time.RFC3339)), wlog.Err(launchErr))
 }
 
