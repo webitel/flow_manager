@@ -1,5 +1,11 @@
 package model
 
+import (
+	"errors"
+	"fmt"
+	"time"
+)
+
 const (
 	DATABASE_DRIVER_POSTGRES = "postgres"
 )
@@ -27,6 +33,7 @@ type Config struct {
 	Log                   LogSettings           `json:"log"`
 	Tls                   TLSConfig             `json:"tls"`
 	ProxyConfigFile       string                `json:"proxy_config_file" flag:"proxy_config_file||Proxy settings file (http_proxy/https_proxy/no_proxy) watched for changes" env:"PROXY_CONFIG_FILE"`
+	EmailEvents           EmailEventsSettings   `json:"email_events"`
 }
 
 type LogSettings struct {
@@ -91,4 +98,47 @@ type WebHookSettings struct {
 type MQSettings struct {
 	Url   string `json:"url" flag:"amqp|amqp://admin:admin@rabbit:5672?heartbeat=10|AMQP connection" env:"AMQP"`
 	UseIM bool   `json:"use_im" flag:"use_im|false|Use IM handlers" env:"USE_IM"`
+}
+
+// EmailEventsSettings configures consuming email-service events into the Inbox.
+type EmailEventsSettings struct {
+	Enabled         bool          `json:"enabled" flag:"email_events|false|Consume email-service events and start Flows from them" env:"EMAIL_EVENTS"`
+	Prefetch        int           `json:"prefetch" flag:"email_events_prefetch|20|Unacknowledged email events per consumer" env:"EMAIL_EVENTS_PREFETCH"`
+	DeliveryLimit   int           `json:"delivery_limit" flag:"email_events_delivery_limit|20|Deliveries of an email event before it goes to the DLQ" env:"EMAIL_EVENTS_DELIVERY_LIMIT"`
+	Workers         int           `json:"workers" flag:"email_events_workers|4|Inbox workers starting Flows from email events" env:"EMAIL_EVENTS_WORKERS"`
+	Retention       time.Duration `json:"retention" flag:"email_events_retention|720h|How long accepted email events are kept for deduplication" env:"EMAIL_EVENTS_RETENTION"`
+	CleanupInterval time.Duration `json:"cleanup_interval" flag:"email_events_cleanup_interval|1h|Interval between Inbox cleanups" env:"EMAIL_EVENTS_CLEANUP_INTERVAL"`
+	CleanupBatch    int           `json:"cleanup_batch" flag:"email_events_cleanup_batch|1000|Accepted email events deleted per statement" env:"EMAIL_EVENTS_CLEANUP_BATCH"`
+}
+
+const (
+	// maxEmailEventsPrefetch is the limit of the AMQP prefetch count, a uint16.
+	maxEmailEventsPrefetch     = 65535
+	maxEmailEventsCleanupBatch = 10000
+)
+
+// Validate rejects zero values too: an unparsable duration is set to zero.
+func (s EmailEventsSettings) Validate() error {
+	var errs []error
+	positive := func(name string, value int64) {
+		if value <= 0 {
+			errs = append(errs, fmt.Errorf("%s must be positive", name))
+		}
+	}
+
+	positive("email_events_prefetch", int64(s.Prefetch))
+	positive("email_events_delivery_limit", int64(s.DeliveryLimit))
+	positive("email_events_workers", int64(s.Workers))
+	positive("email_events_retention", int64(s.Retention))
+	positive("email_events_cleanup_interval", int64(s.CleanupInterval))
+	positive("email_events_cleanup_batch", int64(s.CleanupBatch))
+
+	if s.Prefetch > maxEmailEventsPrefetch {
+		errs = append(errs, fmt.Errorf("email_events_prefetch must not exceed %d", maxEmailEventsPrefetch))
+	}
+	if s.CleanupBatch > maxEmailEventsCleanupBatch {
+		errs = append(errs, fmt.Errorf("email_events_cleanup_batch must not exceed %d", maxEmailEventsCleanupBatch))
+	}
+
+	return errors.Join(errs...)
 }

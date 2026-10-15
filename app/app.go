@@ -25,6 +25,7 @@ import (
 	"github.com/webitel/flow_manager/mq/rabbit"
 	"github.com/webitel/flow_manager/providers/channel"
 	"github.com/webitel/flow_manager/providers/email"
+	"github.com/webitel/flow_manager/providers/emailevent"
 	"github.com/webitel/flow_manager/providers/fs"
 	"github.com/webitel/flow_manager/providers/grpc"
 	"github.com/webitel/flow_manager/providers/http"
@@ -57,6 +58,8 @@ type FlowManager struct {
 	channelServer model.Server
 	httpServer    model.Server
 	imServer      model.Server
+	// emailEventServer is nil unless email_events is enabled.
+	emailEventServer model.Server
 
 	schemaCache model.ObjectCache
 	chatManager *grpc.ChatManager
@@ -239,6 +242,13 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		RecordResample: fm.Config().Record.Sample,
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
+	if config.EmailEvents.Enabled {
+		srv, err := emailevent.NewServer(fm.id, config.EmailEvents, config.MQSettings.Url, fm.Store.EmailEvent(), fm.log)
+		if err != nil {
+			return nil, err
+		}
+		fm.emailEventServer = srv
+	}
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 

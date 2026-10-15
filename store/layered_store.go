@@ -40,6 +40,10 @@ func (s *LayeredStore) Email() EmailStore {
 	return s.DatabaseLayer.Email()
 }
 
+func (s *LayeredStore) EmailEvent() EmailEventStore {
+	return s.DatabaseLayer.EmailEvent()
+}
+
 func (s *LayeredStore) Media() MediaStore {
 	return s.DatabaseLayer.Media()
 }

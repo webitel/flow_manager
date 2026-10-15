@@ -17,6 +17,10 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        emailHandlerMiddleware(r.reply),
 	}
+	apps["joinQueue"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        emailHandlerMiddleware(r.joinQueue),
+	}
 
 	return apps
 }
