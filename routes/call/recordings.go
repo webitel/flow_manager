@@ -2,6 +2,8 @@ package call
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/webitel/flow_manager/flow"
@@ -90,4 +92,29 @@ func normalizeRecordName(s *string) {
 	if strings.Index(*s, " ") != -1 {
 		*s = strings.Replace(*s, " ", "_", -1)
 	}
+}
+
+func schemaRecordsSession(schema *model.Schema) bool {
+	if schema == nil {
+		return false
+	}
+
+	data, err := json.Marshal(schema.Schema)
+	if err != nil {
+		return false
+	}
+
+	return strings.Contains(string(data), `"recordSession":`)
+}
+
+func (r *Router) forceRecordAllCalls(ctx context.Context, call model.Call) (model.Response, *model.AppError) {
+	return call.Set(ctx, model.Variables{
+		"RECORD_MIN_SEC":            2,
+		"RECORD_STEREO":             true,
+		"RECORD_BRIDGE_REQ":         false,
+		"media_bug_answer_req":      false,
+		"recording_follow_transfer": true,
+		"execute_on_answer": fmt.Sprintf("record_session http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.mp3&.mp3",
+			call.DomainId(), call.Id(), recordSessionTemplate),
+	})
 }
