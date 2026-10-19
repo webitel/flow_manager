@@ -59,3 +59,53 @@ func (r EmailEventAcceptResult) String() string {
 		return "unknown"
 	}
 }
+
+// EmailRouteState is the route of an event whose Thread had no active attempt.
+type EmailRouteState string
+
+const (
+	// EmailRouteUnset is a row written before routing existed or not woken up yet.
+	EmailRouteUnset     EmailRouteState = ""
+	EmailRouteNotNeeded EmailRouteState = "not_needed"
+	// EmailRoutePending waits for the intent of the Flow until the deadline.
+	EmailRoutePending EmailRouteState = "pending"
+	// EmailRouteJoining joins the queue the Flow chose before the deadline.
+	EmailRouteJoining EmailRouteState = "joining"
+	// EmailRouteResolving joins the fallback queue after the deadline.
+	EmailRouteResolving EmailRouteState = "resolving"
+	EmailRouteRouted    EmailRouteState = "routed"
+	// EmailRouteUnrouted ends without a queue; the reason says why.
+	EmailRouteUnrouted EmailRouteState = "unrouted"
+	// EmailRouteFailed ends after the retries of unexpected errors ran out.
+	EmailRouteFailed EmailRouteState = "route_failed"
+)
+
+// Sources of a route queue.
+const (
+	EmailRouteSourceFlow     = "flow"
+	EmailRouteSourceFallback = "fallback"
+)
+
+// EmailRoute is the route part of an Inbox row.
+type EmailRoute struct {
+	EventId         string
+	DomainId        int64
+	ThreadId        int64
+	State           EmailRouteState
+	Source          string
+	QueueId         *int32
+	FallbackQueueId *int32
+	// DuePassed reports that the deadline of the Flow is over, by the database clock.
+	DuePassed bool
+	Attempts  int32
+}
+
+// EmailRouteResult is the outcome of a join that ends a route step: the new state, and
+// for routed the queue call_center answered.
+type EmailRouteResult struct {
+	State     EmailRouteState
+	QueueId   *int32
+	Source    string
+	Reason    string
+	LastError string
+}

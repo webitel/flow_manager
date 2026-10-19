@@ -17,6 +17,7 @@ import (
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/gen/cc"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/flow_manager/providers/emailevent"
 )
 
 type QueueParameters struct {
@@ -78,7 +79,15 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn model.Ema
 		return nil, err
 	}
 
-	return joinEmailQueue(ctx, r.fm, event, argv, defaultJoinRetry)
+	req, appErr := emailJoinRequest(r.fm, event, argv)
+	if appErr != nil {
+		return nil, appErr
+	}
+	if handled, res, err := joinEmailRoute(ctx, r.fm.Store.EmailEvent(), r.fm, event, req, defaultJoinRetry); handled {
+		return res, err
+	}
+
+	return joinWithRequest(ctx, r.fm, event, req, defaultJoinRetry)
 }
 
 // Keep validation before narrowing the generic Flow decoder's numeric values.
@@ -100,6 +109,16 @@ func emailQueueNumber(value any, maximum int32, field string) (int32, *model.App
 
 // joinEmailQueue freezes routing values once before any transport retry.
 func joinEmailQueue(ctx context.Context, cli emailQueueService, conn model.EmailEventConnection, argv QueueParameters, rt joinRetry) (model.Response, *model.AppError) {
+	req, appErr := emailJoinRequest(cli, conn, argv)
+	if appErr != nil {
+		return nil, appErr
+	}
+
+	return joinWithRequest(ctx, cli, conn, req, rt)
+}
+
+// emailJoinRequest validates the arguments and resolves the queue and the Sticky agent once.
+func emailJoinRequest(cli emailQueueService, conn model.EmailEventConnection, argv QueueParameters) (*cc.EmailJoinToQueueRequest, *model.AppError) {
 	priority, appErr := emailQueueNumber(argv.Priority, 100, "priority")
 	if appErr != nil {
 		return nil, appErr
@@ -144,12 +163,127 @@ func joinEmailQueue(ctx context.Context, cli emailQueueService, conn model.Email
 		FromAddress:     model.NormalizeEmailRoutingAddress(conn.InitialFromAddress()),
 	}
 
+	return req, nil
+}
+
+// joinWithRequest joins with a frozen request and stores the cc_* variables.
+func joinWithRequest(ctx context.Context, cli emailQueueJoiner, conn model.EmailEventConnection, req *cc.EmailJoinToQueueRequest, rt joinRetry) (model.Response, *model.AppError) {
 	res, err := callEmailJoin(ctx, cli, req, rt, conn.Log())
 	if err != nil {
 		return nil, joinError(err)
 	}
 
-	// Only the three known results with positive ids count as a join.
+	return setJoinVariables(ctx, conn, res)
+}
+
+// routeStore is the part of the Inbox that keeps the route of an event.
+type routeStore interface {
+	BeginFlowRoute(ctx context.Context, owner, eventId string, queueId int32, lease time.Duration) (bool, *model.EmailRoute, *model.AppError)
+	FinishRoute(ctx context.Context, owner, eventId string, from model.EmailRouteState, res model.EmailRouteResult) (bool, *model.AppError)
+	RetryRoute(ctx context.Context, owner, eventId string, from model.EmailRouteState, reason string, next time.Time, counted bool) (bool, *model.AppError)
+}
+
+// routeWriteTimeout bounds a route write after the join, even when the Flow is gone.
+const routeWriteTimeout = 5 * time.Second
+
+// joinEmailRoute writes the Flow intent before the join, so a late Flow cannot race the fallback;
+// handled is false for events without a tracked route, which join as before.
+func joinEmailRoute(ctx context.Context, routes routeStore, cli emailQueueJoiner, conn model.EmailEventConnection, req *cc.EmailJoinToQueueRequest, rt joinRetry) (bool, model.Response, *model.AppError) {
+	queueId := req.QueueId
+	owner := conn.NodeId() + "/flow/" + model.NewId()
+	log := conn.Log().With(wlog.Int("queue_id", int(queueId)))
+
+	began, route, appErr := routes.BeginFlowRoute(ctx, owner, conn.EventId(), queueId, rt.budget+routeWriteTimeout)
+	switch {
+	case appErr != nil:
+		return true, nil, model.NewAppError("Email.JoinQueue", "email_route.unavailable", nil, appErr.Error(), http.StatusServiceUnavailable)
+	case route == nil:
+		// Cleanup removes only finished routes, so the deadline of this event is long over.
+		emailevent.RecordRouteOutcome(ctx, emailevent.RouteOutcomeWindowClosed)
+		log.Warn("email route is no longer kept")
+		return true, nil, model.NewAppError("Email.JoinQueue", "email_route.window_closed", nil,
+			"the route of the email is no longer kept; its time to choose a queue is over", http.StatusConflict)
+	case route.State == model.EmailRouteUnset || route.State == model.EmailRouteNotNeeded:
+		return false, nil, nil
+	case began:
+		res, err := joinFlowRoute(ctx, routes, cli, conn, owner, req, rt, log)
+		return true, res, err
+	case route.State == model.EmailRouteJoining:
+		log.Warn("email route already joins another queue", wlog.Int("route_queue_id", int(*route.QueueId)))
+		return true, nil, model.NewAppError("Email.JoinQueue", "email_route.queue_conflict", nil,
+			fmt.Sprintf("the email is already joining queue %d", *route.QueueId), http.StatusConflict)
+	case route.State == model.EmailRouteRouted && route.Source == model.EmailRouteSourceFlow:
+		// A repeated join answers from call_center, which replays the stored join.
+		res, err := callEmailJoin(ctx, cli, withQueue(req, *route.QueueId), rt, conn.Log())
+		if err != nil {
+			return true, nil, joinError(err)
+		}
+		resp, joinErr := setJoinVariables(ctx, conn, res)
+		return true, resp, joinErr
+	default:
+		emailevent.RecordRouteOutcome(ctx, emailevent.RouteOutcomeWindowClosed)
+		log.Warn("email route window is closed", wlog.String("route_state", string(route.State)))
+		return true, nil, model.NewAppError("Email.JoinQueue", "email_route.window_closed", nil,
+			"the email is already routed or its time to choose a queue is over", http.StatusConflict)
+	}
+}
+
+// joinFlowRoute joins the queue of the intent and records the outcome; an error that
+// may hide a join keeps the intent for the route watcher.
+func joinFlowRoute(ctx context.Context, routes routeStore, cli emailQueueJoiner, conn model.EmailEventConnection, owner string, req *cc.EmailJoinToQueueRequest, rt joinRetry, log *wlog.Logger) (model.Response, *model.AppError) {
+	res, err := callEmailJoin(ctx, cli, req, rt, conn.Log())
+
+	wctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), routeWriteTimeout)
+	defer cancel()
+
+	if err != nil {
+		if failure := emailevent.JoinFailure(model.EmailRouteJoining, err); failure != nil {
+			if _, appErr := routes.FinishRoute(wctx, owner, conn.EventId(), model.EmailRouteJoining, *failure); appErr != nil {
+				log.Warn("email route intent was not dropped", wlog.Err(appErr))
+			}
+		} else if _, appErr := routes.RetryRoute(wctx, owner, conn.EventId(), model.EmailRouteJoining, err.Error(), time.Now(), false); appErr != nil {
+			log.Warn("email route was not handed to the watcher", wlog.Err(appErr))
+		}
+
+		return nil, joinError(err)
+	}
+
+	resp, joinErr := setJoinVariables(ctx, conn, res)
+	if joinErr != nil {
+		if _, appErr := routes.RetryRoute(wctx, owner, conn.EventId(), model.EmailRouteJoining, joinErr.Error(), time.Now(), false); appErr != nil {
+			log.Warn("email route was not handed to the watcher", wlog.Err(appErr))
+		}
+
+		return nil, joinErr
+	}
+
+	actual := res.GetQueueId()
+	done, appErr := routes.FinishRoute(wctx, owner, conn.EventId(), model.EmailRouteJoining,
+		model.EmailRouteResult{State: model.EmailRouteRouted, QueueId: &actual, Source: model.EmailRouteSourceFlow})
+	if appErr != nil || !done {
+		// The join is done; the watcher repeats it into the same queue and records the route.
+		log.Warn("email route was joined but not recorded; the watcher records it", wlog.Err(appErr))
+	}
+
+	return resp, nil
+}
+
+// withQueue is the frozen request for another queue; call_center replays a routed event whatever it gets.
+func withQueue(req *cc.EmailJoinToQueueRequest, queueId int32) *cc.EmailJoinToQueueRequest {
+	return &cc.EmailJoinToQueueRequest{
+		QueueId:         queueId,
+		ThreadId:        req.ThreadId,
+		EmailEventId:    req.EmailEventId,
+		DomainId:        req.DomainId,
+		Priority:        req.Priority,
+		StickyAgentId:   req.StickyAgentId,
+		ExtraEmailCount: req.ExtraEmailCount,
+		FromAddress:     req.FromAddress,
+	}
+}
+
+// setJoinVariables stores the cc_* variables of a valid join response.
+func setJoinVariables(ctx context.Context, conn model.EmailEventConnection, res *cc.EmailJoinToQueueResponse) (model.Response, *model.AppError) {
 	result, ok := joinResults[res.GetResult()]
 	if res == nil || !ok || res.GetAttemptId() <= 0 || res.GetQueueId() <= 0 {
 		return nil, invalidJoinResponse(res)

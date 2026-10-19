@@ -29,6 +29,7 @@ func (c *fakeEventConn) ThreadId() int64            { return 42 }
 func (c *fakeEventConn) DomainId() int64            { return 1 }
 func (c *fakeEventConn) Log() *wlog.Logger          { return testLog }
 func (c *fakeEventConn) InitialFromAddress() string { return c.from }
+func (c *fakeEventConn) NodeId() string             { return "flow-1" }
 func (c *fakeEventConn) Get(name string) (string, bool) {
 	v, ok := c.vars[name]
 	if !ok {
@@ -267,5 +268,114 @@ func TestJoinEmailQueueAgentLookup(t *testing.T) {
 		if cli.lookups != tc.lookups || (cli.lookups != 0 && cli.lookupDomain != 1) {
 			t.Fatal("lookup not scoped to event domain")
 		}
+	}
+}
+
+// fakeRoutes answers BeginFlowRoute with a fixed route and records the writes after the join.
+type fakeRoutes struct {
+	began   bool
+	route   *model.EmailRoute
+	err     *model.AppError
+	finish  []model.EmailRouteResult
+	retries int
+}
+
+func (f *fakeRoutes) BeginFlowRoute(context.Context, string, string, int32, time.Duration) (bool, *model.EmailRoute, *model.AppError) {
+	return f.began, f.route, f.err
+}
+
+func (f *fakeRoutes) FinishRoute(_ context.Context, _, _ string, _ model.EmailRouteState, res model.EmailRouteResult) (bool, *model.AppError) {
+	f.finish = append(f.finish, res)
+	return true, nil
+}
+
+func (f *fakeRoutes) RetryRoute(context.Context, string, string, model.EmailRouteState, string, time.Time, bool) (bool, *model.AppError) {
+	f.retries++
+	return true, nil
+}
+
+// Repeated and late joins of a routed event follow the route, never the deadline alone.
+func TestJoinEmailRoute(t *testing.T) {
+	flowQueue, otherQueue := int32(5), int32(9)
+	unavailable := status.Error(codes.Unavailable, "down")
+	tests := []struct {
+		name    string
+		routes  *fakeRoutes
+		cli     *fakeJoiner
+		handled bool
+		errId   string
+		calls   int
+		finish  model.EmailRouteState
+		retries int
+	}{
+		{name: "an untracked event joins as before",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteNotNeeded}}, cli: &fakeJoiner{}},
+		{name: "a row written before routing joins as before",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteUnset}}, cli: &fakeJoiner{}},
+		{name: "a route removed by cleanup closes the window",
+			routes: &fakeRoutes{}, cli: &fakeJoiner{}, handled: true, errId: "email_route.window_closed"},
+		{name: "the intent is joined and recorded with the answered queue",
+			routes: &fakeRoutes{began: true, route: &model.EmailRoute{State: model.EmailRouteJoining, QueueId: &flowQueue}},
+			cli:    &fakeJoiner{}, handled: true, calls: 1, finish: model.EmailRouteRouted},
+		{name: "an unusable queue drops the intent",
+			routes:  &fakeRoutes{began: true, route: &model.EmailRoute{State: model.EmailRouteJoining, QueueId: &flowQueue}},
+			cli:     &fakeJoiner{errs: []error{status.Error(codes.NotFound, "store.sql_member.email_join.queue_not_found")}},
+			handled: true, errId: "email.join_queue.queue_not_found", calls: 1, finish: model.EmailRoutePending},
+		{name: "an unknown outcome keeps the intent for the watcher",
+			routes:  &fakeRoutes{began: true, route: &model.EmailRoute{State: model.EmailRouteJoining, QueueId: &flowQueue}},
+			cli:     &fakeJoiner{errs: []error{unavailable, unavailable, unavailable}},
+			handled: true, errId: "email.join_queue.unavailable", calls: 3, retries: 1},
+		{name: "another queue conflicts with the intent",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteJoining, QueueId: &otherQueue}},
+			cli:    &fakeJoiner{}, handled: true, errId: "email_route.queue_conflict"},
+		{name: "a route of the flow is answered again",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteRouted, Source: model.EmailRouteSourceFlow, QueueId: &otherQueue}},
+			cli:    &fakeJoiner{}, handled: true, calls: 1},
+		{name: "the fallback route closes the window",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteRouted, Source: model.EmailRouteSourceFallback, QueueId: &otherQueue}},
+			cli:    &fakeJoiner{}, handled: true, errId: "email_route.window_closed"},
+		{name: "a pending route past the deadline closes the window",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRoutePending, DuePassed: true}},
+			cli:    &fakeJoiner{}, handled: true, errId: "email_route.window_closed"},
+		{name: "resolving closes the window",
+			routes: &fakeRoutes{route: &model.EmailRoute{State: model.EmailRouteResolving}},
+			cli:    &fakeJoiner{}, handled: true, errId: "email_route.window_closed"},
+		{name: "an intent that cannot be written is not joined",
+			routes: &fakeRoutes{err: model.NewAppError("test", "test", nil, "db", 500)},
+			cli:    &fakeJoiner{}, handled: true, errId: "email_route.unavailable"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conn := &fakeEventConn{}
+			req := &cc.EmailJoinToQueueRequest{QueueId: flowQueue, ThreadId: 42, EmailEventId: conn.EventId(), DomainId: 1,
+				Priority: 20, StickyAgentId: 8, ExtraEmailCount: true, FromAddress: "c@example.com"}
+			handled, _, err := joinEmailRoute(context.Background(), tt.routes, tt.cli, conn, req, testRetry)
+
+			errId := ""
+			if err != nil {
+				errId = err.Id
+			}
+			if handled != tt.handled || errId != tt.errId || len(tt.cli.calls) != tt.calls || tt.routes.retries != tt.retries {
+				t.Fatalf("handled %v, err %q, calls %d, retries %d", handled, errId, len(tt.cli.calls), tt.routes.retries)
+			}
+			if tt.finish == "" && len(tt.routes.finish) != 0 || tt.finish != "" && (len(tt.routes.finish) != 1 || tt.routes.finish[0].State != tt.finish) {
+				t.Fatalf("finish %+v, want %s", tt.routes.finish, tt.finish)
+			}
+			// Every call carries the routing values frozen before the route.
+			for _, c := range tt.cli.calls {
+				if c.Priority != 20 || c.StickyAgentId != 8 || !c.ExtraEmailCount || c.FromAddress != "c@example.com" {
+					t.Fatalf("routing values lost: %+v", c)
+				}
+			}
+			if tt.finish == model.EmailRouteRouted && (*tt.routes.finish[0].QueueId != 3 || conn.vars["cc_queue_id"] != "3") {
+				t.Fatalf("routed %+v, vars %v", tt.routes.finish[0], conn.vars)
+			}
+			if tt.calls == 1 && tt.errId == "" && tt.finish == "" &&
+				(tt.cli.calls[0].QueueId != otherQueue || conn.vars["cc_attempt_id"] != "7" ||
+					conn.vars["cc_queue_id"] != "3" || conn.vars["cc_join_result"] != "replayed") {
+				t.Fatalf("replay request %+v, vars %v", tt.cli.calls[0], conn.vars)
+			}
+		})
 	}
 }
