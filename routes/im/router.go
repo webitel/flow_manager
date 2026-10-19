@@ -122,6 +122,7 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 		select {
 		case <-conv.ResumeChan():
 			i.ClearCancel()
+			i.RepeatInterrupted("recvMessage", "interactiveMenu")
 			flow.Route(conv.RunContext(), i, r) // продовжуємо з ноди після joinQueue
 		case <-conn.Context().Done():
 			return nil // lifetime ctx = термінал

@@ -169,6 +169,12 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 		return
 	}
 
+	if released.Reason == model.BotControlReasonAgentTakeover {
+		s.suspendForAgent(released)
+
+		return
+	}
+
 	if released.Reason != model.BotControlReasonClientLeave {
 		return
 	}
@@ -196,7 +202,10 @@ func (s *server) handleBotControlReleased(msg model.IMEventWrapper) {
 //   - a live non-suspended connection exists for the Sub         -> duplicate grant, no-op;
 //   - no connection for the Sub                                  -> PUSH: suspend the
 //     released bot (the transfer source) and start a fresh schema for the granted bot
-//     IMMEDIATELY, without waiting for the next inbound client message.
+//     IMMEDIATELY, without waiting for the next inbound client message;
+//   - no connection and reason=initial (thread just created)     -> no-op: the thread has
+//     no messages yet, the first customer message starts the schema via nodeMessage.
+//
 // The grant event carries no customer peer, so the thread participants are fetched to
 // synthesize the start message (from = customer, to = bot).
 func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error {
@@ -207,6 +216,7 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 		wlog.Int("bot_sub", m.Sub),
 		wlog.Int("released_sub", m.ReleasedSub),
 		wlog.String("member_id", m.MemberID),
+		wlog.String("reason", m.Reason),
 		wlog.Any("is_resume", m.IsResume),
 		wlog.Any("auto_leave", m.AutoLeave),
 		wlog.String("session_id", compositeSessionID),
@@ -244,10 +254,35 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 			return nil
 		}
 
+		if m.Reason == model.BotControlReasonAgentHandback && conn.ReturnFromQueue() {
+			s.log.Debug("operator handed the thread back, returning schema from queue",
+				wlog.String("session_id", compositeSessionID),
+			)
+
+			return nil
+		}
+
 		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
 		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
 		s.log.Debug("grant for already-active connection, ignoring",
 			wlog.String("session_id", compositeSessionID),
+		)
+
+		return nil
+	}
+
+	if m.Reason == model.BotControlReasonInitial {
+		s.log.Debug("initial grant on thread creation, schema starts only on first message",
+			wlog.String("session_id", compositeSessionID),
+		)
+
+		return nil
+	}
+
+	if m.Reason == model.BotControlReasonAgentHandback || m.Reason == model.BotControlReasonAgentLeft {
+		s.log.Debug("no live schema to hand the thread back to, next customer message starts it",
+			wlog.String("session_id", compositeSessionID),
+			wlog.String("reason", m.Reason),
 		)
 
 		return nil
@@ -314,6 +349,25 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 	return s.startDialog(compositeSessionID, to, msg, releasedSessionID != "")
 }
 
+func (s *server) suspendForAgent(released model.BotControlReleased) {
+	if released.Sub == 0 {
+		return
+	}
+
+	sessionID := released.GetThreadID() + "." + strconv.Itoa(released.Sub)
+
+	conn, ok := s.connectionStore.Get(sessionID)
+	if !ok || conn.IsSuspended() || conn.IsTerminating() || conn.InQueue() {
+		return
+	}
+
+	s.log.Debug("operator took the thread over, suspending schema",
+		wlog.String("session_id", sessionID),
+	)
+
+	conn.Suspend()
+}
+
 // resolveCustomerPeer loads the thread participants and returns the customer endpoint —
 // the non-bot member that is not the granted bot itself. It reuses the same gateway
 // Search RPC as Connection.treadInfo, addressed with schema metadata for the granted bot.
@@ -353,10 +407,15 @@ func (s *server) resolveCustomerPeer(m model.IMBotControlGrantedEvent, to model.
 	return peer, nil
 }
 
-// selectCustomerPeer returns the first human (non-bot) participant that is not the
-// granted bot itself, mapped to an ImEndpoint. Returns a zero endpoint (Sub == "")
+// selectCustomerPeer returns the customer of the thread, mapped to an ImEndpoint: the human
+// (non-bot) owner. On a transfer the operator who handed the thread over is still a member
+// when the grant arrives (call_center removes it only after closing its attempt), and the
+// members come in no particular order, so "the first human" may be that operator. Falls back
+// to the first human when the thread has no human owner. Returns a zero endpoint (Sub == "")
 // when the thread carries no resolvable customer.
 func selectCustomerPeer(members []*p.ThreadMember, botSub string) model.ImEndpoint {
+	var fallback *p.ThreadMember
+
 	for _, member := range members {
 		contact := member.GetContact()
 		if contact == nil {
@@ -368,16 +427,32 @@ func selectCustomerPeer(members []*p.ThreadMember, botSub string) model.ImEndpoi
 			continue
 		}
 
-		return model.ImEndpoint{
-			Sub:      contact.GetSub(),
-			Issuer:   contact.GetIss(),
-			Name:     contact.GetName(),
-			MemberID: member.GetId(),
-			Role:     int(member.GetRole()),
+		if member.GetRole() == p.ThreadRole_ROLE_OWNER {
+			return customerEndpoint(member)
+		}
+
+		if fallback == nil {
+			fallback = member
 		}
 	}
 
-	return model.ImEndpoint{}
+	if fallback == nil {
+		return model.ImEndpoint{}
+	}
+
+	return customerEndpoint(fallback)
+}
+
+func customerEndpoint(member *p.ThreadMember) model.ImEndpoint {
+	contact := member.GetContact()
+
+	return model.ImEndpoint{
+		Sub:      contact.GetSub(),
+		Issuer:   contact.GetIss(),
+		Name:     contact.GetName(),
+		MemberID: member.GetId(),
+		Role:     int(member.GetRole()),
+	}
 }
 
 // synthesizeGrantMessage builds a MessageWrapper that mimics an inbound customer

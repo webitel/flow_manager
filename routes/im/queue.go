@@ -127,7 +127,7 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		info.LastMessage = conn.LastMessage().Text
 	}
 
-	attId, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
+	joined, ch, err := r.fm.JoinIMToInboundQueue(ctx, &cc.IMJoinToQueueRequest{
 		ThreadId: conn.ThreadId(),
 		Queue: &cc.IMJoinToQueueRequest_Queue{
 			Id:   q.Queue.Id,
@@ -160,7 +160,16 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		return model.CallResponseOK, nil
 	}
 
+	attId := joined.GetAttemptId()
+
+	if joined.GetBridged() {
+		wCancel()
+	}
+
+	returned := conn.EnterQueue()
+
 	defer func() {
+		conn.LeaveQueue()
 		conn.SetQueue(nil)
 		r.fm.LeavingIMToInboundQueue(attId)
 	}()
@@ -169,6 +178,10 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conn Dialog, a
 		select {
 		case <-ctx.Done():
 			return model.CallResponseOK, nil
+		case <-returned:
+			return conn.Set(ctx, model.Variables{
+				"cc_result": model.CCResultBot,
+			})
 		case e, _ := <-ch:
 			switch e.Event {
 			case "bridged":

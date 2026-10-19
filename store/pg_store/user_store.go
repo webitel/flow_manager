@@ -55,9 +55,26 @@ where c.user_id = u.id and c.bridged_at notnull and c.hangup_at isnull)` + pq.Qu
 		case "active_calls":
 			val = `(select count(*) from call_center.cc_calls c
 where c.user_id = u.id)` + pq.QuoteIdentifier(k)
+		case "answered_call":
+			val = `
+				(select json_build_object(
+                    'id', c.id,
+                    'direction', c.direction,
+                    'callee_number', case
+                        when c.direction = 'inbound' then c.from_number
+                        else c.to_number
+                    end,
+                    'callee_name', case
+                        when c.direction = 'inbound' then c.from_name
+                        else c.to_name
+                    end
+                )::text as info
+                 from call_center.cc_calls c
+                where c.user_id = u.id and c.answered_at is not null
+                limit 1)
+			` + pq.QuoteIdentifier(k)
 		case "agent_status":
-			val = `(select a.status::text
-				from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
+			val = `(select a.status::text from call_center.cc_agent a where a.user_id = u.id limit 1)` + pq.QuoteIdentifier(k)
 		case "status_payload":
 			val = `(select coalesce(a.status_payload, '')::text
 				from call_center.cc_agent a where a.user_id = u.id limit 1) ` + pq.QuoteIdentifier(k)
