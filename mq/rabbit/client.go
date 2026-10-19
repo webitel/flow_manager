@@ -366,14 +366,11 @@ func (a *AMQP) subscribeSystemSettings() {
 
 	queue, err := a.channel.QueueDeclare(
 		queueName,
-		true,
-		false,
 		false,
 		true,
-		amqp.Table{
-			"x-queue-type": "quorum",
-			"x-expires":    10000,
-		},
+		true,
+		false,
+		nil,
 	)
 	if err != nil {
 		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", queueName, err.Error()))
@@ -381,7 +378,7 @@ func (a *AMQP) subscribeSystemSettings() {
 		os.Exit(EXIT_DECLARE_QUEUE)
 	}
 
-	if err = a.channel.QueueBind(queue.Name, model.SystemSettingsObjectName+".#", model.EventExchange, true, nil); err != nil {
+	if err = a.channel.QueueBind(queue.Name, model.SystemSettingsObjectName+".#", model.EventExchange, false, nil); err != nil {
 		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queue.Name, model.EventExchange, err.Error()))
 		time.Sleep(time.Second)
 		os.Exit(EXIT_BIND)
