@@ -3,11 +3,12 @@ package call
 import (
 	"context"
 	"fmt"
-	"github.com/webitel/wlog"
 	"maps"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app"
 	"github.com/webitel/flow_manager/flow"
@@ -194,10 +195,10 @@ func (r *Router) handle(conn model.Connection) {
 	}
 
 	if recordAll, rerr := r.fm.RecordAllCalls(conn.Context(), conn.DomainId()); rerr != nil {
-		call.Log().Err(rerr)
+		call.Log().Error("fetching record all calls system setting", wlog.Err(rerr))
 	} else if recordAll {
 		if rerr = r.startRecordAllCalls(call.Context(), call); rerr != nil {
-			call.Log().Err(rerr)
+			call.Log().Error("record all calls system setting starting record session", wlog.Err(rerr))
 		}
 	}
 
