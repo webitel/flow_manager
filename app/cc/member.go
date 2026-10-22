@@ -30,6 +30,10 @@ func (api *memberApi) JoinIMToQueue(ctx context.Context, in *cc.IMJoinToQueueReq
 	return api.Api.IMJoinToQueue(ctx, in)
 }
 
+func (api *memberApi) EmailJoinToQueue(ctx context.Context, in *cc.EmailJoinToQueueRequest) (*cc.EmailJoinToQueueResponse, error) {
+	return api.Api.EmailJoinToQueue(ctx, in)
+}
+
 func (api *memberApi) DirectAgentToMember(domainId, memberId int64, communicationId int, agentId int64) (int64, error) {
 	res, err := api.Api.DirectAgentToMember(context.Background(), &cc.DirectAgentToMemberRequest{
 		MemberId:        memberId,

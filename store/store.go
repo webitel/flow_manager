@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"golang.org/x/oauth2"
 
@@ -18,6 +19,7 @@ type Store interface {
 	CallRouting() CallRoutingStore
 	Endpoint() EndpointStore
 	Email() EmailStore
+	EmailEvent() EmailEventStore
 	Media() MediaStore
 	Calendar() CalendarStore
 	List() ListStore
@@ -64,6 +66,24 @@ type EmailStore interface {
 	SetToken(id int, token *oauth2.Token) *model.AppError
 	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
 	SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
+}
+
+// EmailEventStore is the Inbox of email-service events. Every write to a claimed
+// row is conditional on the lease of owner, so a worker never overwrites another.
+type EmailEventStore interface {
+	// Insert stores a pending event; false means the event_id is already stored.
+	Insert(ctx context.Context, e *model.EmailEvent) (bool, *model.AppError)
+	// RecoverExpired returns rows with an expired lease to pending.
+	RecoverExpired(ctx context.Context) (int64, *model.AppError)
+	// Claim leases the next due row to owner; nil when none is due.
+	Claim(ctx context.Context, owner string, lease time.Duration) (*model.EmailEvent, *model.AppError)
+	MarkAccepted(ctx context.Context, owner, eventId string) (model.EmailEventAcceptResult, *model.AppError)
+	// Release records a failed launch and returns the row to pending at next.
+	Release(ctx context.Context, owner, eventId, reason string, next time.Time) (bool, *model.AppError)
+	// MarkFailed records a failed launch and gives up on the row.
+	MarkFailed(ctx context.Context, owner, eventId, reason string) (bool, *model.AppError)
+	// DeleteAcceptedBefore removes up to limit rows accepted before the time.
+	DeleteAcceptedBefore(ctx context.Context, before time.Time, limit int) (int64, *model.AppError)
 }
 
 type CallStore interface {

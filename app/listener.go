@@ -34,6 +34,11 @@ func (f *FlowManager) Listen() {
 		go f.listenInboundEmail(f.stop, &wg, f.mailServer)
 	}
 
+	if f.emailEventServer != nil {
+		wg.Add(1)
+		go f.listenInboundEmail(f.stop, &wg, f.emailEventServer)
+	}
+
 	if f.channelServer != nil {
 		wg.Add(1)
 		go f.listenChannelConnection(f.stop, &wg, f.channelServer)

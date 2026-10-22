@@ -41,6 +41,7 @@ type SqlSupplierOldStores struct {
 	callRouting   store.CallRoutingStore
 	endpoint      store.EndpointStore
 	email         store.EmailStore
+	emailEvent    store.EmailEventStore
 	media         store.MediaStore
 	calendar      store.CalendarStore
 	list          store.ListStore
@@ -80,6 +81,7 @@ func NewSqlSupplier(settings model.SqlSettings) *SqlSupplier {
 	supplier.oldStores.callRouting = NewSqlCallRoutingStore(supplier)
 	supplier.oldStores.endpoint = NewSqlEndpointStore(supplier)
 	supplier.oldStores.email = NewSqlEmailStore(supplier)
+	supplier.oldStores.emailEvent = NewSqlEmailEventStore(supplier)
 	supplier.oldStores.media = NewSqlMediaStore(supplier)
 	supplier.oldStores.calendar = NewSqlCalendarStore(supplier)
 	supplier.oldStores.list = NewSqlListStore(supplier)
@@ -253,6 +255,10 @@ func (ss *SqlSupplier) Endpoint() store.EndpointStore {
 
 func (ss *SqlSupplier) Email() store.EmailStore {
 	return ss.oldStores.email
+}
+
+func (ss *SqlSupplier) EmailEvent() store.EmailEventStore {
+	return ss.oldStores.emailEvent
 }
 
 func (ss *SqlSupplier) Media() store.MediaStore {
