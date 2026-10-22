@@ -3,7 +3,6 @@ package sqlstore
 import (
 	"context"
 	dbsql "database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	sqltrace "log"
@@ -196,18 +195,6 @@ func (me typeConverter) ToDb(val interface{}) (interface{}, error) {
 
 func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 	switch target.(type) {
-	case *model.Variables, *model.SmtSettings, *model.SmtpPlainAuth, **model.MailParams, **oauth2.Token:
-		binder := func(holder, target interface{}) error {
-			s, ok := holder.(*[]byte)
-			if !ok {
-				return errors.New("Bad request ") // fixme json
-			}
-			if *s == nil {
-				return nil
-			}
-			return json.Unmarshal(*s, target)
-		}
-		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
 
 	case *[]string:
 		binder := func(holder, target interface{}) error {
@@ -230,7 +217,29 @@ func (me typeConverter) FromDb(target interface{}) (gorp.CustomScanner, bool) {
 			}
 		}
 		return gorp.CustomScanner{Holder: &[]byte{}, Target: target, Binder: binder}, true
-
+	// ----- ENCRYPTED ----- //
+	case *model.UserPassword:
+		{
+			cast := func(src, dst any) (err error) {
+				data := src.(*[]byte)
+				into := dst.(*model.UserPassword)
+				return decryptText(into).Scan(*data)
+			}
+			return gorp.CustomScanner{Holder: new([]byte), Target: target, Binder: cast}, true
+		}
+	case *model.Variables,
+		*model.SmtpPlainAuth,
+		*model.SmtSettings,
+		**model.MailParams,
+		**oauth2.Token:
+		{
+			cast := func(src, dst any) (err error) {
+				data := src.(*[]byte)
+				into := dst
+				return decryptJSON(into).Scan(*data)
+			}
+			return gorp.CustomScanner{Holder: new([]byte), Target: target, Binder: cast}, true
+		}
 	}
 	return gorp.CustomScanner{}, false
 }

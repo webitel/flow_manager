@@ -32,6 +32,7 @@ import (
 //go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.general.yaml
 //go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.storage.yaml
 //go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.wbt.yaml
+//go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.im.yaml
 //go:generate go run github.com/bufbuild/buf/cmd/buf@latest generate --template buf/buf.gen.yaml
 //go:generate go mod tidy
 
@@ -39,7 +40,9 @@ func main() {
 	interruptChan := make(chan os.Signal, 1)
 	fm, err := app.NewFlowManager()
 	if err != nil {
-		panic(err.Error())
+		wlog.Critical("configuration failed", wlog.Err(err))
+		os.Exit(1)
+		return
 	}
 
 	router := flow.NewRouter(fm)
