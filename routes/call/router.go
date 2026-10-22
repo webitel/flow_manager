@@ -193,8 +193,10 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
-	if recordAll, _ := r.fm.GetSystemSettings(conn.Context(), conn.DomainId(), model.SysRecordAllCalls); recordAll.BoolValue {
-		if rerr := r.startRecordAllCalls(call.Context(), call); rerr != nil {
+	if recordAll, rerr := r.fm.RecordAllCalls(conn.Context(), conn.DomainId()); rerr != nil {
+		call.Log().Err(rerr)
+	} else if recordAll {
+		if rerr = r.startRecordAllCalls(call.Context(), call); rerr != nil {
 			call.Log().Err(rerr)
 		}
 	}

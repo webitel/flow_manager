@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"net/http"
 
 	"github.com/webitel/flow_manager/model"
 	"golang.org/x/sync/singleflight"
@@ -20,6 +21,19 @@ func (fm *FlowManager) GetSystemSettingsString(ctx context.Context, domainId int
 	}
 
 	return s.StringValue, nil
+}
+
+func (fm *FlowManager) RecordAllCalls(ctx context.Context, domainID int64) (bool, *model.AppError) {
+	s, err := fm.GetSystemSettings(ctx, domainID, model.SysRecordAllCalls)
+	if err != nil {
+		if err.StatusCode != http.StatusNotFound {
+			return false, err
+		}
+
+		systemCache.AddWithDefaultExpires(model.SystemSettingCacheKey(domainID, model.SysRecordAllCalls), model.SysValue{})
+	}
+
+	return s.BoolValue, nil
 }
 
 func (fm *FlowManager) GetSystemSettings(ctx context.Context, domainId int64, name string) (model.SysValue, *model.AppError) {

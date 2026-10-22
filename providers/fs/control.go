@@ -345,13 +345,12 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 		return nil, err
 	}
 
-	app := "wbt_record_session"
+	args := fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format)
 	if force {
-		app = "record_session"
+		args += " {force=true}"
 	}
 
-	return c.executeWithContext(ctx, app,
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format))
+	return c.executeWithContext(ctx, "wbt_record_session", args)
 }
 
 func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {

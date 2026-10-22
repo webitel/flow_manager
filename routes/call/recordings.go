@@ -8,10 +8,7 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
-const (
-	recordSessionTemplate  = "${strepoch()}_${caller_id_number}_${destination_number}"
-	recordAllCallsTemplate = recordSessionTemplate + "_all"
-)
+const recordSessionTemplate = "${strepoch()}_${caller_id_number}_${destination_number}"
 
 type RecordFileArg struct {
 	Name          string
@@ -91,7 +88,7 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 }
 
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
-	_, err := call.RecordSession(ctx, recordAllCallsTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
 
 	return err
 }
