@@ -325,6 +325,31 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
 }
 
+func (c *Connection) RecordAction(ctx context.Context, cfg *model.SessionRecord) (model.Response, *model.AppError) {
+	if !cfg.IsRecordingStart() {
+		recordingStr := cfg.RecordingString(c)
+		if recordingStr == "" {
+			return nil, model.NewAppError(
+				"Freeswitch.RecordAction",
+				"fs.control.record_action.not_found",
+				nil,
+				"recording path name not found",
+				404,
+			)
+		}
+
+		return c.executeWithContext(ctx, cfg.Action(), recordingStr)
+	}
+
+	cfg.AudioConfig.TryUseSampleRate(c.resample, c.IsSetResample())
+
+	if _, err := c.Set(ctx, cfg.InitStartVariables()); err != nil {
+		return nil, err
+	}
+
+	return c.executeWithContext(ctx, cfg.Action(), cfg.FormatRecordingStringWithParameters(c))
+}
+
 func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer, force bool) (model.Response, *model.AppError) {
 	// FIXME SET
 

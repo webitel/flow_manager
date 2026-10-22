@@ -1,10 +1,12 @@
 package model
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/webitel/wlog"
 )
@@ -565,6 +567,7 @@ type Call interface {
 	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer, force bool) (Response, *AppError)
 	RecordSessionStop(ctx context.Context, name, format string) (Response, *AppError)
+	RecordAction(ctx context.Context, cfg *SessionRecord) (Response, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	FlushDTMF(ctx context.Context) (Response, *AppError)
 	StartDTMF(ctx context.Context) (Response, *AppError)
@@ -741,4 +744,152 @@ type PlaybackArgs struct {
 	Terminator string          `json:"terminator" def:"#"`
 	GetDigits  *PlaybackDigits `json:"getDigits"`
 	GetSpeech  *GetSpeech      `json:"getSpeech"`
+}
+
+func NormalizeRecordName(s *string) {
+	if strings.Index(*s, " ") != -1 {
+		*s = strings.Replace(*s, " ", "_", -1)
+	}
+}
+
+type SessionRecord struct {
+	DomainID         int64
+	CallID           string
+	Name             string
+	Format           string
+	AudioConfig      SessionRecordAudioConfig
+	ActionStr        string
+	RecordingNameVar string
+	Force            bool
+}
+
+type SessionRecordAudioConfig struct {
+	RecordMinSec           int
+	RecordStereo           bool
+	RecordBridgeReq        bool
+	MediaBugAnswerReq      bool
+	RecordingFolowTransfer bool
+	RecordSampleRate       int
+}
+
+func WithSessionRecordBridged(bridged bool) func(*SessionRecord) {
+	return func(sr *SessionRecord) {
+		sr.AudioConfig.RecordBridgeReq = bridged
+		sr.AudioConfig.MediaBugAnswerReq = bridged
+	}
+}
+
+func WithCallID(id string) func(*SessionRecord) {
+	return func(sr *SessionRecord) {
+		sr.CallID = id
+	}
+}
+
+func WithDomainID(id int64) func(*SessionRecord) {
+	return func(sr *SessionRecord) {
+		sr.DomainID = id
+	}
+}
+
+func DefaultSessionRecordConfig(opts ...func(*SessionRecord)) *SessionRecord {
+	cfg := &SessionRecord{
+		Name:   recordSessionTemplate,
+		Format: "mp3",
+		AudioConfig: SessionRecordAudioConfig{
+			RecordMinSec:           2,
+			RecordStereo:           true,
+			RecordingFolowTransfer: true,
+		},
+		RecordingNameVar: DefaultRecordingVarName,
+	}
+
+	for _, o := range opts {
+		o(cfg)
+	}
+
+	return cfg
+}
+
+func (c *SessionRecordAudioConfig) TryUseSampleRate(resample int, alreadySetted bool) {
+	if resample > 0 && !alreadySetted {
+		c.RecordSampleRate = resample
+	}
+}
+
+const (
+	recordSessionTemplate   string = "${strepoch()}_${caller_id_number}_${destination_number}"
+	DefaultRecordingVarName string = "recording_start_name"
+)
+
+func (r *SessionRecord) Prepare() {
+	r.Name = cmp.Or(r.Name, recordSessionTemplate)
+	r.RecordingNameVar = strings.TrimSpace(r.RecordingNameVar)
+
+	NormalizeRecordName(&r.Name)
+}
+
+func (r *SessionRecord) IsRecordingStart() bool {
+	return r.Action() == "wbt_record_session"
+}
+
+func (r *SessionRecord) Action() string {
+	if r.ActionStr == "stop" {
+		return "stop_record_session"
+	}
+
+	return "wbt_record_session"
+}
+
+func (r *SessionRecord) StartNameVariableKey() string {
+	return cmp.Or(r.RecordingNameVar, DefaultRecordingVarName)
+}
+
+func (r *SessionRecord) InitStartVariables() map[string]any {
+	vars := map[string]any{
+		"RECORD_MIN_SEC":            r.AudioConfig.RecordMinSec,
+		"RECORD_STEREO":             r.AudioConfig.RecordStereo,
+		"RECORD_BRIDGE_REQ":         r.AudioConfig.RecordBridgeReq,
+		"media_bug_answer_req":      r.AudioConfig.MediaBugAnswerReq,
+		"recording_follow_transfer": r.AudioConfig.RecordingFolowTransfer,
+		r.StartNameVariableKey():    r.RecordingString(),
+	}
+
+	if r.AudioConfig.RecordSampleRate > 0 {
+		vars["record_sample_rate"] = r.AudioConfig.RecordSampleRate
+	}
+
+	return vars
+}
+
+type VariableProvisioner interface {
+	Get(key string) (string, bool)
+}
+
+func (r *SessionRecord) FormatRecordingStringWithParameters(provisioner VariableProvisioner) string {
+	return r.RecordingString(provisioner) + " " + r.FormatSessionRecordParameters(r.FormatForce())
+}
+
+func (r *SessionRecord) FormatSessionRecordParameters(p ...string) string {
+	return "{" + strings.Join(p, ",") + "}"
+}
+
+func (r *SessionRecord) FormatForce() string {
+	return fmt.Sprintf("force=%s", strconv.FormatBool(r.Force))
+}
+
+func (r *SessionRecord) RecordingString(provisioner ...VariableProvisioner) string {
+	if len(provisioner) > 0 {
+		if uri, exists := provisioner[0].Get(r.StartNameVariableKey()); exists || !r.IsRecordingStart() {
+			return uri
+		}
+	}
+
+	return fmt.Sprintf(
+		"http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s",
+		r.DomainID,
+		r.CallID,
+		r.Name,
+		r.Format,
+		r.Format,
+	)
 }
