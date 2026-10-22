@@ -28,6 +28,7 @@ type RecordSessionArg struct {
 	Bridged        bool
 	MinSec         int  `json:"minSec"`
 	FollowTransfer bool `json:"followTransfer"`
+	Force          bool `json:"force"`
 }
 
 func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
@@ -83,7 +84,13 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
 	}
 
-	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer)
+	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer, argv.Force)
+}
+
+func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
+	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+
+	return err
 }
 
 func normalizeRecordName(s *string) {

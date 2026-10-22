@@ -9,6 +9,7 @@ import (
 const (
 	SysAutoLinkCallToContact = "autolink_call_to_contact"
 	SysAutoLinkMailToContact = "autolink_mail_to_contact"
+	SysRecordAllCalls        = "record_all_calls"
 )
 
 const SystemSettingsObjectName = "system_settings"
