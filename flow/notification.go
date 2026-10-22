@@ -6,7 +6,8 @@ import (
 )
 
 const (
-	notificationAction = "show_message"
+	notificationAction      = "show_message"
+	defaultNotificationType = "info"
 )
 
 type NotificationArgs struct {
@@ -23,16 +24,36 @@ func (r *router) notification(ctx context.Context, scope *Flow, conn model.Conne
 		return nil, err
 	}
 
+	body := map[string]any{
+		"message": argv.Message,
+		"timeout": argv.Timeout,
+		"type":    argv.Type,
+	}
+
 	n := model.Notification{
 		DomainId:  conn.DomainId(),
 		Action:    notificationAction,
 		CreatedAt: model.GetMillis(),
 		ForUsers:  argv.UserIds,
-		Body: map[string]interface{}{
-			"message": argv.Message,
-			"timeout": argv.Timeout,
-			"type":    argv.Type,
-		},
+		Body:      body,
+	}
+
+	un := &model.UserNotification{
+		DomainId: conn.DomainId(),
+		ForUsers: argv.UserIds,
+		Type:     argv.Type,
+		Message:  argv.Message,
+	}
+	if un.Type == "" {
+		un.Type = defaultNotificationType
+	}
+
+	if err = r.fm.SaveUserNotification(ctx, un); err != nil {
+		conn.Log().Error(err.Error())
+	} else {
+		n.Id = un.Id
+		n.CreatedAt = un.CreatedAt
+		body["id"] = un.Id
 	}
 
 	r.fm.UserNotification(n)
