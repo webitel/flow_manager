@@ -120,10 +120,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		cbr:         NewCallbackResolver(),
 	}
 
-	if config.ExternalSql {
-		fm.ExternalStore = cachelayer.NewExternalStoreManager()
-	}
-
 	logConfig := &wlog.LoggerConfiguration{
 		EnableConsole: config.Log.Console,
 		ConsoleJson:   false,
@@ -161,6 +157,19 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	wlog.RedirectStdLog(fm.log)
 	wlog.InitGlobalLogger(fm.log)
+
+	if config.ExternalSQLSettings.Enabled {
+		if err := config.ExternalSQLSettings.Prepare(); err != nil {
+			config.ExternalSQLSettings.SanitazeOnPrepareFailure()
+			wlog.Error("prepare external sql settings", wlog.Err(err))
+		}
+
+		fm.ExternalStore = cachelayer.NewExternalStoreManager(
+			cachelayer.WithSQLLiteSandboxDir(config.ExternalSQLSettings.SandboxRootDirectory),
+			cachelayer.WithWriteOperationsEnabled(config.ExternalSQLSettings.WriteEnabled),
+			cachelayer.WithLogger(wlog.GlobalLogger().With(wlog.Namespace("external_sql"))),
+		)
+	}
 
 	// Bind http.DefaultTransport to the proxy manager before any outbound
 	// client is built, so every default-transport call site follows the
