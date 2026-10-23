@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -115,6 +116,18 @@ type EmailEventConnection interface {
 	EventId() string
 	ThreadId() int64
 	MessageId() int64
+	InitialFromAddress() string
+}
+
+var emailRoutingAddress = regexp.MustCompile(`^[^[:space:]@<>(),;:"]+@[^[:space:]@<>(),;:"]+$`)
+
+// NormalizeEmailRoutingAddress matches the minimal address guard used by Email join.
+func NormalizeEmailRoutingAddress(address string) string {
+	address = strings.ToLower(strings.TrimSpace(address))
+	if !emailRoutingAddress.MatchString(address) {
+		return ""
+	}
+	return address
 }
 
 // EmailLaunchConnection is an EmailConnection whose source waits for the Flow

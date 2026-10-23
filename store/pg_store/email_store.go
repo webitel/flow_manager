@@ -2,8 +2,11 @@ package sqlstore
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -21,6 +24,69 @@ type SqlEmailStore struct {
 func NewSqlEmailStore(sqlStore SqlStore) store.EmailStore {
 	st := &SqlEmailStore{sqlStore}
 	return st
+}
+
+func (s *SqlEmailStore) LastBridged(ctx context.Context, domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError) {
+	result := make(model.Variables, len(mapRes))
+	for name, value := range mapRes {
+		field, ok := value.(string)
+		if !ok || (field != "agent_id" && field != "extension" && field != "queue_id") {
+			return nil, model.NewAppError("SqlEmailStore.LastBridged", "store.sql_email.get_last_bridged.invalid_field", nil,
+				"Email lastBridged supports agent_id, extension and queue_id in set", http.StatusBadRequest)
+		}
+		result[name] = ""
+	}
+	number = model.NormalizeEmailRoutingAddress(number)
+	if number == "" || len(mapRes) == 0 {
+		return result, nil
+	}
+
+	var agentId, extension, queueId string
+	// One primary snapshot also sees a completed attempt before SaveToHistory.
+	err := s.GetMaster().WithContext(ctx).QueryRow(`with completed as (
+    select id, agent_id, queue_id, leaving_at
+    from call_center.cc_member_attempt
+    where domain_id = $1 and channel = 'email'
+        and state = 'leaving' and leaving_at is not null
+        and leaving_at > now() - ($3::varchar || ' hours')::interval
+        and destination->>'number' = $2
+        and ($4::int[] is null or queue_id = any($4::int[]))
+        and bridged_at is not null and agent_id is not null
+        and result in ('processed', 'processing_timeout')
+    union all
+    select id, agent_id, queue_id, leaving_at
+    from call_center.cc_member_attempt_history
+    where domain_id = $1 and channel = 'email'
+        and leaving_at is not null
+        and leaving_at > now() - ($3::varchar || ' hours')::interval
+        and destination->>'number' = $2
+        and ($4::int[] is null or queue_id = any($4::int[]))
+        and bridged_at is not null and agent_id is not null
+        and result in ('processed', 'processing_timeout')
+)
+select h.agent_id::text, coalesce(u.extension, ''), coalesce(h.queue_id::text, '')
+from (
+    select id, agent_id, queue_id
+    from completed
+    order by leaving_at desc, id desc
+    limit 1
+) h
+join call_center.cc_agent a on a.id = h.agent_id and a.domain_id = $1
+left join directory.wbt_user u on u.id = a.user_id and u.dc = $1`,
+		domainId, number, hours, pq.Array(queueIds)).Scan(&agentId, &extension, &queueId)
+	if errors.Is(err, sql.ErrNoRows) {
+		return result, nil
+	}
+	if err != nil {
+		return nil, model.NewAppError("SqlEmailStore.LastBridged", "store.sql_email.get_last_bridged.app_error", nil,
+			err.Error(), extractCodeFromErr(err))
+	}
+
+	fields := map[string]string{"agent_id": agentId, "extension": extension, "queue_id": queueId}
+	for name, field := range mapRes {
+		result[name] = fields[field.(string)]
+	}
+	return result, nil
 }
 
 func (s *SqlEmailStore) ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError) {
