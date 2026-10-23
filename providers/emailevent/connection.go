@@ -28,16 +28,17 @@ const (
 // Connection hands one Inbox event to the email router; the worker that claimed
 // the event waits for its launch result.
 type Connection struct {
-	mu        sync.RWMutex
-	event     *InboundMessage
-	nodeId    string
-	schemaId  int
-	variables model.Variables
-	state     launchState
-	launched  chan *model.AppError
-	ctx       context.Context //nolint:containedctx
-	cancel    context.CancelFunc
-	log       *wlog.Logger
+	mu                 sync.RWMutex
+	event              *InboundMessage
+	initialFromAddress string
+	nodeId             string
+	schemaId           int
+	variables          model.Variables
+	state              launchState
+	launched           chan *model.AppError
+	ctx                context.Context //nolint:containedctx
+	cancel             context.CancelFunc
+	log                *wlog.Logger
 }
 
 var (
@@ -49,15 +50,20 @@ var (
 // Flow outlives the worker and its handshake.
 func NewConnection(ctx context.Context, nodeId string, event *InboundMessage, log *wlog.Logger) *Connection {
 	ctx, cancel := context.WithCancel(ctx)
+	var from string
+	if !event.Snapshot.FromTruncated && len(event.Snapshot.From) != 0 {
+		from = model.NormalizeEmailRoutingAddress(event.Snapshot.From[0].Address)
+	}
 
 	return &Connection{
-		event:     event,
-		nodeId:    nodeId,
-		schemaId:  int(*event.FlowId),
-		variables: variables(event),
-		launched:  make(chan *model.AppError, 1),
-		ctx:       ctx,
-		cancel:    cancel,
+		event:              event,
+		initialFromAddress: from,
+		nodeId:             nodeId,
+		schemaId:           int(*event.FlowId),
+		variables:          variables(event),
+		launched:           make(chan *model.AppError, 1),
+		ctx:                ctx,
+		cancel:             cancel,
 		log: log.With(
 			wlog.Namespace("context"),
 			wlog.String("email_event_id", event.EventId),
@@ -178,6 +184,10 @@ func (c *Connection) MessageId() int64 {
 	return c.event.MessageId
 }
 
+func (c *Connection) InitialFromAddress() string {
+	return c.initialFromAddress
+}
+
 func (c *Connection) SchemaId() int {
 	return c.schemaId
 }
@@ -211,6 +221,9 @@ func (c *Connection) Get(name string) (string, bool) {
 	}
 
 	v, ok := c.variables[name]
+	if !ok {
+		return "", false
+	}
 
 	return fmt.Sprintf("%v", v), ok
 }

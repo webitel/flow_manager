@@ -61,3 +61,50 @@ func TestConnectionLaunchState(t *testing.T) {
 		t.Error("a started launch must not be abandoned")
 	}
 }
+
+func TestConnectionMissingVariable(t *testing.T) {
+	flowId := int64(1)
+	conn := NewConnection(context.Background(), "flow-1", &InboundMessage{FlowId: &flowId}, testLog)
+	defer conn.Close()
+	for _, name := range []string{"missing", "missing.path"} {
+		if value, ok := conn.Get(name); value != "" || ok {
+			t.Fatalf("Get(%q) = %q, %v", name, value, ok)
+		}
+		if value := conn.ParseText("before${" + name + "}after"); value != "beforeafter" {
+			t.Fatalf("ParseText(%q) = %q", name, value)
+		}
+	}
+	if value, ok := conn.Get("from"); value != "" || !ok {
+		t.Fatalf("existing empty variable: %q, %v", value, ok)
+	}
+}
+
+func TestConnectionInitialFromAddress(t *testing.T) {
+	for _, tc := range []struct {
+		snapshot string
+		want     string
+	}{
+		{snapshot: `{"from":[{"address":" Customer@Example.COM "},{"address":"other@example.com"}]}`, want: "customer@example.com"},
+		{snapshot: `{"from":[]}`},
+		{snapshot: `{"from":[{"address":""},{"address":"other@example.com"}]}`},
+		{snapshot: `{"from":[{"address":"not-an-address"}]}`},
+		{snapshot: `{"from":[{"address":"name <a@example.com>"}]}`},
+		{snapshot: `{"from":[{"address":"a@example.com"}],"from_truncated":true}`},
+	} {
+		t.Run(tc.snapshot, func(t *testing.T) {
+			event, err := Decode([]byte(`{"event_id":"0199b2a4-3c4e-7a10-8f2e-1b2c3d4e5f60","event_type":"email.message.inbound","schema_version":1,"domain_id":1,"profile_id":2,"flow_id":3,"thread_id":4,"message_id":5,"snapshot":` + tc.snapshot[:len(tc.snapshot)-1] + `,"message_kind":"regular","thread_kind":"regular"}}`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			conn := NewConnection(context.Background(), "flow-1", event, testLog)
+			defer conn.Close()
+			conn.Set(context.Background(), map[string]any{"from": "changed@example.com"})
+			if len(event.Snapshot.From) > 0 {
+				event.Snapshot.From[0].Address = "mutated@example.com"
+			}
+			if conn.InitialFromAddress() != tc.want {
+				t.Fatalf("initial From = %q, want %q", conn.InitialFromAddress(), tc.want)
+			}
+		})
+	}
+}
