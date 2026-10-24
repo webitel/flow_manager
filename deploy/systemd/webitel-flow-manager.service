@@ -33,9 +33,7 @@ ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
 NoExecPaths=/
-ExecPaths=/usr/local/bin/webitel-flow-manager
-ExecPaths=/lib64/ld-linux-x86-64.so.2
-ExecPaths=/lib/x86_64-linux-gnu/libc.so.6
+ExecPaths=/usr/local/bin/webitel-flow-manager /usr/lib -/lib -/lib64
 
 # Process isolation
 PrivateDevices=yes
