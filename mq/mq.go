@@ -17,6 +17,7 @@ type MQ interface {
 	ConsumeExec() <-chan model.ChannelExec
 	ConsumeIM() <-chan any
 	ConsumeCCEvents() <-chan model.CCQueueEvent
+	ConsumeSystemSettingsEvents() <-chan model.SystemSettingEvent
 
 	QueueEvent() QueueEvent
 }
