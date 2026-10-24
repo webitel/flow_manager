@@ -26,6 +26,10 @@ func (l *LayeredMQ) SendJSON(exchange, key string, data []byte) *model.AppError 
 	return l.MQLayer.SendJSON(exchange, key, data)
 }
 
+func (l *LayeredMQ) Ping(ctx context.Context) error {
+	return l.MQLayer.Ping(ctx)
+}
+
 func (l *LayeredMQ) Close() {
 	l.MQLayer.Close()
 }
