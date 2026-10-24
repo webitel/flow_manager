@@ -66,6 +66,10 @@ func (r *RedisCache) Delete(ctx context.Context, key string) *model.AppError {
 	return nil
 }
 
+func (r *RedisCache) Ping(ctx context.Context) error {
+	return r.redis.Ping(ctx).Err()
+}
+
 func (r *RedisCache) IsValid() *model.AppError {
 	if r.redis == nil {
 		return model.NewAppError("CacheLayer.RedisCache", "cache.redis_cache", nil, "redis client not declared", http.StatusInternalServerError)
