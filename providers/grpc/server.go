@@ -27,6 +27,7 @@ type Config struct {
 type server struct {
 	cfg             *Config
 	server          *grpc.Server
+	listener        net.Listener
 	didFinishListen chan struct{}
 	consume         chan model.Connection
 	chatApi         *chatApi
@@ -93,10 +94,15 @@ func (s *server) Start() *model.AppError {
 	workflow.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
 
 	s.cfg.Host, s.cfg.Port = publicAddr(lis)
+	s.listener = lis
 
 	go s.listen(lis)
 
 	return nil
+}
+
+func (s *server) Listener() net.Listener {
+	return s.listener
 }
 
 func (s *server) listen(lis net.Listener) {
