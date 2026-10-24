@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
@@ -44,6 +43,7 @@ import (
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/otlp"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/stdout"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/prometheus"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/stdout"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/otlp"
 	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/stdout"
@@ -107,7 +107,6 @@ type FlowManager struct {
 
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
-	otelHealth       metric.Registration
 	cbr              *CallbackResolver
 	health           *health.Registry
 }
@@ -172,12 +171,18 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 	slogLog := slog.New(wlog.NewSlogHandler(fm.log))
 
+	var healthMetrics *otelhealth.Transport
+	if config.Log.Otel {
+		healthMetrics = otelhealth.NewTransport()
+	}
+
 	fm.health = health.New(health.DefaultConfig(), slogLog,
 		health.WithTransport(sdnotify.New(
 			sdnotify.WithLogger(slogLog),
 			sdnotify.WithStartTimeout(time.Duration(config.Health.StartTimeout)*time.Second),
 		)),
 		health.WithTransport(healthhttp.NewServer(config.Health.Address, healthhttp.WithLogger(slogLog))),
+		health.WithTransport(healthMetrics),
 	)
 	if err := fm.health.Start(fm.ctx); err != nil {
 		return nil, fmt.Errorf("unable to start health registry: %w", err)
@@ -288,21 +293,15 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return outApp, outErr
 	}
 
-	fm.health.Critical("grpc", health.ListenerCheck(fm.grpcServer.Listener()))
+	fm.health.Critical(health.SystemGRPC, health.ListenerCheck(fm.grpcServer.Listener()))
 	fm.health.Critical("esl", health.ListenerCheck(fm.eslServer.Listener()))
 	if fm.httpServer != nil {
-		fm.health.Critical("web_hook", health.ListenerCheck(fm.httpServer.Listener()))
+		fm.health.Critical(health.SystemHTTP, health.ListenerCheck(fm.httpServer.Listener()))
 	}
-	fm.health.Informational("postgres", sqlSupplier.Ping)
-	fm.health.Informational("rabbitmq", fm.eventQueue.Ping)
+	fm.health.Informational(health.SystemPostgreSQL, sqlSupplier.Ping)
+	fm.health.Informational(health.SystemRabbitMQ, fm.eventQueue.Ping)
 	if redisCache != nil {
-		fm.health.Informational("redis", redisCache.Ping)
-	}
-
-	if config.Log.Otel {
-		if fm.otelHealth, err = otelhealth.Start(fm.health); err != nil {
-			return nil, fmt.Errorf("unable to register health metrics: %w", err)
-		}
+		fm.health.Informational(health.SystemRedis, redisCache.Ping)
 	}
 
 	if err = fm.cluster.Start(); err != nil {
@@ -408,12 +407,6 @@ func (f *FlowManager) Shutdown() {
 
 	if f.otelShutdownFunc != nil {
 		f.otelShutdownFunc(f.ctx)
-	}
-
-	if f.otelHealth != nil {
-		if err := f.otelHealth.Unregister(); err != nil {
-			f.log.Error(fmt.Sprintf("health metrics unregister: %s", err.Error()), wlog.Err(err))
-		}
 	}
 }
 
