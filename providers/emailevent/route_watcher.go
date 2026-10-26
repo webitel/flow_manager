@@ -95,6 +95,25 @@ func (w *routeWatcher) cycle(ctx context.Context) {
 	}
 }
 
+// routeJoinRequest repeats the stored JoinQueue values: the Flow intent while joining, the fallback
+// defaults while resolving; a row written before them joins with the defaults. Both keep the initial From.
+func routeJoinRequest(route *model.EmailRoute, queueId int32) *cc.EmailJoinToQueueRequest {
+	req := &cc.EmailJoinToQueueRequest{
+		QueueId:      queueId,
+		ThreadId:     route.ThreadId,
+		EmailEventId: route.EventId,
+		DomainId:     route.DomainId,
+		FromAddress:  route.FromAddress,
+	}
+	if route.Intent != nil {
+		req.Priority = route.Intent.Priority
+		req.StickyAgentId = route.Intent.StickyAgentId
+		req.ExtraEmailCount = route.Intent.ExtraEmailCount
+	}
+
+	return req
+}
+
 // resolve joins the stored queue of the route: the intent of the Flow while joining,
 // the fallback queue while resolving. It never chooses another queue.
 func (w *routeWatcher) resolve(ctx context.Context, route *model.EmailRoute, stats *routeCycle) {
@@ -115,12 +134,7 @@ func (w *routeWatcher) resolve(ctx context.Context, route *model.EmailRoute, sta
 	}
 
 	jctx, cancel := context.WithTimeout(ctx, routeJoinTimeout)
-	res, err := w.joiner.EmailJoinToQueue(jctx, &cc.EmailJoinToQueueRequest{
-		QueueId:      *queueId,
-		ThreadId:     route.ThreadId,
-		EmailEventId: route.EventId,
-		DomainId:     route.DomainId,
-	})
+	res, err := w.joiner.EmailJoinToQueue(jctx, routeJoinRequest(route, *queueId))
 	cancel()
 	if err == nil && !validJoin(res) {
 		err = fmt.Errorf("call_center returned an invalid email join response: %v", res)

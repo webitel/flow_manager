@@ -89,10 +89,12 @@ type EmailEventStore interface {
 
 	// InitRoute starts the route of a row owner holds, once: pending with the deadline when needed,
 	// not_needed otherwise. EmailRouteUnset means owner lost the row before the route was written.
-	InitRoute(ctx context.Context, owner, eventId string, needed bool, fallbackQueueId *int32, due time.Duration) (*model.EmailRoute, *model.AppError)
-	// BeginFlowRoute records the Flow intent to join queueId and leases the row: pending before the
-	// deadline, or joining the same queue; false returns the route that stopped it, nil if gone.
-	BeginFlowRoute(ctx context.Context, owner, eventId string, queueId int32, lease time.Duration) (bool, *model.EmailRoute, *model.AppError)
+	InitRoute(ctx context.Context, owner, eventId string, needed bool, fallbackQueueId *int32, fromAddress string, due time.Duration) (*model.EmailRoute, *model.AppError)
+	// BeginFlowRoute records the Flow intent and leases the row: pending before the deadline, or joining
+	// the same queue, which keeps the first intent; false returns the route that stopped it, nil if gone.
+	BeginFlowRoute(ctx context.Context, owner, eventId string, intent model.EmailRouteIntent, lease time.Duration) (bool, *model.EmailRoute, *model.AppError)
+	// Route reads the route of an event; nil when the row is gone.
+	Route(ctx context.Context, eventId string) (*model.EmailRoute, *model.AppError)
 	// ClaimRoutes leases up to limit routes due for the watcher; a pending one past the
 	// deadline becomes resolving.
 	ClaimRoutes(ctx context.Context, owner string, limit int, lease time.Duration) ([]*model.EmailRoute, *model.AppError)

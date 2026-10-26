@@ -186,16 +186,25 @@ reopened Thread stays `unrouted`.
 
 - An intent recorded before the deadline is kept: if the join fails with an
   unclear error or `flow_manager` stops, the route watcher repeats it into the
-  same queue.
+  same queue with the same priority, Sticky agent and Extra permission, without
+  a new lookup. A repeated `joinQueue` into that queue keeps the first intent and
+  repeats no agent lookup; a queue given only by `queue.name` is looked up to
+  compare it with the queue of the intent.
 - Without an intent, the watcher joins the queue of the last finished attempt
-  of the Thread (`cc_fallback_queue_id`). Without such a queue, or when the queue
+  of the Thread (`cc_fallback_queue_id`) with priority 0, without Sticky and
+  Extra; the Inbox keeps these values until the Flow records its intent and
+  again after a join the queue rejects. Without such a queue, or when the queue
   is gone or disabled, the email stays without a queue (`unrouted`).
 - A `joinQueue` after the deadline or after the fallback join fails with
   `email_route.window_closed` and does not call `call_center`. A second
   `joinQueue` to another queue while the first one runs fails with
-  `email_route.queue_conflict`; repeating the same queue, or a `joinQueue` after
-  the Flow's own route, answers again with the same attempt.
+  `email_route.queue_conflict`; repeating the same queue, or any `joinQueue`
+  after the Flow's own route, answers again with the same attempt. These
+  repeats and `window_closed` are decided by the stored route before any agent
+  lookup.
 - An event without `flow_id` is routed by the watcher at once.
+- Both joins of the watcher send the normalized initial From of the event, kept
+  at wake-up, so the address history and `lastBridged` cover them too.
 
 A retried event, for example after `flow_manager` stopped, starts its Flow again
 only while the deadline is not over and no queue was chosen. Steps after the

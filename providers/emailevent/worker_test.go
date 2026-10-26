@@ -88,7 +88,7 @@ type settleStore struct {
 	due      time.Duration
 }
 
-func (s *settleStore) InitRoute(_ context.Context, _, eventId string, needed bool, fallback *int32, due time.Duration) (*model.EmailRoute, *model.AppError) {
+func (s *settleStore) InitRoute(_ context.Context, _, eventId string, needed bool, fallback *int32, _ string, due time.Duration) (*model.EmailRoute, *model.AppError) {
 	s.needed, s.fallback, s.due = needed, fallback, due
 	if s.route.State != model.EmailRouteUnset {
 		return &s.route, nil

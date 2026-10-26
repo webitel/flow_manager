@@ -56,9 +56,12 @@ type fakeJoiner struct {
 	lookupDomain int64
 }
 
-func (j *fakeJoiner) FindQueueByName(domainId int64, _ string) (int32, *model.AppError) {
+func (j *fakeJoiner) FindQueueByName(domainId int64, name string) (int32, *model.AppError) {
 	j.lookups++
 	j.lookupDomain = domainId
+	if name == "unknown" {
+		return 0, nil // as the store answers for a name it does not find
+	}
 	return 3, nil
 }
 
@@ -278,9 +281,15 @@ type fakeRoutes struct {
 	err     *model.AppError
 	finish  []model.EmailRouteResult
 	retries int
+	intent  *model.EmailRouteIntent
 }
 
-func (f *fakeRoutes) BeginFlowRoute(context.Context, string, string, int32, time.Duration) (bool, *model.EmailRoute, *model.AppError) {
+func (f *fakeRoutes) Route(context.Context, string) (*model.EmailRoute, *model.AppError) {
+	return f.route, f.err
+}
+
+func (f *fakeRoutes) BeginFlowRoute(_ context.Context, _, _ string, intent model.EmailRouteIntent, _ time.Duration) (bool, *model.EmailRoute, *model.AppError) {
+	f.intent = &intent
 	return f.began, f.route, f.err
 }
 
@@ -362,6 +371,9 @@ func TestJoinEmailRoute(t *testing.T) {
 			if tt.finish == "" && len(tt.routes.finish) != 0 || tt.finish != "" && (len(tt.routes.finish) != 1 || tt.routes.finish[0].State != tt.finish) {
 				t.Fatalf("finish %+v, want %s", tt.routes.finish, tt.finish)
 			}
+			if tt.routes.intent != nil && *tt.routes.intent != (model.EmailRouteIntent{QueueId: flowQueue, Priority: 20, StickyAgentId: 8, ExtraEmailCount: true}) {
+				t.Fatalf("intent %+v", *tt.routes.intent)
+			}
 			// Every call carries the routing values frozen before the route.
 			for _, c := range tt.cli.calls {
 				if c.Priority != 20 || c.StickyAgentId != 8 || !c.ExtraEmailCount || c.FromAddress != "c@example.com" {
@@ -377,5 +389,60 @@ func TestJoinEmailRoute(t *testing.T) {
 				t.Fatalf("replay request %+v, vars %v", tt.cli.calls[0], conn.vars)
 			}
 		})
+	}
+}
+
+// A repeated JoinQueue is settled by the stored route before any agent lookup.
+func TestStoredFlowRequest(t *testing.T) {
+	queue, other := int32(3), int32(5) // fakeJoiner resolves a queue name to 3, "unknown" to 0
+	in := &model.EmailRouteIntent{QueueId: queue, Priority: 20, StickyAgentId: 8, ExtraEmailCount: true}
+	ext := "2002"
+	args := func(id int32, name string, priority any) QueueParameters {
+		p := QueueParameters{Priority: priority, Agent: &struct {
+			Id        any     `json:"id"`
+			Extension *string `json:"extension"`
+		}{Extension: &ext}}
+		p.Queue.Id, p.Queue.Name = id, name
+		return p
+	}
+	byName, unknown, otherId := args(0, "support", nil), args(0, "unknown", nil), args(9, "", nil)
+	route := func(state model.EmailRouteState, source string, in *model.EmailRouteIntent) *model.EmailRoute {
+		return &model.EmailRoute{State: state, Source: source, QueueId: &in.QueueId, Intent: in}
+	}
+	joining := route(model.EmailRouteJoining, model.EmailRouteSourceFlow, in)
+	routed := route(model.EmailRouteRouted, model.EmailRouteSourceFlow, &model.EmailRouteIntent{QueueId: other, Priority: 20, StickyAgentId: 8, ExtraEmailCount: true})
+	late := &model.EmailRoute{State: model.EmailRoutePending, DuePassed: true, Intent: &model.EmailRouteIntent{}}
+
+	cases := []struct {
+		name    string
+		route   *model.EmailRoute
+		argv    QueueParameters
+		kept    bool
+		lookups int
+		errId   string
+	}{
+		{"joining, same queue by name", joining, byName, true, 1, ""},
+		{"joining, another queue by name", route(model.EmailRouteJoining, model.EmailRouteSourceFlow, &model.EmailRouteIntent{QueueId: other}), byName, false, 1, "email_route.queue_conflict"},
+		{"joining, another queue id", joining, otherId, false, 0, "email_route.queue_conflict"},
+		{"joining, queue name not found", joining, unknown, false, 1, "email.join_queue.valid.queue"},
+		{"routed by the Flow, another queue", routed, byName, true, 0, ""},
+		{"routed by the Flow, unknown name", routed, unknown, true, 0, ""},
+		{"routed by the Flow, no queue", routed, args(0, "", nil), false, 0, "email.join_queue.valid.queue"},
+		{"invalid priority in a repeat", joining, args(queue, "", "500"), false, 0, "email.join_queue.valid.priority"},
+		{"routed by the fallback", route(model.EmailRouteRouted, model.EmailRouteSourceFallback, in), byName, false, 0, "email_route.window_closed"},
+		{"pending after the deadline", late, unknown, false, 0, "email_route.window_closed"},
+		{"pending before the deadline", &model.EmailRoute{State: model.EmailRoutePending, Intent: &model.EmailRouteIntent{}}, byName, false, 0, ""},
+	}
+	for _, c := range cases {
+		conn := &fakeEventConn{from: "C@Example.com"}
+		cli := &fakeJoiner{}
+		req, err := storedFlowRequest(context.Background(), &fakeRoutes{route: c.route}, cli, conn, c.argv)
+		if (err == nil) != (c.errId == "") || (err != nil && err.Id != c.errId) || (req != nil) != c.kept || cli.lookups != c.lookups {
+			t.Fatalf("%s: req %+v, err %v, lookups %d", c.name, req, err, cli.lookups)
+		}
+		if c.kept && (req.QueueId != c.route.Intent.QueueId || req.Priority != 20 || req.StickyAgentId != 8 || !req.ExtraEmailCount ||
+			req.FromAddress != "c@example.com" || req.EmailEventId != conn.EventId()) {
+			t.Fatalf("%s: %+v", c.name, req)
+		}
 	}
 }

@@ -98,6 +98,19 @@ type EmailRoute struct {
 	// DuePassed reports that the deadline of the Flow is over, by the database clock.
 	DuePassed bool
 	Attempts  int32
+	// Intent holds the stored JoinQueue values: of the Flow once it chose a queue, the fallback
+	// defaults before; nil for a row written before them. QueueId is 0 without route_queue_id.
+	Intent *EmailRouteIntent
+	// FromAddress is the normalized initial From of the event; "" when it has none.
+	FromAddress string
+}
+
+// EmailRouteIntent is the queue and the JoinQueue values the Flow chose, kept for a repeat.
+type EmailRouteIntent struct {
+	QueueId         int32
+	Priority        int32
+	StickyAgentId   int32
+	ExtraEmailCount bool
 }
 
 // EmailRouteResult is the outcome of a join that ends a route step: the new state, and

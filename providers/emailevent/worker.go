@@ -115,7 +115,7 @@ func (w *worker) process(ctx context.Context, row *model.EmailEvent) {
 	if event.FlowId == nil {
 		due = 0
 	}
-	route, appErr := w.store.InitRoute(ctx, w.owner, row.EventId, wakeup == wakeUpNotActive, fallback, due)
+	route, appErr := w.store.InitRoute(ctx, w.owner, row.EventId, wakeup == wakeUpNotActive, fallback, RoutingFromAddress(event), due)
 	if appErr != nil {
 		switch {
 		case ctx.Err() != nil:

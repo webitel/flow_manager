@@ -210,3 +210,28 @@ func routeOutcomeCount(metrics metricdata.ResourceMetrics, outcome string) int64
 	}
 	return count
 }
+
+// The watcher repeats the Flow intent; a fallback or an older row uses the defaults; both keep From.
+func TestRouteJoinRequest(t *testing.T) {
+	intent := &model.EmailRouteIntent{QueueId: 5, Priority: 20, StickyAgentId: 8, ExtraEmailCount: true}
+	base := model.EmailRoute{EventId: "e", DomainId: 1, ThreadId: 42, FromAddress: "c@example.com"}
+	cases := []struct {
+		name   string
+		state  model.EmailRouteState
+		intent *model.EmailRouteIntent
+		want   [3]any
+	}{
+		{"flow intent", model.EmailRouteJoining, intent, [3]any{int32(20), int32(8), true}},
+		{"fallback", model.EmailRouteResolving, nil, [3]any{int32(0), int32(0), false}},
+		{"row written before the intent values", model.EmailRouteJoining, nil, [3]any{int32(0), int32(0), false}},
+	}
+	for _, c := range cases {
+		route := base
+		route.State, route.Intent = c.state, c.intent
+		req := routeJoinRequest(&route, 7)
+		got := [3]any{req.Priority, req.StickyAgentId, req.ExtraEmailCount}
+		if got != c.want || req.QueueId != 7 || req.FromAddress != "c@example.com" || req.EmailEventId != "e" || req.ThreadId != 42 {
+			t.Fatalf("%s: %+v", c.name, req)
+		}
+	}
+}

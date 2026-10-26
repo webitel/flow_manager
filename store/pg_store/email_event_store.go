@@ -166,9 +166,10 @@ where event_id in (
 
 // routeColumns reads the route part of a row; the deadline is compared on the database clock.
 const routeColumns = `event_id, domain_id, thread_id, coalesce(route_state, ''), coalesce(route_source, ''),
-    route_queue_id, fallback_queue_id, coalesce(route_due_at <= now(), false), route_attempts`
+    route_queue_id, fallback_queue_id, coalesce(route_due_at <= now(), false), route_attempts,
+    route_priority, route_sticky_agent_id, route_extra_email_count, coalesce(route_from_address, '')`
 
-func (s *SqlEmailEventStore) InitRoute(ctx context.Context, owner, eventId string, needed bool, fallbackQueueId *int32, due time.Duration) (*model.EmailRoute, *model.AppError) {
+func (s *SqlEmailEventStore) InitRoute(ctx context.Context, owner, eventId string, needed bool, fallbackQueueId *int32, fromAddress string, due time.Duration) (*model.EmailRoute, *model.AppError) {
 	// Both parts read one snapshot: the second shows a route written before.
 	rows, err := s.GetMaster().WithContext(ctx).Query(`with upd as (
     update flow.email_event
@@ -176,6 +177,11 @@ func (s *SqlEmailEventStore) InitRoute(ctx context.Context, owner, eventId strin
         fallback_queue_id = case when $3 then $4::integer end,
         route_due_at = case when $3 then now() + $5 * interval '1 millisecond' end,
         route_next_at = case when $3 then now() + $5 * interval '1 millisecond' end,
+        route_from_address = case when $3 then $6::text end,
+        -- Fallback defaults until the Flow writes its intent: priority 0, no Sticky agent, no Extra.
+        route_priority = case when $3 then 0 end,
+        route_sticky_agent_id = case when $3 then 0 end,
+        route_extra_email_count = case when $3 then false end,
         updated_at = now()
     where event_id = $1 and route_state is null and state = 'processing' and locked_by = $2
     returning `+routeColumns+`
@@ -183,7 +189,7 @@ func (s *SqlEmailEventStore) InitRoute(ctx context.Context, owner, eventId strin
 select * from upd
 union all
 select `+routeColumns+` from flow.email_event where event_id = $1 and not exists (select 1 from upd)`,
-		eventId, owner, needed, fallbackQueueId, due.Milliseconds())
+		eventId, owner, needed, fallbackQueueId, due.Milliseconds(), fromAddress)
 	if err != nil {
 		return nil, emailEventError("SqlEmailEventStore.InitRoute", err)
 	}
@@ -199,12 +205,16 @@ select `+routeColumns+` from flow.email_event where event_id = $1 and not exists
 	return routes[0], nil
 }
 
-func (s *SqlEmailEventStore) BeginFlowRoute(ctx context.Context, owner, eventId string, queueId int32, lease time.Duration) (bool, *model.EmailRoute, *model.AppError) {
+func (s *SqlEmailEventStore) BeginFlowRoute(ctx context.Context, owner, eventId string, intent model.EmailRouteIntent, lease time.Duration) (bool, *model.EmailRoute, *model.AppError) {
 	// The deadline and the watcher claim are one condition each on the same row, so only
 	// one of them can move a pending route.
 	rows, err := s.GetMaster().WithContext(ctx).Query(`with upd as (
     update flow.email_event
     set route_state = 'joining', route_queue_id = $3, route_source = 'flow',
+        -- The first intent stays; a repeated JoinQueue into the same queue does not change it.
+        route_priority = case when route_state = 'pending' then $5::integer else route_priority end,
+        route_sticky_agent_id = case when route_state = 'pending' then $6::integer else route_sticky_agent_id end,
+        route_extra_email_count = case when route_state = 'pending' then $7::boolean else route_extra_email_count end,
         route_locked_by = $2, route_locked_until = now() + $4 * interval '1 millisecond',
         route_next_at = now(), updated_at = now()
     where event_id = $1
@@ -214,7 +224,7 @@ func (s *SqlEmailEventStore) BeginFlowRoute(ctx context.Context, owner, eventId 
 select * from upd
 union all
 select false, `+routeColumns+` from flow.email_event where event_id = $1 and not exists (select 1 from upd)`,
-		eventId, owner, queueId, lease.Milliseconds())
+		eventId, owner, intent.QueueId, lease.Milliseconds(), intent.Priority, intent.StickyAgentId, intent.ExtraEmailCount)
 	if err != nil {
 		return false, nil, emailEventError("SqlEmailEventStore.BeginFlowRoute", err)
 	}
@@ -237,6 +247,23 @@ select false, `+routeColumns+` from flow.email_event where event_id = $1 and not
 	return applied, route, nil
 }
 
+func (s *SqlEmailEventStore) Route(ctx context.Context, eventId string) (*model.EmailRoute, *model.AppError) {
+	rows, err := s.GetMaster().WithContext(ctx).Query(`select `+routeColumns+` from flow.email_event where event_id = $1`, eventId)
+	if err != nil {
+		return nil, emailEventError("SqlEmailEventStore.Route", err)
+	}
+
+	routes, err := scanEmailRoutes(rows)
+	if err != nil {
+		return nil, emailEventError("SqlEmailEventStore.Route", err)
+	}
+	if len(routes) == 0 {
+		return nil, nil
+	}
+
+	return routes[0], nil
+}
+
 func (s *SqlEmailEventStore) ClaimRoutes(ctx context.Context, owner string, limit int, lease time.Duration) ([]*model.EmailRoute, *model.AppError) {
 	// A pending route is taken only after its deadline; a leased one only once its lease ends.
 	rows, err := s.GetMaster().WithContext(ctx).Query(`with due as (
@@ -254,7 +281,8 @@ set route_state = case when e.route_state = 'pending' then 'resolving' else e.ro
 from due
 where e.event_id = due.event_id
 returning e.event_id, e.domain_id, e.thread_id, e.route_state, coalesce(e.route_source, ''),
-    e.route_queue_id, e.fallback_queue_id, true, e.route_attempts`,
+    e.route_queue_id, e.fallback_queue_id, true, e.route_attempts,
+    e.route_priority, e.route_sticky_agent_id, e.route_extra_email_count, coalesce(e.route_from_address, '')`,
 		owner, lease.Milliseconds(), limit)
 	if err != nil {
 		return nil, emailEventError("SqlEmailEventStore.ClaimRoutes", err)
@@ -269,11 +297,14 @@ returning e.event_id, e.domain_id, e.thread_id, e.route_state, coalesce(e.route_
 }
 
 func (s *SqlEmailEventStore) FinishRoute(ctx context.Context, owner, eventId string, from model.EmailRouteState, res model.EmailRouteResult) (bool, *model.AppError) {
-	// Back to pending forgets the intent; the watcher takes it at the deadline.
+	// Back to pending resets the intent to the fallback defaults; the watcher takes it at the deadline.
 	r, err := s.GetMaster().WithContext(ctx).Exec(`update flow.email_event
 set route_state = $4,
     route_queue_id = case $4 when 'routed' then $5::integer when 'pending' then null else route_queue_id end,
     route_source = case $4 when 'routed' then $6 when 'pending' then null else route_source end,
+    route_priority = case when $4 = 'pending' then 0 else route_priority end,
+    route_sticky_agent_id = case when $4 = 'pending' then 0 else route_sticky_agent_id end,
+    route_extra_email_count = case when $4 = 'pending' then false else route_extra_email_count end,
     route_reason = nullif($7, ''),
     route_last_error = left(nullif($8, ''), $9),
     route_next_at = case when $4 = 'pending' then route_due_at end,
@@ -320,8 +351,11 @@ func scanEmailRoute(rows *sql.Rows, lead ...any) (*model.EmailRoute, error) {
 		r                 model.EmailRoute
 		state             string
 		queueId, fallback sql.NullInt32
+		priority, sticky  sql.NullInt32
+		extra             sql.NullBool
 	)
-	dest := append(lead, &r.EventId, &r.DomainId, &r.ThreadId, &state, &r.Source, &queueId, &fallback, &r.DuePassed, &r.Attempts)
+	dest := append(lead, &r.EventId, &r.DomainId, &r.ThreadId, &state, &r.Source, &queueId, &fallback, &r.DuePassed, &r.Attempts,
+		&priority, &sticky, &extra, &r.FromAddress)
 	if err := rows.Scan(dest...); err != nil {
 		return nil, err
 	}
@@ -332,6 +366,10 @@ func scanEmailRoute(rows *sql.Rows, lead ...any) (*model.EmailRoute, error) {
 	}
 	if fallback.Valid {
 		r.FallbackQueueId = &fallback.Int32
+	}
+	if priority.Valid && sticky.Valid && extra.Valid {
+		r.Intent = &model.EmailRouteIntent{QueueId: queueId.Int32, Priority: priority.Int32, StickyAgentId: sticky.Int32,
+			ExtraEmailCount: extra.Bool}
 	}
 
 	return &r, nil
