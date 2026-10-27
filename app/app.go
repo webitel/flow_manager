@@ -216,6 +216,12 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	wlog.Info(fmt.Sprintf("version: %s", Version()))
 	wlog.Info("server is initializing...")
 
+	// failfast: load sqlstore/cryptostore environment configuration
+	if err = sqlstore.CryptoInit(); err != nil {
+		// wlog.Error("crypto: configuration failed", wlog.Err(err))
+		return nil, err
+	}
+
 	sqlSupplier := sqlstore.NewSqlSupplier(fm.Config().SqlSettings)
 	fm.Store = store.NewLayeredStore(sqlSupplier)
 
