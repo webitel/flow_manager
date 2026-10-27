@@ -2,13 +2,10 @@ package call
 
 import (
 	"context"
-	"strings"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
-
-const recordSessionTemplate = "${strepoch()}_${caller_id_number}_${destination_number}"
 
 type RecordFileArg struct {
 	Name          string
@@ -26,9 +23,10 @@ type RecordSessionArg struct {
 	Type           string
 	Stereo         bool
 	Bridged        bool
-	MinSec         int  `json:"minSec"`
-	FollowTransfer bool `json:"followTransfer"`
-	Force          bool `json:"force"`
+	Force          bool   `json:"force"`
+	MinSec         int    `json:"minSec"`
+	FollowTransfer bool   `json:"followTransfer"`
+	SetVar         string `json:"setVar"`
 }
 
 func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
@@ -57,7 +55,7 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 		call.Push(ctx, "wbt_tags", "vm")
 	}
 
-	normalizeRecordName(&argv.Name)
+	model.NormalizeRecordName(&argv.Name)
 
 	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
 }
@@ -74,27 +72,38 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 		return nil, err
 	}
 
-	if argv.Name == "" {
-		argv.Name = recordSessionTemplate
+	sessionRecord := &model.SessionRecord{
+		RecordingNameVar: argv.SetVar,
+		ActionStr:        argv.Action,
+		DomainID:         call.DomainId(),
+		CallID:           call.Id(),
+		Name:             argv.Name,
+		Format:           argv.Type,
+		Force:            argv.Force,
+		AudioConfig: model.SessionRecordAudioConfig{
+			RecordMinSec:           argv.MinSec,
+			RecordStereo:           argv.Stereo,
+			RecordBridgeReq:        argv.Bridged,
+			MediaBugAnswerReq:      argv.Bridged,
+			RecordingFolowTransfer: argv.FollowTransfer,
+		},
 	}
 
-	normalizeRecordName(&argv.Name)
+	sessionRecord.Prepare()
 
-	if argv.Action == "stop" {
-		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
-	}
-
-	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer, argv.Force)
+	return call.RecordAction(ctx, sessionRecord)
 }
 
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
-	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+	cfg := model.DefaultSessionRecordConfig(
+		model.WithDomainID(call.DomainId()),
+		model.WithCallID(call.Id()),
+		model.WithSessionRecordBridged(call.IVRQueueId() == nil),
+	)
+
+	cfg.Prepare()
+
+	_, err := call.RecordAction(ctx, cfg)
 
 	return err
-}
-
-func normalizeRecordName(s *string) {
-	if strings.Index(*s, " ") != -1 {
-		*s = strings.Replace(*s, " ", "_", -1)
-	}
 }
