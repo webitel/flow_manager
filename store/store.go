@@ -31,6 +31,7 @@ type Store interface {
 	SystemcSettings() SystemcSettings
 	SocketSession() SocketSessionStore
 	Session() SessionStore
+	UserNotification() UserNotificationStore
 }
 
 type SocketSessionStore interface {
@@ -160,4 +161,9 @@ type WebHookStore interface {
 
 type SystemcSettings interface {
 	Get(ctx context.Context, domainId int64, name string) (json.RawMessage, *model.AppError)
+}
+
+type UserNotificationStore interface {
+	Create(ctx context.Context, n *model.UserNotification) *model.AppError
+	CleanExpired() (int64, *model.AppError)
 }
