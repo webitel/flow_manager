@@ -36,7 +36,7 @@ require (
 	github.com/webitel/crypto/cryptostore v0.3.0
 	github.com/webitel/engine/pkg/discovery v0.0.0-20260826062815-ac09649ed0d9
 	github.com/webitel/engine/pkg/presign v0.1.0
-	github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0
+	github.com/webitel/engine/pkg/wbt v0.0.0-20261027095731-a9df619bd3f4
 	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
 	github.com/webitel/webitel-cryptoctl/schema v0.1.0
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
@@ -104,6 +104,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0 // indirect
 	go.opentelemetry.io/contrib/bridges/otelzap v0.21.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0 // indirect
 	go.opentelemetry.io/contrib/instrumentation/runtime v0.72.0 // indirect
 	go.opentelemetry.io/contrib/processors/baggagecopy v0.17.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.0 // indirect

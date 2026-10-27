@@ -351,6 +351,8 @@ github.com/webitel/engine/pkg/presign v0.1.0 h1:Hh48l2I+48h8GE01Te/ZLcj+CO1wbZDC
 github.com/webitel/engine/pkg/presign v0.1.0/go.mod h1:G7latI+XseOcIIgIULlqCLjtif1f+zT1/ezHT+3EdIU=
 github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0 h1:kx4j8d17hGQeDv22WbvCKgT9wamOKqc50bJnsIwp778=
 github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0/go.mod h1:15PVfPhimD18i+1ARcWq5ZZ8P5ugjpriGIT1+5/bDEw=
+github.com/webitel/engine/pkg/wbt v0.0.0-20261027095731-a9df619bd3f4 h1:8ZZvijaxmBUs6CrQhV2F0ijKL8YCL4fKSzyy13K2+2w=
+github.com/webitel/engine/pkg/wbt v0.0.0-20261027095731-a9df619bd3f4/go.mod h1:y0Gn1/nB0PfCpsD9LDUg3sB0ApUZfVMwEXoTSQVvTTA=
 github.com/webitel/webitel-cryptoctl/schema v0.1.0 h1:gtOsNQhDMFCHwOqonrwRVarLrqkimHmCCd1vtVwpUgI=
 github.com/webitel/webitel-cryptoctl/schema v0.1.0/go.mod h1:Wcfj77Gbg1kMNYDVIQFY6wxB3XEVBBXNb5III7RUo6U=
 github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41 h1:vj6qE8RtTyz8B4syfUDCkZqULLJ/4I+LS0Rw5W7mao0=
@@ -378,6 +380,8 @@ go.opentelemetry.io/contrib/bridges/otelslog v0.21.0 h1:/CdgE52i1OEPHhsGUqrggYNR
 go.opentelemetry.io/contrib/bridges/otelslog v0.21.0/go.mod h1:9pBdbVbuehIDzxN4accnzzxEUPT8Nq7grbZMo+J1VN4=
 go.opentelemetry.io/contrib/bridges/otelzap v0.21.0 h1:p23nklcy3VVRcfZ2ce5AXQa6RHQPQvIMM+fW3GzXCU0=
 go.opentelemetry.io/contrib/bridges/otelzap v0.21.0/go.mod h1:7NPD4VToURMipQu1xgz6seTz8aXmbCqQNZs7bQADEjU=
+go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0 h1:B2h3uqicet1CT2N5TOFhS+Gq++9i0/CLmaxvhmhtP5s=
+go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.71.0/go.mod h1:dylvB+ZiiwMvsDij9O84Uy7SijLgHMX4mbkncds+4Sw=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.72.0 h1:rv8t3kKjyC2/9D99L1MZt4tJSZO4aYUmHus7L//iKKg=
 go.opentelemetry.io/contrib/instrumentation/runtime v0.72.0/go.mod h1:ZzG+JmzLLvKzx6tMeLrw2l7F8ik2GeRZJALoPBqnM0c=
 go.opentelemetry.io/contrib/processors/baggagecopy v0.17.0 h1:ReIcidxGZxFw8VqLY3Wx0ya+/C4TkNxrnAQMU+/QRPk=
