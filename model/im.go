@@ -11,7 +11,20 @@ const (
 	IMEventTypeBotControlReleased string = "bot_control_released"
 )
 
-const BotControlReasonClientLeave string = "client_leave"
+const (
+	BotControlReasonClientLeave   string = "client_leave"
+	BotControlReasonAgentTakeover string = "agent_takeover"
+	BotControlReasonAgentHandback string = "agent_handback"
+	BotControlReasonAgentLeft     string = "agent_left"
+	BotControlReasonInitial       string = "initial"
+)
+
+const CCResultBot string = "bot"
+
+// IMMessageTypeSystem is the payload-level Message.Type for administrative system
+// notices (member added/removed, transfer, bot_stopped, ...). Such messages must never
+// trigger or feed a bot schema.
+const IMMessageTypeSystem string = "system"
 
 type IMDialog interface {
 	Connection
@@ -25,10 +38,17 @@ type IMDialog interface {
 	SchemaId() int
 	Stop(err error)
 	Complete(id string)
-	IsTransfer() bool
-	TransferredSchema() (int, string)
 	CompleteId() string
-	NewContext() context.Context
+	RunContext() context.Context
+	ResumeChan() <-chan struct{}
+	IsSuspended() bool
+	IsTerminating() bool
+	Suspend()
+	Resume()
+	EnterQueue() <-chan struct{}
+	LeaveQueue()
+	ResumeParent()
+	IsNested() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
@@ -43,8 +63,32 @@ type IMDialog interface {
 	SetQueue(*InQueueKey) bool
 	DumpExportVariables() map[string]string
 	SendInteractive(ctx context.Context, interactive SendInteractiveRequest) (Response, *AppError)
-	GetAuthSession(ctx context.Context, deviceID string) (IMUserInfo, *AppError)
+	GetAuthSession(ctx context.Context, query *AuthSessionQuery) (IMUserInfo, *AppError)
 	HandleGateInfo(ctx context.Context, gateType IMGateType, id string) (*IMGate, *AppError)
+}
+
+type AuthSessionQuery struct {
+	DeviceID        string
+	AuthIputContact *AuthIputContact
+}
+
+func NewAuthSessionQuery(deviceID string, authIputContact *AuthIputContact) *AuthSessionQuery {
+	return &AuthSessionQuery{
+		DeviceID:        deviceID,
+		AuthIputContact: authIputContact,
+	}
+}
+
+type AuthIputContact struct {
+	Sub string
+	Iss string
+}
+
+func NewAuthIputContact(sub, iss string) *AuthIputContact {
+	return &AuthIputContact{
+		Sub: sub,
+		Iss: iss,
+	}
 }
 
 type ThreadMember struct {
@@ -111,6 +155,7 @@ type IMBotControlGrantedEvent struct {
 	IsResume    bool   `json:"is_resume"`
 	ReleasedSub int    `json:"released_sub"`
 	Sub         int    `json:"sub"`
+	Reason      string `json:"reason"`
 }
 
 func (w MessageWrapper[T]) GetID() string                 { return w.ID }
@@ -128,20 +173,20 @@ func (w MessageWrapper[T]) Via() string                   { return w.via }
 
 // Message описує вкладений об'єкт повідомлення
 type Message struct {
-	ID          string        `json:"id"`
-	ThreadID    string        `json:"thread_id"`
-	DomainID    int           `json:"domain_id"`
-	From        ImEndpoint    `json:"from"`
-	To          []ImEndpoint  `json:"to"`
-	Text        string        `json:"text"`
-	CreatedAt   int64         `json:"created_at"` // Unix timestamp у мілісекундах
-	Subject     string        `json:"subject"`
-	Description string        `json:"description"`
-	Type        string        `json:"type"`
-	Contact     *Contact      `json:"contact,omitempty"`
-	Location    *Location     `json:"location,omitempty"`
-	Documents   []MessageFile `json:"documents,omitempty"`
-  System      *SystemIMMessage `json:"system,omitempty"`
+	ID          string           `json:"id"`
+	ThreadID    string           `json:"thread_id"`
+	DomainID    int              `json:"domain_id"`
+	From        ImEndpoint       `json:"from"`
+	To          []ImEndpoint     `json:"to"`
+	Text        string           `json:"text"`
+	CreatedAt   int64            `json:"created_at"` // Unix timestamp у мілісекундах
+	Subject     string           `json:"subject"`
+	Description string           `json:"description"`
+	Type        string           `json:"type"`
+	Contact     *Contact         `json:"contact,omitempty"`
+	Location    *Location        `json:"location,omitempty"`
+	Documents   []MessageFile    `json:"documents,omitempty"`
+	System      *SystemIMMessage `json:"system,omitempty"`
 }
 
 type Contact struct {
@@ -219,6 +264,7 @@ type BotControlReleased struct {
 	MemberID     string `json:"member_id"`
 	NextMemberID string `json:"next_member_id,omitempty"`
 	Reason       string `json:"reason"`
+	Sub          int    `json:"sub"`
 }
 
 func (b BotControlReleased) GetThreadID() string     { return b.ThreadID }

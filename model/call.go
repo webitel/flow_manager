@@ -37,6 +37,8 @@ const (
 	IMExchange         = "im_delivery.broadcast"
 	CallCenterExchange = "callcenter"
 	CallCenterPrefix   = "workflow-cc"
+	EventExchange      = "event"
+	SysSettingsPrefix  = "workflow-system-settings"
 )
 
 const (
@@ -61,6 +63,7 @@ const (
 	CallActionHeartbeatName  = "heartbeat"
 	CallActionTranscriptName = "transcript"
 	CallActionStatsName      = "stats"
+	CallActionProgressName   = "progress"
 )
 
 type OutboundCallRequest struct {
@@ -200,6 +203,7 @@ type CallActionInfo struct {
 	Queue            *QueueInfo     `json:"queue"`
 	GranteeId        *int           `json:"grantee_id"`
 	SipId            *string        `json:"sip_id"`
+	UserAgent        string         `json:"ua"`
 	Heartbeat        int            `json:"heartbeat,omitempty"`
 	Video            string         `json:"video,omitempty"`
 	MeetingId        string         `json:"meeting_id,omitempty"`
@@ -293,6 +297,10 @@ func (r *CallActionRinging) GetParams() []byte {
 		res["is_consult_to_queue"] = *r.IsConsultToQueue
 	}
 
+	if ua := r.UserAgent; ua != "" {
+		res["ua"] = ua
+	}
+
 	data, _ := json.Marshal(res)
 	return data
 }
@@ -351,6 +359,21 @@ type CallActionTranscript struct {
 type CallActionMediaStats struct {
 	CallAction
 	CallMediaStats
+}
+
+type CallActionProgress struct {
+	CallAction `json:",inline"`
+
+	UserAgent string `json:"ua"`
+	UserID    int64  `json:"user_id"`
+}
+
+func (p *CallActionProgress) UserAgentOrNil() *string {
+	if p == nil || p.UserAgent == "" {
+		return nil
+	}
+
+	return &p.UserAgent
 }
 
 func (h *CallActionHangup) VariablesToJson() []byte {
@@ -465,11 +488,20 @@ func (c *CallActionData) GetEvent() any {
 		c.parsed = &CallActionMediaStats{
 			CallAction: c.CallAction,
 		}
+	case CallActionProgressName:
+		c.parsed = &CallActionProgress{
+			CallAction: c.CallAction,
+		}
 	}
 
 	if c.Data != nil {
 		if err := json.Unmarshal([]byte(*c.Data), &c.parsed); err != nil {
-			wlog.Error(fmt.Sprintf("parse call %s [%s] error: %s", c.Id, c.Event, err.Error()))
+			wlog.Error(
+				"parsing call event data",
+				wlog.String("call_id", c.Id),
+				wlog.String("call_event", c.Event),
+				wlog.Err(err),
+			)
 		}
 	}
 	return c.parsed
@@ -531,7 +563,7 @@ type Call interface {
 	Conference(ctx context.Context, name, profile, pin string, tags []string) (Response, *AppError)
 	RecordFile(ctx context.Context, name, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
 	SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (Response, *AppError)
-	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (Response, *AppError)
+	RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer, force bool) (Response, *AppError)
 	RecordSessionStop(ctx context.Context, name, format string) (Response, *AppError)
 	Export(ctx context.Context, vars []string) (Response, *AppError)
 	FlushDTMF(ctx context.Context) (Response, *AppError)

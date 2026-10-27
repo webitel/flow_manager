@@ -69,23 +69,25 @@ func (r *Router) Request(ctx context.Context, scope *flow.Flow, req model.Applic
 
 func (r *Router) handle(conn model.Connection) {
 	conv := conn.(Dialog)
-	if err := r.runSchema(conn, conv, conv.SchemaId(), conn.Context(), ""); err != nil {
+	if err := r.runSchema(conn, conv, conv.SchemaId(), conv.RunContext()); err != nil {
 		conv.Stop(err)
 	} else {
 		conv.Stop(nil)
 	}
 }
 
-func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context, cid string) *model.AppError {
+func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context) *model.AppError {
 	var routing *model.Routing
 	var err *model.AppError
 
 	if shId > 0 {
 		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), int32(shId))
 	}
+
 	if routing == nil {
 		err = model.NewAppError("IM", "im.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
 	}
+
 	if err != nil {
 		return err
 	}
@@ -99,25 +101,54 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 		Timezone: routing.TimezoneName,
 	})
 
-	conn.Set(ctx, map[string]any{
+	_, _ = conn.Set(ctx, map[string]any{
 		model.FlowSchemaNameVariable: routing.Schema.Name,
 	})
 
 	flow.Route(ctx, i, r)
 
-	if conv.IsTransfer() {
-		newCtx := conv.NewContext()
-		schemaId, c2 := conv.TransferredSchema()
-		if err = r.runSchema(conn, conv, schemaId, newCtx, c2); err != nil {
-			return err
+	// Park-loop гейтиться на СТАНІ КОНЕКШНА (IsSuspended), НЕ на i.IsCancel().
+	// flow.Route виставляє i.cancel=true у трьох випадках, і лише один — це suspend:
+	//   1) runCtx скасований Suspend() (handler.go)          → park (чекаємо resume)
+	//   2) нода `break` у схемі (break.go)                    → природний кінець
+	//   3) інші апи через req.IsCancel() (execute/ai_bridge)  → природний кінець
+	// Suspend() ставить state=suspended ДО скасування runCtx, тож для suspend тут
+	// IsSuspended()==true, а для break/природного кінця == false — і loop пропускається.
+	for conv.IsSuspended() {
+		if conv.IsTerminating() {
+			return nil // client_leave / stop під час прогону
 		}
-		i.ClearCancel()
-		flow.Route(conv.NewContext(), i, r)
+
+		select {
+		case <-conv.ResumeChan():
+			i.ClearCancel()
+			i.RepeatInterrupted("recvMessage", "interactiveMenu")
+			flow.Route(conv.RunContext(), i, r) // продовжуємо з ноди після joinQueue
+		case <-conn.Context().Done():
+			return nil // lifetime ctx = термінал
+		}
 	}
 
-	if cid != "" {
-		conv.Complete(cid)
+	// Guard проти гонки: Break/Stop (client_leave) міг виставити terminating саме
+	// коли перевірялася умова циклу (IsSuspended()==false, але не природний кінець).
+	// Без цього ми б помилково виконали Complete/ResumeParent на leave і воскресили
+	// джерельну схему.
+	if conv.IsTerminating() {
+		return nil
 	}
+
+	// Природний кінець схеми → pop зі стека контролю. Complete шлемо лише для
+	// пушнутих (вкладених) схем; owner/стартова не комплітиться на боці
+	// thread-service, тож зайвий виклик пропускаємо.
+	if conv.IsNested() {
+		if id := conv.CompleteId(); id != "" {
+			conv.Complete(id)
+		}
+	}
+
+	// Локально повертаємо контроль на призупинену джерельну схему (якщо ця була
+	// пушнута над нею). Ідемпотентно з майбутнім grant від thread-service.
+	conv.ResumeParent()
 
 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
 		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -10,8 +11,12 @@ import (
 
 	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/webitel-go-kit/infra/health"
+	healthhttp "github.com/webitel/webitel-go-kit/infra/health/http"
+	"github.com/webitel/webitel-go-kit/infra/health/sdnotify"
 	"github.com/webitel/webitel-go-kit/infra/httpproxy"
-	otelsdk "github.com/webitel/webitel-go-kit/otel/sdk"
+	otelhealth "github.com/webitel/webitel-go-kit/infra/otel/instrumentation/health"
+	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app/bots_client"
@@ -35,12 +40,13 @@ import (
 
 	_ "github.com/mbobakov/grpc-consul-resolver"
 	// -------------------- plugin(s) -------------------- //
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/log/stdout"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/metric/stdout"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/otlp"
-	_ "github.com/webitel/webitel-go-kit/otel/sdk/trace/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/log/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/prometheus"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/metric/stdout"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/otlp"
+	_ "github.com/webitel/webitel-go-kit/infra/otel/sdk/trace/stdout"
 )
 
 type FlowManager struct {
@@ -51,11 +57,11 @@ type FlowManager struct {
 	Store         store.Store
 	ExternalStore *cachelayer.ExternalStoreManager
 
-	grpcServer    model.Server
+	grpcServer    model.NetServer
 	mailServer    model.Server
-	eslServer     model.Server
+	eslServer     model.NetServer
 	channelServer model.Server
-	httpServer    model.Server
+	httpServer    model.NetServer
 	imServer      model.Server
 
 	schemaCache model.ObjectCache
@@ -102,6 +108,7 @@ type FlowManager struct {
 	ctx              context.Context
 	otelShutdownFunc otelsdk.ShutdownFunc
 	cbr              *CallbackResolver
+	health           *health.Registry
 }
 
 func NewFlowManager() (outApp *FlowManager, outErr error) {
@@ -162,10 +169,29 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	wlog.RedirectStdLog(fm.log)
 	wlog.InitGlobalLogger(fm.log)
 
+	slogLog := slog.New(wlog.NewSlogHandler(fm.log))
+
+	var healthMetrics *otelhealth.Transport
+	if config.Log.Otel {
+		healthMetrics = otelhealth.NewTransport()
+	}
+
+	fm.health = health.New(health.DefaultConfig(), slogLog,
+		health.WithTransport(sdnotify.New(
+			sdnotify.WithLogger(slogLog),
+			sdnotify.WithStartTimeout(time.Duration(config.Health.StartTimeout)*time.Second),
+		)),
+		health.WithTransport(healthhttp.NewServer(config.Health.Address, healthhttp.WithLogger(slogLog))),
+		health.WithTransport(healthMetrics),
+	)
+	if err := fm.health.Start(fm.ctx); err != nil {
+		return nil, fmt.Errorf("unable to start health registry: %w", err)
+	}
+
 	// Bind http.DefaultTransport to the proxy manager before any outbound
 	// client is built, so every default-transport call site follows the
 	// watched proxy settings without a restart.
-	fm.ProxyManager = httpproxy.NewManager(httpproxy.WithLogger(newSlogLogger(fm.log)))
+	fm.ProxyManager = httpproxy.NewManager(httpproxy.WithLogger(slogLog))
 	if err := fm.ProxyManager.HookDefaultTransport(); err != nil {
 		return nil, err
 	}
@@ -196,12 +222,14 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, err
 	}
 
-	fm.Store = store.NewLayeredStore(sqlstore.NewSqlSupplier(fm.Config().SqlSettings))
+	sqlSupplier := sqlstore.NewSqlSupplier(fm.Config().SqlSettings)
+	fm.Store = store.NewLayeredStore(sqlSupplier)
 
 	fm.cluster = NewCluster(fm)
 
 	fm.cacheStore = map[CacheType]cachelayer.CacheStore{}
 	fm.cacheStore[Memory] = cachelayer.NewMemoryCache(&cachelayer.MemoryCacheConfig{Size: 10000, DefaultExpiry: 10000})
+	var redisCache *cachelayer.RedisCache
 	if config.RedisSettings.IsValid() {
 		storage, err := cachelayer.NewRedisCache(config.RedisSettings.Host, config.RedisSettings.Port, config.RedisSettings.Password, config.RedisSettings.Database)
 		if err != nil {
@@ -209,6 +237,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 			return outApp, outErr
 		}
 		fm.cacheStore[Redis] = storage
+		redisCache = storage
 	}
 	fm.chatManager = grpc.NewChatManager()
 
@@ -246,6 +275,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
+	go fm.listenSystemSettingsEvents(fm.eventQueue.ConsumeSystemSettingsEvents())
 	fm.channelServer = channel.New(fm.eventQueue.ConsumeExec())
 
 	t, err := LoadTlsCreds(config.Tls)
@@ -268,6 +298,17 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	if err := fm.RegisterServers(); err != nil {
 		outErr = err
 		return outApp, outErr
+	}
+
+	fm.health.Critical(health.SystemGRPC, health.ListenerCheck(fm.grpcServer.Listener()))
+	fm.health.Critical("esl", health.ListenerCheck(fm.eslServer.Listener()))
+	if fm.httpServer != nil {
+		fm.health.Critical(health.SystemHTTP, health.ListenerCheck(fm.httpServer.Listener()))
+	}
+	fm.health.Informational(health.SystemPostgreSQL, sqlSupplier.Ping)
+	fm.health.Informational(health.SystemRabbitMQ, fm.eventQueue.Ping)
+	if redisCache != nil {
+		fm.health.Informational(health.SystemRedis, redisCache.Ping)
 	}
 
 	if err = fm.cluster.Start(); err != nil {
@@ -323,6 +364,17 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 
 func (f *FlowManager) Shutdown() {
 	wlog.Info("stopping Server...")
+
+	if f.health != nil {
+		ctx, cancel := context.WithTimeout(context.Background(),
+			time.Duration(f.Config().Health.StopTimeout)*time.Second)
+
+		if err := f.health.Shutdown(ctx); err != nil {
+			f.log.Error(fmt.Sprintf("health shutdown: %s", err.Error()), wlog.Err(err))
+		}
+
+		cancel()
+	}
 
 	if f.proxyWatchStop != nil {
 		f.proxyWatchStop()

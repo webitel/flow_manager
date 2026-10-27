@@ -63,7 +63,12 @@ func (h *IMUserInfoDeviceHandler) Handle(ctx context.Context, dialog Dialog) (st
 		return "", model.NewRequestError("IMUserInfoDeviceHandler.Handle", "received empty device id call")
 	}
 
-	session, err := dialog.GetAuthSession(ctx, deviceID)
+	authContact := model.NewAuthIputContact(dialog.From().Sub, dialog.From().Issuer)
+	if authContact.Iss == "" || authContact.Sub == "" {
+		return "", model.NewRequestError("IMUserInfoDeviceHandler.Handle", "received invalid auth contact")
+	}
+
+	session, err := dialog.GetAuthSession(ctx, model.NewAuthSessionQuery(deviceID, authContact))
 	if err != nil {
 		if errors.Is(err, model.ErrAuthSesionNotFound) {
 			wlog.Warn("zero devices found for requested device id", wlog.String("device_id", deviceID), wlog.Err(err))

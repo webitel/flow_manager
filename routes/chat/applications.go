@@ -57,6 +57,9 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	apps["chatAi"] = &flow.Application{
 		Handler: chatHandlerMiddleware(r.chatAi),
 	}
+	apps["searchContact"] = &flow.Application{
+		Handler: chatHandlerMiddleware(r.searchContact),
+	}
 
 	return apps
 }

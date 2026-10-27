@@ -592,17 +592,22 @@ func (r *router) openai(ctx context.Context, scope *Flow, conn model.Connection,
 	if e != nil {
 		return nil, model.NewInternalError("bot.openai.connect", e.Error())
 	}
-
+	var rate int
 	var connection, dialogId string
 	switch out := res.Output.(type) {
 	case *ai_bots.OpenAIResponse_Connected:
 		connection = out.Connected.Connection
 		dialogId = out.Connected.DialogId
+		rate = int(out.Connected.InputRate)
 	default:
 		return nil, model.NewAppError("openai", "bot.openai", nil, "failed to get connected response", http.StatusInternalServerError)
 	}
 
-	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, 16000)
+	if rate == 0 {
+		rate = 24000
+	}
+
+	return r.bot(ctx, scope, conn, connection, dialogId, argv.BotParams, rate)
 }
 
 func (r *router) bot(ctx context.Context, scope *Flow, conn model.Connection, connection, dialogId string, argv BotParams, inputRate int) (model.Response, *model.AppError) {

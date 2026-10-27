@@ -325,7 +325,7 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
 }
 
-func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer bool) (model.Response, *model.AppError) {
+func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer, force bool) (model.Response, *model.AppError) {
 	// FIXME SET
 
 	vrs := map[string]any{
@@ -345,8 +345,12 @@ func (c *Connection) RecordSession(ctx context.Context, name, format string, min
 		return nil, err
 	}
 
-	return c.executeWithContext(ctx, "record_session",
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format))
+	args := fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format)
+	if force {
+		args += " {force=true}"
+	}
+
+	return c.executeWithContext(ctx, "wbt_record_session", args)
 }
 
 func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {

@@ -2,6 +2,7 @@ package flow
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -39,6 +40,7 @@ type Flow struct {
 	triggers    map[string]model.Applications
 	currentNode *Node
 	prevRequest *ApplicationRequest
+	interrupted *ApplicationRequest
 	gotoCounter int16
 	cancel      bool
 	logs        []*model.StepLog
@@ -298,6 +300,34 @@ func (i *Flow) SetCancel() {
 	i.Lock()
 	defer i.Unlock()
 	i.cancel = true
+}
+
+func (i *Flow) setInterrupted(req *ApplicationRequest) {
+	i.Lock()
+	i.interrupted = req
+	i.Unlock()
+}
+
+// RepeatInterrupted rewinds to the request cut off by a cancelled run if it is one of names.
+func (i *Flow) RepeatInterrupted(names ...string) bool {
+	i.Lock()
+	defer i.Unlock()
+
+	req := i.interrupted
+	i.interrupted = nil
+
+	if req == nil || !slices.Contains(names, req.Name) {
+		return false
+	}
+
+	pos := i.currentNode.position - 1
+	if pos < 0 || pos >= len(i.currentNode.children) || i.currentNode.children[pos] != req {
+		return false
+	}
+
+	i.currentNode.position = pos
+
+	return true
 }
 
 func (i *Flow) IsCancel() bool {

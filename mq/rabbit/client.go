@@ -1,7 +1,9 @@
 package rabbit
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,6 +20,8 @@ import (
 )
 
 const CallChanBufferCount = 100
+
+var errChannelClosed = errors.New("amqp channel is closed")
 
 const (
 	MAX_ATTEMPTS_CONNECT = 100
@@ -50,6 +54,7 @@ type AMQP struct {
 	execEvent          chan model.ChannelExec
 	imEvents           chan any
 	ccEvents           chan model.CCQueueEvent
+	sysSettingsEvents  chan model.SystemSettingEvent
 	queueEvent         mq.QueueEvent
 	sync.RWMutex
 }
@@ -62,6 +67,8 @@ func NewRabbitMQ(settings model.MQSettings, nodeName string) mq.LayeredMQLayer {
 		imEvents:  make(chan any, CallChanBufferCount),
 		ccEvents:  make(chan model.CCQueueEvent, CallChanBufferCount),
 		nodeName:  nodeName,
+
+		sysSettingsEvents: make(chan model.SystemSettingEvent, CallChanBufferCount),
 	}
 	mq_.queueEvent = NewQueueMQ(mq_)
 	mq_.initConnection()
@@ -131,6 +138,20 @@ func (a *AMQP) initExchange() {
 		time.Sleep(time.Second)
 		os.Exit(1)
 	}
+
+	if err := a.channel.ExchangeDeclare(
+		model.EventExchange,
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	); err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to create AMQP exchange %s to err:%v", model.EventExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(1)
+	}
 }
 
 func (a *AMQP) initQueues() {
@@ -167,6 +188,7 @@ func (a *AMQP) initQueues() {
 	a.subscribeCall()
 	a.subscribeExec()
 	a.subscribeCC()
+	a.subscribeSystemSettings()
 
 	if a.settings.UseIM {
 		go a.subscribeIM()
@@ -249,10 +271,10 @@ func (a *AMQP) subscribeExec() {
 
 	go func() {
 		for m := range msgs {
-			if m.ContentType != "text/json" {
-				wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
-				continue
-			}
+			// if m.ContentType != "text/json" {
+			// 	wlog.Warn(fmt.Sprintf("Failed receive event content type: %v\n%s", m.ContentType, m.Body))
+			// 	continue
+			// }
 
 			switch m.Exchange {
 			case model.FlowExchange:
@@ -339,6 +361,58 @@ func (a *AMQP) subscribeCC() {
 
 		if !a.stopping {
 			a.initConnection()
+		}
+	}()
+}
+
+func (a *AMQP) subscribeSystemSettings() {
+	queueName := fmt.Sprintf("%s.%s", model.SysSettingsPrefix, model.NewId()[0:8])
+
+	queue, err := a.channel.QueueDeclare(
+		queueName,
+		false,
+		true,
+		true,
+		false,
+		nil,
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Failed to declare AMQP queue %v to err:%v", queueName, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_DECLARE_QUEUE)
+	}
+
+	if err = a.channel.QueueBind(queue.Name, model.SystemSettingsObjectName+".#", model.EventExchange, false, nil); err != nil {
+		wlog.Critical(fmt.Sprintf("Error binding queue %s to %s: %s", queue.Name, model.EventExchange, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	msgs, err := a.channel.Consume(
+		queue.Name,
+		"",
+		false,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		wlog.Critical(fmt.Sprintf("Error create consume for queue %s: %s", queue.Name, err.Error()))
+		time.Sleep(time.Second)
+		os.Exit(EXIT_BIND)
+	}
+
+	go func() {
+		for m := range msgs {
+			ev, appErr := model.NewSystemSettingEventFromRoutingKey(m.RoutingKey)
+			if appErr != nil {
+				wlog.Warn(fmt.Sprintf("unable to parse system settings event, %s", appErr.Error()))
+			} else {
+				a.sysSettingsEvents <- *ev
+			}
+
+			m.Ack(false)
 		}
 	}()
 }
@@ -450,6 +524,15 @@ func (a *AMQP) getChannel() *amqp.Channel {
 	return a.channel
 }
 
+func (a *AMQP) Ping(context.Context) error {
+	ch := a.getChannel()
+	if ch == nil || ch.IsClosed() {
+		return errChannelClosed
+	}
+
+	return nil
+}
+
 func (a *AMQP) SendJSON(exchange, key string, data []byte) *model.AppError {
 	channel := a.getChannel()
 	if channel == nil {
@@ -480,4 +563,8 @@ func (a *AMQP) ConsumeIM() <-chan any {
 
 func (a *AMQP) ConsumeCCEvents() <-chan model.CCQueueEvent {
 	return a.ccEvents
+}
+
+func (a *AMQP) ConsumeSystemSettingsEvents() <-chan model.SystemSettingEvent {
+	return a.sysSettingsEvents
 }

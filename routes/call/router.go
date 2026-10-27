@@ -193,6 +193,14 @@ func (r *Router) handle(conn model.Connection) {
 		return
 	}
 
+	if recordAll, rerr := r.fm.RecordAllCalls(conn.Context(), conn.DomainId()); rerr != nil {
+		call.Log().Err(rerr)
+	} else if recordAll {
+		if rerr = r.startRecordAllCalls(call.Context(), call); rerr != nil {
+			call.Log().Err(rerr)
+		}
+	}
+
 	call.timezoneName = routing.TimezoneName
 	call.SetDomainName(routing.DomainName) //fixme
 	i := flow.New(r, flow.Config{

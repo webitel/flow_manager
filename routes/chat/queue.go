@@ -64,9 +64,9 @@ type QueueJoinArg struct {
 	}
 	ExtraChatCount bool             `json:"extraChatCount"`
 	Timers         []flow.TimerArgs `json:"timers"`
-	Offering []any            `json:"offering"`
-	Missed   []any            `json:"missed"`
-	Bridged  []any            `json:"bridged"`
+	Offering       []any            `json:"offering"`
+	Missed         []any            `json:"missed"`
+	Bridged        []any            `json:"bridged"`
 }
 
 func (r *Router) cancelQueue(ctx context.Context, scope *flow.Flow, conv Conversation, args any) (model.Response, *model.AppError) {
@@ -137,10 +137,10 @@ func (r *Router) joinQueue(ctx context.Context, scope *flow.Flow, conv Conversat
 			Id:   q.Queue.Id,
 			Name: q.Queue.Name,
 		},
-		Priority:      q.Priority,
-		BucketId:      q.Bucket.Id,
-		Variables:     conv.DumpExportVariables(),
-		DomainId:      conv.DomainId(),
+		Priority:       q.Priority,
+		BucketId:       q.Bucket.Id,
+		Variables:      conv.DumpExportVariables(),
+		DomainId:       conv.DomainId(),
 		StickyAgentId:  stickyAgentId,
 		ExtraChatCount: q.ExtraChatCount,
 	})
