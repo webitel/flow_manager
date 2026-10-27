@@ -33,11 +33,12 @@ require (
 	github.com/robertkrimen/otto v0.3.0
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/tidwall/gjson v1.17.1
-	github.com/webitel/crypto/cryptostore v0.2.1
+	github.com/webitel/crypto/cryptostore v0.3.0
 	github.com/webitel/engine/pkg/discovery v0.0.0-20260826062815-ac09649ed0d9
-	github.com/webitel/engine/pkg/presign v0.0.0-20260814110632-b0085804d1f0
+	github.com/webitel/engine/pkg/presign v0.1.0
 	github.com/webitel/engine/pkg/wbt v0.0.0-20260205121723-dbc036fb7ab0
 	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
+	github.com/webitel/webitel-cryptoctl/schema v0.1.0
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/webitel-go-kit/infra/health v0.3.0
 	github.com/webitel/webitel-go-kit/infra/httpproxy v0.0.0-20260707115612-427dabf84692
@@ -95,9 +96,9 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/webitel/crypto/cryptobox v0.2.0 // indirect
+	github.com/webitel/crypto/cryptobox v0.3.0 // indirect
 	github.com/webitel/crypto/encoding/jsonc v0.1.0 // indirect
-	github.com/webitel/crypto/env v0.1.0 // indirect
+	github.com/webitel/crypto/env v0.2.0 // indirect
 	github.com/webitel/webitel-go-kit/pkg/logging v0.1.0 // indirect
 	github.com/ziutek/mymysql v1.5.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
