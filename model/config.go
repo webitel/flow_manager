@@ -5,7 +5,7 @@ const (
 )
 
 type Config struct {
-	ConfigFile  *string `json:"-" flag:"config_file||JSON file configuration"`
+	ConfigFile  *string `json:"-" flag:"config_file||JSON file configuration" env:"CONFIG_FILE"`
 	Id          string  `json:"id" flag:"id|1|Service id" env:"ID"`
 	ExternalSql bool    `json:"external_sql" flag:"external_sql|false|Enable external sql query" env:"EXTERNAL_SQL"`
 	AllowUseMQ  bool    `json:"allow_use_mq" flag:"allow_use_mq|false|Allow push message to MQ" env:"ALLOW_USE_MQ"`

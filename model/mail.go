@@ -3,7 +3,7 @@ package model
 import "golang.org/x/oauth2"
 
 type SmtpPlainAuth struct {
-	Password string `json:"password" db:"password"`
+	Password UserPassword `json:"password" db:"password"`
 	User     string `json:"user" db:"login"`
 }
 
