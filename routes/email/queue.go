@@ -100,7 +100,7 @@ func emailQueueNumber(value any, maximum int32, field string) (int32, *model.App
 
 // joinEmailQueue freezes routing values once before any transport retry.
 func joinEmailQueue(ctx context.Context, cli emailQueueService, conn model.EmailEventConnection, argv QueueParameters, rt joinRetry) (model.Response, *model.AppError) {
-	priority, appErr := emailQueueNumber(argv.Priority, 100, "priority")
+	priority, appErr := emailQueueNumber(argv.Priority, math.MaxInt32, "priority")
 	if appErr != nil {
 		return nil, appErr
 	}
