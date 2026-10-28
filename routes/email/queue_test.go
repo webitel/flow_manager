@@ -157,10 +157,10 @@ func TestJoinEmailQueuePriorityValidation(t *testing.T) {
 		valid    bool
 		want     int32
 	}{
-		{priority: nil, valid: true}, {priority: 0, valid: true}, {priority: 100, valid: true, want: 100},
+		{priority: nil, valid: true}, {priority: 0, valid: true}, {priority: 2147483647, valid: true, want: 2147483647},
 		{priority: "", valid: true}, {priority: " \t ", valid: true},
-		{priority: "20", valid: true, want: 20}, {priority: -1}, {priority: 101},
-		{priority: 1.5}, {priority: float64(4294967296)},
+		{priority: "20", valid: true, want: 20}, {priority: -1}, {priority: 101, valid: true, want: 101},
+		{priority: 1.5}, {priority: float64(2147483648)},
 		{priority: "NaN"}, {priority: "Inf"}, {priority: "invalid"},
 	} {
 		for _, priority := range []any{tc.priority, "${priority}"} {
