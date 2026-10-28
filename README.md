@@ -69,7 +69,7 @@ attempt of the Thread, and the Flow goes on with its next step. When Email
 distribution is enabled, `call_center` assigns the attempt asynchronously; the
 Flow neither waits for an agent nor receives queue events.
 
-Routing arguments: `priority` is an integer `0–100` (default `0`, also for an
+Routing arguments: `priority` is an integer `0–2147483647` (default `0`, also for an
 empty/whitespace string after variable substitution),
 `extraEmailCount` allows Extra capacity (default `false`), and optional
 `agent.id` or `agent.extension` supplies the Sticky candidate. An explicit ID,
@@ -79,6 +79,9 @@ application. Without a candidate there is no implicit history lookup.
 Invalid priority or agent ID fails with `email.join_queue.valid.priority` or
 `email.join_queue.valid.agent` before the join RPC; numeric Flow variables are
 validated without integer truncation. Agent IDs must be in `0–2147483647`.
+
+Deploy the `call_center` SQL and service that accept priority above 100 before
+this Flow version: older versions reject such values.
 
 The join address is the trimmed, lowercased first `snapshot.from[].address`,
 captured when the connection starts, not the editable `from` Flow variable.
@@ -247,3 +250,15 @@ finished.
 Events that could not be stored at all are in the `flow.email.inbound.dlq`
 queue. A lease of a stopped worker expires after a minute, and another worker
 takes the event over.
+
+### Shared distribution and lifecycle
+
+Inbound events call EmailWakeUp before launching a Flow, including events without
+flow_id. Wake-up is durable by event ID in call_center. Flow Postpone/Resume keep
+their existing lifecycle RPC/retry forms and do not implement agent selection.
+Primary JoinQueue and validation before a stored-route replay accept nonnegative
+int32 priority. A replay keeps the first persisted priority/Sticky/Extra/From;
+it does not perform a new agent lookup. Deploy the matching EM-24 SQL and service
+before Flow, following the call_center runbook. The C interface belongs to the
+cc_sql extension and is called by call_center. Flow selects and repeats routing
+parameters.

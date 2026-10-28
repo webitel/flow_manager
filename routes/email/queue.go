@@ -129,7 +129,7 @@ func joinEmailQueue(ctx context.Context, cli emailQueueService, conn model.Email
 
 // emailJoinRequest validates the arguments and resolves the queue and the Sticky agent once.
 func emailJoinRequest(cli emailQueueService, conn model.EmailEventConnection, argv QueueParameters) (*cc.EmailJoinToQueueRequest, *model.AppError) {
-	priority, appErr := emailQueueNumber(argv.Priority, 100, "priority")
+	priority, appErr := emailQueueNumber(argv.Priority, math.MaxInt32, "priority")
 	if appErr != nil {
 		return nil, appErr
 	}
@@ -198,7 +198,7 @@ func storedFlowRequest(ctx context.Context, routes routeStore, queues emailQueue
 		return nil, nil
 	}
 	// Changed values are ignored only when valid; an invalid one fails as on the first call.
-	if _, appErr = emailQueueNumber(argv.Priority, 100, "priority"); appErr != nil {
+	if _, appErr = emailQueueNumber(argv.Priority, math.MaxInt32, "priority"); appErr != nil {
 		return nil, appErr
 	}
 	if argv.Agent != nil && argv.Agent.Id != nil {

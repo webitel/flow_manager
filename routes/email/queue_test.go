@@ -161,10 +161,10 @@ func TestJoinEmailQueuePriorityValidation(t *testing.T) {
 		valid    bool
 		want     int32
 	}{
-		{priority: nil, valid: true}, {priority: 0, valid: true}, {priority: 100, valid: true, want: 100},
+		{priority: nil, valid: true}, {priority: 0, valid: true}, {priority: 2147483647, valid: true, want: 2147483647},
 		{priority: "", valid: true}, {priority: " \t ", valid: true},
-		{priority: "20", valid: true, want: 20}, {priority: -1}, {priority: 101},
-		{priority: 1.5}, {priority: float64(4294967296)},
+		{priority: "20", valid: true, want: 20}, {priority: -1}, {priority: 101, valid: true, want: 101},
+		{priority: 1.5}, {priority: float64(2147483648)},
 		{priority: "NaN"}, {priority: "Inf"}, {priority: "invalid"},
 	} {
 		for _, priority := range []any{tc.priority, "${priority}"} {
@@ -428,7 +428,7 @@ func TestStoredFlowRequest(t *testing.T) {
 		{"routed by the Flow, another queue", routed, byName, true, 0, ""},
 		{"routed by the Flow, unknown name", routed, unknown, true, 0, ""},
 		{"routed by the Flow, no queue", routed, args(0, "", nil), false, 0, "email.join_queue.valid.queue"},
-		{"invalid priority in a repeat", joining, args(queue, "", "500"), false, 0, "email.join_queue.valid.priority"},
+		{"invalid priority in a repeat", joining, args(queue, "", "2147483648"), false, 0, "email.join_queue.valid.priority"},
 		{"routed by the fallback", route(model.EmailRouteRouted, model.EmailRouteSourceFallback, in), byName, false, 0, "email_route.window_closed"},
 		{"pending after the deadline", late, unknown, false, 0, "email_route.window_closed"},
 		{"pending before the deadline", &model.EmailRoute{State: model.EmailRoutePending, Intent: &model.EmailRouteIntent{}}, byName, false, 0, ""},
