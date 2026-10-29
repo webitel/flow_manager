@@ -22,6 +22,20 @@ func (fm *FlowManager) EmailJoinToQueue(ctx context.Context, in *cc.EmailJoinToQ
 	return fm.cc.Member().EmailJoinToQueue(ctx, in)
 }
 
+// EmailWakeUp wakes the active Email attempt of a Thread once per inbound event.
+func (fm *FlowManager) EmailWakeUp(ctx context.Context, in *cc.EmailWakeUpRequest) (*cc.EmailWakeUpResponse, error) {
+	return fm.cc.Member().EmailWakeUp(ctx, in)
+}
+
+func (fm *FlowManager) EmailAttemptPostpone(ctx context.Context, in *cc.EmailAttemptPostponeRequest) (*cc.EmailAttemptResponse, error) {
+	return fm.cc.Member().EmailAttemptPostpone(ctx, in)
+}
+
+// EmailAttemptResume sends the Email form of ResumeAttempt.
+func (fm *FlowManager) EmailAttemptResume(ctx context.Context, in *cc.ResumeAttemptRequest) (*cc.ResumeAttemptResponse, error) {
+	return fm.cc.Member().EmailAttemptResume(ctx, in)
+}
+
 func (fm *FlowManager) JoinChatToInboundQueue(ctx context.Context, in *cc.ChatJoinToQueueRequest) (cc.MemberService_ChatJoinToQueueClient, error) {
 	return fm.cc.Member().JoinChatToQueue(ctx, in)
 }

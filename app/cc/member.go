@@ -34,6 +34,18 @@ func (api *memberApi) EmailJoinToQueue(ctx context.Context, in *cc.EmailJoinToQu
 	return api.Api.EmailJoinToQueue(ctx, in)
 }
 
+func (api *memberApi) EmailWakeUp(ctx context.Context, in *cc.EmailWakeUpRequest) (*cc.EmailWakeUpResponse, error) {
+	return api.Api.EmailWakeUp(ctx, in)
+}
+
+func (api *memberApi) EmailAttemptPostpone(ctx context.Context, in *cc.EmailAttemptPostponeRequest) (*cc.EmailAttemptResponse, error) {
+	return api.Api.EmailAttemptPostpone(ctx, in)
+}
+
+func (api *memberApi) EmailAttemptResume(ctx context.Context, in *cc.ResumeAttemptRequest) (*cc.ResumeAttemptResponse, error) {
+	return api.Api.ResumeAttempt(ctx, in)
+}
+
 func (api *memberApi) DirectAgentToMember(domainId, memberId int64, communicationId int, agentId int64) (int64, error) {
 	res, err := api.Api.DirectAgentToMember(context.Background(), &cc.DirectAgentToMemberRequest{
 		MemberId:        memberId,

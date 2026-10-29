@@ -77,7 +77,7 @@ func TestWorkerRecordsLaunch(t *testing.T) {
 				t.Fatalf("set attempts: %v", err)
 			}
 
-			s := &Server{nodeId: "flow-1", runId: "run", store: st, log: testLog, conns: make(chan model.Connection), ctx: ctx}
+			s := &Server{nodeId: "flow-1", runId: "run", store: st, waker: &fakeWaker{}, log: testLog, conns: make(chan model.Connection), ctx: ctx}
 			w := newWorker(s, 0)
 
 			// A router that answers like EmailRouter.launch.

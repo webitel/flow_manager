@@ -181,3 +181,11 @@ ORDER BY updated_at DESC;
 Events that could not be stored at all are in the `flow.email.inbound.dlq`
 queue. A lease of a stopped worker expires after a minute, and another worker
 takes the event over.
+
+### EM-23 lifecycle integration
+
+Inbound events call EmailWakeUp before launching a Flow, including events without
+flow_id. Wake-up is durable by event ID in call_center. Flow Postpone/Resume keep
+their existing lifecycle RPC/retry forms and do not implement agent selection.
+Primary JoinQueue accepts nonnegative int32 priority; merged generated contracts
+retain the EM-23 API. EM-24 stored-route/replay adaptation is still pending.

@@ -21,6 +21,14 @@ func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 		AllowNoConnect: false,
 		Handler:        emailHandlerMiddleware(r.joinQueue),
 	}
+	apps["postpone"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        emailHandlerMiddleware(r.postpone),
+	}
+	apps["resume"] = &flow.Application{
+		AllowNoConnect: false,
+		Handler:        emailHandlerMiddleware(r.resume),
+	}
 
 	return apps
 }
