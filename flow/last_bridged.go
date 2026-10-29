@@ -38,7 +38,9 @@ func (r *router) lastBridged(ctx context.Context, scope *Flow, c model.Connectio
 		argv.Filter = *argv.Calls
 	}
 
-	if c.Type() == model.ConnectionTypeChat {
+	if c.Type() == model.ConnectionTypeEmail {
+		lastBridged, err = r.fm.LastBridgedEmail(ctx, c.DomainId(), argv.Number, argv.Hours, argv.Filter.QueueIds, argv.Set)
+	} else if c.Type() == model.ConnectionTypeChat {
 		//argv.Calls.Dialer, argv.Calls.Inbound, argv.Calls.Outbound,
 		lastBridged, err = r.fm.LastBridgedChat(c.DomainId(), argv.Number, argv.Hours, argv.Filter.QueueIds, argv.Set)
 	} else {

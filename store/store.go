@@ -56,6 +56,7 @@ type UserStore interface {
 }
 
 type EmailStore interface {
+	LastBridged(ctx context.Context, domainId int64, number, hours string, queueIds []int, mapRes model.Variables) (model.Variables, *model.AppError)
 	Save(domainId int64, m *model.Email) *model.AppError
 	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
 	GetProfile(id int) (*model.EmailProfile, *model.AppError)

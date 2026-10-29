@@ -47,6 +47,7 @@ type Snapshot struct {
 	ContactId         *int64       `json:"contact_id"`
 	ReceivedAt        time.Time    `json:"received_at"`
 	From              []Address    `json:"from"`
+	FromTruncated     bool         `json:"from_truncated"`
 	Sender            []Address    `json:"sender"`
 	ReplyTo           []Address    `json:"reply_to"`
 	To                []Address    `json:"to"`
