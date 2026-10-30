@@ -10,10 +10,15 @@ It runs only with `email_events=true` and leaves the IMAP email path unchanged.
 - Inbox workers claim the stored events and hand them to the email router, which
   starts the Flow of the event's `flow_id`. An event without `flow_id` is
   accepted with no Flow.
+- A route watcher joins the email of a Thread without an active attempt to a
+  queue when its Flow chose none in time (see "Routing a reopened Thread").
 
 The event contract, the RabbitMQ topology and the rollout order are described in
 `docs/events.md` of email-service (the `webitel-emails` repository). The Inbox
-table is created by the `call_center` migration `26.dev/email_service_inbox.sql`.
+table is created by the `call_center` migration `26.dev/email_service_inbox.sql`,
+its route columns by `26.dev/email_route.sql`. The Inbox integration tests (`-tags integration`)
+expect `email_route.sql` to be applied once to the database of
+`FLOW_TEST_POSTGRES_DSN`.
 
 ### Configuration
 
@@ -26,6 +31,12 @@ table is created by the `call_center` migration `26.dev/email_service_inbox.sql`
 | `email_events_retention` | `EMAIL_EVENTS_RETENTION` | `720h` | How long accepted events are kept for deduplication |
 | `email_events_cleanup_interval` | `EMAIL_EVENTS_CLEANUP_INTERVAL` | `1h` | Interval between Inbox cleanups |
 | `email_events_cleanup_batch` | `EMAIL_EVENTS_CLEANUP_BATCH` | `1000` | Accepted events deleted per statement, at most 10000 |
+| `email_route_timeout` | `EMAIL_ROUTE_TIMEOUT` | `60s` | How long the Flow may choose a queue before the fallback queue is used |
+| `email_route_watcher_interval` | `EMAIL_ROUTE_WATCHER_INTERVAL` | `1s` | Interval between route watcher cycles |
+| `email_route_watcher_batch` | `EMAIL_ROUTE_WATCHER_BATCH` | `100` | Routes claimed by one cycle |
+| `email_route_lease` | `EMAIL_ROUTE_LEASE` | `1m` | How long the watcher holds the routes it claimed, at least 15s |
+| `email_route_retry_max_interval` | `EMAIL_ROUTE_RETRY_MAX_INTERVAL` | `1m` | Longest pause between joins of one route |
+| `email_route_max_attempts` | `EMAIL_ROUTE_MAX_ATTEMPTS` | `10` | Joins after unexpected errors before a route fails |
 
 Durations use Go syntax (`720h`, not `30d`). Startup fails when a value is zero,
 negative or unparsable, or exceeds its limit.
@@ -39,7 +50,9 @@ in email-service), `message_id`, `from`, `to`, `cc`, `sender` and `reply_to`
 and `wbt_contact_id` (when the contact is known).
 
 New variables: `email_event_id`, `email_profile_id`, `email_thread_id`,
-`email_message_id` and `body_truncated`.
+`email_message_id` and `body_truncated`. `cc_wakeup_result` is the result of
+waking the Thread up, and `cc_fallback_queue_id` the queue the email joins
+when the Flow chooses none; it is empty when there is no such queue.
 An undefined variable in these event Flows expands to `""`, not `"<nil>"`.
 
 There is no `body_html`. The `reply` application returns an error, and the
@@ -164,6 +177,48 @@ including controlled commit/rollback concurrency. Real Email completion remains
 a stage-11 lifecycle check. Test rows and the temporary gate were removed, the
 isolated database preserved and its container stopped.
 
+### Routing a reopened Thread
+
+When `call_center` finds no active attempt of the Thread (`cc_wakeup_result` is
+`not_active`), the Flow has `email_route_timeout` to call `joinQueue`, counted
+from the wake-up. Call it as early as possible: what counts is the intent
+`joinQueue` records before it calls `call_center`, not the end of the Flow.
+Deploy this version only after `email_route.sql` is applied and every
+`call_center` node returns the fallback queue; with an older `call_center` a
+reopened Thread stays `unrouted`.
+
+- An intent recorded before the deadline is kept: if the join fails with an
+  unclear error or `flow_manager` stops, the route watcher repeats it into the
+  same queue with the same priority, Sticky agent and Extra permission, without
+  a new lookup. A repeated `joinQueue` into that queue keeps the first intent and
+  repeats no agent lookup; a queue given only by `queue.name` is looked up to
+  compare it with the queue of the intent.
+- Without an intent, the watcher joins the queue of the last finished attempt
+  of the Thread (`cc_fallback_queue_id`) with priority 0, without Sticky and
+  Extra; the Inbox keeps these values until the Flow records its intent and
+  again after a join the queue rejects. Without such a queue, or when the queue
+  is gone or disabled, the email stays without a queue (`unrouted`).
+- A `joinQueue` after the deadline or after the fallback join fails with
+  `email_route.window_closed` and does not call `call_center`. A second
+  `joinQueue` to another queue while the first one runs fails with
+  `email_route.queue_conflict`; repeating the same queue, or any `joinQueue`
+  after the Flow's own route, answers again with the same attempt. These
+  repeats and `window_closed` are decided by the stored route before any agent
+  lookup.
+- An event without `flow_id` is routed by the watcher at once.
+- Both joins of the watcher send the normalized initial From of the event, kept
+  at wake-up, so the address history and `lastBridged` cover them too.
+
+A retried event, for example after `flow_manager` stopped, starts its Flow again
+only while the deadline is not over and no queue was chosen. Steps after the
+join of an interrupted Flow are not repeated, and a Flow that could not start
+within `email_route_timeout` does not run for that email at all, auto-replies
+included.
+
+Outcomes are counted by the OpenTelemetry counter `flow.email.route.outcome`
+with the label `outcome`: `fallback`, `window_closed`, `unrouted` and
+`route_failed`.
+
 ### Operations
 
 An Inbox row is `pending` until a worker claims it, `processing` while a worker
@@ -178,14 +233,32 @@ WHERE state = 'failed'
 ORDER BY updated_at DESC;
 ```
 
+Routes that ended without a queue, or failed after repeated unexpected errors,
+stay in the Inbox with their reason:
+
+```sql
+SELECT event_id, domain_id, thread_id, route_state, route_reason, route_last_error, updated_at
+FROM flow.email_event
+WHERE route_state IN ('unrouted', 'route_failed')
+ORDER BY updated_at DESC;
+```
+
+A `route_failed` join may still have happened; check `cc_email_join` of
+`call_center` by `email_event_id`. Cleanup never removes a route that is not
+finished.
+
 Events that could not be stored at all are in the `flow.email.inbound.dlq`
 queue. A lease of a stopped worker expires after a minute, and another worker
 takes the event over.
 
-### EM-23 lifecycle integration
+### Shared distribution and lifecycle
 
 Inbound events call EmailWakeUp before launching a Flow, including events without
 flow_id. Wake-up is durable by event ID in call_center. Flow Postpone/Resume keep
 their existing lifecycle RPC/retry forms and do not implement agent selection.
-Primary JoinQueue accepts nonnegative int32 priority; merged generated contracts
-retain the EM-23 API. EM-24 stored-route/replay adaptation is still pending.
+Primary JoinQueue and validation before a stored-route replay accept nonnegative
+int32 priority. A replay keeps the first persisted priority/Sticky/Extra/From;
+it does not perform a new agent lookup. Deploy the matching EM-24 SQL and service
+before Flow, following the call_center runbook. The C interface belongs to the
+cc_sql extension and is called by call_center. Flow selects and repeats routing
+parameters.

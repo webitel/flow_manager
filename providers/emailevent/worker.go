@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/webitel/wlog"
@@ -91,7 +92,7 @@ func (w *worker) process(ctx context.Context, row *model.EmailEvent) {
 		return
 	}
 
-	wakeup, appErr := w.wakeUp(ctx, event)
+	wakeup, fallback, appErr := w.wakeUp(ctx, event)
 	if appErr != nil {
 		switch {
 		case ctx.Err() != nil:
@@ -109,21 +110,51 @@ func (w *worker) process(ctx context.Context, row *model.EmailEvent) {
 		log.Info("email attempt wake-up", wlog.String("result", wakeup))
 	}
 
+	// Without a Flow the deadline is now, and the route watcher joins the fallback queue.
+	due := w.cfg.RouteTimeout
+	if event.FlowId == nil {
+		due = 0
+	}
+	route, appErr := w.store.InitRoute(ctx, w.owner, row.EventId, wakeup == wakeUpNotActive, fallback, RoutingFromAddress(event), due)
+	if appErr != nil {
+		switch {
+		case ctx.Err() != nil:
+			// The lease returns the row.
+		case appErr.StatusCode == http.StatusBadRequest:
+			w.fail(ctx, row, appErr.Error(), log)
+		default:
+			w.retry(ctx, row, appErr, "email route start failed", log)
+		}
+		return
+	}
+	if route.State == model.EmailRouteUnset {
+		log.Warn("email event lease lost")
+		return
+	}
+
 	if event.FlowId == nil {
 		if !w.accept(ctx, row, nil, log) {
 			return
 		}
 		// A Thread with an attempt needs no route: the wake-up handled the email.
-		if wakeup == wakeUpNotActive {
-			log.Info("email thread has no route")
+		if route.State != model.EmailRouteNotNeeded {
+			log.Info("email thread has no flow; the fallback queue routes it", wlog.String("route_state", string(route.State)))
 		} else {
 			log.Info("email event accepted without a flow", wlog.String("result", wakeup))
 		}
 		return
 	}
 
+	if !launchFlow(route) {
+		// The route is decided or past the deadline; a Flow could not change it.
+		if w.accept(ctx, row, nil, log) {
+			log.Info("email flow not started again", wlog.String("route_state", string(route.State)))
+		}
+		return
+	}
+
 	conn := NewConnection(w.ctx, w.nodeId, event, w.Server.log)
-	conn.Set(ctx, model.Variables{"cc_wakeup_result": wakeup})
+	conn.Set(ctx, model.Variables{"cc_wakeup_result": wakeup, "cc_fallback_queue_id": queueVariable(route.FallbackQueueId)})
 	switch outcome, launchErr := w.launch(ctx, conn); outcome {
 	case outcomeStarted:
 		w.accept(ctx, row, conn, log)
@@ -147,9 +178,24 @@ var wakeUpResults = map[cc.EmailWakeUpResponse_Result]string{
 	cc.EmailWakeUpResponse_RESULT_NOT_ACTIVE: wakeUpNotActive,
 }
 
-// wakeUp runs before the Flow and without one; call_center keeps the result by event id,
-// so a retried event does not wake the attempt again.
-func (w *worker) wakeUp(ctx context.Context, event *InboundMessage) (string, *model.AppError) {
+// launchFlow starts a Flow for a Thread with an attempt, or while the Flow may still
+// choose the queue; a retried event never extends the deadline.
+func launchFlow(route *model.EmailRoute) bool {
+	return route.State == model.EmailRouteNotNeeded || (route.State == model.EmailRoutePending && !route.DuePassed)
+}
+
+// queueVariable is empty without a queue, so the Flow never reads a stale value.
+func queueVariable(queueId *int32) string {
+	if queueId == nil {
+		return ""
+	}
+
+	return strconv.Itoa(int(*queueId))
+}
+
+// wakeUp runs before the Flow and without one; call_center keeps the result and the
+// fallback queue by event id, so a retried event does not wake the attempt again.
+func (w *worker) wakeUp(ctx context.Context, event *InboundMessage) (string, *int32, *model.AppError) {
 	ctx, cancel := context.WithTimeout(ctx, wakeUpTimeout)
 	defer cancel()
 
@@ -159,16 +205,16 @@ func (w *worker) wakeUp(ctx context.Context, event *InboundMessage) (string, *mo
 		EmailEventId: event.EventId,
 	})
 	if err != nil {
-		return "", wakeUpError(err)
+		return "", nil, wakeUpError(err)
 	}
 
 	result, ok := wakeUpResults[res.GetResult()]
 	if !ok {
-		return "", model.NewAppError("EmailEvents.WakeUp", "email_events.wakeup.invalid_response", nil,
+		return "", nil, model.NewAppError("EmailEvents.WakeUp", "email_events.wakeup.invalid_response", nil,
 			"call_center returned an unknown wake-up result "+res.GetResult().String(), http.StatusBadGateway)
 	}
 
-	return result, nil
+	return result, res.FallbackQueueId, nil
 }
 
 // wakeUpError keeps 400 and 409 for errors a retry cannot fix; the worker fails those events.

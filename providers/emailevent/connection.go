@@ -50,14 +50,10 @@ var (
 // Flow outlives the worker and its handshake.
 func NewConnection(ctx context.Context, nodeId string, event *InboundMessage, log *wlog.Logger) *Connection {
 	ctx, cancel := context.WithCancel(ctx)
-	var from string
-	if !event.Snapshot.FromTruncated && len(event.Snapshot.From) != 0 {
-		from = model.NormalizeEmailRoutingAddress(event.Snapshot.From[0].Address)
-	}
 
 	return &Connection{
 		event:              event,
-		initialFromAddress: from,
+		initialFromAddress: RoutingFromAddress(event),
 		nodeId:             nodeId,
 		schemaId:           int(*event.FlowId),
 		variables:          variables(event),
@@ -182,6 +178,16 @@ func (c *Connection) ThreadId() int64 {
 
 func (c *Connection) MessageId() int64 {
 	return c.event.MessageId
+}
+
+// RoutingFromAddress is the normalized first From of the event, the routing key of the history;
+// "" when From is missing, truncated or not an address.
+func RoutingFromAddress(event *InboundMessage) string {
+	if event.Snapshot.FromTruncated || len(event.Snapshot.From) == 0 {
+		return ""
+	}
+
+	return model.NormalizeEmailRoutingAddress(event.Snapshot.From[0].Address)
 }
 
 func (c *Connection) InitialFromAddress() string {

@@ -36,6 +36,7 @@ type Server struct {
 	cfg      model.EmailEventsSettings
 	store    store.EmailEventStore
 	waker    AttemptWaker
+	joiner   AttemptJoiner
 	consumer *consumer
 	log      *wlog.Logger
 	conns    chan model.Connection
@@ -52,7 +53,7 @@ type Server struct {
 
 var _ model.Server = (*Server)(nil)
 
-func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st store.EmailEventStore, waker AttemptWaker, log *wlog.Logger) (*Server, error) {
+func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st store.EmailEventStore, waker AttemptWaker, joiner AttemptJoiner, log *wlog.Logger) (*Server, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("email events: %w", err)
 	}
@@ -68,6 +69,7 @@ func NewServer(nodeId string, cfg model.EmailEventsSettings, amqpUrl string, st 
 		cfg:      cfg,
 		store:    st,
 		waker:    waker,
+		joiner:   joiner,
 		consumer: newConsumer(amqpUrl, nodeId, runId, cfg, st, log),
 		log:      log.With(wlog.String("component", "email_events")),
 		conns:    make(chan model.Connection),
@@ -96,10 +98,10 @@ func (s *Server) Cluster(discovery.ServiceDiscovery) *model.AppError {
 	return nil
 }
 
-// Start runs the consumer and the Inbox upkeep; it runs before the email router
-// exists, so workers wait for Consume.
+// Start runs the consumer, the Inbox upkeep and the route watcher; it runs before the
+// email router exists, so workers wait for Consume.
 func (s *Server) Start() *model.AppError {
-	if !s.spawn(s.consumer.Run, s.recoverLoop, s.cleanupLoop) {
+	if !s.spawn(s.consumer.Run, s.recoverLoop, s.cleanupLoop, newRouteWatcher(s).run) {
 		return model.NewAppError("EmailEvents.Start", "email_events.start.stopped", nil, "server is stopped", http.StatusInternalServerError)
 	}
 

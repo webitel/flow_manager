@@ -109,12 +109,23 @@ type EmailEventsSettings struct {
 	Retention       time.Duration `json:"retention" flag:"email_events_retention|720h|How long accepted email events are kept for deduplication" env:"EMAIL_EVENTS_RETENTION"`
 	CleanupInterval time.Duration `json:"cleanup_interval" flag:"email_events_cleanup_interval|1h|Interval between Inbox cleanups" env:"EMAIL_EVENTS_CLEANUP_INTERVAL"`
 	CleanupBatch    int           `json:"cleanup_batch" flag:"email_events_cleanup_batch|1000|Accepted email events deleted per statement" env:"EMAIL_EVENTS_CLEANUP_BATCH"`
+
+	// RouteTimeout is how long the Flow of an email to a Thread without an attempt may choose a queue.
+	RouteTimeout time.Duration `json:"route_timeout" flag:"email_route_timeout|60s|How long the Flow may choose a queue before the fallback queue is used" env:"EMAIL_ROUTE_TIMEOUT"`
+	// The route watcher finishes routes on every instance: fallback joins and joins of the Flow left unfinished.
+	RouteWatcherInterval  time.Duration `json:"route_watcher_interval" flag:"email_route_watcher_interval|1s|Interval between route watcher cycles" env:"EMAIL_ROUTE_WATCHER_INTERVAL"`
+	RouteWatcherBatch     int           `json:"route_watcher_batch" flag:"email_route_watcher_batch|100|Routes claimed by one route watcher cycle" env:"EMAIL_ROUTE_WATCHER_BATCH"`
+	RouteLease            time.Duration `json:"route_lease" flag:"email_route_lease|1m|How long the route watcher holds the routes it claimed" env:"EMAIL_ROUTE_LEASE"`
+	RouteRetryMaxInterval time.Duration `json:"route_retry_max_interval" flag:"email_route_retry_max_interval|1m|Longest pause between joins of one route" env:"EMAIL_ROUTE_RETRY_MAX_INTERVAL"`
+	RouteMaxAttempts      int           `json:"route_max_attempts" flag:"email_route_max_attempts|10|Joins of one route after unexpected errors before it fails" env:"EMAIL_ROUTE_MAX_ATTEMPTS"`
 }
 
 const (
 	// maxEmailEventsPrefetch is the limit of the AMQP prefetch count, a uint16.
 	maxEmailEventsPrefetch     = 65535
 	maxEmailEventsCleanupBatch = 10000
+	// One join (5s) and its write (5s) must fit in the lease with room to spare.
+	minEmailRouteLease = 15 * time.Second
 )
 
 // Validate rejects zero values too: an unparsable duration is set to zero.
@@ -132,9 +143,18 @@ func (s EmailEventsSettings) Validate() error {
 	positive("email_events_retention", int64(s.Retention))
 	positive("email_events_cleanup_interval", int64(s.CleanupInterval))
 	positive("email_events_cleanup_batch", int64(s.CleanupBatch))
+	positive("email_route_timeout", int64(s.RouteTimeout))
+	positive("email_route_watcher_interval", int64(s.RouteWatcherInterval))
+	positive("email_route_watcher_batch", int64(s.RouteWatcherBatch))
+	positive("email_route_retry_max_interval", int64(s.RouteRetryMaxInterval))
+	positive("email_route_max_attempts", int64(s.RouteMaxAttempts))
 
 	if s.Prefetch > maxEmailEventsPrefetch {
 		errs = append(errs, fmt.Errorf("email_events_prefetch must not exceed %d", maxEmailEventsPrefetch))
+	}
+	// One join of the watcher has to fit in its lease.
+	if s.RouteLease < minEmailRouteLease {
+		errs = append(errs, fmt.Errorf("email_route_lease must be at least %s", minEmailRouteLease))
 	}
 	if s.CleanupBatch > maxEmailEventsCleanupBatch {
 		errs = append(errs, fmt.Errorf("email_events_cleanup_batch must not exceed %d", maxEmailEventsCleanupBatch))
