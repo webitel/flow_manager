@@ -66,7 +66,7 @@ from endpoints e
 		   where c.user_id = u.id and c.hangup_at isnull and c.direction notnull
 		   limit 1
 		) x on not uss.dnd and (e.endpoint->>'idle')::bool
-     where (e.endpoint->>'type')::varchar = 'user' and u.dc = :DomainId and
+     where (e.endpoint->>'type')::varchar = 'user' and u.dc = :DomainId and u.deleted_at isnull and
            ( u.extension = (e.endpoint->>'extension')::varchar or
              u.id = (e.endpoint->>'id')::bigint)
 
