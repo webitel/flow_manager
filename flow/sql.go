@@ -8,12 +8,11 @@ import (
 )
 
 type SqlArgs struct {
-	Driver   string        `json:"driver"`
-	Dns      string        `json:"dns"`
-	Query    string        `json:"query"`
-	Params   []interface{} `json:"params"`
-	Timeout  int           `json:"timeout"`
-	Writable bool          `json:"writable"`
+	Driver  string        `json:"driver"`
+	Dns     string        `json:"dns"`
+	Query   string        `json:"query"`
+	Params  []interface{} `json:"params"`
+	Timeout int           `json:"timeout"`
 }
 
 func (r *router) SqlHandler(ctx context.Context, scope *Flow, conn model.Connection, args interface{}) (model.Response, *model.AppError) {
@@ -35,7 +34,7 @@ func (r *router) SqlHandler(ctx context.Context, scope *Flow, conn model.Connect
 		return nil, ErrorRequiredParameter("sql", "dns")
 	}
 
-	db, err := r.fm.GetSqlDb(ctx, req.Driver, req.Dns, req.Writable)
+	db, err := r.fm.GetSqlDb(ctx, req.Driver, req.Dns)
 	if err != nil {
 		return model.CallResponseError, err
 	}

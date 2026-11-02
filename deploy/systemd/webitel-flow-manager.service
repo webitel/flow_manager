@@ -34,6 +34,7 @@ ProtectHome=yes
 PrivateTmp=yes
 NoExecPaths=/
 ExecPaths=/usr/local/bin/webitel-flow-manager /usr/lib -/lib -/lib64
+StateDirectory=webitel/webitel-flow-manager/sqlite
 
 # Process isolation
 PrivateDevices=yes

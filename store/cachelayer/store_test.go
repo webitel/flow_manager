@@ -42,7 +42,13 @@ func newSandboxEnv(t *testing.T) sandboxEnv {
 }
 
 func (env sandboxEnv) manager(opts ...ExternalStoreManagerOption) *ExternalStoreManager {
-	all := append([]ExternalStoreManagerOption{WithSQLLiteSandboxDir(env.root), WithLogger(wlog.NewLogger(&wlog.LoggerConfiguration{}))}, opts...)
+	if wlog.GlobalLogger() == nil {
+		wlog.InitGlobalLogger(wlog.NewLogger(&wlog.LoggerConfiguration{}))
+	}
+
+	all := append([]ExternalStoreManagerOption{
+		WithSQLiteSandboxDir(env.root),
+	}, opts...)
 
 	return NewExternalStoreManager(all...)
 }
@@ -60,7 +66,7 @@ func createSQLiteDB(t *testing.T, path string) {
 func createSQLiteDBWithSQL(t *testing.T, path, ddl string) {
 	t.Helper()
 
-	db, err := sql.Open("sqlite3", path)
+	db, err := sql.Open(SQLiteDriverName, path)
 	if err != nil {
 		t.Fatalf("open fixture %s: %v", path, err)
 	}
@@ -87,21 +93,32 @@ func mustMkdir(t *testing.T, path string) {
 	}
 }
 
-func mustConnect(t *testing.T, m *ExternalStoreManager, dsn string, writable bool) *ExternalDb {
+func sqliteCfg(dsn string) ExternalSQLStoreConnectConfig {
+	return ExternalSQLStoreConnectConfig{Driver: "sqlite3", DSN: dsn}
+}
+
+func mustConnect(t *testing.T, m *ExternalStoreManager, dsn string) *ExternalDb {
 	t.Helper()
 
-	d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{
-		Driver:   "sqlite3",
-		DSN:      dsn,
-		Writable: writable,
-	})
+	d, err := m.Connect(context.Background(), sqliteCfg(dsn))
 	if err != nil {
-		t.Fatalf("connect %q (writable=%v): %v", dsn, writable, err)
+		t.Fatalf("connect %q: %v", dsn, err)
 	}
 
 	t.Cleanup(func() { _ = d.db.Close() })
 
 	return d
+}
+
+func readFile(t *testing.T, path string) string {
+	t.Helper()
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+
+	return string(b)
 }
 
 func TestResolveSandboxPath_Allowed(t *testing.T) {
@@ -132,13 +149,46 @@ func TestResolveSandboxPath_Allowed(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := m.resolveSanbdoxPath(tc.input, false)
+			got, err := m.resolveSandboxPath(tc.input)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
 			if got != tc.want {
 				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolveSandboxPath_SandboxRootIsSymlink(t *testing.T) {
+	env := newSandboxEnv(t)
+
+	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
+
+	linkRoot := filepath.Join(filepath.Dir(env.root), "sandbox-link")
+	mustSymlink(t, env.root, linkRoot)
+
+	m := NewExternalStoreManager(
+		WithSQLiteSandboxDir(linkRoot),
+		WithLogger(wlog.NewLogger(&wlog.LoggerConfiguration{})),
+	)
+
+	want := filepath.Join(env.root, "a.db")
+
+	for name, in := range map[string]string{
+		"relative":               "a.db",
+		"absolute via link":      filepath.Join(linkRoot, "a.db"),
+		"absolute via real root": want,
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := m.resolveSandboxPath(in)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if got != want {
+				t.Fatalf("got %q, want %q", got, want)
 			}
 		})
 	}
@@ -196,19 +246,17 @@ func TestResolveSandboxPath_Denied(t *testing.T) {
 		{"missing file", "missing.db"},
 	}
 
-	for _, writable := range []bool{false, true} {
-		for _, tc := range tests {
-			t.Run(fmt.Sprintf("%s/writable=%v", tc.name, writable), func(t *testing.T) {
-				got, err := m.resolveSanbdoxPath(tc.input, writable)
-				if err == nil {
-					t.Fatalf("expected denial, got path %q", got)
-				}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := m.resolveSandboxPath(tc.input)
+			if err == nil {
+				t.Fatalf("expected denial, got path %q", got)
+			}
 
-				if got != "" {
-					t.Fatalf("path must be empty on error, got %q", got)
-				}
-			})
-		}
+			if got != "" {
+				t.Fatalf("path must be empty on error, got %q", got)
+			}
+		})
 	}
 }
 
@@ -220,8 +268,8 @@ func TestResolveSandboxPath_NoExistenceOracle(t *testing.T) {
 	createSQLiteDB(t, existing)
 	missing := filepath.Join(env.outside, "missing.db")
 
-	_, e1 := m.resolveSanbdoxPath(existing, false)
-	_, e2 := m.resolveSanbdoxPath(missing, false)
+	_, e1 := m.resolveSandboxPath(existing)
+	_, e2 := m.resolveSandboxPath(missing)
 
 	if e1 == nil || e2 == nil {
 		t.Fatalf("both must be denied: %v / %v", e1, e2)
@@ -248,7 +296,7 @@ func TestBuildSQLiteDSN_Disabled_WhenNoSandbox(t *testing.T) {
 	}
 }
 
-func TestBuildSQLiteDSN_Mode(t *testing.T) {
+func TestBuildSQLiteDSN_ModeAndPragmas(t *testing.T) {
 	env := newSandboxEnv(t)
 	m := env.manager()
 
@@ -256,15 +304,25 @@ func TestBuildSQLiteDSN_Mode(t *testing.T) {
 	createSQLiteDB(t, dbPath)
 
 	tests := []struct {
-		writable bool
-		mode     string
+		name          string
+		writable      bool
+		mode          string
+		wantPragmas   []string
+		forbidPragmas []string
 	}{
-		{false, "ro"},
-		{true, "rw"},
+		{
+			name: "ro", writable: false, mode: "ro",
+			wantPragmas: []string{"query_only(1)", "trusted_schema(0)", "busy_timeout(5000)"},
+		},
+		{
+			name: "rw", writable: true, mode: "rw",
+			wantPragmas:   []string{"trusted_schema(0)", "busy_timeout(5000)"},
+			forbidPragmas: []string{"query_only(1)"},
+		},
 	}
 
 	for _, tc := range tests {
-		t.Run(tc.mode, func(t *testing.T) {
+		t.Run(tc.name, func(t *testing.T) {
 			dsn, err := m.buildSQLiteDSN("a.db", tc.writable)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
@@ -288,8 +346,31 @@ func TestBuildSQLiteDSN_Mode(t *testing.T) {
 				t.Fatalf("mode = %q, want %q", q.Get("mode"), tc.mode)
 			}
 
-			if len(q) != 1 {
-				t.Fatalf("unexpected extra params: %v", q)
+			if len(q["mode"]) != 1 {
+				t.Fatalf("mode must be set exactly once: %v", q["mode"])
+			}
+
+			pragmas := make(map[string]bool)
+			for _, p := range q["_pragma"] {
+				pragmas[p] = true
+			}
+
+			for _, p := range tc.wantPragmas {
+				if !pragmas[p] {
+					t.Fatalf("missing pragma %q in %v", p, q["_pragma"])
+				}
+			}
+
+			for _, p := range tc.forbidPragmas {
+				if pragmas[p] {
+					t.Fatalf("unexpected pragma %q in %v", p, q["_pragma"])
+				}
+			}
+
+			for k := range q {
+				if k != "mode" && k != "_pragma" {
+					t.Fatalf("unexpected DSN parameter %q", k)
+				}
 			}
 		})
 	}
@@ -313,57 +394,93 @@ func TestBuildSQLiteDSN_SpecialCharsInFileName(t *testing.T) {
 		t.Fatalf("parse: %v", perr)
 	}
 
-	if u.Path != dbPath || len(u.Query()) != 1 || u.Query().Get("mode") != "ro" {
+	if u.Path != dbPath || u.Query().Get("mode") != "ro" {
 		t.Fatalf("bad dsn %q (path=%q query=%v)", dsn, u.Path, u.Query())
 	}
 
-	d := mustConnect(t, m, name, false)
-	if _, qerr := d.Query(context.Background(), "SELECT 1 AS one", nil); qerr != nil {
-		t.Fatalf("query: %v", qerr)
+	d := mustConnect(t, m, name)
+
+	row, qerr := d.Query(context.Background(), "SELECT COUNT(*) AS c FROM items", nil)
+	if qerr != nil || row["c"] != "2" {
+		t.Fatalf("row=%v err=%v", row, qerr)
 	}
 }
 
-func TestPrepareConnectionString_Drivers(t *testing.T) {
+func TestResolveConnection_SQLiteVariants(t *testing.T) {
+	env := newSandboxEnv(t)
+	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
+
+	for _, writeEnabled := range []bool{false, true} {
+		m := env.manager(WithWriteOperationsEnabled(writeEnabled))
+
+		for _, drv := range []string{"sqlite3", "sqlite", "SQLITE3", " Sqlite "} {
+			t.Run(fmt.Sprintf("%q/write=%v", drv, writeEnabled), func(t *testing.T) {
+				cfg := ExternalSQLStoreConnectConfig{Driver: drv, DSN: "a.db"}
+
+				rc, err := m.resolveConnection(cfg)
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+
+				if rc.Driver != SQLiteDriverName {
+					t.Fatalf("driver = %q, want %q", rc.Driver, SQLiteDriverName)
+				}
+
+				if !rc.SQLite {
+					t.Fatal("SQLite flag must be set")
+				}
+
+				if rc.Writable != writeEnabled {
+					t.Fatalf("writable = %v, want %v", rc.Writable, writeEnabled)
+				}
+
+				if !strings.HasPrefix(rc.DSN, "file:") {
+					t.Fatalf("dsn must be built by service, got %q", rc.DSN)
+				}
+
+				if cfg.Driver != drv || cfg.DSN != "a.db" {
+					t.Fatalf("input cfg was modified: %+v", cfg)
+				}
+			})
+		}
+	}
+}
+
+func TestResolveConnection_NonSQLitePassThrough(t *testing.T) {
+	m := NewExternalStoreManager()
+
+	raw := "user:pass@tcp(127.0.0.1:3306)/db"
+
+	rc, err := m.resolveConnection(ExternalSQLStoreConnectConfig{Driver: "mysql", DSN: raw})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if rc.Driver != "mysql" || rc.DSN != raw || rc.SQLite || rc.Writable {
+		t.Fatalf("unexpected result: %+v", rc)
+	}
+}
+
+func TestResolveConnection_SQLiteRejectsBadPath(t *testing.T) {
 	env := newSandboxEnv(t)
 	m := env.manager()
-	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
 
-	for _, drv := range []string{"sqlite3", "sqlite", "SQLITE3", " Sqlite "} {
-		t.Run("sqlite variant "+drv, func(t *testing.T) {
-			cfg := &ExternalSQLStoreConnectConfig{Driver: drv, DSN: "a.db"}
-
-			dsn, err := m.PrepareConnectionString(cfg)
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-
-			if cfg.Driver != SQLiteCustomDriverName {
-				t.Fatalf("driver must be replaced with sandboxed one, got %q", cfg.Driver)
-			}
-
-			if !strings.HasPrefix(dsn, "file:") {
-				t.Fatalf("dsn must be built by service, got %q", dsn)
-			}
-		})
+	rc, err := m.resolveConnection(sqliteCfg("../outside/secret.db"))
+	if err == nil {
+		t.Fatalf("expected rejection, got %+v", rc)
 	}
 
-	t.Run("non-sqlite is passed through", func(t *testing.T) {
-		raw := "user:pass@tcp(127.0.0.1:3306)/db"
-		cfg := &ExternalSQLStoreConnectConfig{Driver: "mysql", DSN: raw}
-
-		dsn, err := m.PrepareConnectionString(cfg)
-		if err != nil || dsn != raw || cfg.Driver != "mysql" {
-			t.Fatalf("got dsn=%q driver=%q err=%v", dsn, cfg.Driver, err)
-		}
-	})
+	if rc != (resolvedConnection{}) {
+		t.Fatalf("result must be zero on error, got %+v", rc)
+	}
 }
 
-func TestConnect_ReadOnlyByDefault(t *testing.T) {
+func TestConnect_ReadOnly_WhenWritesDisabled(t *testing.T) {
 	env := newSandboxEnv(t)
-	m := env.manager(WithWriteOperationsEnabled(true))
+	m := env.manager()
 
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
-	d := mustConnect(t, m, "a.db", false)
+	d := mustConnect(t, m, "a.db")
 
 	row, err := d.Query(context.Background(), "SELECT id, name FROM items ORDER BY id", nil)
 	if err != nil {
@@ -374,39 +491,35 @@ func TestConnect_ReadOnlyByDefault(t *testing.T) {
 		t.Fatalf("unexpected row: %v", row)
 	}
 
-	_, werr := d.db.ExecContext(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma')")
-	if werr == nil || !strings.Contains(strings.ToLower(werr.Error()), "readonly") {
-		t.Fatalf("write must fail with readonly error, got: %v", werr)
-	}
+	t.Run("blocked by guard", func(t *testing.T) {
+		if _, qerr := d.Query(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma')", nil); qerr == nil {
+			t.Fatal("INSERT must be rejected by the statement guard")
+		}
+	})
+
+	t.Run("blocked by DSN", func(t *testing.T) {
+		_, werr := d.db.ExecContext(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma')")
+		if werr == nil || !strings.Contains(strings.ToLower(werr.Error()), "readonly") {
+			t.Fatalf("write must fail with readonly error, got: %v", werr)
+		}
+	})
 }
 
-func TestConnect_WriteDowngraded_WhenServiceDisablesWrites(t *testing.T) {
-	env := newSandboxEnv(t)
-	m := env.manager()
-
-	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
-	d := mustConnect(t, m, "a.db", true)
-
-	_, werr := d.db.ExecContext(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma')")
-	if werr == nil {
-		t.Fatal("write must be impossible when service has writes disabled")
-	}
-}
-
-func TestConnect_WriteAllowed_WhenEnabledAndRequested(t *testing.T) {
+func TestConnect_Writable_WhenEnabled(t *testing.T) {
 	env := newSandboxEnv(t)
 	m := env.manager(WithWriteOperationsEnabled(true))
 
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
-	d := mustConnect(t, m, "a.db", true)
+	d := mustConnect(t, m, "a.db")
 
-	if _, err := d.db.ExecContext(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma')"); err != nil {
-		t.Fatalf("write must succeed: %v", err)
+	row, err := d.Query(context.Background(), "INSERT INTO items (id, name) VALUES (3, 'gamma') RETURNING id", nil)
+	if err != nil || row["id"] != "3" {
+		t.Fatalf("insert via guard: row=%v err=%v", row, err)
 	}
 
-	row, qerr := d.Query(context.Background(), "SELECT COUNT(*) AS c FROM items", nil)
-	if qerr != nil || row["c"] != "3" {
-		t.Fatalf("row=%v err=%v", row, qerr)
+	cnt, qerr := d.Query(context.Background(), "SELECT COUNT(*) AS c FROM items", nil)
+	if qerr != nil || cnt["c"] != "3" {
+		t.Fatalf("row=%v err=%v", cnt, qerr)
 	}
 }
 
@@ -414,9 +527,7 @@ func TestConnect_RW_DoesNotCreateMissingFile(t *testing.T) {
 	env := newSandboxEnv(t)
 	m := env.manager(WithWriteOperationsEnabled(true))
 
-	d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{
-		Driver: "sqlite3", DSN: "new.db", Writable: true,
-	})
+	d, err := m.Connect(context.Background(), sqliteCfg("new.db"))
 	if err == nil {
 		_ = d.db.Close()
 		t.Fatal("must not connect to a non-existing file")
@@ -429,30 +540,55 @@ func TestConnect_RW_DoesNotCreateMissingFile(t *testing.T) {
 
 func TestConnect_Cache(t *testing.T) {
 	env := newSandboxEnv(t)
-	m := env.manager(WithWriteOperationsEnabled(true))
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
 
-	ro1 := mustConnect(t, m, "a.db", false)
-	ro2 := mustConnect(t, m, "a.db", false)
-	rw := mustConnect(t, m, "a.db", true)
+	ro := env.manager()
+	rw := env.manager(WithWriteOperationsEnabled(true))
 
-	if ro1 != ro2 {
-		t.Fatal("same config must hit the cache")
-	}
+	t.Run("same config hits the cache", func(t *testing.T) {
+		d1 := mustConnect(t, ro, "a.db")
+		d2 := mustConnect(t, ro, "a.db")
 
-	if ro1 == rw {
-		t.Fatal("ro and rw connections must not share a cache entry")
-	}
+		if d1 != d2 {
+			t.Fatal("same config must hit the cache")
+		}
+	})
 
-	abs := mustConnect(t, m, filepath.Join(env.root, "a.db"), false)
-	if abs != ro1 {
-		t.Fatal("relative and absolute forms of the same file must share a cache entry")
-	}
+	t.Run("relative and absolute forms share an entry", func(t *testing.T) {
+		d1 := mustConnect(t, ro, "a.db")
+		d2 := mustConnect(t, ro, filepath.Join(env.root, "a.db"))
+
+		if d1 != d2 {
+			t.Fatal("relative and absolute forms of the same file must share a cache entry")
+		}
+	})
+
+	t.Run("ro and rw use different keys", func(t *testing.T) {
+		roRC, err := ro.resolveConnection(sqliteCfg("a.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		rwRC, err := rw.resolveConnection(sqliteCfg("a.db"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if roRC.DSN == rwRC.DSN {
+			t.Fatalf("ro and rw must produce different DSNs: %q", roRC.DSN)
+		}
+
+		d1 := mustConnect(t, ro, "a.db")
+		d2 := mustConnect(t, rw, "a.db")
+
+		if d1.writable || !d2.writable {
+			t.Fatalf("writable flags: ro=%v rw=%v", d1.writable, d2.writable)
+		}
+	})
 }
 
 func TestConnect_Rejected(t *testing.T) {
 	env := newSandboxEnv(t)
-	m := env.manager(WithWriteOperationsEnabled(true))
 
 	secret := filepath.Join(env.outside, "secret.db")
 	createSQLiteDB(t, secret)
@@ -463,12 +599,12 @@ func TestConnect_Rejected(t *testing.T) {
 		"../outside/secret.db", secret, "/etc/passwd",
 	}
 
-	for _, writable := range []bool{false, true} {
+	for _, writeEnabled := range []bool{false, true} {
+		m := env.manager(WithWriteOperationsEnabled(writeEnabled))
+
 		for _, in := range inputs {
-			t.Run(fmt.Sprintf("%q/writable=%v", in, writable), func(t *testing.T) {
-				d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{
-					Driver: "sqlite3", DSN: in, Writable: writable,
-				})
+			t.Run(fmt.Sprintf("%q/write=%v", in, writeEnabled), func(t *testing.T) {
+				d, err := m.Connect(context.Background(), sqliteCfg(in))
 				if err == nil {
 					_ = d.db.Close()
 					t.Fatal("expected rejection")
@@ -485,14 +621,14 @@ func TestConnect_Rejected(t *testing.T) {
 func TestConnect_SQLiteDisabled_WithoutSandbox(t *testing.T) {
 	m := NewExternalStoreManager(WithLogger(wlog.NewLogger(&wlog.LoggerConfiguration{})))
 
-	d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{Driver: "sqlite3", DSN: "a.db"})
+	d, err := m.Connect(context.Background(), sqliteCfg("a.db"))
 	if err == nil {
 		_ = d.db.Close()
 		t.Fatal("sqlite must be disabled when sandbox is not configured")
 	}
 }
 
-func TestConnect_CannotBypassWithInternalDriverName(t *testing.T) {
+func TestConnect_UserDSNNeverUsedRaw(t *testing.T) {
 	env := newSandboxEnv(t)
 	m := env.manager(WithWriteOperationsEnabled(true))
 
@@ -507,14 +643,13 @@ func TestConnect_CannotBypassWithInternalDriverName(t *testing.T) {
 
 	for _, dsn := range dsns {
 		t.Run(dsn, func(t *testing.T) {
-			d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{
-				Driver:   SQLiteCustomDriverName,
-				DSN:      dsn,
-				Writable: true,
+			d, err := m.Connect(context.Background(), ExternalSQLStoreConnectConfig{
+				Driver: SQLiteDriverName,
+				DSN:    dsn,
 			})
 			if err == nil {
 				_ = d.db.Close()
-				t.Fatalf("driver %q with user-supplied DSN bypasses sandbox validation", SQLiteCustomDriverName)
+				t.Fatalf("user-supplied DSN %q bypasses sandbox validation", dsn)
 			}
 		})
 	}
@@ -539,7 +674,7 @@ func TestConnect_Concurrent_SingleInstancePerKey(t *testing.T) {
 		go func() {
 			defer wg.Done()
 
-			d, err := m.Connect(context.Background(), &ExternalSQLStoreConnectConfig{Driver: "sqlite3", DSN: "a.db"})
+			d, err := m.Connect(context.Background(), sqliteCfg("a.db"))
 			if err != nil {
 				t.Errorf("connect: %v", err)
 				return
@@ -562,42 +697,108 @@ func TestConnect_Concurrent_SingleInstancePerKey(t *testing.T) {
 	}
 }
 
-func TestAuthorizer_BlocksAttach(t *testing.T) {
+func TestSQLiteGuard(t *testing.T) {
+	cases := []struct {
+		name  string
+		sql   string
+		write bool
+		ok    bool
+	}{
+		{"select", "SELECT 1", false, true},
+		{"select lower", "select 1", false, true},
+		{"select trailing semicolon", "SELECT 1;  -- done", false, true},
+		{"with cte", "WITH x AS (SELECT 1) SELECT * FROM x", false, true},
+		{"values", "VALUES (1), (2)", false, true},
+		{"leading comment", "/* hi */ -- yo\n SELECT 1", false, true},
+		{"semicolon in string", "SELECT 'a;b'", false, true},
+		{"semicolon in quoted identifier", `SELECT 1 AS "a;b"`, false, true},
+		{"semicolon in bracket identifier", "SELECT 1 AS [a;b]", false, true},
+		{"escaped quote", "SELECT 'it''s; fine'", false, true},
+
+		{"attach", "ATTACH DATABASE '/tmp/x.db' AS x", false, false},
+		{"attach lower", "attach database '/tmp/x.db' as x", false, false},
+		{"attach bound param", "ATTACH DATABASE ? AS x", false, false},
+		{"detach", "DETACH DATABASE x", false, false},
+		{"vacuum", "VACUUM", false, false},
+		{"vacuum into", "VACUUM INTO '/tmp/out.db'", false, false},
+		{"vacuum into after comment", "/**/ vacuum into '/tmp/out.db'", false, false},
+		{"pragma", "PRAGMA writable_schema=1", false, false},
+		{"create", "CREATE TABLE t(x)", false, false},
+		{"drop", "DROP TABLE items", false, false},
+		{"multi statement", "SELECT 1; VACUUM INTO '/tmp/out.db'", false, false},
+		{"multi statement w/ comment", "SELECT 1; /* x */ ATTACH 'a' AS b", false, false},
+		{"unterminated string", "SELECT 'abc", false, false},
+		{"unterminated bracket", "SELECT [abc", false, false},
+		{"empty", "   ", false, false},
+		{"only comment", "-- nothing", false, false},
+
+		{"insert ro", "INSERT INTO t VALUES (1)", false, false},
+		{"update ro", "UPDATE t SET x = 1", false, false},
+		{"delete ro", "DELETE FROM t", false, false},
+		{"insert rw", "INSERT INTO t VALUES (1)", true, true},
+		{"update rw", "UPDATE t SET x = 1", true, true},
+		{"delete rw", "DELETE FROM t", true, true},
+		{"replace rw", "REPLACE INTO t VALUES (1)", true, true},
+		{"vacuum into rw", "VACUUM INTO '/tmp/out.db'", true, false},
+		{"attach rw", "ATTACH 'a' AS b", true, false},
+		{"pragma rw", "PRAGMA writable_schema=1", true, false},
+		{"drop rw", "DROP TABLE t", true, false},
+		{"multi statement rw", "INSERT INTO t VALUES (1); ATTACH 'a' AS b", true, false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkSQLiteStatement(tc.sql, tc.write)
+			if (err == nil) != tc.ok {
+				t.Fatalf("ok=%v, err=%v", tc.ok, err)
+			}
+		})
+	}
+}
+
+func TestGuard_BlocksAttachVacuumPragma(t *testing.T) {
 	env := newSandboxEnv(t)
-	m := env.manager(WithWriteOperationsEnabled(true))
 
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
 
 	secret := filepath.Join(env.outside, "secret.db")
 	createSQLiteDBWithSQL(t, secret, `CREATE TABLE secrets (v TEXT); INSERT INTO secrets VALUES ('TOP');`)
 
-	before, err := os.ReadFile(secret)
-	if err != nil {
-		t.Fatalf("read secret: %v", err)
-	}
+	leak := filepath.Join(env.outside, "leak.db")
+	before := readFile(t, secret)
 
 	tests := []struct {
 		name   string
 		sql    string
 		params []interface{}
 	}{
-		{"plain", fmt.Sprintf("ATTACH DATABASE '%s' AS x", secret), nil},
-		{"lower case", fmt.Sprintf("attach '%s' as x", secret), nil},
-		{"leading comment", fmt.Sprintf("/* c */ ATTACH '%s' AS x", secret), nil},
-		{"after another statement", fmt.Sprintf("SELECT 1; ATTACH '%s' AS x", secret), nil},
-		{"bound parameter", "ATTACH DATABASE ? AS x", []interface{}{secret}},
-		{"uri form", fmt.Sprintf("ATTACH 'file:%s?mode=rw' AS x", secret), nil},
-		{"memory", "ATTACH ':memory:' AS x", nil},
-		{"temp db", "ATTACH '' AS x", nil},
+		{"attach plain", fmt.Sprintf("ATTACH DATABASE '%s' AS x", secret), nil},
+		{"attach lower case", fmt.Sprintf("attach '%s' as x", secret), nil},
+		{"attach leading comment", fmt.Sprintf("/* c */ ATTACH '%s' AS x", secret), nil},
+		{"attach after another statement", fmt.Sprintf("SELECT 1; ATTACH '%s' AS x", secret), nil},
+		{"attach bound parameter", "ATTACH DATABASE ? AS x", []interface{}{secret}},
+		{"attach uri form", fmt.Sprintf("ATTACH 'file:%s?mode=rw' AS x", secret), nil},
+		{"attach memory", "ATTACH ':memory:' AS x", nil},
+		{"attach temp db", "ATTACH '' AS x", nil},
+
+		{"vacuum into", fmt.Sprintf("VACUUM INTO '%s'", leak), nil},
+		{"vacuum into main", fmt.Sprintf("VACUUM main INTO '%s'", leak), nil},
+		{"vacuum into bound parameter", "VACUUM INTO ?", []interface{}{leak}},
+		{"vacuum into leading comment", fmt.Sprintf("/**/ vacuum into '%s'", leak), nil},
+		{"vacuum into after another statement", fmt.Sprintf("SELECT 1; VACUUM INTO '%s'", leak), nil},
+
+		{"pragma writable_schema", "PRAGMA writable_schema = 1", nil},
+		{"pragma query_only off", "PRAGMA query_only = 0", nil},
 	}
 
-	for _, writable := range []bool{false, true} {
-		d := mustConnect(t, m, "a.db", writable)
+	for _, writeEnabled := range []bool{false, true} {
+		m := env.manager(WithWriteOperationsEnabled(writeEnabled))
+		d := mustConnect(t, m, "a.db")
 
 		for _, tc := range tests {
-			t.Run(fmt.Sprintf("%s/writable=%v", tc.name, writable), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%s/write=%v", tc.name, writeEnabled), func(t *testing.T) {
 				if _, qerr := d.Query(context.Background(), tc.sql, tc.params); qerr == nil {
-					t.Fatal("ATTACH must be denied")
+					t.Fatalf("%q must be denied", tc.sql)
 				}
 
 				if _, qerr := d.Query(context.Background(), "SELECT v FROM x.secrets", nil); qerr == nil {
@@ -607,12 +808,11 @@ func TestAuthorizer_BlocksAttach(t *testing.T) {
 		}
 	}
 
-	after, err := os.ReadFile(secret)
-	if err != nil {
-		t.Fatalf("read secret: %v", err)
+	if _, err := os.Stat(leak); !os.IsNotExist(err) {
+		t.Fatalf("VACUUM INTO created a file outside the sandbox (stat err=%v)", err)
 	}
 
-	if string(before) != string(after) {
+	if after := readFile(t, secret); before != after {
 		t.Fatal("outside file was modified")
 	}
 }
@@ -622,7 +822,7 @@ func TestSQLite_LoadExtensionDisabled(t *testing.T) {
 	m := env.manager()
 
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
-	d := mustConnect(t, m, "a.db", false)
+	d := mustConnect(t, m, "a.db")
 
 	if _, err := d.Query(context.Background(), "SELECT load_extension('/nonexistent/lib.so')", nil); err == nil {
 		t.Fatal("load_extension must not be available")
@@ -634,7 +834,7 @@ func TestQuery_Semantics(t *testing.T) {
 	m := env.manager()
 
 	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
-	d := mustConnect(t, m, "a.db", false)
+	d := mustConnect(t, m, "a.db")
 
 	ctx := context.Background()
 
@@ -678,7 +878,6 @@ func TestQuery_Semantics(t *testing.T) {
 	})
 
 	t.Run("NULL current representation", func(t *testing.T) {
-		// фіксуємо поточну поведінку: fmt.Sprint(nil) == "<nil>"
 		row, err := d.Query(ctx, "SELECT NULL AS n", nil)
 		if err != nil || row["n"] != "<nil>" {
 			t.Fatalf("row=%v err=%v", row, err)
@@ -699,4 +898,21 @@ func TestQuery_Semantics(t *testing.T) {
 			t.Fatal("expected error on canceled context")
 		}
 	})
+}
+
+func TestQuery_NonSQLiteDbSkipsGuard(t *testing.T) {
+	env := newSandboxEnv(t)
+	createSQLiteDB(t, filepath.Join(env.root, "a.db"))
+
+	raw, err := sql.Open(SQLiteDriverName, filepath.Join(env.root, "a.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = raw.Close() })
+
+	d := &ExternalDb{db: raw, useAllowList: false}
+
+	if _, qerr := d.Query(context.Background(), "PRAGMA user_version", nil); qerr != nil {
+		t.Fatalf("guard must not apply to non-sqlite connections: %v", qerr)
+	}
 }

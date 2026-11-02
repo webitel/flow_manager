@@ -19,23 +19,22 @@ type Config struct {
 	Record      struct {
 		Sample int `json:"sample" flag:"record_sample|0|Set the sample rate of the recording" env:"RECORD_SAMPLE"`
 	} `json:"record"`
-	DebugImap                    bool              `json:"debug_imap" flag:"debug_imap|false|Debug IMAP protocol" env:"DEBUG_IMAP"`
-	SqlSettings                  SqlSettings       `json:"sql_settings"`
-	MQSettings                   MQSettings        `json:"mq_settings"`
-	RedisSettings                RedisSettings     `json:"redis_settings"`
-	DiscoverySettings            DiscoverySettings `json:"discovery_settings"`
-	PreSignedCertificateLocation string            `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate" env:"PRESIGNED_CERT"`
-	Dev                          bool              `json:"dev" flag:"dev|false|Dev mode" env:"DEV"`
-	Esl                          EslSettings       `json:"esl"`
-	WebHook                      WebHookSettings   `json:"web_hook"`
-	Grpc                         GrpcServeSettings `json:"grpc"`
-	// EmailOAuth                   map[string]oauth2.Config `json:"email_oauth2,omitempty"`
-	ChatTemplatesSettings ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
-	Log                   LogSettings           `json:"log"`
-	Tls                   TLSConfig             `json:"tls"`
-	ExternalSQLSettings   ExternalSQLSettings   `json:"external_sql_settings"`
-	ProxyConfigFile       string                `json:"proxy_config_file" flag:"proxy_config_file||Proxy settings file (http_proxy/https_proxy/no_proxy) watched for changes" env:"PROXY_CONFIG_FILE"`
-	Health                HealthSettings        `json:"health"`
+	DebugImap                    bool                  `json:"debug_imap" flag:"debug_imap|false|Debug IMAP protocol" env:"DEBUG_IMAP"`
+	SqlSettings                  SqlSettings           `json:"sql_settings"`
+	MQSettings                   MQSettings            `json:"mq_settings"`
+	RedisSettings                RedisSettings         `json:"redis_settings"`
+	DiscoverySettings            DiscoverySettings     `json:"discovery_settings"`
+	PreSignedCertificateLocation string                `json:"presigned_cert" flag:"presigned_cert|/opt/storage/key.pem|Location to pre signed certificate" env:"PRESIGNED_CERT"`
+	Dev                          bool                  `json:"dev" flag:"dev|false|Dev mode" env:"DEV"`
+	Esl                          EslSettings           `json:"esl"`
+	WebHook                      WebHookSettings       `json:"web_hook"`
+	Grpc                         GrpcServeSettings     `json:"grpc"`
+	ChatTemplatesSettings        ChatTemplatesSettings `json:"chat_templates_settings,omitempty"`
+	Log                          LogSettings           `json:"log"`
+	Tls                          TLSConfig             `json:"tls"`
+	ExternalSQLSettings          ExternalSQLSettings   `json:"external_sql_settings"`
+	ProxyConfigFile              string                `json:"proxy_config_file" flag:"proxy_config_file||Proxy settings file (http_proxy/https_proxy/no_proxy) watched for changes" env:"PROXY_CONFIG_FILE"`
+	Health                       HealthSettings        `json:"health"`
 }
 
 type HealthSettings struct {
@@ -109,23 +108,23 @@ type MQSettings struct {
 }
 
 type ExternalSQLSettings struct {
-	Enabled              bool   `json:"enabled" flag:"external_sql|false|Enable use of external SQL stores" env:"EXTERNAL_SQL"`
-	SandboxRootDirectory string `json:"root_directory" flag:"external_sql_sandbox_directory|/var/lib/webitel/webitel-flow-manager/sqlite|Root path for sandbox SQLLite access directory" env:"EXTERNAL_SQL_SANDBOX_DIRECTORY"`
-	WriteEnabled         bool   `json:"writable" flag:"external_sql_write_enabled|false|Is enabled write operations with external SQL stores" env:"EXTERNAL_SQL_WRITE_ENABLED"`
+	Enabled                    bool   `json:"enabled" flag:"external_sql|false|Enable use of external SQL stores" env:"EXTERNAL_SQL"`
+	SQLiteSandboxRootDirectory string `json:"sqlite_root_directory" flag:"external_sql_sqlite_sandbox_directory|/var/lib/webitel/webitel-flow-manager/sqlite|Root path for sandbox SQLite access directory" env:"EXTERNAL_SQL_SQLITE_SANDBOX_DIRECTORY"`
+	SQLiteWriteEnabled         bool   `json:"sqlite_write_enabled" flag:"external_sql_sqlite_write_enabled|false|Open SQLite databases in read-write mode" env:"EXTERNAL_SQL_SQLITE_WRITE_ENABLED"`
 }
 
 var ErrEmptyExternalSQLSandbox = NewAppError("Config", "model.config.external_sql_settings.empty", nil, "empty external sql sandbox dir", 400)
 
 func (s *ExternalSQLSettings) Prepare() *AppError {
-	if strings.TrimSpace(s.SandboxRootDirectory) == "" {
+	if strings.TrimSpace(s.SQLiteSandboxRootDirectory) == "" {
 		return ErrEmptyExternalSQLSandbox
 	}
 
-	if !filepath.IsAbs(s.SandboxRootDirectory) {
+	if !filepath.IsAbs(s.SQLiteSandboxRootDirectory) {
 		return NewAppError("Config", "model.config.external_sql_settings.not_absolute", nil, "sandbox root must be absolute", 400)
 	}
 
-	real, err := filepath.EvalSymlinks(filepath.Clean(s.SandboxRootDirectory))
+	real, err := filepath.EvalSymlinks(filepath.Clean(s.SQLiteSandboxRootDirectory))
 	if err != nil {
 		return NewAppError("Config", "model.config.external_sql_settings.sandbox_root", nil, fmt.Sprintf("sandbox root %+v", err), 400)
 	}
@@ -136,14 +135,10 @@ func (s *ExternalSQLSettings) Prepare() *AppError {
 	}
 
 	if fi.Mode().Perm()&0o002 != 0 {
-		return NewAppError("Config", "model.config.external_sql_settings.word_writable", nil, "sandbox root must not be a world writable", 400)
+		return NewAppError("Config", "model.config.external_sql_settings.world_writable", nil, "sandbox root must not be a world writable", 400)
 	}
 
-	s.SandboxRootDirectory = real
+	s.SQLiteSandboxRootDirectory = real
 
 	return nil
-}
-
-func (s *ExternalSQLSettings) SanitazeOnPrepareFailure() {
-	s.SandboxRootDirectory = ""
 }

@@ -10,16 +10,15 @@ import (
 
 var ErrExternalStoreDisabled = model.NewAppError("App", "app.settings.sql.external.disabled", nil, "External store disabled", http.StatusForbidden)
 
-func (fm *FlowManager) GetSqlDb(ctx context.Context, driver, dns string, writable bool) (*cachelayer.ExternalDb, *model.AppError) {
+func (fm *FlowManager) GetSqlDb(ctx context.Context, driver, dns string) (*cachelayer.ExternalDb, *model.AppError) {
 	if fm.ExternalStore == nil {
 		return nil, ErrExternalStoreDisabled
 	}
 
 	connectCfg := cachelayer.ExternalSQLStoreConnectConfig{
-		Driver:   driver,
-		DSN:      dns,
-		Writable: writable,
+		Driver: driver,
+		DSN:    dns,
 	}
 
-	return fm.ExternalStore.Connect(ctx, &connectCfg)
+	return fm.ExternalStore.Connect(ctx, connectCfg)
 }

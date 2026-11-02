@@ -185,16 +185,18 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if config.ExternalSQLSettings.Enabled {
-		if err := config.ExternalSQLSettings.Prepare(); err != nil {
-			config.ExternalSQLSettings.SanitazeOnPrepareFailure()
-			wlog.Error("prepare external sql settings", wlog.Err(err))
+		opts := []cachelayer.ExternalStoreManagerOption{
+			cachelayer.WithWriteOperationsEnabled(config.ExternalSQLSettings.SQLiteWriteEnabled),
+			cachelayer.WithLogger(fm.log.With(wlog.Namespace("external_sql"))),
 		}
 
-		fm.ExternalStore = cachelayer.NewExternalStoreManager(
-			cachelayer.WithSQLLiteSandboxDir(config.ExternalSQLSettings.SandboxRootDirectory),
-			cachelayer.WithWriteOperationsEnabled(config.ExternalSQLSettings.WriteEnabled),
-			cachelayer.WithLogger(wlog.GlobalLogger().With(wlog.Namespace("external_sql"))),
-		)
+		if err := config.ExternalSQLSettings.Prepare(); err != nil {
+			fm.log.Warn("sqlite is disabled: invalid sandbox directory", wlog.Err(err))
+		} else {
+			opts = append(opts, cachelayer.WithSQLiteSandboxDir(config.ExternalSQLSettings.SQLiteSandboxRootDirectory))
+		}
+
+		fm.ExternalStore = cachelayer.NewExternalStoreManager(opts...)
 	}
 
 	// Bind http.DefaultTransport to the proxy manager before any outbound
