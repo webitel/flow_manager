@@ -26,9 +26,31 @@ type RecordSessionArg struct {
 	Type           string
 	Stereo         bool
 	Bridged        bool
-	MinSec         int  `json:"minSec"`
-	FollowTransfer bool `json:"followTransfer"`
-	Force          bool `json:"force"`
+	MinSec         int    `json:"minSec"`
+	FollowTransfer bool   `json:"followTransfer"`
+	Force          bool   `json:"force"`
+	SetVar         string `json:"setVar"`
+}
+
+const (
+	RecordActionStop           string = "stop"
+	DefaultRecordSessionFormat string = "mp3"
+	DefaultRecordSessionMinSec int    = 2
+)
+
+func (a *RecordSessionArg) IsStop() bool       { return strings.TrimSpace(a.Action) == RecordActionStop }
+func (a *RecordSessionArg) HasEmptyName() bool { return strings.TrimSpace(a.Name) == "" }
+
+func (a *RecordSessionArg) SetVarOrDefault() string {
+	if a == nil {
+		return model.DefaultRecordingVarName
+	}
+
+	if strings.TrimSpace(a.SetVar) == "" {
+		return model.DefaultRecordingVarName
+	}
+
+	return a.SetVar
 }
 
 func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
@@ -62,33 +84,53 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
 }
 
-// FIXME test record stop
 func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
 	argv := RecordSessionArg{
-		Name:   "",
-		Type:   "mp3",
-		MinSec: 2,
+		Type:   DefaultRecordSessionFormat,
+		MinSec: DefaultRecordSessionMinSec,
 	}
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
-	if argv.Name == "" {
-		argv.Name = recordSessionTemplate
+	if argv.HasEmptyName() {
+		argv.Name = model.RecordSessionTemplate
 	}
 
 	normalizeRecordName(&argv.Name)
 
-	if argv.Action == "stop" {
-		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
+	if argv.IsStop() {
+		return call.RecordSessionStop(ctx, argv.SetVarOrDefault())
 	}
 
-	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer, argv.Force)
+	recordSessionRequest := &model.RecordSessionArgs{
+		Name:           argv.Name,
+		Format:         argv.Type,
+		MinSec:         argv.MinSec,
+		Stereo:         argv.Stereo,
+		Bridged:        argv.Bridged,
+		FollowTransfer: argv.FollowTransfer,
+		Force:          argv.Force,
+		PathVar:        argv.SetVarOrDefault(),
+	}
+
+	return call.RecordSession(ctx, recordSessionRequest)
 }
 
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
-	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+	sysRecordRequest := &model.RecordSessionArgs{
+		Name:           model.RecordSessionTemplate,
+		Format:         DefaultRecordSessionFormat,
+		MinSec:         DefaultRecordSessionMinSec,
+		Stereo:         true,
+		Bridged:        call.IVRQueueId() == nil,
+		FollowTransfer: true,
+		Force:          false,
+		PathVar:        model.DefaultSysRecordingVarName,
+	}
+
+	_, err := call.RecordSession(ctx, sysRecordRequest)
 
 	return err
 }
