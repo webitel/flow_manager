@@ -136,13 +136,10 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 		return nil
 	}
 
-	// Природний кінець схеми → pop зі стека контролю. Complete шлемо лише для
-	// пушнутих (вкладених) схем; owner/стартова не комплітиться на боці
-	// thread-service, тож зайвий виклик пропускаємо.
-	if conv.IsNested() {
-		if id := conv.CompleteId(); id != "" {
-			conv.Complete(id)
-		}
+	// Природний кінець схеми → pop зі стека контролю. Для owner-бота
+	// thread-service робить CompleteBotControl no-op.
+	if id := conv.CompleteId(); id != "" {
+		conv.Complete(id)
 	}
 
 	// Локально повертаємо контроль на призупинену джерельну схему (якщо ця була
