@@ -254,6 +254,12 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 			return nil
 		}
 
+		if releasedSessionID != "" {
+			s.adoptPush(compositeSessionID, releasedSessionID, m.ReleasedSub)
+
+			return nil
+		}
+
 		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
 		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
 		s.log.Debug("grant for already-active connection, ignoring",
@@ -336,9 +342,35 @@ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error
 
 	msg := s.synthesizeGrantMessage(m, from, to)
 
-	// nested=true, якщо це push над іншою схемою (є released_sub); owner
-	// (released_sub=0) стартує як не-nested і не шле Complete на завершенні.
+	// nested=true, якщо це push над іншою схемою (є released_sub).
 	return s.startDialog(compositeSessionID, to, msg, releasedSessionID != "")
+}
+
+// adoptPush applies a push grant to a schema that an inbound message already started
+// before the grant arrived: the source bot is suspended and linked as the parent,
+// exactly as if the grant had started the schema.
+func (s *server) adoptPush(sessionID, releasedSessionID string, releasedSub int) {
+	released, ok := s.connectionStore.Get(releasedSessionID)
+	if !ok {
+		s.log.Debug("push grant for already-active connection, source bot not running",
+			wlog.String("session_id", sessionID),
+			wlog.String("released_session_id", releasedSessionID),
+		)
+
+		return
+	}
+
+	s.log.Debug("push grant for already-active connection, suspending source bot",
+		wlog.String("session_id", sessionID),
+		wlog.String("released_session_id", releasedSessionID),
+		wlog.Int("released_sub", releasedSub),
+	)
+
+	if !released.IsSuspended() && !released.IsTerminating() {
+		released.Suspend()
+	}
+
+	s.pushParent.Store(sessionID, releasedSessionID)
 }
 
 func (s *server) suspendForAgent(released model.BotControlReleased) {
