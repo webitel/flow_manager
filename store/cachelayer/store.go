@@ -16,19 +16,37 @@ import (
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/wlog"
 	"golang.org/x/sync/singleflight"
-	_ "modernc.org/sqlite"
+	"modernc.org/sqlite"
 )
 
 const (
 	CacheSize   = 100
 	CacheExpire = 25 * 1000
+
+	SQLiteDriverName = "sqlite_sandboxed"
 )
 
-const (
-	SQLiteDriverName        = "sqlite"
-	sqliteModeRO     string = "ro"
-	sqliteModeRW     string = "rw"
-)
+func init() {
+	drv := new(sqlite.Driver)
+	drv.RegisterConnectionHook(func(conn sqlite.ExecQuerierContext, _ string) error {
+		r, ok := conn.(sqlite.AuthorizerRegisterer)
+		if !ok {
+			return errors.New("sqlite: authorizer is not supported")
+		}
+		return r.RegisterAuthorizer(sqliteAuthorizer)
+	})
+	sql.Register(SQLiteDriverName, drv)
+}
+
+func sqliteAuthorizer(action sqlite.AuthorizerActionCode, _, _, _, _ string) sqlite.AuthorizerReturnCode {
+	switch action {
+	case sqlite.AuthSelect, sqlite.AuthRead, sqlite.AuthFunction, sqlite.AuthRecursive,
+		sqlite.AuthInsert, sqlite.AuthUpdate, sqlite.AuthDelete:
+		return sqlite.AuthorizerOK
+	default:
+		return sqlite.AuthorizerDeny
+	}
+}
 
 type ExternalStoreManagerOption func(*ExternalStoreManager)
 
@@ -37,7 +55,7 @@ func WithSQLiteSandboxDir(sandbox string) ExternalStoreManagerOption {
 }
 
 func WithWriteOperationsEnabled(enabled bool) ExternalStoreManagerOption {
-	return func(esm *ExternalStoreManager) { esm.writeEnabled = enabled }
+	return func(esm *ExternalStoreManager) { esm.sqliteWriteEnabled = enabled }
 }
 
 func WithLogger(logger *wlog.Logger) ExternalStoreManagerOption {
@@ -45,29 +63,20 @@ func WithLogger(logger *wlog.Logger) ExternalStoreManagerOption {
 }
 
 type ExternalStoreManager struct {
-	sqliteSandboxDir string
-	writeEnabled     bool
-	cache            model.ObjectCache
-	logger           *wlog.Logger
-	sf               singleflight.Group
+	sqliteSandboxDir   string
+	sqliteWriteEnabled bool
+	cache              model.ObjectCache
+	logger             *wlog.Logger
+	sf                 singleflight.Group
 }
 
 type ExternalDb struct {
-	db           *sql.DB
-	useAllowList bool
-	writable     bool
+	db *sql.DB
 }
 
 type ExternalSQLStoreConnectConfig struct {
 	Driver string
 	DSN    string
-}
-
-type resolvedConnection struct {
-	Driver   string
-	DSN      string
-	SQLite   bool
-	Writable bool
 }
 
 func NewExternalStoreManager(options ...ExternalStoreManagerOption) *ExternalStoreManager {
@@ -82,12 +91,12 @@ func NewExternalStoreManager(options ...ExternalStoreManagerOption) *ExternalSto
 }
 
 func (e *ExternalStoreManager) Connect(_ context.Context, cfg ExternalSQLStoreConnectConfig) (*ExternalDb, *model.AppError) {
-	rc, werr := e.resolveConnection(cfg)
-	if werr != nil {
-		return nil, werr
+	driver, dsn, appErr := e.resolveConnection(cfg)
+	if appErr != nil {
+		return nil, appErr
 	}
 
-	key := rc.Driver + "|" + rc.DSN
+	key := driver + "|" + dsn
 
 	if d, ok := e.cache.Get(key); ok {
 		return d.(*ExternalDb), nil
@@ -98,16 +107,15 @@ func (e *ExternalStoreManager) Connect(_ context.Context, cfg ExternalSQLStoreCo
 			return d, nil
 		}
 
-		db, err := sql.Open(rc.Driver, rc.DSN)
+		db, err := sql.Open(driver, dsn)
 		if err != nil {
 			return nil, err
 		}
 		db.SetConnMaxIdleTime(time.Second * (CacheExpire - 60))
 
-		ext := &ExternalDb{db: db, useAllowList: rc.SQLite, writable: rc.Writable}
-
+		ext := &ExternalDb{db: db}
 		e.cache.AddWithDefaultExpires(key, ext)
-		e.logger.Info("store cache db", wlog.String("driver", rc.Driver))
+		e.logger.Info("store cache db", wlog.String("driver", driver))
 
 		return ext, nil
 	})
@@ -118,83 +126,70 @@ func (e *ExternalStoreManager) Connect(_ context.Context, cfg ExternalSQLStoreCo
 	return v.(*ExternalDb), nil
 }
 
-func (e *ExternalStoreManager) resolveConnection(cfg ExternalSQLStoreConnectConfig) (resolvedConnection, *model.AppError) {
+func (e *ExternalStoreManager) resolveConnection(cfg ExternalSQLStoreConnectConfig) (driver, dsn string, appErr *model.AppError) {
 	if !isSQLiteDriver(cfg.Driver) {
-		return resolvedConnection{Driver: cfg.Driver, DSN: cfg.DSN}, nil
+		return cfg.Driver, cfg.DSN, nil
 	}
 
-	dsn, err := e.buildSQLiteDSN(cfg.DSN, e.writeEnabled)
-	if err != nil {
-		return resolvedConnection{}, err
-	}
-
-	return resolvedConnection{
-		Driver:   SQLiteDriverName,
-		DSN:      dsn,
-		SQLite:   true,
-		Writable: e.writeEnabled,
-	}, nil
+	dsn, appErr = e.buildSQLiteDSN(cfg.DSN)
+	return SQLiteDriverName, dsn, appErr
 }
 
 func (d *ExternalDb) Query(ctx context.Context, text string, params []any) (map[string]any, *model.AppError) {
-	if d.useAllowList {
-		if err := checkSQLiteStatement(text, d.writable); err != nil {
-			return nil, model.NewAppError("Cache.Query", "cache.query.sqlite_forbidden", nil, err.Error(), http.StatusBadRequest)
-		}
-	}
-
 	rows, err := d.db.QueryContext(ctx, text, params...)
 	if err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.err", nil, err.Error(), http.StatusInternalServerError)
+		return nil, queryError("cache.query.err", err)
 	}
 	defer rows.Close()
 
-	colNames, err := rows.Columns()
+	names, err := rows.Columns()
 	if err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.columns.err", nil, err.Error(), http.StatusInternalServerError)
-	}
-
-	cols := make([]any, len(colNames))
-	colPtrs := make([]any, len(colNames))
-	for i := range colNames {
-		colPtrs[i] = &cols[i]
+		return nil, queryError("cache.query.columns.err", err)
 	}
 
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			return nil, model.NewAppError("Query", "cachelayer.store.external_db.rows_next", nil,
-				fmt.Sprintf("iterating rows result: %+v", err), http.StatusInternalServerError)
+			return nil, queryError("cachelayer.store.external_db.rows_next", err)
 		}
-		return make(map[string]any), nil
+		return map[string]any{}, nil
 	}
 
-	if err = rows.Scan(colPtrs...); err != nil {
-		return nil, model.NewAppError("Cache.Query", "cache.query.scan.err", nil, err.Error(), http.StatusInternalServerError)
+	values := make([]any, len(names))
+	ptrs := make([]any, len(names))
+	for i := range values {
+		ptrs[i] = &values[i]
 	}
 
-	result := make(map[string]any, len(cols))
-	for i, col := range cols {
-		switch col.(type) {
-		case []uint8, []uint32, []uint:
-			result[colNames[i]] = fmt.Sprintf("%s", col)
-		default:
-			result[colNames[i]] = fmt.Sprint(col)
+	if err := rows.Scan(ptrs...); err != nil {
+		return nil, queryError("cache.query.scan.err", err)
+	}
+
+	result := make(map[string]any, len(names))
+	for i, v := range values {
+		if b, ok := v.([]byte); ok {
+			result[names[i]] = string(b)
+		} else {
+			result[names[i]] = fmt.Sprint(v)
 		}
 	}
 
 	return result, nil
 }
 
+func queryError(id string, err error) *model.AppError {
+	return model.NewAppError("Cache.Query", id, nil, err.Error(), http.StatusInternalServerError)
+}
+
 func isSQLiteDriver(driver string) bool {
 	switch strings.ToLower(strings.TrimSpace(driver)) {
-	case "sqlite", "sqlite3":
+	case "sqlite", "sqlite3", SQLiteDriverName:
 		return true
 	default:
 		return false
 	}
 }
 
-func (e *ExternalStoreManager) buildSQLiteDSN(userPath string, writable bool) (string, *model.AppError) {
+func (e *ExternalStoreManager) buildSQLiteDSN(userPath string) (string, *model.AppError) {
 	if e.sqliteSandboxDir == "" {
 		return "", model.NewAppError("BuildSQLiteDSN", "cachelayer.store.build_sqlite_dsn.empty", nil,
 			"sqlite is disabled: sandbox directory not configured", http.StatusBadRequest)
@@ -205,28 +200,19 @@ func (e *ExternalStoreManager) buildSQLiteDSN(userPath string, writable bool) (s
 		return "", err
 	}
 
-	mode := sqliteModeRO
-	q := url.Values{}
-	if writable {
-		mode = sqliteModeRW
-	} else {
-		q.Add("_pragma", "query_only(1)")
+	mode := "ro"
+	if e.sqliteWriteEnabled {
+		mode = "rw"
 	}
+
+	q := url.Values{}
 	q.Set("mode", mode)
 	q.Add("_pragma", "trusted_schema(0)")
 	q.Add("_pragma", "busy_timeout(5000)")
+	q.Add("_defensive", "1")
 
-	u := url.URL{
-		Scheme:   "file",
-		OmitHost: true,
-		Path:     realPath,
-		RawQuery: q.Encode(),
-	}
-
+	u := url.URL{Scheme: "file", OmitHost: true, Path: realPath, RawQuery: q.Encode()}
 	return u.String(), nil
-}
-func isWithin(root, p string) bool {
-	return p == root || strings.HasPrefix(p, root+string(os.PathSeparator))
 }
 
 func (e *ExternalStoreManager) resolveSandboxPath(p string) (string, *model.AppError) {
@@ -238,136 +224,31 @@ func (e *ExternalStoreManager) resolveSandboxPath(p string) (string, *model.AppE
 		return fail("empty_path", "empty sqlite path", http.StatusBadRequest)
 	}
 
-	lower := strings.ToLower(p)
-	if strings.HasPrefix(lower, ":") || strings.HasPrefix(lower, "file:") {
-		return fail("not_allowed_params", "memory/URI forms are not allowed", http.StatusBadRequest)
+	root, err := filepath.Abs(e.sqliteSandboxDir)
+	if err == nil {
+		root, err = filepath.EvalSymlinks(root)
 	}
-
-	if strings.ContainsAny(p, "\x00?#") {
-		return fail("forbidden_characters", "forbidden characters in path", http.StatusBadRequest)
-	}
-
-	rawRoot := filepath.Clean(e.sqliteSandboxDir)
-	root := rawRoot
-	if r, err := filepath.EvalSymlinks(rawRoot); err == nil {
-		root = r
+	if err != nil {
+		return fail("sandbox_root", "sandbox directory is not accessible", http.StatusInternalServerError)
 	}
 
 	if !filepath.IsAbs(p) {
-		p = filepath.Join(rawRoot, p)
-	}
-	p = filepath.Clean(p)
-
-	if !isWithin(rawRoot, p) && !isWithin(root, p) {
-		return fail("escaping_sandbox", "path escapes sandbox", http.StatusForbidden)
+		p = filepath.Join(root, p)
 	}
 
 	realPath, err := filepath.EvalSymlinks(p)
-	if err != nil {
-		return fail("eval_symlinks", "file is not accessible", http.StatusNotFound)
+	if err != nil || !isWithin(root, realPath) {
+		return fail("not_accessible", "file is not accessible", http.StatusNotFound)
 	}
 
-	if !isWithin(root, realPath) {
-		return fail("escaping_sandbox", "path escapes sandbox", http.StatusForbidden)
-	}
-
-	fi, serr := os.Stat(realPath)
-	if serr != nil {
-		return fail("stat", "file is not accessible", http.StatusBadRequest)
-	}
-	if !fi.Mode().IsRegular() {
+	if fi, err := os.Stat(realPath); err != nil || !fi.Mode().IsRegular() {
 		return fail("not_regular", "not a regular file", http.StatusBadRequest)
 	}
 
 	return realPath, nil
 }
 
-var (
-	sqliteReadStmts  = map[string]struct{}{"SELECT": {}, "WITH": {}, "VALUES": {}}
-	sqliteWriteStmts = map[string]struct{}{"INSERT": {}, "UPDATE": {}, "DELETE": {}, "REPLACE": {}}
-)
-
-func checkSQLiteStatement(q string, allowWrite bool) error {
-	i := skipSpaceAndComments(q, 0)
-
-	start := i
-	for i < len(q) && (q[i] >= 'a' && q[i] <= 'z' || q[i] >= 'A' && q[i] <= 'Z') {
-		i++
-	}
-	kw := strings.ToUpper(q[start:i])
-
-	if _, ok := sqliteReadStmts[kw]; !ok {
-		if _, ok := sqliteWriteStmts[kw]; !(ok && allowWrite) {
-			return fmt.Errorf("statement %q is not allowed", kw)
-		}
-	}
-
-	return ensureSingleStatement(q, i)
-}
-
-func ensureSingleStatement(q string, i int) error {
-	for i < len(q) {
-		switch c := q[i]; {
-		case c == '-' && strings.HasPrefix(q[i:], "--"), c == '/' && strings.HasPrefix(q[i:], "/*"):
-			i = skipSpaceAndComments(q, i)
-		case c == '\'' || c == '"' || c == '`':
-			end, err := skipQuoted(q, i, c)
-			if err != nil {
-				return err
-			}
-			i = end
-		case c == '[':
-			end := strings.IndexByte(q[i:], ']')
-			if end < 0 {
-				return errors.New("unterminated identifier")
-			}
-			i += end + 1
-		case c == ';':
-			if skipSpaceAndComments(q, i+1) != len(q) {
-				return errors.New("multiple statements are not allowed")
-			}
-			return nil
-		default:
-			i++
-		}
-	}
-	return nil
-}
-
-func skipQuoted(q string, i int, quote byte) (int, error) {
-	for j := i + 1; j < len(q); j++ {
-		if q[j] != quote {
-			continue
-		}
-		if j+1 < len(q) && q[j+1] == quote {
-			j++
-			continue
-		}
-		return j + 1, nil
-	}
-	return 0, errors.New("unterminated quoted string")
-}
-
-func skipSpaceAndComments(q string, i int) int {
-	for i < len(q) {
-		switch {
-		case q[i] == ' ' || q[i] == '\t' || q[i] == '\n' || q[i] == '\r' || q[i] == '\f' || q[i] == '\v':
-			i++
-		case strings.HasPrefix(q[i:], "--"):
-			nl := strings.IndexByte(q[i:], '\n')
-			if nl < 0 {
-				return len(q)
-			}
-			i += nl + 1
-		case strings.HasPrefix(q[i:], "/*"):
-			end := strings.Index(q[i+2:], "*/")
-			if end < 0 {
-				return len(q)
-			}
-			i += 2 + end + 2
-		default:
-			return i
-		}
-	}
-	return i
+func isWithin(root, p string) bool {
+	rel, err := filepath.Rel(root, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
 }
