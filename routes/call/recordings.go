@@ -1,14 +1,13 @@
 package call
 
 import (
+	"cmp"
 	"context"
 	"strings"
 
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
 )
-
-const recordSessionTemplate = "${strepoch()}_${caller_id_number}_${destination_number}"
 
 type RecordFileArg struct {
 	Name          string
@@ -20,15 +19,57 @@ type RecordFileArg struct {
 	VoiceMail     bool   `json:"voiceMail"`
 }
 
+const (
+	recordActionStop           string = "stop"
+	defaultRecordSessionFormat string = "mp3"
+	defaultRecordSessionMinSec int    = 2
+	recordSessionTemplate      string = "${strepoch()}_${caller_id_number}_${destination_number}"
+	defaultRecordingVarName    string = "wbt_record_session_path"
+	defaultSysRecordingVarName string = "wbt_record_all_calls_path"
+)
+
 type RecordSessionArg struct {
 	Action         string
 	Name           string
 	Type           string
 	Stereo         bool
 	Bridged        bool
-	MinSec         int  `json:"minSec"`
-	FollowTransfer bool `json:"followTransfer"`
-	Force          bool `json:"force"`
+	MinSec         int    `json:"minSec"`
+	FollowTransfer bool   `json:"followTransfer"`
+	Force          bool   `json:"force"`
+	SetVar         string `json:"setVar"`
+}
+
+func (a *RecordSessionArg) Normalize() {
+	if strings.TrimSpace(a.Type) == "" {
+		a.Type = defaultRecordSessionFormat
+	}
+
+	if strings.TrimSpace(a.Name) == "" {
+		a.Name = recordSessionTemplate
+	}
+
+	normalizeRecordName(&a.Name)
+}
+
+func (a *RecordSessionArg) IsStop() bool { return strings.TrimSpace(a.Action) == recordActionStop }
+
+// PathVar returns the set path variable name if specified, or defaultRecordingVarName as a fallback.
+func (a *RecordSessionArg) PathVar() string {
+	return cmp.Or(strings.TrimSpace(a.SetVar), defaultRecordingVarName)
+}
+
+func (a *RecordSessionArg) ToRequest() *model.RecordSessionArgs {
+	return &model.RecordSessionArgs{
+		Name:           a.Name,
+		Format:         a.Type,
+		MinSec:         a.MinSec,
+		Stereo:         a.Stereo,
+		Bridged:        a.Bridged,
+		FollowTransfer: a.FollowTransfer,
+		Force:          a.Force,
+		PathVar:        a.PathVar(),
+	}
 }
 
 func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
@@ -62,33 +103,35 @@ func (r *Router) recordFile(ctx context.Context, scope *flow.Flow, call model.Ca
 	return call.RecordFile(ctx, argv.Name, argv.Type, argv.MaxSec, argv.SilenceThresh, argv.SilenceHits)
 }
 
-// FIXME test record stop
 func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model.Call, args any) (model.Response, *model.AppError) {
-	argv := RecordSessionArg{
-		Name:   "",
-		Type:   "mp3",
-		MinSec: 2,
-	}
+	argv := RecordSessionArg{MinSec: defaultRecordSessionMinSec}
 
 	if err := r.Decode(scope, args, &argv); err != nil {
 		return nil, err
 	}
 
-	if argv.Name == "" {
-		argv.Name = recordSessionTemplate
+	argv.Normalize()
+
+	if argv.IsStop() {
+		return call.RecordSessionStop(ctx, argv.PathVar())
 	}
 
-	normalizeRecordName(&argv.Name)
-
-	if argv.Action == "stop" {
-		return call.RecordSessionStop(ctx, argv.Name, argv.Type)
-	}
-
-	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer, argv.Force)
+	return call.RecordSession(ctx, argv.ToRequest())
 }
 
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
-	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+	sysRecordRequest := &model.RecordSessionArgs{
+		Name:           recordSessionTemplate,
+		Format:         defaultRecordSessionFormat,
+		MinSec:         defaultRecordSessionMinSec,
+		Stereo:         true,
+		Bridged:        call.IVRQueueId() == nil,
+		FollowTransfer: true,
+		Force:          false,
+		PathVar:        defaultSysRecordingVarName,
+	}
+
+	_, err := call.RecordSession(ctx, sysRecordRequest)
 
 	return err
 }

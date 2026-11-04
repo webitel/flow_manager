@@ -22,6 +22,11 @@ const (
 	HANGUP_NO_ROUTE_DESTINATION     = "NO_ROUTE_DESTINATION"
 )
 
+const (
+	recordSessionFSApp     string = "wbt_record_session"
+	stopRecordSessionFSApp string = "stop_record_session"
+)
+
 var fixNamePattern = regexp.MustCompile(`'|"|,`)
 
 func (c *Connection) Answer(ctx context.Context) (model.Response, *model.AppError) {
@@ -325,37 +330,54 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
 }
 
-func (c *Connection) RecordSession(ctx context.Context, name, format string, minSec int, stereo, bridged, followTransfer, force bool) (model.Response, *model.AppError) {
-	// FIXME SET
+func (c *Connection) buildRecordSessionPath(args *model.RecordSessionArgs) string {
+	return fmt.Sprintf(
+		"http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s",
+		c.DomainId(),
+		c.Id(),
+		args.Name,
+		args.Format,
+		args.Format,
+	)
+}
 
-	vrs := map[string]any{
-		"RECORD_MIN_SEC":            minSec,
-		"RECORD_STEREO":             stereo,
-		"RECORD_BRIDGE_REQ":         bridged,
-		"media_bug_answer_req":      bridged,
-		"recording_follow_transfer": followTransfer,
+func (c *Connection) RecordSession(ctx context.Context, args *model.RecordSessionArgs) (model.Response, *model.AppError) {
+	vars := map[string]any{
+		"RECORD_MIN_SEC":            args.MinSec,
+		"RECORD_STEREO":             args.Stereo,
+		"RECORD_BRIDGE_REQ":         args.Bridged,
+		"media_bug_answer_req":      args.Bridged,
+		"recording_follow_transfer": args.FollowTransfer,
+		args.PathVar:                c.buildRecordSessionPath(args),
 	}
 
 	if c.resample != 0 && !c.IsSetResample() {
-		vrs["record_sample_rate"] = c.resample
+		vars["record_sample_rate"] = c.resample
 	}
 
-	_, err := c.Set(ctx, vrs)
-	if err != nil {
+	if _, err := c.setInternal(ctx, vars); err != nil {
 		return nil, err
 	}
 
-	args := fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s", c.domainId, c.Id(), name, format, format)
-	if force {
-		args += " {force=true}"
+	path, exists := c.Get(args.PathVar)
+	if !exists || strings.TrimSpace(path) == "" {
+		return nil, model.NewAppError("RecordSession", "fs.control.record_session.get_path", nil, "finding recording path in FS variables", http.StatusNotFound)
 	}
 
-	return c.executeWithContext(ctx, "wbt_record_session", args)
+	if args.Force {
+		path += " {force=true}"
+	}
+
+	return c.executeWithContext(ctx, recordSessionFSApp, path)
 }
 
-func (c *Connection) RecordSessionStop(ctx context.Context, name, format string) (model.Response, *model.AppError) {
-	return c.executeWithContext(ctx, "stop_record_session",
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s_%s&.%s", c.domainId, c.Id(), c.Id(), name, format))
+func (c *Connection) RecordSessionStop(ctx context.Context, pathVar string) (model.Response, *model.AppError) {
+	path, exists := c.Get(pathVar)
+	if !exists || strings.TrimSpace(path) == "" {
+		return nil, model.NewAppError("RecordSessionStop", "fs.control.record_session.get_path", nil, "finding recording path in FS variables", http.StatusNotFound)
+	}
+
+	return c.executeWithContext(ctx, stopRecordSessionFSApp, path)
 }
 
 func (c *Connection) FlushDTMF(ctx context.Context) (model.Response, *model.AppError) {
