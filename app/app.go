@@ -127,10 +127,6 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		cbr:         NewCallbackResolver(),
 	}
 
-	if config.ExternalSql {
-		fm.ExternalStore = cachelayer.NewExternalStoreManager()
-	}
-
 	logConfig := &wlog.LoggerConfiguration{
 		EnableConsole: config.Log.Console,
 		ConsoleJson:   false,
@@ -186,6 +182,21 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	)
 	if err := fm.health.Start(fm.ctx); err != nil {
 		return nil, fmt.Errorf("unable to start health registry: %w", err)
+	}
+
+	if config.ExternalSQLSettings.Enabled {
+		opts := []cachelayer.ExternalStoreManagerOption{
+			cachelayer.WithWriteOperationsEnabled(config.ExternalSQLSettings.SQLiteWriteEnabled),
+			cachelayer.WithLogger(fm.log.With(wlog.Namespace("external_sql"))),
+		}
+
+		if err := config.ExternalSQLSettings.Prepare(); err != nil {
+			fm.log.Warn("sqlite is disabled: invalid sandbox directory", wlog.Err(err))
+		} else {
+			opts = append(opts, cachelayer.WithSQLiteSandboxDir(config.ExternalSQLSettings.SQLiteSandboxRootDirectory))
+		}
+
+		fm.ExternalStore = cachelayer.NewExternalStoreManager(opts...)
 	}
 
 	// Bind http.DefaultTransport to the proxy manager before any outbound
