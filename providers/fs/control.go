@@ -23,8 +23,8 @@ const (
 )
 
 const (
-	RecordSessionFSApp     string = "wbt_record_session"
-	StopRecordSessionFSApp string = "stop_record_session"
+	recordSessionFSApp     string = "wbt_record_session"
+	stopRecordSessionFSApp string = "stop_record_session"
 )
 
 var fixNamePattern = regexp.MustCompile(`'|"|,`)
@@ -355,7 +355,7 @@ func (c *Connection) RecordSession(ctx context.Context, args *model.RecordSessio
 		vars["record_sample_rate"] = c.resample
 	}
 
-	if _, err := c.Set(ctx, vars); err != nil {
+	if _, err := c.setInternal(ctx, vars); err != nil {
 		return nil, err
 	}
 
@@ -368,7 +368,7 @@ func (c *Connection) RecordSession(ctx context.Context, args *model.RecordSessio
 		path += " {force=true}"
 	}
 
-	return c.executeWithContext(ctx, RecordSessionFSApp, path)
+	return c.executeWithContext(ctx, recordSessionFSApp, path)
 }
 
 func (c *Connection) RecordSessionStop(ctx context.Context, pathVar string) (model.Response, *model.AppError) {
@@ -377,7 +377,7 @@ func (c *Connection) RecordSessionStop(ctx context.Context, pathVar string) (mod
 		return nil, model.NewAppError("RecordSessionStop", "fs.control.record_session.get_path", nil, "finding recording path in FS variables", http.StatusNotFound)
 	}
 
-	return c.executeWithContext(ctx, StopRecordSessionFSApp, path)
+	return c.executeWithContext(ctx, stopRecordSessionFSApp, path)
 }
 
 func (c *Connection) FlushDTMF(ctx context.Context) (model.Response, *model.AppError) {

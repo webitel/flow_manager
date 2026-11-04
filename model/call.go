@@ -743,12 +743,6 @@ type PlaybackArgs struct {
 	GetSpeech  *GetSpeech      `json:"getSpeech"`
 }
 
-const (
-	RecordSessionTemplate      string = "${strepoch()}_${caller_id_number}_${destination_number}"
-	DefaultRecordingVarName    string = "recording_start_name"
-	DefaultSysRecordingVarName string = "sys_recording_start_name"
-)
-
 type RecordSessionArgs struct {
 	Name           string
 	Format         string
