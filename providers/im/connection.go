@@ -75,8 +75,6 @@ type Connection struct {
 	completeId      string
 	queueReturn     chan struct{}
 	// nested — схема стартувала як push над іншою (grant з released_sub != 0).
-	// Лише для таких на природному завершенні шлемо CompleteBotControl (pop).
-	// Owner/стартова схема не комплітиться (підтверджено thread-service).
 	nested bool
 }
 
@@ -917,7 +915,7 @@ func (c *Connection) Complete(id string) {
 }
 
 // IsNested повідомляє, чи ця схема була пушнута над іншою (grant з
-// released_sub != 0). Лише для таких шлемо Complete на природному завершенні.
+// released_sub != 0).
 func (c *Connection) IsNested() bool { return c.nested }
 
 // ResumeParent локально повертає контроль на призупинену джерельну схему, якщо
