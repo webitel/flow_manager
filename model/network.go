@@ -2,45 +2,6 @@ package model
 
 import "net"
 
-func IsPublicIP(IP net.IP) bool {
-	if IP.IsLoopback() || IP.IsLinkLocalMulticast() || IP.IsLinkLocalUnicast() {
-		return false
-	}
-	return true
-}
-
-func GetPublicAddr() string {
-	ifaces, err := net.Interfaces()
-
-	if err != nil {
-		return ""
-	}
-	for _, i := range ifaces {
-		addrs, err := i.Addrs()
-		if err != nil {
-			continue
-		}
-
-		for _, addr := range addrs {
-			var ip net.IP
-			switch v := addr.(type) {
-			case *net.IPNet:
-				ip = v.IP
-			case *net.IPAddr:
-				ip = v.IP
-			default:
-				continue
-			}
-
-			if IsPublicIP(ip) {
-				return ip.String()
-			}
-			// process IP address
-		}
-	}
-	return ""
-}
-
 // GetFreePort asks the kernel for a free open port that is ready to use.
 func GetFreePort() (int, error) {
 	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")

@@ -79,7 +79,7 @@ func (r *RedisSettings) IsValid() bool {
 }
 
 type GrpcServeSettings struct {
-	Host string `json:"host" flag:"grpc_addr|localhost|GRPC server host" env:"GRPC_ADDR"`
+	Host string `json:"host" flag:"grpc_addr||GRPC server host" env:"GRPC_ADDR"`
 	Port int    `json:"port" flag:"grpc_port|0|GRPC server port" env:"GRPC_PORT"`
 }
 

@@ -2,16 +2,20 @@ package grpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/gen/workflow"
 	"github.com/webitel/flow_manager/model"
+	"github.com/webitel/webitel-go-kit/pkg/hostaddr"
 	"github.com/webitel/wlog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -64,23 +68,27 @@ func NewServer(cfg *Config, cm *ChatManager, cb CallbackResolver) *server {
 	return srv
 }
 
-func publicAddr(lis net.Listener) (string, int) {
-	h, p, _ := net.SplitHostPort(lis.Addr().String())
-	if h == "::" {
-		h = model.GetPublicAddr()
-	}
-	port, _ := strconv.Atoi(p)
-	return h, port
-}
-
 // todo del me
 func (s *server) Cluster(discovery discovery.ServiceDiscovery) *model.AppError {
 	return nil
 }
 
 func (s *server) Start() *model.AppError {
-	address := s.getAddress()
-	lis, err := net.Listen("tcp", address)
+	host := strings.Trim(s.Host(), "[]")
+	if host == "" {
+		ip, err := hostaddr.PrivateIPv4()
+		switch {
+		case errors.Is(err, hostaddr.ErrNoPrivateIPv4):
+			host = "127.0.0.1"
+			s.log.Warn("no private IPv4 address found, grpc listens on loopback; set GRPC_ADDR to accept remote connections", wlog.String("address", host))
+		case err != nil:
+			return model.NewAppError("GRPC", "grpc.start_server.error", nil, fmt.Sprintf("resolve default grpc address: %s; set GRPC_ADDR explicitly", err), http.StatusInternalServerError)
+		default:
+			host = ip.String()
+		}
+	}
+
+	lis, err := net.Listen("tcp", net.JoinHostPort(host, strconv.Itoa(s.Port())))
 	if err != nil {
 		return model.NewAppError("GRPC", "grpc.start_server.error", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -93,7 +101,18 @@ func (s *server) Start() *model.AppError {
 	workflow.RegisterFlowChatServerServiceServer(s.server, s.chatApi)
 	workflow.RegisterFlowProcessingServiceServer(s.server, s.processingApi)
 
-	s.cfg.Host, s.cfg.Port = publicAddr(lis)
+	listen, err := netip.ParseAddrPort(lis.Addr().String())
+	if err != nil {
+		lis.Close()
+		return model.NewAppError("GRPC", "grpc.start_server.error", nil, err.Error(), http.StatusInternalServerError)
+	}
+	advertise, err := hostaddr.Advertise(listen)
+	if err != nil {
+		lis.Close()
+		return model.NewAppError("GRPC", "grpc.start_server.error", nil, fmt.Sprintf("resolve grpc advertise address: %s; set GRPC_ADDR to a specific IP", err), http.StatusInternalServerError)
+	}
+
+	s.cfg.Host, s.cfg.Port = advertise.Addr().String(), int(advertise.Port())
 	s.listener = lis
 
 	go s.listen(lis)
@@ -115,15 +134,6 @@ func (s *server) listen(lis net.Listener) {
 	} else {
 		close(s.didFinishListen)
 	}
-}
-
-func (s *server) getAddress() string {
-	p := s.Port()
-	h := s.Host()
-	if p == 0 {
-		return fmt.Sprintf("%s:", h)
-	}
-	return fmt.Sprintf("%s:%d", h, p)
 }
 
 func (s server) Name() string {
