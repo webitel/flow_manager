@@ -26,7 +26,10 @@ const (
 	recordSessionTemplate      string = "${strepoch()}_${caller_id_number}_${destination_number}"
 	defaultRecordingVarName    string = "wbt_record_session_path"
 	defaultSysRecordingVarName string = "wbt_record_all_calls_path"
+	sysRecordSessionSuffix     string = "_auto"
 )
+
+func formatSysRecordingName() string { return recordSessionTemplate + sysRecordSessionSuffix }
 
 type RecordSessionArg struct {
 	Action         string
@@ -121,7 +124,7 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
 	sysRecordRequest := &model.RecordSessionArgs{
-		Name:           recordSessionTemplate,
+		Name:           formatSysRecordingName(),
 		Format:         defaultRecordSessionFormat,
 		MinSec:         defaultRecordSessionMinSec,
 		Stereo:         true,
@@ -137,7 +140,13 @@ func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *mode
 }
 
 func normalizeRecordName(s *string) {
-	if strings.Index(*s, " ") != -1 {
-		*s = strings.Replace(*s, " ", "_", -1)
+	if s == nil {
+		return
 	}
+
+	if !strings.Contains(*s, " ") {
+		return
+	}
+
+	*s = strings.ReplaceAll(*s, " ", "_")
 }
