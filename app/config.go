@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"io"
+	"log"
 	"os"
 
 	"github.com/BoRuDar/configuration/v4"
@@ -24,11 +25,11 @@ func loadConfig() (*model.Config, error) {
 		configuration.NewFlagProvider(),
 		configuration.NewDefaultProvider(),
 	).SetOptions(configuration.OnFailFnOpt(func(err error) {
-		// log.Println(err)
+		log.Println(err)
 	}))
 
 	if err := configurator.InitValues(); err != nil {
-		// return nil, err
+		return nil, err
 	}
 
 	if config.ConfigFile != nil && *config.ConfigFile != "" {

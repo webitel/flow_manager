@@ -1,0 +1,518 @@
+Subject: [PATCH] fix(im): suspend/resume start schema across transfer instead of destroying it
+---
+Index: model/im.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/model/im.go b/model/im.go
+--- a/model/im.go	(revision 9e1add095eb98270935509720c93e990fc34e07c)
++++ b/model/im.go	(revision 833d36f180d44dc99145155d8ae59043c3c5952d)
+@@ -30,10 +30,13 @@
+ 	SchemaId() int
+ 	Stop(err error)
+ 	Complete(id string)
+-	IsTransfer() bool
+-	TransferredSchema() (int, string)
+ 	CompleteId() string
+-	NewContext() context.Context
++	RunContext() context.Context
++	ResumeChan() <-chan struct{}
++	IsSuspended() bool
++	IsTerminating() bool
++	Suspend()
++	Resume()
+ 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+ 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
+ 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
+Index: providers/im/connection.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/providers/im/connection.go b/providers/im/connection.go
+--- a/providers/im/connection.go	(revision 9e1add095eb98270935509720c93e990fc34e07c)
++++ b/providers/im/connection.go	(revision 833d36f180d44dc99145155d8ae59043c3c5952d)
+@@ -11,6 +11,7 @@
+ 	"strconv"
+ 	"strings"
+ 	"sync"
++	"sync/atomic"
+ 	"time"
+ 
+ 	"github.com/tidwall/gjson"
+@@ -40,35 +41,51 @@
+ type Connection struct {
+ 	sync.RWMutex
+ 
+-	id               string
+-	threadId         string
+-	ctx              context.Context
+-	cancelCtx        context.CancelFunc
+-	domainId         int64
+-	schemaId         int
+-	srv              *server
+-	variables        map[string]string
+-	storeMessages    map[string][]byte
+-	msg              model.Message
+-	lastMsg          model.Message
+-	from             model.ImEndpoint
+-	to               model.ImEndpoint
+-	log              *wlog.Logger
+-	waitMsgChan      chan model.IMEventWrapper
+-	hdrs             metadata.MD
+-	queueKey         *model.InQueueKey
+-	exportVariables  []string
+-	messages         []model.IMEventWrapper
+-	info             model.ThreadInfo
+-	transferred      bool
+-	transferSchemaId int
+-	completeId       string
++	id       string
++	threadId string
++	// ctx/cancelCtx — lifetime контекст конекшна: живе весь час, поки жива
++	// схема, і рветься лише термінально (Break/Stop).
++	ctx       context.Context
++	cancelCtx context.CancelFunc
++	// runCtx/runCancel — контекст ПОТОЧНОГО прогону схеми: рветься на Suspend()
++	// (розкручує joinQueue/receive), Resume() створює новий. Природний кінець
++	// схеми його не чіпає.
++	runCtx    context.Context
++	runCancel context.CancelFunc
++	// state: 0=running, 1=suspended, 2=terminating (atomic).
++	state int32
++	// resumeCh — буферизований (1) сигнал park-loop продовжити після Resume().
++	resumeCh        chan struct{}
++	domainId        int64
++	schemaId        int
++	srv             *server
++	variables       map[string]string
++	storeMessages   map[string][]byte
++	msg             model.Message
++	lastMsg         model.Message
++	from            model.ImEndpoint
++	to              model.ImEndpoint
++	log             *wlog.Logger
++	waitMsgChan     chan model.IMEventWrapper
++	hdrs            metadata.MD
++	queueKey        *model.InQueueKey
++	exportVariables []string
++	messages        []model.IMEventWrapper
++	info            model.ThreadInfo
++	completeId      string
+ }
+ 
++const (
++	connStateRunning     int32 = 0
++	connStateSuspended   int32 = 1
++	connStateTerminating int32 = 2
++)
++
+ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventWrapper) *Connection {
+ 	schemaId, _ := strconv.Atoi(to.Sub)
+ 
+ 	ctx, cancel := context.WithCancel(context.Background())
++	runCtx, runCancel := context.WithCancel(context.Background())
+ 
+ 	conn := &Connection{
+ 		id:       id,
+@@ -85,6 +102,9 @@
+ 		msg:           msg.GetPayload().Message(),
+ 		ctx:           ctx,
+ 		cancelCtx:     cancel,
++		runCtx:        runCtx,
++		runCancel:     runCancel,
++		resumeCh:      make(chan struct{}, 1),
+ 		domainId:      msg.GetDomainID(),
+ 		variables:     toVariables(nil), // todo
+ 		storeMessages: make(map[string][]byte),
+@@ -249,21 +269,11 @@
+ }
+ 
+ func (c *Connection) processSystemMessage(msg model.Message) {
+-	c.Lock()
+-	c.transferred = msg.System.Type == "transferred"
+-	if c.transferred {
+-		c.log.Debug("transferred")
+-		// c.cancelCtx()
++	// transferred тепер обробляється подієво через bot.control.granted
++	// (server.handleBotControlGranted → Suspend/Resume), а не через прапорець тут.
++	if msg.System != nil && msg.System.Type == "transferred" {
++		c.log.Debug("transferred system message observed")
+ 	}
+-
+-	c.Unlock()
+-}
+-
+-func (c *Connection) onTransfer(m model.IMBotControlGrantedEvent) {
+-	c.ResetForTransfer(m.Sub)
+-	c.Lock()
+-	c.completeId = m.MemberID
+-	c.Unlock()
+ }
+ 
+ func (c *Connection) CompleteId() string {
+@@ -604,7 +614,6 @@
+ 			Variables: variables,
+ 		},
+ 	)
+-
+ 	if err != nil {
+ 		if s, ok := status.FromError(err); ok {
+ 			if s.Code() == codes.PermissionDenied {
+@@ -875,16 +884,7 @@
+ 	return res
+ }
+ 
+-func (c *Connection) IsTransfer() bool {
+-	c.RLock()
+-	v := c.transferred
+-	c.RUnlock()
+-
+-	return v
+-}
+-
+ func (c *Connection) Complete(id string) {
+-	println("complete", id)
+ 	_, e := c.srv.client.th.Api.CompleteBotControl(metadata.NewOutgoingContext(context.Background(), c.hdrs), &t.CompleteBotControlRequest{
+ 		ThreadId: c.threadId,
+ 		DomainId: int32(c.domainId),
+@@ -896,53 +896,95 @@
+ 	}
+ }
+ 
+-func (c *Connection) Break() {
+-	if c.cancelCtx != nil {
+-		c.cancelCtx()
+-	}
++// RunContext повертає контекст поточного прогону схеми (рветься на Suspend()).
++func (c *Connection) RunContext() context.Context {
++	c.RLock()
++	defer c.RUnlock()
++
++	return c.runCtx
++}
++
++// ResumeChan — сигнал park-loop продовжити виконання після Resume().
++func (c *Connection) ResumeChan() <-chan struct{} {
++	return c.resumeCh
+ }
+ 
+-func (c *Connection) Stop(err error) {
+-	if c.cancelCtx != nil {
+-		c.cancelCtx()
+-	}
++func (c *Connection) IsSuspended() bool {
++	return atomic.LoadInt32(&c.state) == connStateSuspended
++}
+ 
+-	c.srv.stopConnection(c)
++func (c *Connection) IsTerminating() bool {
++	return atomic.LoadInt32(&c.state) == connStateTerminating
+ }
+ 
+-func (c *Connection) TransferredSchema() (int, string) {
++// Suspend призупиняє поточний прогін схеми: виставляє state=suspended ПЕРЕД
++// скасуванням runCtx (щоб park-loop надійно побачив suspend, а не сплутав із
++// природним break), потім рве runCtx — joinQueue/receive розкручуються, а сама
++// конекшн лишається живою.
++func (c *Connection) Suspend() {
++	atomic.StoreInt32(&c.state, connStateSuspended)
++
+ 	c.Lock()
+-	transferSchemaId := c.transferSchemaId
+-	completeId := c.completeId
+-	c.transferred = false
++	cancel := c.runCancel
+ 	c.Unlock()
+ 
+-	return transferSchemaId, completeId
++	if cancel != nil {
++		cancel()
++	}
+ }
+ 
+-func (c *Connection) NewContext() context.Context {
++// Resume готує новий runCtx, перемикає state=running і штовхає токен у
++// буферизований resumeCh (ранній сигнал не губиться).
++func (c *Connection) Resume() {
+ 	ctx, cancel := context.WithCancel(context.Background())
++
+ 	c.Lock()
+-	c.ctx = ctx
+-	c.cancelCtx = cancel
+-	c.transferred = false
++	c.runCtx = ctx
++	c.runCancel = cancel
+ 	c.Unlock()
+-	return ctx
++
++	atomic.StoreInt32(&c.state, connStateRunning)
++
++	select {
++	case c.resumeCh <- struct{}{}:
++	default:
++	}
+ }
+ 
+-func (c *Connection) ResetForTransfer(schemaId int) context.Context {
+-	ctx, cancel := context.WithCancel(context.Background())
+-	old := c.cancelCtx
++// Break термінально знищує конекшн: state=terminating + скасування ОБОХ
++// контекстів (run і lifetime), щоб park-loop гарантовано вийшов.
++func (c *Connection) Break() {
++	atomic.StoreInt32(&c.state, connStateTerminating)
++
+ 	c.Lock()
+-	c.ctx = ctx
+-	c.cancelCtx = cancel
+-	c.transferred = true
+-	c.transferSchemaId = schemaId
++	rc := c.runCancel
++	lc := c.cancelCtx
+ 	c.Unlock()
+ 
+-	old()
++	if rc != nil {
++		rc()
++	}
++	if lc != nil {
++		lc()
++	}
++}
++
++func (c *Connection) Stop(err error) {
++	atomic.StoreInt32(&c.state, connStateTerminating)
+ 
+-	return ctx
++	c.Lock()
++	rc := c.runCancel
++	lc := c.cancelCtx
++	c.Unlock()
++
++	if rc != nil {
++		rc()
++	}
++	if lc != nil {
++		lc()
++	}
++
++	c.srv.stopConnection(c)
+ }
+ 
+ func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
+Index: providers/im/server.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/providers/im/server.go b/providers/im/server.go
+--- a/providers/im/server.go	(revision 9e1add095eb98270935509720c93e990fc34e07c)
++++ b/providers/im/server.go	(revision 833d36f180d44dc99145155d8ae59043c3c5952d)
+@@ -182,13 +182,16 @@
+ 	)
+ }
+ 
+-// handleBotControlGranted reacts to a bot.control.granted.v1 event. When an existing
+-// connection already owns the thread (bot->bot resume, or the client message already
+-// started the schema), it just re-points that connection at the new bot via onTransfer.
+-// Otherwise — the human->bot case — it starts a fresh schema for the granted bot
+-// IMMEDIATELY, without waiting for the next inbound client message. The grant event
+-// carries no customer peer, so the thread participants are fetched to synthesize the
+-// start message (from = customer, to = bot).
++// handleBotControlGranted reacts to a bot.control.granted.v1 event. Push vs pop is
++// derived from LOCAL state (no is_resume flag):
++//   - a suspended connection already exists for the granted Sub  -> POP: resume it and
++//     tear down the released (finished) bot;
++//   - a live non-suspended connection exists for the Sub         -> duplicate grant, no-op;
++//   - no connection for the Sub                                  -> PUSH: suspend the
++//     released bot (the transfer source) and start a fresh schema for the granted bot
++//     IMMEDIATELY, without waiting for the next inbound client message.
++// The grant event carries no customer peer, so the thread participants are fetched to
++// synthesize the start message (from = customer, to = bot).
+ func (s *server) handleBotControlGranted(m model.IMBotControlGrantedEvent) error {
+ 	compositeSessionID := m.ThreadID + "." + strconv.Itoa(m.Sub)
+ 
+@@ -202,34 +205,63 @@
+ 		wlog.String("session_id", compositeSessionID),
+ 	)
+ 
+-	// The granted event names the bot being released (ReleasedSub). Tear its
+-	// connection down here so a superseded bot never keeps running alongside the new
+-	// controller. The schema goroutine unwinds and removes itself from the cache.
++	releasedSessionID := ""
+ 	if m.ReleasedSub != 0 && m.ReleasedSub != m.Sub {
+-		releasedSessionID := m.ThreadID + "." + strconv.Itoa(m.ReleasedSub)
+-		if released, ok := s.connectionStore.Get(releasedSessionID); ok {
+-			s.log.Debug("releasing previous bot connection on grant",
+-				wlog.String("released_session_id", releasedSessionID),
+-				wlog.Int("released_sub", m.ReleasedSub),
+-			)
+-			released.Break()
+-		}
+-	}
++		releasedSessionID = m.ThreadID + "." + strconv.Itoa(m.ReleasedSub)
++	}
++
++	// Розрізняємо push vs pop з ЛОКАЛЬНОГО стану (без is_resume):
++	//   POP  — призупинена конекшн для Sub уже існує → повертаємось на неї
++	//          (Resume), а released-бота (що завершився) зносимо.
++	//   PUSH — новий бот зверху → призупиняємо released-бота (джерело трансфера)
++	//          і стартуємо Sub свіжою схемою.
++	if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
++		if conn.IsSuspended() {
++			// POP: повертаємось на призупинену схему.
++			s.log.Debug("resuming suspended connection on grant (pop)",
++				wlog.String("session_id", compositeSessionID),
++			)
++
++			if releasedSessionID != "" {
++				if released, ok := s.connectionStore.Get(releasedSessionID); ok {
++					s.log.Debug("breaking released bot on pop",
++						wlog.String("released_session_id", releasedSessionID),
++						wlog.Int("released_sub", m.ReleasedSub),
++					)
++					released.Break()
++				}
++			}
+ 
+-	if conn, ok := s.connectionStore.Get(compositeSessionID); ok {
+-		s.log.Debug("live connection exists, resuming instead of starting a fresh schema",
++			conn.Resume()
++
++			return nil
++		}
++
++		// Живий, але НЕ suspended для цього Sub — повторний grant уже активного
++		// бота (напр. дубль події). Нічого не робимо, щоб не рестартувати схему.
++		s.log.Debug("grant for already-active connection, ignoring",
+ 			wlog.String("session_id", compositeSessionID),
+ 		)
+-		conn.onTransfer(m)
+ 
+ 		return nil
+ 	}
+ 
+-	// No live connection for this session. Schemas start ONLY from a grant (never from
+-	// an inbound message), so both a first-time grant and a resume (pop of the control
+-	// stack) fall through to the fresh-start path below. Previously resume deferred to
+-	// the next inbound message to re-establish the schema; that is gone now that
+-	// nodeMessage only delivers to already-live connections.
++	// PUSH: живої конекшн для Sub немає. Призупиняємо released-бота (джерело
++	// трансфера) — це головне виправлення: Suspend, а не Break, щоб потім
++	// відновитись на pop. Далі стартуємо Sub свіжою схемою.
++	if releasedSessionID != "" {
++		if released, ok := s.connectionStore.Get(releasedSessionID); ok {
++			s.log.Debug("suspending source bot on push",
++				wlog.String("released_session_id", releasedSessionID),
++				wlog.Int("released_sub", m.ReleasedSub),
++			)
++			released.Suspend()
++		}
++	}
++
++	s.log.Debug("no live connection, starting a fresh schema (push)",
++		wlog.String("session_id", compositeSessionID),
++	)
+ 
+ 	to := model.ImEndpoint{
+ 		Sub:      strconv.Itoa(m.Sub),
+Index: routes/im/router.go
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/routes/im/router.go b/routes/im/router.go
+--- a/routes/im/router.go	(revision 9e1add095eb98270935509720c93e990fc34e07c)
++++ b/routes/im/router.go	(revision 833d36f180d44dc99145155d8ae59043c3c5952d)
+@@ -69,36 +69,25 @@
+ 
+ func (r *Router) handle(conn model.Connection) {
+ 	conv := conn.(Dialog)
+-	if err := r.runSchema(conn, conv, conv.SchemaId(), conn.Context(), ""); err != nil {
+-		// Schema was cancelled (control transferred/superseded by a grant). Do not signal
+-		// completion — the bot is only suspended, not finished.
++	if err := r.runSchema(conn, conv, conv.SchemaId(), conv.RunContext()); err != nil {
+ 		conv.Stop(err)
+-
+-		return
+-	}
+-
+-	// Schema reached its natural end. A grant-based bot runs in its own connection and finishes
+-	// the top-level schema with cid="", so the in-schema completion (runSchema) never fires.
+-	// Signal CompleteBotControl so thread-service pops the bot: a transient (auto_leave) bot is
+-	// removed from the thread, the owner is marked idle. Without this the transferred bot never
+-	// gets popped (thread-service never removes it) and lingers as a thread member.
+-	if id := conv.CompleteId(); id != "" {
+-		conv.Complete(id)
+-	}
+-
+-	conv.Stop(nil)
++	} else {
++		conv.Stop(nil)
++	}
+ }
+ 
+-func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context, cid string) *model.AppError {
++func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx context.Context) *model.AppError {
+ 	var routing *model.Routing
+ 	var err *model.AppError
+ 
+ 	if shId > 0 {
+ 		routing, err = r.fm.GetChatRouteFromSchemaId(conv.DomainId(), int32(shId))
+ 	}
++
+ 	if routing == nil {
+ 		err = model.NewAppError("IM", "im.routing.not_found", nil, "Not found routing schema", http.StatusBadRequest)
+ 	}
++
+ 	if err != nil {
+ 		return err
+ 	}
+@@ -112,24 +101,36 @@
+ 		Timezone: routing.TimezoneName,
+ 	})
+ 
+-	conn.Set(ctx, map[string]any{
++	_, _ = conn.Set(ctx, map[string]any{
+ 		model.FlowSchemaNameVariable: routing.Schema.Name,
+ 	})
+ 
+ 	flow.Route(ctx, i, r)
+ 
+-	if conv.IsTransfer() {
+-		newCtx := conv.NewContext()
+-		schemaId, c2 := conv.TransferredSchema()
+-		if err = r.runSchema(conn, conv, schemaId, newCtx, c2); err != nil {
+-			return err
++	// Park-loop гейтиться на СТАНІ КОНЕКШНА (IsSuspended), НЕ на i.IsCancel().
++	// flow.Route виставляє i.cancel=true у трьох випадках, і лише один — це suspend:
++	//   1) runCtx скасований Suspend() (handler.go)          → park (чекаємо resume)
++	//   2) нода `break` у схемі (break.go)                    → природний кінець
++	//   3) інші апи через req.IsCancel() (execute/ai_bridge)  → природний кінець
++	// Suspend() ставить state=suspended ДО скасування runCtx, тож для suspend тут
++	// IsSuspended()==true, а для break/природного кінця == false — і loop пропускається.
++	for conv.IsSuspended() {
++		if conv.IsTerminating() {
++			return nil // client_leave / stop під час прогону
+ 		}
+-		i.ClearCancel()
+-		flow.Route(conv.NewContext(), i, r)
++
++		select {
++		case <-conv.ResumeChan():
++			i.ClearCancel()
++			flow.Route(conv.RunContext(), i, r) // продовжуємо з ноди після joinQueue
++		case <-conn.Context().Done():
++			return nil // lifetime ctx = термінал
++		}
+ 	}
+ 
+-	if cid != "" {
+-		conv.Complete(cid)
++	// Природний кінець схеми → pop зі стека контролю.
++	if id := conv.CompleteId(); id != "" {
++		conv.Complete(id)
+ 	}
+ 
+ 	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
