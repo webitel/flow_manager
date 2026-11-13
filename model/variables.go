@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-var compileVar *regexp.Regexp
+var compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
 
 type Variables map[string]any
 
@@ -15,10 +15,6 @@ type ParseOption uint
 const (
 	ParseOptionJson ParseOption = 1 << iota
 )
-
-func init() {
-	compileVar = regexp.MustCompile(`\$\{([\s\S]*?)\}`)
-}
 
 type TextParser func(string) string
 
