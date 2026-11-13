@@ -87,8 +87,19 @@ func (r *Router) recordSession(ctx context.Context, scope *flow.Flow, call model
 	return call.RecordSession(ctx, argv.Name, argv.Type, argv.MinSec, argv.Stereo, argv.Bridged, argv.FollowTransfer, argv.Force)
 }
 
+func formatSysRecordSessionTemplate() string { return recordSessionTemplate + "_auto" }
+
 func (r *Router) startRecordAllCalls(ctx context.Context, call model.Call) *model.AppError {
-	_, err := call.RecordSession(ctx, recordSessionTemplate, "mp3", 2, true, call.IVRQueueId() == nil, true, false)
+	_, err := call.RecordSession(
+		ctx,
+		formatSysRecordSessionTemplate(),
+		"mp3",
+		2,
+		true,
+		call.IVRQueueId() == nil,
+		true,
+		false,
+	)
 
 	return err
 }
