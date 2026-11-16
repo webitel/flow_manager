@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	GateService_ListGates_FullMethodName = "/webitel.im.provider.v1.GateService/ListGates"
+	GateService_GetGate_FullMethodName   = "/webitel.im.provider.v1.GateService/GetGate"
 )
 
 // GateServiceClient is the client API for GateService service.
@@ -28,6 +29,8 @@ const (
 type GateServiceClient interface {
 	// / ListGates returns a collection of all registered gateways within the current domain.
 	ListGates(ctx context.Context, in *ProviderListGatesRequest, opts ...grpc.CallOption) (*ProviderListGatesResponse, error)
+	// / GetGate returns a single gateway by id, scoped to a domain.
+	GetGate(ctx context.Context, in *GetGateRequest, opts ...grpc.CallOption) (*GetGateResponse, error)
 }
 
 type gateServiceClient struct {
@@ -47,12 +50,23 @@ func (c *gateServiceClient) ListGates(ctx context.Context, in *ProviderListGates
 	return out, nil
 }
 
+func (c *gateServiceClient) GetGate(ctx context.Context, in *GetGateRequest, opts ...grpc.CallOption) (*GetGateResponse, error) {
+	out := new(GetGateResponse)
+	err := c.cc.Invoke(ctx, GateService_GetGate_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // GateServiceServer is the server API for GateService service.
 // All implementations must embed UnimplementedGateServiceServer
 // for forward compatibility
 type GateServiceServer interface {
 	// / ListGates returns a collection of all registered gateways within the current domain.
 	ListGates(context.Context, *ProviderListGatesRequest) (*ProviderListGatesResponse, error)
+	// / GetGate returns a single gateway by id, scoped to a domain.
+	GetGate(context.Context, *GetGateRequest) (*GetGateResponse, error)
 	mustEmbedUnimplementedGateServiceServer()
 }
 
@@ -62,6 +76,9 @@ type UnimplementedGateServiceServer struct {
 
 func (UnimplementedGateServiceServer) ListGates(context.Context, *ProviderListGatesRequest) (*ProviderListGatesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListGates not implemented")
+}
+func (UnimplementedGateServiceServer) GetGate(context.Context, *GetGateRequest) (*GetGateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetGate not implemented")
 }
 func (UnimplementedGateServiceServer) mustEmbedUnimplementedGateServiceServer() {}
 
@@ -94,6 +111,24 @@ func _GateService_ListGates_Handler(srv interface{}, ctx context.Context, dec fu
 	return interceptor(ctx, in, info, handler)
 }
 
+func _GateService_GetGate_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetGateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GateServiceServer).GetGate(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: GateService_GetGate_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GateServiceServer).GetGate(ctx, req.(*GetGateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // GateService_ServiceDesc is the grpc.ServiceDesc for GateService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -104,6 +139,10 @@ var GateService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListGates",
 			Handler:    _GateService_ListGates_Handler,
+		},
+		{
+			MethodName: "GetGate",
+			Handler:    _GateService_GetGate_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
