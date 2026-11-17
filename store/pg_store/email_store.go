@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"golang.org/x/oauth2"
@@ -48,12 +49,19 @@ returning id, (extract(EPOCH from updated_at) * 1000)::int8 updated_at`)
 func (s *SqlEmailStore) Save(domainId int64, m *model.Email) *model.AppError {
 	id, err := s.GetMaster().SelectInt(`insert into call_center.cc_email ("from", "to", profile_id, subject, cc, body, direction, message_id, sender, reply_to,
                       in_reply_to, parent_id, html, attachment_ids, contact_ids, owner_id, cid)
-values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
+select :From, :To, p.id, :Subject, :Cc, :Body::text, :Direction, :MessageId, :Sender, :ReplyTo, :InReplyTo, (select m.id
                                                                                                        from call_center.cc_email m
-                                                                                                       where m.in_reply_to = :MessageId limit 1), 
-		:Html::text, :AttachmentIds::int8[], :ContactIds::int8[], :OwnerId::int8, :Cid::jsonb)
+                                                                                                           inner join call_center.cc_email_profile mp on mp.id = m.profile_id
+                                                                                                       where m.in_reply_to = :MessageId
+                                                                                                         and mp.domain_id = :DomainId::int8
+                                                                                                       limit 1),
+		:Html::text, :AttachmentIds::int8[], :ContactIds::int8[], :OwnerId::int8, :Cid::jsonb
+from call_center.cc_email_profile p
+where p.id = :ProfileId
+  and p.domain_id = :DomainId::int8
 	   returning id
 `, map[string]interface{}{
+		"DomainId":      domainId,
 		"From":          pq.Array(m.From),
 		"To":            pq.Array(m.To),
 		"ProfileId":     m.ProfileId,
@@ -75,6 +83,10 @@ values (:From, :To, :ProfileId, :Subject, :Cc, :Body::text, :Direction, :Message
 	if err != nil {
 		return model.NewAppError("SqlEmailStore.Save", "store.sql_email.save.error", nil,
 			err.Error(), extractCodeFromErr(err))
+	}
+	if id == 0 {
+		return model.NewAppError("SqlEmailStore.Save", "store.sql_email.save.profile_not_found", nil,
+			fmt.Sprintf("profile_id=%d not found in domain_id=%d", m.ProfileId, domainId), http.StatusNotFound)
 	}
 	m.Id = id
 	return nil
@@ -111,14 +123,16 @@ where t.id = :Id`, map[string]interface{}{
 	return profile, nil
 }
 
-func (s *SqlEmailStore) SetToken(id int, token *oauth2.Token) *model.AppError {
+func (s *SqlEmailStore) SetToken(domainId int64, id int, token *oauth2.Token) *model.AppError {
 	data, _ := json.Marshal(token)
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
 set updated_at = now(),
     token = :Token
-where id = :Id`, map[string]interface{}{
-		"Id":    id,
-		"Token": encryptJSONSchema(data, schemaTableEmailAccount, "token"),
+where id = :Id
+  and domain_id = :DomainId`, map[string]interface{}{
+		"Id":       id,
+		"DomainId": domainId,
+		"Token":    encryptJSONSchema(data, schemaTableEmailAccount, "token"),
 	})
 
 	if err != nil {
@@ -145,12 +159,14 @@ where id = :Id and domain_id = :DomainId`, map[string]interface{}{
 	return updatedAt, nil
 }
 
-func (s *SqlEmailStore) SetError(profileId int, appErr *model.AppError) *model.AppError {
+func (s *SqlEmailStore) SetError(domainId int64, profileId int, appErr *model.AppError) *model.AppError {
 	_, err := s.GetMaster().Exec(`update call_center.cc_email_profile
 set fetch_err = :Err
-where id = :Id`, map[string]interface{}{
-		"Id":  profileId,
-		"Err": appErr.DetailedError,
+where id = :Id
+  and domain_id = :DomainId`, map[string]interface{}{
+		"Id":       profileId,
+		"DomainId": domainId,
+		"Err":      appErr.DetailedError,
 	})
 
 	if err != nil {
@@ -257,10 +273,12 @@ limit 1`, map[string]interface{}{
 
 func (s *SqlEmailStore) SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError {
 	_, err := s.GetMaster().WithContext(ctx).Exec(`update call_center.cc_email
-set contact_ids = :ContactIds 
-where message_id = :Id`, map[string]interface{}{
+set contact_ids = :ContactIds
+where message_id = :Id
+  and profile_id in (select p.id from call_center.cc_email_profile p where p.domain_id = :DomainId)`, map[string]interface{}{
 		"ContactIds": pq.Array(contactIds),
 		"Id":         id,
+		"DomainId":   domainId,
 	})
 
 	if err != nil {

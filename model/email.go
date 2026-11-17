@@ -32,6 +32,7 @@ type MailParams struct {
 }
 
 const (
+	MailAuthTypePlain  = "plain"
 	MailAuthTypeOAuth2 = "oauth2"
 )
 

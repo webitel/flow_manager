@@ -66,10 +66,12 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	if argv.Profile != nil && (argv.Profile.Id != nil || argv.Profile.Name != nil) {
 		var settings *model.SmtSettings
 		settings, err = r.fm.SmtpSettings(conn.DomainId(), argv.Profile)
-		// TODO WTEL-5146
-		if err == nil {
-			argv.Smtp = *settings
+		if err != nil {
+			return nil, err
 		}
+		argv.Smtp = *settings
+	} else if err = sanitizeInlineSmtp(&argv.Smtp); err != nil {
+		return nil, err
 	}
 
 	if argv.Async {
@@ -83,6 +85,21 @@ func (r *router) sendEmail(ctx context.Context, scope *Flow, conn model.Connecti
 	} else {
 		return r.sendEmailFn(ctx, conn, argv)
 	}
+}
+
+// sanitizeInlineSmtp keeps only plain-auth connection settings from schema arguments.
+// Profile id, oauth2 params and token are tenant-bound and may come only from a profile
+// resolved within the connection domain.
+func sanitizeInlineSmtp(smtp *model.SmtSettings) *model.AppError {
+	if smtp.AuthType != "" && smtp.AuthType != model.MailAuthTypePlain {
+		return model.NewAppError("Email", "flow.email.smtp.auth_type.app_err", nil,
+			fmt.Sprintf("smtp auth type \"%s\" requires profile", smtp.AuthType), http.StatusBadRequest)
+	}
+	smtp.Id = 0
+	smtp.Params = nil
+	smtp.Token = nil
+
+	return nil
 }
 
 func (r *router) sendEmailFn(ctx context.Context, conn model.Connection, argv EmailArgs) (model.Response, *model.AppError) {
@@ -134,7 +151,7 @@ func (r *router) sendEmailFn(ctx context.Context, conn model.Connection, argv Em
 	var dialer *gomail.Dialer
 	if argv.Smtp.AuthType == model.MailAuthTypeOAuth2 {
 		var token string
-		token, err = r.fm.SmtpSettingsOAuthToken(&argv.Smtp)
+		token, err = r.fm.SmtpSettingsOAuthToken(domainId, &argv.Smtp)
 		if err != nil {
 			return model.CallResponseError, err
 		}
