@@ -64,6 +64,9 @@ type Gemini struct {
 	Temperature       float32       `json:"temperature"`
 	Language          string        `json:"language"`
 	Vad               *GeminiVad    `json:"vad"`
+	// Hints for the caller-side transcript only; see ai_bots protos/bots.proto.
+	TranscriptionLanguages  []string `json:"transcriptionLanguages"`
+	TranscriptionVocabulary []string `json:"transcriptionVocabulary"`
 	SessionResumption *struct {
 		Handle      string `json:"handle"`
 		Transparent bool   `json:"transparent"`
@@ -399,6 +402,9 @@ func (r *router) gemini(ctx context.Context, scope *Flow, conn model.Connection,
 		MediaResolution: argv.MediaResolution,
 		Model:           argv.Model,
 		StartMessage:    argv.StartMessage,
+
+		TranscriptionLanguages:  argv.TranscriptionLanguages,
+		TranscriptionVocabulary: argv.TranscriptionVocabulary,
 	}
 
 	if argv.SessionResumption != nil {

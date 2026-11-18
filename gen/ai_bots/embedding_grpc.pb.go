@@ -144,3 +144,245 @@ var EmbeddingService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "embedding.proto",
 }
+
+const (
+	EmbeddingAdminService_ListDocuments_FullMethodName   = "/ai_bots.EmbeddingAdminService/ListDocuments"
+	EmbeddingAdminService_DeleteDocuments_FullMethodName = "/ai_bots.EmbeddingAdminService/DeleteDocuments"
+	EmbeddingAdminService_IngestDocuments_FullMethodName = "/ai_bots.EmbeddingAdminService/IngestDocuments"
+	EmbeddingAdminService_IngestFromURL_FullMethodName   = "/ai_bots.EmbeddingAdminService/IngestFromURL"
+	EmbeddingAdminService_CountDocuments_FullMethodName  = "/ai_bots.EmbeddingAdminService/CountDocuments"
+)
+
+// EmbeddingAdminServiceClient is the client API for EmbeddingAdminService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type EmbeddingAdminServiceClient interface {
+	ListDocuments(ctx context.Context, in *ListDocumentsRequest, opts ...grpc.CallOption) (*ListDocumentsResponse, error)
+	DeleteDocuments(ctx context.Context, in *DeleteDocumentsRequest, opts ...grpc.CallOption) (*DeleteDocumentsResponse, error)
+	IngestDocuments(ctx context.Context, in *IngestDocumentsRequest, opts ...grpc.CallOption) (*IngestDocumentsResponse, error)
+	// IngestFromURL fetches a single web page server-side, extracts its main
+	// readable text and ingests it like IngestDocuments (same response shape).
+	IngestFromURL(ctx context.Context, in *IngestFromURLRequest, opts ...grpc.CallOption) (*IngestDocumentsResponse, error)
+	CountDocuments(ctx context.Context, in *CountDocumentsRequest, opts ...grpc.CallOption) (*CountDocumentsResponse, error)
+}
+
+type embeddingAdminServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewEmbeddingAdminServiceClient(cc grpc.ClientConnInterface) EmbeddingAdminServiceClient {
+	return &embeddingAdminServiceClient{cc}
+}
+
+func (c *embeddingAdminServiceClient) ListDocuments(ctx context.Context, in *ListDocumentsRequest, opts ...grpc.CallOption) (*ListDocumentsResponse, error) {
+	out := new(ListDocumentsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingAdminService_ListDocuments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingAdminServiceClient) DeleteDocuments(ctx context.Context, in *DeleteDocumentsRequest, opts ...grpc.CallOption) (*DeleteDocumentsResponse, error) {
+	out := new(DeleteDocumentsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingAdminService_DeleteDocuments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingAdminServiceClient) IngestDocuments(ctx context.Context, in *IngestDocumentsRequest, opts ...grpc.CallOption) (*IngestDocumentsResponse, error) {
+	out := new(IngestDocumentsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingAdminService_IngestDocuments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingAdminServiceClient) IngestFromURL(ctx context.Context, in *IngestFromURLRequest, opts ...grpc.CallOption) (*IngestDocumentsResponse, error) {
+	out := new(IngestDocumentsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingAdminService_IngestFromURL_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *embeddingAdminServiceClient) CountDocuments(ctx context.Context, in *CountDocumentsRequest, opts ...grpc.CallOption) (*CountDocumentsResponse, error) {
+	out := new(CountDocumentsResponse)
+	err := c.cc.Invoke(ctx, EmbeddingAdminService_CountDocuments_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// EmbeddingAdminServiceServer is the server API for EmbeddingAdminService service.
+// All implementations must embed UnimplementedEmbeddingAdminServiceServer
+// for forward compatibility
+type EmbeddingAdminServiceServer interface {
+	ListDocuments(context.Context, *ListDocumentsRequest) (*ListDocumentsResponse, error)
+	DeleteDocuments(context.Context, *DeleteDocumentsRequest) (*DeleteDocumentsResponse, error)
+	IngestDocuments(context.Context, *IngestDocumentsRequest) (*IngestDocumentsResponse, error)
+	// IngestFromURL fetches a single web page server-side, extracts its main
+	// readable text and ingests it like IngestDocuments (same response shape).
+	IngestFromURL(context.Context, *IngestFromURLRequest) (*IngestDocumentsResponse, error)
+	CountDocuments(context.Context, *CountDocumentsRequest) (*CountDocumentsResponse, error)
+	mustEmbedUnimplementedEmbeddingAdminServiceServer()
+}
+
+// UnimplementedEmbeddingAdminServiceServer must be embedded to have forward compatible implementations.
+type UnimplementedEmbeddingAdminServiceServer struct {
+}
+
+func (UnimplementedEmbeddingAdminServiceServer) ListDocuments(context.Context, *ListDocumentsRequest) (*ListDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListDocuments not implemented")
+}
+func (UnimplementedEmbeddingAdminServiceServer) DeleteDocuments(context.Context, *DeleteDocumentsRequest) (*DeleteDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteDocuments not implemented")
+}
+func (UnimplementedEmbeddingAdminServiceServer) IngestDocuments(context.Context, *IngestDocumentsRequest) (*IngestDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IngestDocuments not implemented")
+}
+func (UnimplementedEmbeddingAdminServiceServer) IngestFromURL(context.Context, *IngestFromURLRequest) (*IngestDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IngestFromURL not implemented")
+}
+func (UnimplementedEmbeddingAdminServiceServer) CountDocuments(context.Context, *CountDocumentsRequest) (*CountDocumentsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CountDocuments not implemented")
+}
+func (UnimplementedEmbeddingAdminServiceServer) mustEmbedUnimplementedEmbeddingAdminServiceServer() {}
+
+// UnsafeEmbeddingAdminServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to EmbeddingAdminServiceServer will
+// result in compilation errors.
+type UnsafeEmbeddingAdminServiceServer interface {
+	mustEmbedUnimplementedEmbeddingAdminServiceServer()
+}
+
+func RegisterEmbeddingAdminServiceServer(s grpc.ServiceRegistrar, srv EmbeddingAdminServiceServer) {
+	s.RegisterService(&EmbeddingAdminService_ServiceDesc, srv)
+}
+
+func _EmbeddingAdminService_ListDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingAdminServiceServer).ListDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingAdminService_ListDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingAdminServiceServer).ListDocuments(ctx, req.(*ListDocumentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingAdminService_DeleteDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingAdminServiceServer).DeleteDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingAdminService_DeleteDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingAdminServiceServer).DeleteDocuments(ctx, req.(*DeleteDocumentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingAdminService_IngestDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingAdminServiceServer).IngestDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingAdminService_IngestDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingAdminServiceServer).IngestDocuments(ctx, req.(*IngestDocumentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingAdminService_IngestFromURL_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IngestFromURLRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingAdminServiceServer).IngestFromURL(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingAdminService_IngestFromURL_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingAdminServiceServer).IngestFromURL(ctx, req.(*IngestFromURLRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _EmbeddingAdminService_CountDocuments_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CountDocumentsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(EmbeddingAdminServiceServer).CountDocuments(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: EmbeddingAdminService_CountDocuments_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(EmbeddingAdminServiceServer).CountDocuments(ctx, req.(*CountDocumentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// EmbeddingAdminService_ServiceDesc is the grpc.ServiceDesc for EmbeddingAdminService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var EmbeddingAdminService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai_bots.EmbeddingAdminService",
+	HandlerType: (*EmbeddingAdminServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ListDocuments",
+			Handler:    _EmbeddingAdminService_ListDocuments_Handler,
+		},
+		{
+			MethodName: "DeleteDocuments",
+			Handler:    _EmbeddingAdminService_DeleteDocuments_Handler,
+		},
+		{
+			MethodName: "IngestDocuments",
+			Handler:    _EmbeddingAdminService_IngestDocuments_Handler,
+		},
+		{
+			MethodName: "IngestFromURL",
+			Handler:    _EmbeddingAdminService_IngestFromURL_Handler,
+		},
+		{
+			MethodName: "CountDocuments",
+			Handler:    _EmbeddingAdminService_CountDocuments_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "embedding.proto",
+}
