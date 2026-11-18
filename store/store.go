@@ -82,6 +82,19 @@ type CallStore interface {
 	SetUserId(domainId int64, id string, userId int64) *model.AppError
 	SetBlindTransfer(domainId int64, id, destination string) *model.AppError
 	SetContactId(domainId int64, id string, contactId int64) *model.AppError
+	// SetContactIDIfEmpty binds the contact only when the call has none yet
+	// and reports whether it did: an automatic binding never replaces one set
+	// by an operator or a schema. found is false while the call row does not
+	// exist yet.
+	SetContactIDIfEmpty(domainID int64, id string, contactID int64) (set, found bool, appErr *model.AppError)
+	// ContactCandidates returns the call's CRM contact candidates as JSON,
+	// from the live call or its history; nil when none were stored.
+	ContactCandidates(domainID int64, id string) ([]byte, *model.AppError)
+	// SetContactCandidates stores the call's candidate list and duplicate
+	// record (nil keeps the stored one) in params and reports whether the call
+	// row (live or history) was found. onlyIfAbsent skips a call that already
+	// has a list (reported as found).
+	SetContactCandidates(domainID int64, id string, candidates, duplicate []byte, onlyIfAbsent bool) (bool, *model.AppError)
 	SetVariables(id string, vars *model.CallVariables) *model.AppError
 	SaveMediaStats(stats *model.CallActionMediaStats) *model.AppError
 	SaveProgress(ctx context.Context, p *model.CallActionProgress) *model.AppError

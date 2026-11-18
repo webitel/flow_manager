@@ -1220,3 +1220,72 @@ func messageToText(messages ...model.IMEventWrapper) []string {
 
 	return msgs
 }
+
+// identifyTimeout bounds one Identify call to im-thread.
+const identifyTimeout = 12 * time.Second
+
+// IdentifyContact asks im-thread to identify the chat's CRM contact. The
+// criteria values are never logged: they hold the client's phone and email.
+func (c *Connection) IdentifyContact(ctx context.Context, req model.ContactIdentificationRequest) (*model.ContactIdentificationResult, *model.AppError) {
+	in := identifyRequest(c.threadId, c.domainId, req)
+
+	// im-thread bounds its CRM search by 10s; this covers it and the call.
+	ctx, cancel := context.WithTimeout(ctx, identifyTimeout)
+	defer cancel()
+
+	res, err := c.srv.client.identification.Api.Identify(c.IMOugoingContext(ctx), in)
+	if err != nil {
+		return nil, model.NewAppError("Conversation.IdentifyContact", "conv.identify_contact", map[string]any{"thread_id": in.GetThreadId()}, err.Error(), model.ExtractHTPPStatusCodeFromGRPC(err))
+	}
+
+	return identifyResult(res), nil
+}
+
+// identifyRequest maps a node run to im-thread's request: the node's
+// conversation id, else the current chat. The node already bounded last-N to 0
+// or 4..15 (PhoneLastDigitsOrWhole).
+func identifyRequest(currentThreadID string, domainID int64, req model.ContactIdentificationRequest) *t.IdentifyContactRequest {
+	in := &t.IdentifyContactRequest{
+		ThreadId:        cmp.Or(req.ThreadID, currentThreadID),
+		DomainId:        int32(domainID),             //nolint:gosec // domain ids fit int32
+		PhoneLastDigits: uint32(req.PhoneLastDigits), //nolint:gosec // 0 or 4..15, see PhoneLastDigitsOrWhole
+		Criteria:        make([]*t.IdentificationCriterion, 0, len(req.Criteria)),
+	}
+
+	if req.PrimaryOnly {
+		in.PhoneScope = t.PhoneScope_PHONE_SCOPE_PRIMARY_ONLY
+	}
+
+	for _, cr := range req.Criteria {
+		item := &t.IdentificationCriterion{Value: cr.Value}
+
+		switch cr.Type {
+		case model.IdentificationCriterionPhone:
+			item.Type = t.IdentificationCriterionType_IDENTIFICATION_CRITERION_TYPE_PHONE
+		case model.IdentificationCriterionEmail:
+			item.Type = t.IdentificationCriterionType_IDENTIFICATION_CRITERION_TYPE_EMAIL
+		default:
+			item.Type = t.IdentificationCriterionType_IDENTIFICATION_CRITERION_TYPE_ATTRIBUTE
+			item.Key = cr.Key
+		}
+
+		in.Criteria = append(in.Criteria, item)
+	}
+
+	return in
+}
+
+// identifyResult maps im-thread's summary to the schema variable.
+func identifyResult(res *t.IdentifyContactResponse) *model.ContactIdentificationResult {
+	out := &model.ContactIdentificationResult{FoundCount: int(res.GetFoundCount()), ContactID: res.GetCrmContactId()}
+
+	switch res.GetTrust() {
+	case t.IdentificationTrust_IDENTIFICATION_TRUST_VERIFIED:
+		out.Trust = model.IdentificationTrustVerified
+	case t.IdentificationTrust_IDENTIFICATION_TRUST_UNVERIFIED:
+		out.Trust = model.IdentificationTrustUnverified
+	case t.IdentificationTrust_IDENTIFICATION_TRUST_UNSPECIFIED:
+	}
+
+	return out
+}

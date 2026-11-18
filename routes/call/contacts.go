@@ -1,66 +1,33 @@
 package call
 
 import (
-	"github.com/webitel/flow_manager/gen/contacts"
+	"context"
+
+	"github.com/webitel/flow_manager/contactid"
 	"github.com/webitel/flow_manager/model"
-	"strconv"
 )
 
+// linkContact is the call auto-link (domain setting autolink_call_to_contact):
+// before the schema runs, the caller's number is searched and a single
+// verified contact is bound. The matches are also kept as the call's contact
+// candidates.
 func (r *Router) linkContact(call model.Call) {
 	if c := call.GetContactId(); c != 0 {
 		return
 	}
 
-	var dest string
-	if call.Direction() == model.CallDirectionOutbound {
-		dest = call.Destination()
-	} else if call.From() != nil {
-		dest = *call.From().GetNumber()
-	} else {
+	ctx, cancel := context.WithTimeout(call.Context(), autoLinkTimeout)
+	defer cancel()
 
-		return
-	}
-
-	list, err := r.fm.SearchContactsNA(call.Context(), &contacts.SearchContactsNARequest{
-		DomainId: call.DomainId(),
-		Qin:      []string{"phones"},
-		Q:        dest,
-		Size:     2,
-		Fields:   []string{"id"},
-	})
-
+	_, bound, err := identifyContact(ctx, r.fm, call, contactid.Request{}, true)
 	if err != nil {
 		call.Log().Error("listContact error:" + err.Error())
+
 		return
 	}
 
-	userIdStr, _ := call.Get("sip_h_X-Webitel-User-Id")
-	userId, _ := strconv.Atoi(userIdStr)
-	var contactId *int
-
-	if len(list.Data) == 1 {
-		call.Set(call.Context(), model.Variables{
-			"wbt_contact_id": list.Data[0].Id,
-		})
-
-		cId, _ := strconv.Atoi(list.Data[0].Id)
-		contactId = &cId
-		r.fm.CallSetContactId(call.DomainId(), call.Id(), int64(cId))
-	}
-
-	if userId > 0 {
-		n := model.Notification{
-			DomainId:  call.DomainId(),
-			Action:    "set_contact", // TODO
-			CreatedAt: model.GetMillis(),
-			ForUsers:  []int64{int64(userId)},
-			Body: map[string]interface{}{
-				"id":         call.Id(),
-				"contact_id": contactId,
-				"channel":    model.CallExchange,
-			},
-		}
-
-		r.fm.UserNotification(n)
+	if !bound {
+		// Nothing bound: the client still learns the lookup finished.
+		notifyContact(r.fm, call, nil)
 	}
 }

@@ -51,7 +51,15 @@ on conflict (id)
 		attempt_id = EXCLUDED.attempt_id,
 		member_id = EXCLUDED.member_id,
 		grantee_Id = EXCLUDED.grantee_Id,
-		params = EXCLUDED.params,
+		-- contact_candidates and contact_duplicate are written by contact
+		-- identification, not by the call event; keep them when a later event
+		-- rewrites params. Calls without them keep the event's params as before.
+		params = case when call_center.cc_calls.params -> 'contact_candidates' is not null
+				or call_center.cc_calls.params -> 'contact_duplicate' is not null
+			then coalesce(EXCLUDED.params, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+				'contact_candidates', call_center.cc_calls.params -> 'contact_candidates',
+				'contact_duplicate', call_center.cc_calls.params -> 'contact_duplicate'))
+			else EXCLUDED.params end,
         heartbeat = EXCLUDED.heartbeat,
         destination_name = EXCLUDED.destination_name,
         contact_id = EXCLUDED.contact_id
@@ -562,6 +570,65 @@ where id = :Id and domain_id = :DomainId`, map[string]any{
 	return nil
 }
 
+// Outcomes of a conditional write to a call: done (written), kept (the call
+// already has the value, left as it is), missing (no row yet) or retry. retry
+// means the statement saw a row it could not write: MoveToHistory moved it
+// meanwhile and the history row is invisible to this statement's snapshot, or
+// a concurrent writer changed it. The statement runs again with a fresh
+// snapshot, which tells the cases apart.
+const (
+	writeDone  = "done"
+	writeKept  = "kept"
+	writeRetry = "retry"
+	// writeAttempts covers one such change between two statements.
+	writeAttempts = 2
+)
+
+// SetContactIDIfEmpty sets contact_id only where it is still null, so an
+// automatic binding never replaces one set meanwhile by an operator or a
+// schema. The history row is written only once the call left cc_calls.
+//
+// found reports whether the call row exists at all: false while the ringing
+// event has not inserted it yet, so the caller can retry.
+func (s SqlCallStore) SetContactIDIfEmpty(domainID int64, id string, contactID int64) (set, found bool, appErr *model.AppError) {
+	var state string
+
+	for range writeAttempts {
+		err := s.GetMaster().SelectOne(&state, `with ua as (
+    update call_center.cc_calls
+        set contact_id = :ContactId
+        where id = :Id and domain_id = :DomainId and contact_id is null
+        returning id),
+     uh as (
+    update call_center.cc_calls_history h
+        set contact_id = :ContactId
+        where h.id = :Id and h.domain_id = :DomainId and h.contact_id is null
+            and not exists(select 1 from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId)
+        returning h.id)
+select case
+    when exists(select 1 from ua) or exists(select 1 from uh) then 'done'
+    when exists(select 1 from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId and c.contact_id is not null)
+        or exists(select 1 from call_center.cc_calls_history h where h.id = :Id and h.domain_id = :DomainId and h.contact_id is not null) then 'kept'
+    when exists(select 1 from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId)
+        or exists(select 1 from call_center.cc_calls_history h where h.id = :Id and h.domain_id = :DomainId) then 'retry'
+    else 'missing' end`, map[string]any{
+			"DomainId":  domainID,
+			"ContactId": contactID,
+			"Id":        id,
+		})
+		if err != nil {
+			return false, false, model.NewAppError("SqlCallStore.SetContactIDIfEmpty", "store.sql_call.set_contact_id_if_empty.app_error", nil, err.Error(), extractCodeFromErr(err))
+		}
+
+		if state != writeRetry {
+			break
+		}
+	}
+
+	// A row still unwritable after the retry is left to the caller's retries.
+	return state == writeDone, state == writeDone || state == writeKept, nil
+}
+
 func (s SqlCallStore) SetContactId(domainId int64, id string, contactId int64) *model.AppError {
 	_, err := s.GetMaster().Exec(`with ua as (
     update call_center.cc_calls
@@ -595,6 +662,84 @@ from uh`, map[string]any{
 	}
 
 	return nil
+}
+
+func (s SqlCallStore) ContactCandidates(domainID int64, id string) ([]byte, *model.AppError) {
+	var res *string
+
+	// Master, not a replica: the list is read, merged and written back, and a
+	// lagging read would drop the previous run's candidates.
+	err := s.GetMaster().SelectOne(&res, `select coalesce(
+	(select c.params -> 'contact_candidates' from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId),
+	(select h.params -> 'contact_candidates' from call_center.cc_calls_history h where h.id = :Id and h.domain_id = :DomainId)
+)::text`, map[string]any{
+		"DomainId": domainID,
+		"Id":       id,
+	})
+	if err != nil {
+		return nil, model.NewAppError("SqlCallStore.ContactCandidates", "store.sql_call.contact_candidates.app_error", nil, err.Error(), extractCodeFromErr(err))
+	}
+
+	if res == nil {
+		return nil, nil
+	}
+
+	return []byte(*res), nil
+}
+
+func (s SqlCallStore) SetContactCandidates(domainID int64, id string, candidates, duplicate []byte, onlyIfAbsent bool) (bool, *model.AppError) {
+	// duplicate is null when the call has no duplicate record: jsonb_strip_nulls
+	// then keeps a stored one. onlyIfAbsent writes only over an empty list, so a
+	// late retry never replaces what a later run stored.
+	var dup *string
+
+	if len(duplicate) > 0 {
+		v := string(duplicate)
+		dup = &v
+	}
+
+	var state string
+
+	for range writeAttempts {
+		err := s.GetMaster().SelectOne(&state, `with ua as (
+    update call_center.cc_calls
+        set params = coalesce(params, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+            'contact_candidates', :Candidates::jsonb, 'contact_duplicate', :Duplicate::jsonb))
+        where id = :Id and domain_id = :DomainId
+            and (not :OnlyIfAbsent::bool or params -> 'contact_candidates' is null)
+        returning id),
+     uh as (
+    update call_center.cc_calls_history h
+        set params = coalesce(h.params, '{}'::jsonb) || jsonb_strip_nulls(jsonb_build_object(
+            'contact_candidates', :Candidates::jsonb, 'contact_duplicate', :Duplicate::jsonb))
+        where h.id = :Id and h.domain_id = :DomainId
+            and (not :OnlyIfAbsent::bool or h.params -> 'contact_candidates' is null)
+            and not exists(select 1 from ua)
+        returning h.id)
+select case
+    when exists(select 1 from ua) or exists(select 1 from uh) then 'done'
+    when :OnlyIfAbsent::bool and (
+        exists(select 1 from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId and c.params -> 'contact_candidates' is not null)
+        or exists(select 1 from call_center.cc_calls_history h where h.id = :Id and h.domain_id = :DomainId and h.params -> 'contact_candidates' is not null)) then 'kept'
+    when exists(select 1 from call_center.cc_calls c where c.id = :Id and c.domain_id = :DomainId)
+        or exists(select 1 from call_center.cc_calls_history h where h.id = :Id and h.domain_id = :DomainId) then 'retry'
+    else 'missing' end`, map[string]any{
+			"DomainId":     domainID,
+			"Id":           id,
+			"Candidates":   string(candidates),
+			"Duplicate":    dup,
+			"OnlyIfAbsent": onlyIfAbsent,
+		})
+		if err != nil {
+			return false, model.NewAppError("SqlCallStore.SetContactCandidates", "store.sql_call.set_contact_candidates.app_error", nil, err.Error(), extractCodeFromErr(err))
+		}
+
+		if state != writeRetry {
+			break
+		}
+	}
+
+	return state == writeDone || state == writeKept, nil
 }
 
 func (s SqlCallStore) SetVariables(id string, vars *model.CallVariables) *model.AppError {
