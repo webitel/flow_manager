@@ -50,6 +50,8 @@ type IMDialog interface {
 	ResumeParent()
 	IsNested() bool
 	SendMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)
+	// IdentifyContact runs CRM contact identification for the chat.
+	IdentifyContact(ctx context.Context, req ContactIdentificationRequest) (*ContactIdentificationResult, *AppError)
 	SendTextMessage(ctx context.Context, text string) (Response, *AppError)
 	SendSystemMessage(ctx context.Context, msg SystemMessageOutbound) (Response, *AppError)
 	SendDocumentMessage(ctx context.Context, msg ChatMessageOutbound) (Response, *AppError)

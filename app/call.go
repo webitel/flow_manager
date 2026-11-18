@@ -167,6 +167,22 @@ func (f *FlowManager) CallSetContactId(domainId int64, callId string, contactId 
 	return f.Store.Call().SetContactId(domainId, callId, contactId)
 }
 
+// CallSetContactIDIfEmpty binds the contact only to a call without one.
+func (f *FlowManager) CallSetContactIDIfEmpty(domainID int64, callID string, contactID int64) (set, found bool, appErr *model.AppError) {
+	return f.Store.Call().SetContactIDIfEmpty(domainID, callID, contactID)
+}
+
+// CallContactCandidates returns the call's identification candidates.
+func (f *FlowManager) CallContactCandidates(domainID int64, callID string) ([]byte, *model.AppError) {
+	return f.Store.Call().ContactCandidates(domainID, callID)
+}
+
+// CallSetContactCandidates stores the call's identification candidates and
+// the duplicate record of two or more verified ones.
+func (f *FlowManager) CallSetContactCandidates(domainID int64, callID string, candidates, duplicate []byte, onlyIfAbsent bool) (bool, *model.AppError) {
+	return f.Store.Call().SetContactCandidates(domainID, callID, candidates, duplicate, onlyIfAbsent)
+}
+
 func (f *FlowManager) StoreCallVariables(id string, vars map[string]string) *model.AppError {
 	if len(vars) == 0 {
 		return nil

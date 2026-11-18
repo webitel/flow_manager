@@ -28,6 +28,7 @@ type Client struct {
 	threadService   *wbt.Client[p.ThreadManagementClient]
 	accountService  *wbt.Client[p.AccountClient]
 	th              *wbt.Client[t.ThreadManagementClient]
+	identification  *wbt.Client[t.ContactIdentificationClient]
 	facebookService *wbt.Client[providers.FacebookServiceClient]
 	viberService    *wbt.Client[providers.ViberServiceClient]
 	customService   *wbt.Client[providers.CustomServiceClient]
@@ -82,6 +83,12 @@ func (cm *Client) Start() error {
 			return
 		}
 
+		if cm.identification, err = wbt.NewClient(cm.consulAddr, ServiceNameThread, t.NewContactIdentificationClient, opts...); err != nil {
+			cm.log.Error("creating IM contact identification connection", wlog.Err(err))
+
+			return
+		}
+
 		if cm.facebookService, err = wbt.NewClient(cm.consulAddr, ServiceNameGateway, providers.NewFacebookServiceClient, opts...); err != nil {
 			cm.log.Error("creating IM facebook service connection", wlog.Err(err))
 			return
@@ -120,5 +127,13 @@ func (cm *Client) Stop() {
 
 	if err := cm.customService.Close(); err != nil {
 		cm.log.Error("closing custom service connection gracefully", wlog.Err(err))
+	}
+
+	if cm.identification == nil {
+		return
+	}
+
+	if err := cm.identification.Close(); err != nil {
+		cm.log.Error("closing contact identification connection gracefully", wlog.Err(err))
 	}
 }

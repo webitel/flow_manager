@@ -14,6 +14,9 @@ type callHandler func(ctx context.Context, scope *flow.Flow, call model.Call, ar
 func ApplicationsHandlers(r *Router) flow.ApplicationHandlers {
 	var apps = make(flow.ApplicationHandlers)
 
+	apps[model.ContactIdentificationApp] = &flow.Application{
+		Handler: callHandlerMiddleware(r.contactIdentification),
+	}
 	apps["ringReady"] = &flow.Application{
 		Handler: callHandlerMiddleware(r.ringReady),
 	}
