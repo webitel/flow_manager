@@ -22,6 +22,7 @@ type RecordFileArg struct {
 const (
 	recordActionStop           string = "stop"
 	defaultRecordSessionFormat string = "mp3"
+	videoRecordSessionFormat   string = "mp4"
 	defaultRecordSessionMinSec int    = 2
 	recordSessionTemplate      string = "${strepoch()}_${caller_id_number}_${destination_number}"
 	defaultRecordingVarName    string = "wbt_record_session_path"
@@ -46,6 +47,10 @@ type RecordSessionArg struct {
 func (a *RecordSessionArg) Normalize() {
 	if strings.TrimSpace(a.Type) == "" {
 		a.Type = defaultRecordSessionFormat
+	}
+
+	if strings.EqualFold(strings.TrimSpace(a.Type), videoRecordSessionFormat) {
+		a.Force = true
 	}
 
 	if strings.TrimSpace(a.Name) == "" {
