@@ -5,6 +5,12 @@ type SearchEntity struct {
 	Name *string `json:"name"`
 }
 
+// IsEmpty reports whether neither a positive id nor a non-empty name is set.
+// Decoded schema arguments like {"id": ""} produce Id = &0, which is treated as empty.
+func (s *SearchEntity) IsEmpty() bool {
+	return s == nil || ((s.Id == nil || *s.Id <= 0) && (s.Name == nil || *s.Name == ""))
+}
+
 type InQueueKey struct {
 	AttemptId int64
 	AppId     string
