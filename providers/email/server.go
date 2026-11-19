@@ -230,7 +230,7 @@ retry:
 }
 
 func (s *MailServer) storeError(p *Profile, err *model.AppError) {
-	saveErr := s.store.SetError(p.Id, err)
+	saveErr := s.store.SetError(p.DomainId, p.Id, err)
 	if saveErr != nil {
 		s.log.Err(saveErr)
 	}
@@ -239,7 +239,7 @@ func (s *MailServer) storeError(p *Profile, err *model.AppError) {
 }
 
 func (s *MailServer) storeToken(p *Profile, token *oauth2.Token) {
-	err := s.store.SetToken(p.Id, token)
+	err := s.store.SetToken(p.DomainId, p.Id, token)
 	if err != nil {
 		s.log.Err(err)
 	}
