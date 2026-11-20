@@ -2,7 +2,9 @@ package model
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -32,58 +34,63 @@ type TTSSettings struct {
 	} `json:"background"`
 }
 
-func (tts *TTSSettings) QueryParams(domainId int64) string {
-	var q = fmt.Sprintf("domain_id=%d&profile_id=%d&text=%s", domainId, tts.Profile.Id,
-		UrlEncoded(strings.ReplaceAll(tts.Text, "!", ".")))
+func (tts *TTSSettings) QueryValues(domainId int64, q url.Values) {
+	AddFirstValue(q, "domain_id", strconv.FormatInt(domainId, 10))
+	AddFirstValue(q, "profile_id", strconv.Itoa(tts.Profile.Id))
+	AddFirstValue(q, "text", strings.ReplaceAll(tts.Text, "!", "."))
 
 	concatenedMaps, keys := getSortedKeys(tts.VoiceSettings)
 	for _, k := range keys {
-		q += fmt.Sprintf("&%s=%v", k, concatenedMaps[k])
+		AddFirstValue(q, k, fmt.Sprintf("%v", concatenedMaps[k]))
 	}
 
 	if tts.TextType != "" {
-		q += "&text_type=" + tts.TextType
+		AddFirstValue(q, "text_type", tts.TextType)
 	}
 
 	if tts.Language != "" {
-		q += "&language=" + tts.Language
+		AddFirstValue(q, "language", tts.Language)
 	}
 
 	if tts.Voice != "" {
-		q += "&voice=" + tts.Voice
+		AddFirstValue(q, "voice", tts.Voice)
 	}
 
 	if tts.Background != nil && tts.Background.FileUri != "" {
-		q += "&bg_url=" + tts.Background.FileUri
+		AddFirstValue(q, "bg_url", tts.Background.FileUri)
 
 		if tts.Background.Volume > 0 {
-			q += fmt.Sprintf("&bg_vol=%f", tts.Background.Volume)
+			AddFirstValue(q, "bg_vol", fmt.Sprintf("%f", tts.Background.Volume))
 		}
 		if tts.Background.FadeIn > 0 {
-			q += fmt.Sprintf("&bg_fin=%d", tts.Background.FadeIn)
+			AddFirstValue(q, "bg_fin", strconv.FormatInt(tts.Background.FadeIn, 10))
 		}
 		if tts.Background.FadeOut > 0 {
-			q += fmt.Sprintf("&bg_fout=%d", tts.Background.FadeOut)
+			AddFirstValue(q, "bg_fout", strconv.FormatInt(tts.Background.FadeOut, 10))
 		}
 	}
 
 	if tts.SpeakingRate != "" {
-		q += "&speakingRate=" + tts.SpeakingRate
+		AddFirstValue(q, "speakingRate", tts.SpeakingRate)
 	}
-	if tts.SpeakingRate != "" {
-		q += "&pitch=" + tts.Pitch
+	if tts.Pitch != "" {
+		AddFirstValue(q, "pitch", tts.Pitch)
 	}
-	if tts.SpeakingRate != "" {
-		q += "&volumeGainDb=" + tts.VolumeGainDb
+	if tts.VolumeGainDb != "" {
+		AddFirstValue(q, "volumeGainDb", tts.VolumeGainDb)
 	}
-	if tts.SpeakingRate != "" {
-		q += "&effectsProfileId=" + tts.EffectsProfileId
+	if tts.EffectsProfileId != "" {
+		AddFirstValue(q, "effectsProfileId", tts.EffectsProfileId)
 	}
 	if tts.KeyLocation != "" {
-		q += "&keyLocation=" + UrlEncoded(tts.KeyLocation)
+		AddFirstValue(q, "keyLocation", tts.KeyLocation)
 	}
+}
 
-	return q
+func AddFirstValue(q url.Values, key, value string) {
+	if _, ok := q[key]; !ok {
+		q.Set(key, value)
+	}
 }
 
 func getSortedKeys(maps ...map[string]interface{}) (map[string]interface{}, []string) {
