@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strconv"
 
 	"github.com/webitel/wlog"
@@ -578,8 +579,8 @@ type Call interface {
 	PushSpeechMessage(msg SpeechMessage)
 	SpeechMessages(limit int) []SpeechMessage
 
-	TTS(ctx context.Context, path string, tts TTSSettings, digits *PlaybackDigits, timeout int) (Response, *AppError)
-	TTSOpus(ctx context.Context, path string, digits *PlaybackDigits, timeout int) (Response, *AppError)
+	TTS(ctx context.Context, provider string, params url.Values, tts TTSSettings, digits *PlaybackDigits, timeout int) (Response, *AppError)
+	TTSOpus(ctx context.Context, provider string, params url.Values, digits *PlaybackDigits, timeout int) (Response, *AppError)
 
 	Redirect(ctx context.Context, uri []string) (Response, *AppError)
 	SetSounds(ctx context.Context, lang, voice string) (Response, *AppError)

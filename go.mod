@@ -17,8 +17,6 @@ require (
 	github.com/euskadi31/go-tokenizer v1.0.0
 	github.com/go-gorp/gorp v2.2.0+incompatible
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/gorilla/handlers v1.5.2
-	github.com/gorilla/mux v1.8.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0
 	github.com/h2non/filetype v1.1.3
 	github.com/hashicorp/golang-lru/v2 v2.0.7
@@ -34,15 +32,16 @@ require (
 	github.com/tidwall/gjson v1.17.1
 	github.com/webitel/crypto/cryptostore v0.3.0
 	github.com/webitel/engine/pkg/discovery v0.0.0-20260826062815-ac09649ed0d9
-	github.com/webitel/engine/pkg/presign v0.1.0
 	github.com/webitel/engine/pkg/wbt v0.0.0-20261027095731-a9df619bd3f4
 	github.com/webitel/flow_manager/pkg/processing v0.0.0-20250515111207-b1465e8b89c1
+	github.com/webitel/storage/pkg/sysurl v0.1.0
 	github.com/webitel/webitel-cryptoctl/schema v0.1.0
 	github.com/webitel/webitel-go-kit v0.0.13-0.20240908192731-3abe573c0e41
 	github.com/webitel/webitel-go-kit/infra/health v0.3.0
 	github.com/webitel/webitel-go-kit/infra/httpproxy v0.0.0-20260707115612-427dabf84692
 	github.com/webitel/webitel-go-kit/infra/otel v0.6.0
 	github.com/webitel/webitel-go-kit/pkg/hostaddr v0.1.0
+	github.com/webitel/webitel-go-kit/pkg/presign v0.1.0
 	github.com/webitel/wlog v0.0.0-20260929140055-f81a38037840
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -68,7 +67,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
@@ -101,7 +99,7 @@ require (
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
-	github.com/webitel/crypto/cryptobox v0.3.0 // indirect
+	github.com/webitel/crypto/cryptobox v0.3.1 // indirect
 	github.com/webitel/crypto/encoding/jsonc v0.1.0 // indirect
 	github.com/webitel/crypto/env v0.2.0 // indirect
 	github.com/webitel/webitel-go-kit/pkg/logging v0.1.0 // indirect

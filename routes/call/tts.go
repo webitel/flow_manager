@@ -4,6 +4,7 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
+	"net/url"
 	"strconv"
 )
 
@@ -32,37 +33,26 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return model.CallResponseError, ErrorRequiredParameter("tts", "text")
 	}
 
-	q := ""
+	var provider string
 
 	switch argv.Provider {
-	case "polly":
-		q = "/polly?"
-	case "microsoft":
-		q = "/microsoft?"
-	case "yandex":
-		q = "/yandex?"
-	case "webitel":
-		q = "/webitel?"
-	case "google":
-		q = "/google?"
-
-	default:
-		q = "/?"
+	case "polly", "microsoft", "yandex", "webitel", "google":
+		provider = argv.Provider
 	}
 
+	params := url.Values{}
+
 	if argv.Key != "" {
-		q += "&key=" + model.UrlEncoded(argv.Key)
+		params.Set("key", argv.Key)
 	}
 
 	if argv.Token != "" {
-		q += "&token=" + model.UrlEncoded(argv.Token)
+		params.Set("token", argv.Token)
 	}
 
 	if argv.Region != "" {
-		q += "&region=" + argv.Region
+		params.Set("region", argv.Region)
 	}
-
-	q += "&"
 
 	if argv.GetSpeech != nil {
 		background := argv.GetSpeech.Background
@@ -82,7 +72,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			timeout = argv.GetSpeech.Timeout
 		}
 
-		if _, err := call.TTS(ctx, q, argv.TTSSettings, argv.GetDigits, timeout); err != nil {
+		if _, err := call.TTS(ctx, provider, params, argv.TTSSettings, argv.GetDigits, timeout); err != nil {
 			return nil, err
 		}
 
@@ -127,9 +117,9 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return model.CallResponseOK, nil
 	}
 	if argv.Provider == "yandex" {
-		return call.TTSOpus(ctx, q, argv.GetDigits, 0)
+		return call.TTSOpus(ctx, provider, params, argv.GetDigits, 0)
 	}
-	return call.TTS(ctx, q, argv.TTSSettings, argv.GetDigits, 0)
+	return call.TTS(ctx, provider, params, argv.TTSSettings, argv.GetDigits, 0)
 }
 
 func setSttVar(ctx context.Context, varName string, call model.Call) {

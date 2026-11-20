@@ -15,6 +15,7 @@ import (
 
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
+	"github.com/webitel/storage/pkg/sysurl"
 )
 
 const (
@@ -70,6 +71,7 @@ type Connection struct {
 	systemDirection      string
 	schemaId             *int
 	resample             int
+	sysurl               *sysurl.Builder
 	transferSchema       int
 	transferQueue        int
 	transferAgent        int

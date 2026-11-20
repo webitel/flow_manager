@@ -10,6 +10,7 @@ import (
 	"github.com/webitel/engine/pkg/discovery"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/providers/fs/eventsocket"
+	"github.com/webitel/storage/pkg/sysurl"
 	"github.com/webitel/wlog"
 )
 
@@ -24,6 +25,7 @@ type Config struct {
 	Host           string
 	Port           int
 	RecordResample int
+	SysURL         *sysurl.Builder
 }
 
 type server struct {
@@ -158,6 +160,7 @@ func (s *server) handleConnection(c *eventsocket.Connection) {
 
 	connection := newConnection(c, e)
 	connection.resample = s.cfg.RecordResample
+	connection.sysurl = s.cfg.SysURL
 
 	defer func() {
 
