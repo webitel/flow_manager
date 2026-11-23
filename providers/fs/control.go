@@ -256,15 +256,6 @@ func (c *Connection) SendFileToAi(ctx context.Context, aiUrl string, m map[strin
 			"record_sample_rate": c.resample,
 		})
 	}
-	id := model.NewId()
-	params := url.Values{}
-	params.Set("domain", strconv.FormatInt(c.domainId, 10))
-	for k, v := range m {
-		model.AddFirstValue(params, k, b64.URLEncoding.EncodeToString([]byte(v)))
-	}
-
-	model.AddFirstValue(params, "url", aiUrl)
-
 	msg := c.SpeechMessages(20)
 
 	history := make([]SpeechAiMessage, 0, len(msg))
@@ -284,8 +275,16 @@ func (c *Connection) SendFileToAi(ctx context.Context, aiUrl string, m map[strin
 	}
 
 	historyJson, _ := json.Marshal(history)
-	model.AddFirstValue(params, "chat_history", b64.URLEncoding.EncodeToString(historyJson))
-	model.AddFirstValue(params, "id", id)
+
+	id := model.NewId()
+	params := url.Values{}
+	params.Set("domain", strconv.FormatInt(c.domainId, 10))
+	params.Set("url", aiUrl)
+	params.Set("chat_history", b64.URLEncoding.EncodeToString(historyJson))
+	params.Set("id", id)
+	for k, v := range m {
+		model.AddFirstValue(params, k, b64.URLEncoding.EncodeToString([]byte(v)))
+	}
 
 	link, err := c.sysurl.AiUpload(id, params, format)
 	if err != nil {
@@ -846,7 +845,7 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 		if v.Type != nil && *v.Type == "tts" && v.TTS != nil {
 			link, format, err := c.ttsLink("", nil, v.TTS)
 			if err != nil {
-				c.log.Error(err.Error(), wlog.Err(err))
+				c.log.Error("build tts link", wlog.Err(err))
 				continue
 			}
 			fileString = append(fileString,
@@ -937,7 +936,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		}
 		link, err := c.sysurl.RedirectPlayback(args.Url, args.Method, args.Headers, "")
 		if err != nil {
-			c.log.Error(err.Error(), wlog.Err(err))
+			c.log.Error("build redirect playback link", wlog.Err(err))
 			return "", false
 		}
 		return protocol + link, true
@@ -954,7 +953,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		}
 		link, format, err := c.ttsLink("", nil, file.TTS)
 		if err != nil {
-			c.log.Error(err.Error(), wlog.Err(err))
+			c.log.Error("build tts link", wlog.Err(err))
 			return "", false
 		}
 		return c.ttsProtocol(file.TTS, format, false) + link, true
@@ -1017,7 +1016,7 @@ func (c *Connection) ttsProtocol(tts *model.TTSSettings, format string, prepare 
 func (c *Connection) mediaStreamLink(protocol string, fileId int, format string) (string, bool) {
 	link, err := c.sysurl.MediaStream(c.domainId, int64(fileId), format)
 	if err != nil {
-		c.log.Error(err.Error(), wlog.Err(err))
+		c.log.Error("build media stream link", wlog.Err(err))
 		return "", false
 	}
 
@@ -1025,7 +1024,7 @@ func (c *Connection) mediaStreamLink(protocol string, fileId int, format string)
 }
 
 func sysURLError(err error) *model.AppError {
-	return model.NewAppError("FreeSWITCH", "provider.fs.sys_url.app_error", nil, err.Error(), http.StatusInternalServerError)
+	return model.NewAppError("FS", "fs.control.sys_url", nil, err.Error(), http.StatusInternalServerError)
 }
 
 func fixName(n string) string {
