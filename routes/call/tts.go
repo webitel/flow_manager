@@ -4,16 +4,12 @@ import (
 	"context"
 	"github.com/webitel/flow_manager/flow"
 	"github.com/webitel/flow_manager/model"
-	"net/url"
 	"strconv"
 )
 
 type TTSArgs struct {
 	model.TTSSettings
-	Key      string `json:"key"`      // todo deprecated
-	Token    string `json:"token"`    // todo deprecated
 	Provider string `json:"provider"` // todo deprecated
-	Region   string `json:"region"`   // todo deprecated
 
 	Terminator string                `json:"terminator"`
 	GetDigits  *model.PlaybackDigits `json:"getDigits"`
@@ -40,20 +36,6 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		provider = argv.Provider
 	}
 
-	params := url.Values{}
-
-	if argv.Key != "" {
-		params.Set("key", argv.Key)
-	}
-
-	if argv.Token != "" {
-		params.Set("token", argv.Token)
-	}
-
-	if argv.Region != "" {
-		params.Set("region", argv.Region)
-	}
-
 	if argv.GetSpeech != nil {
 		background := argv.GetSpeech.Background
 		if background != nil && background.File != nil {
@@ -72,7 +54,7 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 			timeout = argv.GetSpeech.Timeout
 		}
 
-		if _, err := call.TTS(ctx, provider, params, argv.TTSSettings, argv.GetDigits, timeout); err != nil {
+		if _, err := call.TTS(ctx, provider, argv.TTSSettings, argv.GetDigits, timeout); err != nil {
 			return nil, err
 		}
 
@@ -117,9 +99,9 @@ func (r *Router) TTS(ctx context.Context, scope *flow.Flow, call model.Call, arg
 		return model.CallResponseOK, nil
 	}
 	if argv.Provider == "yandex" {
-		return call.TTSOpus(ctx, provider, params, argv.GetDigits, 0)
+		return call.TTSOpus(ctx, provider, argv.GetDigits, 0)
 	}
-	return call.TTS(ctx, provider, params, argv.TTSSettings, argv.GetDigits, 0)
+	return call.TTS(ctx, provider, argv.TTSSettings, argv.GetDigits, 0)
 }
 
 func setSttVar(ctx context.Context, varName string, call model.Call) {
