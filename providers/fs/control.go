@@ -510,8 +510,8 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 	return res
 }
 
-func (c *Connection) TTS(ctx context.Context, provider string, params url.Values, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
-	link, format, err := c.ttsLink(provider, params, &tts)
+func (c *Connection) TTS(ctx context.Context, provider string, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+	link, format, err := c.ttsLink(provider, &tts)
 	if err != nil {
 		return model.CallResponseError, err
 	}
@@ -533,11 +533,8 @@ func (c *Connection) TTS(ctx context.Context, provider string, params url.Values
 	}
 }
 
-func (c *Connection) TTSOpus(ctx context.Context, provider string, params url.Values, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+func (c *Connection) TTSOpus(ctx context.Context, provider string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
 	q := url.Values{}
-	for k, v := range params {
-		q[k] = v
-	}
 	model.AddFirstValue(q, "format", "opus")
 
 	link, err := c.sysurl.TTS(provider, q, "opus")
@@ -843,7 +840,7 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 
 	for _, v := range files {
 		if v.Type != nil && *v.Type == "tts" && v.TTS != nil {
-			link, format, err := c.ttsLink("", nil, v.TTS)
+			link, format, err := c.ttsLink("", v.TTS)
 			if err != nil {
 				c.log.Error("build tts link", wlog.Err(err))
 				continue
@@ -951,7 +948,7 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		if file.TTS == nil {
 			return "", false
 		}
-		link, format, err := c.ttsLink("", nil, file.TTS)
+		link, format, err := c.ttsLink("", file.TTS)
 		if err != nil {
 			c.log.Error("build tts link", wlog.Err(err))
 			return "", false
@@ -962,11 +959,8 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 	}
 }
 
-func (c *Connection) ttsLink(provider string, params url.Values, tts *model.TTSSettings) (string, string, *model.AppError) {
+func (c *Connection) ttsLink(provider string, tts *model.TTSSettings) (string, string, *model.AppError) {
 	q := url.Values{}
-	for k, v := range params {
-		q[k] = v
-	}
 	tts.QueryValues(c.domainId, q)
 
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))

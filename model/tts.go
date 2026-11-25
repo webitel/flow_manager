@@ -25,7 +25,6 @@ type TTSSettings struct {
 	Pitch            string `json:"pitch"`
 	VolumeGainDb     string `json:"volumeGainDb"`
 	EffectsProfileId string `json:"effectsProfileId"`
-	KeyLocation      string `json:"keyLocation"` // todo deprecated
 	Background       *struct {
 		FileUri string  `json:"url"`
 		Volume  float64 `json:"volume"`
@@ -81,9 +80,6 @@ func (tts *TTSSettings) QueryValues(domainId int64, q url.Values) {
 	}
 	if tts.EffectsProfileId != "" {
 		AddFirstValue(q, "effectsProfileId", tts.EffectsProfileId)
-	}
-	if tts.KeyLocation != "" {
-		AddFirstValue(q, "keyLocation", tts.KeyLocation)
 	}
 }
 
