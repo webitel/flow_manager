@@ -25,6 +25,7 @@ import (
 	"github.com/webitel/flow_manager/cases"
 	"github.com/webitel/flow_manager/gen/contacts"
 	"github.com/webitel/flow_manager/gen/engine"
+	"github.com/webitel/flow_manager/gen/kb"
 	"github.com/webitel/flow_manager/model"
 	"github.com/webitel/flow_manager/mq"
 	"github.com/webitel/flow_manager/mq/rabbit"
@@ -99,6 +100,7 @@ type FlowManager struct {
 
 	engineCallCli     *wbt.Client[engine.CallServiceClient]
 	engineFeedbackCli *wbt.Client[engine.FeedbackServiceClient]
+	kbRetrieval       *wbt.Client[kb.RetrievalClient]
 	AiBots            *bots_client.Client
 
 	ProxyManager   *httpproxy.Manager
@@ -362,6 +364,10 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if fm.engineFeedbackCli, err = wbt.NewClient(config.DiscoverySettings.Url, wbt.EngineServiceName, engine.NewFeedbackServiceClient); err != nil {
+		return nil, err
+	}
+
+	if fm.kbRetrieval, err = wbt.NewClient(config.DiscoverySettings.Url, kbServiceName, kb.NewRetrievalClient); err != nil {
 		return nil, err
 	}
 
