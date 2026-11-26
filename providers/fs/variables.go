@@ -1,5 +1,28 @@
 package fs
 
+import "strings"
+
+const (
+	exportedPrefix         = "usr_"
+	exportedVariablePrefix = "variable_" + exportedPrefix
+)
+
+func resolveExportVariables(vars map[string]any) []string {
+	if len(vars) == 0 {
+		return nil
+	}
+
+	var result []string
+
+	for k := range vars {
+		if strings.HasPrefix(k, exportedVariablePrefix) {
+			result = append(result, strings.TrimPrefix(k, exportedVariablePrefix))
+		}
+	}
+
+	return result
+}
+
 // FIXME ...
 var mapVariables = map[string]string{
 	"state":        "Channel-State",

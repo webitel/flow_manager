@@ -130,7 +130,7 @@ func (c *Connection) Bridge(ctx context.Context, call model.Call, strategy strin
 	if len(c.exportVariables) > 0 {
 		for _, v := range c.exportVariables {
 			if val, ok := c.Get(v); ok {
-				dialString += fmt.Sprintf(",'usr_%s'='%s'", v, val)
+				dialString += fmt.Sprintf(",'%s%s'='%s'", exportedPrefix, v, val)
 			}
 		}
 	}
@@ -203,7 +203,8 @@ func (c *Connection) Export(ctx context.Context, vars []string) (model.Response,
 		if v == "" {
 			continue
 		}
-		exp[fmt.Sprintf("usr_%s", v)], _ = c.Get(v)
+
+		exp[exportedPrefix+v], _ = c.Get(v)
 
 		c.exportVariables = append(c.exportVariables, v)
 	}

@@ -138,9 +138,11 @@ func newConnection(baseConnection *eventsocket.Connection, dump *eventsocket.Eve
 	)
 	connection.initIvrQueue(dump)
 	connection.initTransferSchema(dump)
-	connection.initTransferQueue(dump)
 	connection.setCallInfo(dump)
 	connection.updateVariablesFromEvent(dump)
+	connection.initTransferQueue(dump)
+	connection.initTransferExportVariables(dump)
+
 	return connection
 }
 
@@ -166,16 +168,16 @@ func (c *Connection) initTransferSchema(event *eventsocket.Event) {
 
 func (c *Connection) initTransferQueue(event *eventsocket.Event) {
 	c.transferQueue, _ = strconv.Atoi(event.Get("variable_wbt_bt_queue_id"))
-	if c.transferQueue != 0 {
-		// c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
-	}
-
 	c.transferAgent, _ = strconv.Atoi(event.Get("variable_wbt_bt_agent_id"))
-	if c.transferAgent != 0 {
-		// c.executeWithContext(c.ctx, "unset", "wbt_bt_queue_id")
+	c.isBlindTransferQueue, _ = strconv.ParseBool(event.Get("variable_wbt_bt_queue"))
+}
+
+func (c *Connection) initTransferExportVariables(event *eventsocket.Event) {
+	if !c.IsBlindTransferQueue() && c.transferAgent <= 0 {
+		return
 	}
 
-	c.isBlindTransferQueue = event.Get("variable_wbt_bt_queue") == "true"
+	c.exportVariables = append(c.exportVariables, resolveExportVariables(event.Header)...)
 }
 
 func (c *Connection) IsBlindTransferQueue() bool {
