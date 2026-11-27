@@ -21,6 +21,17 @@ const (
 // trigger or feed a bot schema.
 const IMMessageTypeSystem string = "system"
 
+// IMConsumedUpTo is how far a finished IM dialog read its thread: the newest event time (Unix
+// ms, from the delivery payload) per event kind. Messages and interactive callbacks reach
+// flow_manager through separate im-delivery pipelines, so their times are only ordered within
+// a kind and are tracked apart.
+type IMConsumedUpTo struct {
+	Messages  int64
+	Callbacks int64
+}
+
+func (c IMConsumedUpTo) IsZero() bool { return c.Messages == 0 && c.Callbacks == 0 }
+
 type IMDialog interface {
 	Connection
 
@@ -32,6 +43,8 @@ type IMDialog interface {
 	LastMessage() Message
 	SchemaId() int
 	Stop(err error)
+	// MarkCompleted records that the schema reached its natural end.
+	MarkCompleted()
 	Complete(id string)
 	CompleteId() string
 	RunContext() context.Context
