@@ -9,14 +9,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 
-	"github.com/webitel/engine/pkg/presign"
 	"github.com/webitel/engine/pkg/wbt"
+	"github.com/webitel/storage/pkg/sysurl"
 	"github.com/webitel/webitel-go-kit/infra/health"
 	healthhttp "github.com/webitel/webitel-go-kit/infra/health/http"
 	"github.com/webitel/webitel-go-kit/infra/health/sdnotify"
 	"github.com/webitel/webitel-go-kit/infra/httpproxy"
 	otelhealth "github.com/webitel/webitel-go-kit/infra/otel/instrumentation/health"
 	otelsdk "github.com/webitel/webitel-go-kit/infra/otel/sdk"
+	"github.com/webitel/webitel-go-kit/pkg/presign"
 	"github.com/webitel/wlog"
 
 	"github.com/webitel/flow_manager/app/bots_client"
@@ -277,11 +278,21 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 		return nil, outErr
 	}
 
+	mac, err := presign.NewMAC()
+	if err != nil {
+		return nil, fmt.Errorf("sys url signer: %w", err)
+	}
+	sysURL, err := sysurl.NewBuilder(mac)
+	if err != nil {
+		return nil, err
+	}
+
 	fm.grpcServer = grpcSrv
 	fm.eslServer = fs.NewServer(&fs.Config{
 		Host:           fm.Config().Esl.Host,
 		Port:           fm.Config().Esl.Port,
 		RecordResample: fm.Config().Record.Sample,
+		SysURL:         sysURL,
 	})
 	fm.mailServer = email.New(fm.storage, fm.Store.Email(), fm.Config().DebugImap)
 	fm.eventQueue = mq.NewMQ(rabbit.NewRabbitMQ(fm.Config().MQSettings, fm.id))
@@ -333,7 +344,7 @@ func NewFlowManager() (outApp *FlowManager, outErr error) {
 	}
 
 	if config.PreSignedCertificateLocation != "" {
-		if fm.cert, err = presign.NewPreSigned(config.PreSignedCertificateLocation); err != nil {
+		if fm.cert, err = presign.NewPreSignChain(config.PreSignedCertificateLocation); err != nil {
 			return nil, err
 		}
 	}

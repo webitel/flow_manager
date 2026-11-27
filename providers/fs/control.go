@@ -14,6 +14,8 @@ import (
 
 	"github.com/h2non/filetype"
 
+	"github.com/webitel/wlog"
+
 	"github.com/webitel/flow_manager/model"
 )
 
@@ -235,9 +237,13 @@ func (c *Connection) RecordFile(ctx context.Context, name, format string, maxSec
 		})
 	}
 
+	link, err := c.sysurl.RecordingUpload(c.domainId, c.Id(), name+"."+format, format, nil)
+	if err != nil {
+		return model.CallResponseError, sysURLError(err)
+	}
+
 	return c.executeWithContext(ctx, "record",
-		fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s %d %d %d", c.domainId, c.Id(), name, format, format,
-			maxSec, silenceThresh, silenceHits))
+		fmt.Sprintf("http_cache://http://$${cdr_url}%s %d %d %d", link, maxSec, silenceThresh, silenceHits))
 }
 
 type SpeechAiMessage struct {
@@ -245,19 +251,12 @@ type SpeechAiMessage struct {
 	Sender  string `json:"sender"`
 }
 
-func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
+func (c *Connection) SendFileToAi(ctx context.Context, aiUrl string, m map[string]string, format string, maxSec, silenceThresh, silenceHits int) (model.Response, *model.AppError) {
 	if c.resample != 0 && !c.IsSetResample() {
 		c.Set(ctx, model.Variables{
 			"record_sample_rate": c.resample,
 		})
 	}
-	s := ""
-	for k, v := range m {
-		s += "&" + k + "=" + b64.URLEncoding.EncodeToString([]byte(v))
-	}
-
-	s += "&url=" + url
-
 	msg := c.SpeechMessages(20)
 
 	history := make([]SpeechAiMessage, 0, len(msg))
@@ -277,12 +276,23 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	}
 
 	historyJson, _ := json.Marshal(history)
-	s += "&chat_history=" + b64.URLEncoding.EncodeToString(historyJson)
 
 	id := model.NewId()
+	params := url.Values{}
+	params.Set("domain", strconv.FormatInt(c.domainId, 10))
+	params.Set("url", aiUrl)
+	params.Set("chat_history", b64.URLEncoding.EncodeToString(historyJson))
+	params.Set("id", id)
+	for k, v := range m {
+		model.AddFirstValue(params, k, b64.URLEncoding.EncodeToString([]byte(v)))
+	}
 
-	recUrl := fmt.Sprintf("http_cache://http://$${cdr_url}/sys/recordings/ai/%s?domain=%d%s&id=%s&.%s %d %d %d", id, c.domainId, s, id, format,
-		maxSec, silenceThresh, silenceHits)
+	link, err := c.sysurl.AiUpload(id, params, format)
+	if err != nil {
+		return model.CallResponseError, sysURLError(err)
+	}
+
+	recUrl := fmt.Sprintf("http_cache://http://$${cdr_url}%s %d %d %d", link, maxSec, silenceThresh, silenceHits)
 
 	r, e := c.executeWithContext(ctx, "record", recUrl)
 
@@ -299,7 +309,12 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 		cdrUrl = cdrUrl[13 : i+13]
 	}
 
-	res, err := http.DefaultClient.Get(cdrUrl + "/sys/recordings/ai/" + id + "/metadata")
+	metadataLink, err := c.sysurl.AiMetadata(id)
+	if err != nil {
+		return model.CallResponseError, sysURLError(err)
+	}
+
+	res, err := http.DefaultClient.Get(cdrUrl + metadataLink)
 	if err != nil {
 		return model.CallResponseError, model.NewAppError("FS", "fs.control.ai.err", nil, err.Error(), http.StatusInternalServerError)
 	}
@@ -328,28 +343,36 @@ func (c *Connection) SendFileToAi(ctx context.Context, url string, m map[string]
 	sp.Answer = fmt.Sprintf("%v", tmp)
 	c.PushSpeechMessage(sp)
 
-	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}/sys/recordings/ai/"+id+"?.wav")
+	speechLink, err := c.sysurl.AiSpeech(id, "wav")
+	if err != nil {
+		return model.CallResponseError, sysURLError(err)
+	}
+
+	return c.executeWithContext(ctx, "playback", "http_cache://http://$${cdr_url}"+speechLink)
 }
 
-func (c *Connection) buildRecordSessionPath(args *model.RecordSessionArgs) string {
-	return fmt.Sprintf(
-		"http_cache://http://$${cdr_url}/sys/recordings?domain=%d&id=%s&name=%s.%s&.%s",
-		c.DomainId(),
-		c.Id(),
-		args.Name,
-		args.Format,
-		args.Format,
-	)
+func (c *Connection) buildRecordSessionPath(args *model.RecordSessionArgs) (string, *model.AppError) {
+	link, err := c.sysurl.RecordingUpload(c.DomainId(), c.Id(), args.Name+"."+args.Format, args.Format, nil)
+	if err != nil {
+		return "", sysURLError(err)
+	}
+
+	return "http_cache://http://$${cdr_url}" + link, nil
 }
 
 func (c *Connection) RecordSession(ctx context.Context, args *model.RecordSessionArgs) (model.Response, *model.AppError) {
+	recordPath, appErr := c.buildRecordSessionPath(args)
+	if appErr != nil {
+		return nil, appErr
+	}
+
 	vars := map[string]any{
 		"RECORD_MIN_SEC":            args.MinSec,
 		"RECORD_STEREO":             args.Stereo,
 		"RECORD_BRIDGE_REQ":         args.Bridged,
 		"media_bug_answer_req":      args.Bridged,
 		"recording_follow_transfer": args.FollowTransfer,
-		args.PathVar:                c.buildRecordSessionPath(args),
+		args.PathVar:                recordPath,
 	}
 
 	if c.resample != 0 && !c.IsSetResample() {
@@ -488,14 +511,16 @@ func (c *Connection) SpeechMessages(limit int) []model.SpeechMessage {
 	return res
 }
 
-func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
-	var fs []string
-	var tmp string
+func (c *Connection) TTS(ctx context.Context, provider string, params url.Values, tts model.TTSSettings, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+	link, format, err := c.ttsLink(provider, params, &tts)
+	if err != nil {
+		return model.CallResponseError, err
+	}
 
-	tmp, _ = c.ttsUri(&tts, path, true)
-	fs = append(fs, tmp)
-	tmp, _ = c.ttsUri(&tts, path, false)
-	fs = append(fs, tmp)
+	fs := []string{
+		c.ttsProtocol(&tts, format, true) + link,
+		c.ttsProtocol(&tts, format, false) + link,
+	}
 	if timeout > 0 {
 		fs = append(fs, fmt.Sprintf("silence_stream://%d", timeout))
 	}
@@ -509,23 +534,28 @@ func (c *Connection) TTS(ctx context.Context, path string, tts model.TTSSettings
 	}
 }
 
-func (c *Connection) TTSOpus(ctx context.Context, path string, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
-	tmp := "http_cache://http://$${cdr_url}/sys/tts"
+func (c *Connection) TTSOpus(ctx context.Context, provider string, params url.Values, digits *model.PlaybackDigits, timeout int) (model.Response, *model.AppError) {
+	q := url.Values{}
+	for k, v := range params {
+		q[k] = v
+	}
+	model.AddFirstValue(q, "format", "opus")
 
-	path += "&format=opus"
+	link, err := c.sysurl.TTS(provider, q, "opus")
+	if err != nil {
+		return model.CallResponseError, sysURLError(err)
+	}
 
-	var url string
+	fileUrl := "http_cache://http://$${cdr_url}" + link
 
 	if timeout > 0 {
-		url = fmt.Sprintf("file_string://%s!silence_stream://%d", tmp+path+".opus", timeout)
-	} else {
-		url = tmp + path + "&.opus"
+		fileUrl = fmt.Sprintf("file_string://%s!silence_stream://%d", fileUrl, timeout)
 	}
 
 	if digits != nil {
-		return c.PlaybackUrlAndGetDigits(ctx, url, digits)
+		return c.PlaybackUrlAndGetDigits(ctx, fileUrl, digits)
 	} else {
-		return c.PlaybackUrl(ctx, url)
+		return c.PlaybackUrl(ctx, fileUrl)
 	}
 }
 
@@ -814,8 +844,16 @@ func (c *Connection) getFileString(files []*model.PlaybackFile) (string, bool) {
 
 	for _, v := range files {
 		if v.Type != nil && *v.Type == "tts" && v.TTS != nil {
-			str, _ := c.ttsUri(v.TTS, "?", true)
-			fileString = append(fileString, str)
+			link, format, err := c.ttsLink("", nil, v.TTS)
+			if err != nil {
+				c.log.Error("build tts link", wlog.Err(err))
+				continue
+			}
+			fileString = append(fileString,
+				c.ttsProtocol(v.TTS, format, true)+link,
+				c.ttsProtocol(v.TTS, format, false)+link,
+			)
+			continue
 		}
 		if str, ok := c.buildFileLink(v); ok {
 			fileString = append(fileString, str)
@@ -848,19 +886,19 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("shout://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp3", *file.Id, c.domainId), true
+		return c.mediaStreamLink("shout://$${cdr_url}", *file.Id, "mp3")
 
 	case "audio/wav", "audio/ogg", "audio/x-wav":
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.wav", *file.Id, c.domainId), true
+		return c.mediaStreamLink("http_cache://http://$${cdr_url}", *file.Id, "wav")
 
 	case "video/mp4":
 		if file.Id == nil {
 			return "", false
 		}
-		return fmt.Sprintf("http_cache://http://$${cdr_url}/sys/media/%d/stream?domain_id=%d&.mp4", *file.Id, c.domainId), true
+		return c.mediaStreamLink("http_cache://http://$${cdr_url}", *file.Id, "mp4")
 
 	case "tone":
 		if file.Name == nil {
@@ -887,27 +925,22 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		if err != nil {
 			return "", false
 		}
-		url, err := url.Parse("(storage_var)/sys/redirect/playback")
-		if err != nil {
-			return "", false
-		}
-		params := url.Query()
-		params.Add("url", args.Url)
-		params.Add("method", args.Method)
-		for key, value := range args.Headers {
-			params.Add(key, value)
-		}
-		url.RawQuery = params.Encode()
-		stringUrl := strings.Replace(url.String(), "(storage_var)", "$${cdr_url}", 1)
+		var protocol string
 		tp := filetype.GetType(args.FileType)
 		switch tp.MIME.Value {
 		case "audio/wav", "audio/x-wav":
-			return fmt.Sprintf("http_cache://https://%s", stringUrl), true
+			protocol = "http_cache://https://$${cdr_url}"
 		case "audio/mp3", "audio/mpeg":
-			return fmt.Sprintf("shout://%s", stringUrl), true
+			protocol = "shout://$${cdr_url}"
 		default:
 			return "", false
 		}
+		link, err := c.sysurl.RedirectPlayback(args.Url, args.Method, args.Headers, "")
+		if err != nil {
+			c.log.Error("build redirect playback link", wlog.Err(err))
+			return "", false
+		}
+		return protocol + link, true
 
 	case "local":
 		if file.Name == nil {
@@ -916,27 +949,51 @@ func (c *Connection) buildFileLink(file *model.PlaybackFile) (string, bool) {
 		return *file.Name, true
 
 	case "tts":
-		s, ok := c.ttsUri(file.TTS, "?", false)
-		if !ok {
+		if file.TTS == nil {
 			return "", false
 		}
-		return s, true
+		link, format, err := c.ttsLink("", nil, file.TTS)
+		if err != nil {
+			c.log.Error("build tts link", wlog.Err(err))
+			return "", false
+		}
+		return c.ttsProtocol(file.TTS, format, false) + link, true
 	default:
 		return "", false
 	}
 }
 
-func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool) (string, bool) {
-	if tts == nil {
-		return "", false
+func (c *Connection) ttsLink(provider string, params url.Values, tts *model.TTSSettings) (string, string, *model.AppError) {
+	q := url.Values{}
+	for k, v := range params {
+		q[k] = v
 	}
-	var protocol string
-	q := fmt.Sprintf("%s%s", startQ, tts.QueryParams(c.domainId))
+	tts.QueryValues(c.domainId, q)
 
 	rate, format := ttsGetCodecSettings(c.GetVariable("variable_write_rate"))
 	if tts.Format == "ulaw" { // todo 11lab test
 		format = tts.Format
 	}
+
+	if !tts.Static {
+		model.AddFirstValue(q, "r", c.id[:5])
+	}
+
+	model.AddFirstValue(q, "format", format)
+	if rate != "" {
+		model.AddFirstValue(q, "rate", rate)
+	}
+
+	link, err := c.sysurl.TTS(provider, q, format)
+	if err != nil {
+		return "", "", sysURLError(err)
+	}
+
+	return link, format, nil
+}
+
+func (c *Connection) ttsProtocol(tts *model.TTSSettings, format string, prepare bool) string {
+	var protocol string
 
 	if prepare {
 		protocol = "{call_id=" + c.id + ",id=" + model.NewId()[:8]
@@ -944,25 +1001,31 @@ func (c *Connection) ttsUri(tts *model.TTSSettings, startQ string, prepare bool)
 			protocol += ",skip_cache=true"
 		}
 		protocol += "}"
-		protocol += "wbt_prepare://http://$${cdr_url}/sys/tts"
+		protocol += "wbt_prepare://http://$${cdr_url}"
 	} else if format == "mp3" {
-		protocol = "shout://$${cdr_url}/sys/tts"
+		protocol = "shout://$${cdr_url}"
 	} else {
 		if c.IsPlayBackground() && !tts.Static {
 			protocol = "{refresh=true}"
 		}
-		protocol += "http_cache://http://$${cdr_url}/sys/tts"
-	}
-	if !tts.Static {
-		q += "&r=" + c.id[:5]
+		protocol += "http_cache://http://$${cdr_url}"
 	}
 
-	q += "&format=" + format
-	if rate != "" {
-		q += "&rate=" + rate
+	return protocol
+}
+
+func (c *Connection) mediaStreamLink(protocol string, fileId int, format string) (string, bool) {
+	link, err := c.sysurl.MediaStream(c.domainId, int64(fileId), format)
+	if err != nil {
+		c.log.Error("build media stream link", wlog.Err(err))
+		return "", false
 	}
 
-	return protocol + q + "&." + format, true
+	return protocol + link, true
+}
+
+func sysURLError(err error) *model.AppError {
+	return model.NewAppError("FS", "fs.control.sys_url", nil, err.Error(), http.StatusInternalServerError)
 }
 
 func fixName(n string) string {
