@@ -154,6 +154,8 @@ func finishNaturally(conv Dialog) bool {
 		return false
 	}
 
+	conv.MarkCompleted()
+
 	// Природний кінець схеми → pop зі стека контролю. Для owner-бота
 	// thread-service робить CompleteBotControl no-op.
 	if id := conv.CompleteId(); id != "" {

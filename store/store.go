@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	"golang.org/x/oauth2"
 
@@ -38,10 +39,13 @@ type SocketSessionStore interface {
 }
 
 type SessionStore interface {
-	Touch(id, appId string) (*int, error)
-	Remove(id, appId string) error
+	Touch(id, appID string) (*int, error)
+	Remove(id, appID string) error
+	Release(id, appID string, consumedUpTo model.IMConsumedUpTo) error
+	Consumed(id, kind string, at int64) (bool, error)
+	PruneConsumed(olderThan time.Duration) error
 	RemoveByThread(threadID string) error
-	RemoveAll(appId string) error
+	RemoveAll(appID string) error
 }
 
 type CacheStore interface {
