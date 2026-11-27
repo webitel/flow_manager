@@ -526,7 +526,7 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 	// bot that is already running still needs to observe them (e.g. to react to a close and
 	// finish/leave). So we only guard the startDialog path below, never OnMessage.
 	m := msg.GetPayload().Message()
-	isSystem := m.System != nil || m.Type == model.IMMessageTypeSystem
+	isSystem := isSystemMessage(m)
 
 	for _, endpoint := range msg.GetPayload().Receivers() {
 		if endpoint.Issuer != IMUserTypeBot {

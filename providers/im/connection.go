@@ -311,6 +311,12 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	log.Debug("processed on message event")
 }
 
+// isSystemMessage reports an administrative notice (member added/removed, transfer, close),
+// as opposed to input from a thread participant.
+func isSystemMessage(m model.Message) bool {
+	return m.System != nil || m.Type == model.IMMessageTypeSystem
+}
+
 func (c *Connection) From() model.ImEndpoint     { return c.from }
 func (c *Connection) To() model.ImEndpoint       { return c.to }
 func (c *Connection) ThreadId() string           { return c.threadId }
