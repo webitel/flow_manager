@@ -22,9 +22,6 @@ import (
 // the rerank rather than miss it.
 const kbSearchTimeout = 5 * time.Second
 
-// kbMaxTopK is the most fragments the knowledge base returns.
-const kbMaxTopK = 50
-
 // kbSearch is the "KB Search" node: it finds the fragments of the knowledge
 // base spaces that answer the query and writes them, with the execution state,
 // to the schema variables. A failed search is a state, not an error, so the
@@ -97,7 +94,7 @@ func kbSearchRequest(argv model.KBSearchArgs) (*kb.SemanticSearchRequest, *model
 	return &kb.SemanticSearchRequest{
 		Query:    argv.Query,
 		SpaceIds: spaceIDs,
-		TopK:     int32(min(topK, kbMaxTopK)),
+		TopK:     int32(topK),
 		Tags:     filters.Tags,
 		TagMatch: kbTagMatch[filters.TagMatch],
 		Rerank:   argv.Rerank,
