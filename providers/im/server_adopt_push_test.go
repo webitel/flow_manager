@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
 
@@ -22,9 +23,12 @@ func (fakeSessionStore) Touch(string, string) (*int, error) {
 	seq := 1
 	return &seq, nil
 }
-func (fakeSessionStore) Remove(string, string) error { return nil }
-func (fakeSessionStore) RemoveByThread(string) error { return nil }
-func (fakeSessionStore) RemoveAll(string) error      { return nil }
+func (fakeSessionStore) Remove(string, string) error                        { return nil }
+func (fakeSessionStore) Release(string, string, model.IMConsumedUpTo) error { return nil }
+func (fakeSessionStore) Consumed(string, string, int64) (bool, error)       { return false, nil }
+func (fakeSessionStore) PruneConsumed(time.Duration) error                  { return nil }
+func (fakeSessionStore) RemoveByThread(string) error                        { return nil }
+func (fakeSessionStore) RemoveAll(string) error                             { return nil }
 
 type fakeGatewayThreads struct {
 	p.ThreadManagementClient

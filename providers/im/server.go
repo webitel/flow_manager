@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc/metadata"
 
@@ -15,11 +16,23 @@ import (
 	"github.com/webitel/flow_manager/model"
 )
 
+const (
+	// consumedRecordTTL bounds how long a finished dialog's consumption record is kept. It
+	// only has to outlive the delivery lag between nodes (milliseconds to seconds); a short
+	// TTL keeps flow.session small for the prefix scans of RemoveByThread.
+	consumedRecordTTL = 10 * time.Minute
+	// consumedPruneInterval is how often each node drops expired consumption records.
+	consumedPruneInterval = 5 * time.Minute
+)
+
 type SessionStore interface {
-	Touch(id, appId string) (*int, error)
-	Remove(id, appId string) error
+	Touch(id, appID string) (*int, error)
+	Remove(id, appID string) error
+	Release(id, appID string, consumedUpTo model.IMConsumedUpTo) error
+	Consumed(id, kind string, at int64) (bool, error)
+	PruneConsumed(olderThan time.Duration) error
 	RemoveByThread(threadID string) error
-	RemoveAll(appId string) error
+	RemoveAll(appID string) error
 }
 
 type server struct {
@@ -78,9 +91,29 @@ func (s *server) Start() *model.AppError {
 			panic(err)
 		}
 
+		go s.pruneConsumedRecords()
 		go s.listen()
 	})
 	return nil
+}
+
+// pruneConsumedRecords drops expired consumption records on start and then periodically, until
+// the server stops. Every node runs it; the delete is idempotent.
+func (s *server) pruneConsumedRecords() {
+	ticker := time.NewTicker(consumedPruneInterval)
+	defer ticker.Stop()
+
+	for {
+		if err := s.sessionStore.PruneConsumed(consumedRecordTTL); err != nil {
+			s.log.Warn("failed to prune session consumption records", wlog.Err(err))
+		}
+
+		select {
+		case <-s.didFinishListen:
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 func (s *server) Stop() {
@@ -497,14 +530,27 @@ func (s *server) synthesizeGrantMessage(m model.IMBotControlGrantedEvent, from, 
 	}
 }
 
-func (s *server) stopConnection(c *Connection) {
+// stopConnection drops the dialog and its session claim. A non-zero consumedUpTo (a natural
+// end) also leaves the session's consumption record, see SessionStore.Release.
+func (s *server) stopConnection(c *Connection, consumedUpTo model.IMConsumedUpTo) {
 	c.srv.connectionStore.Delete(c)
 	// Прибираємо будь-який висячий parent-запис для цієї конекшн (на випадок
 	// термінального Break без природного pop).
 	s.pushParent.Delete(c.id)
-	err := s.sessionStore.Remove(c.id, s.id)
-	if err != nil {
-		s.log.Warn("failed to remove session store connection")
+
+	if !consumedUpTo.IsZero() {
+		err := s.sessionStore.Release(c.id, s.id, consumedUpTo)
+		if err == nil {
+			return
+		}
+
+		// Without the record a lagging node may rerun the schema; a claim left behind would
+		// pin the thread to this node until the next leave or restart.
+		s.log.Warn("failed to release session, dropping the claim only", wlog.String("id", c.id), wlog.Err(err))
+	}
+
+	if err := s.sessionStore.Remove(c.id, s.id); err != nil {
+		s.log.Warn("failed to remove session store connection", wlog.String("id", c.id), wlog.Err(err))
 	}
 }
 
@@ -562,7 +608,7 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 	// bot that is already running still needs to observe them (e.g. to react to a close and
 	// finish/leave). So we only guard the startDialog path below, never OnMessage.
 	m := msg.GetPayload().Message()
-	isSystem := m.System != nil || m.Type == model.IMMessageTypeSystem
+	isSystem := isSystemMessage(m)
 
 	for _, endpoint := range msg.GetPayload().Receivers() {
 		if endpoint.Issuer != IMUserTypeBot {
@@ -605,6 +651,51 @@ func (s *server) nodeMessage(msg model.IMEventWrapper) error {
 	return nil
 }
 
+// consumedByFinishedDialog reports whether msg was already received by a dialog of this
+// session that has finished since, and if so gives back the claim just taken for it. Every
+// node receives every IM event, so a node lagging behind the one that ran the dialog can
+// win the freed claim with an event that dialog already received; starting from it would
+// rerun the schema without any new customer input. The check runs only after a won claim:
+// the finished dialog wrote its record in the statement that freed the claim.
+func (s *server) consumedByFinishedDialog(compositeSessionID string, msg model.IMEventWrapper) bool {
+	kind, at := eventMark(msg)
+	if at == 0 {
+		return false
+	}
+
+	consumed, err := s.sessionStore.Consumed(compositeSessionID, kind, at)
+	if err != nil {
+		// Fail open: losing a real customer message is worse than an occasional rerun.
+		s.log.Warn("checking session consumption record failed, starting the dialog",
+			wlog.String("id", compositeSessionID),
+			wlog.Err(err),
+		)
+
+		return false
+	}
+
+	if !consumed {
+		return false
+	}
+
+	s.log.Debug("skipping dialog start: event already received by a finished dialog",
+		wlog.String("id", compositeSessionID),
+		wlog.String("thread_id", msg.GetPayload().GetThreadID()),
+		wlog.String("message_id", msg.GetPayload().MessageID()),
+		wlog.String("event_kind", kind),
+		wlog.Int64("event_time", at),
+	)
+
+	if err = s.sessionStore.Remove(compositeSessionID, s.id); err != nil {
+		s.log.Warn("failed to give back the session claim",
+			wlog.String("id", compositeSessionID),
+			wlog.Err(err),
+		)
+	}
+
+	return true
+}
+
 // startDialog claims the session for this node and, if the claim succeeds and no
 // dialog is already running for the composite id, builds a new connection and hands
 // it to the schema runner via s.consume. It is shared by the inbound-message path
@@ -628,6 +719,10 @@ func (s *server) startDialog(compositeSessionID string, to model.ImEndpoint, msg
 			wlog.String("message_id", msg.GetPayload().MessageID()),
 		)
 
+		return nil
+	}
+
+	if s.consumedByFinishedDialog(compositeSessionID, msg) {
 		return nil
 	}
 
