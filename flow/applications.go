@@ -297,6 +297,10 @@ func ApplicationsHandlers(r *router) ApplicationHandlers {
 		AllowNoConnect: true,
 		Handler:        r.doExecute(r.createMeeting),
 	}
+	apps[model.KBSearchApp] = &Application{
+		AllowNoConnect: true,
+		Handler:        r.doExecute(r.kbSearch),
+	}
 	return apps
 }
 
