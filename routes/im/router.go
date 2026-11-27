@@ -129,12 +129,29 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 		}
 	}
 
+	if !finishNaturally(conv) {
+		return nil
+	}
+
+	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
+		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
+		flow.Route(ctxDisc, d, r)
+		<-ctxDisc.Done()
+		cancel()
+	}
+
+	return nil
+}
+
+// finishNaturally handles the natural end of a schema run. It returns false, doing nothing,
+// when the dialog was terminated meanwhile.
+func finishNaturally(conv Dialog) bool {
 	// Guard проти гонки: Break/Stop (client_leave) міг виставити terminating саме
 	// коли перевірялася умова циклу (IsSuspended()==false, але не природний кінець).
 	// Без цього ми б помилково виконали Complete/ResumeParent на leave і воскресили
 	// джерельну схему.
 	if conv.IsTerminating() {
-		return nil
+		return false
 	}
 
 	// Природний кінець схеми → pop зі стека контролю. Для owner-бота
@@ -147,14 +164,7 @@ func (r *Router) runSchema(conn model.Connection, conv Dialog, shId int, ctx con
 	// пушнута над нею). Ідемпотентно з майбутнім grant від thread-service.
 	conv.ResumeParent()
 
-	if d, err := i.TriggerScope(flow.TriggerDisconnected); err == nil {
-		ctxDisc, cancel := context.WithDeadline(context.Background(), time.Now().Add(10*time.Second))
-		flow.Route(ctxDisc, d, r)
-		<-ctxDisc.Done()
-		cancel()
-	}
-
-	return nil
+	return true
 }
 
 func (r *Router) Decode(scope *flow.Flow, in, out any) *model.AppError {
