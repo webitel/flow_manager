@@ -75,6 +75,16 @@ type Connection struct {
 	completeId      string
 	// nested — схема стартувала як push над іншою (grant з released_sub != 0).
 	nested bool
+	// endMu guards ended and observed. Stop ends the dialog and snapshots observed in one
+	// step, so every event either reaches the dialog and is counted, or does neither.
+	endMu sync.Mutex
+	ended bool
+	// observed is how far this dialog read its thread, counting every non-system event it
+	// received whether or not the schema acted on it. On a natural end it becomes the
+	// session's consumption record, see server.stopConnection.
+	observed model.IMConsumedUpTo
+	// completed marks a natural end of the schema (not an error, leave or stop).
+	completed atomic.Bool
 }
 
 const (
@@ -139,7 +149,67 @@ func newConnection(s *server, id string, to model.ImEndpoint, msg model.IMEventW
 		conn.variables[WebitelViaVariableKey] = msg.Via()
 	}
 
+	conn.observe(msg)
+
 	return conn
+}
+
+// eventMark returns the kind of msg and its time (Unix ms, from the delivery payload), or
+// ("", 0) when msg does not count towards the consumption record: a system notice (it never
+// starts a dialog, and its time is not ordered against participant input) or an event that
+// carries no time (a start synthesized from a bot control grant).
+func eventMark(msg model.IMEventWrapper) (string, int64) {
+	if callback, ok := msg.GetPayload().(model.InteractiveCallback); ok {
+		if callback.ReactedAt.IsZero() {
+			return "", 0
+		}
+
+		return model.IMEventTypeCallback, callback.ReactedAt.UnixMilli()
+	}
+
+	m := msg.GetPayload().Message()
+	if isSystemMessage(m) || m.CreatedAt == 0 {
+		return "", 0
+	}
+
+	return model.IMEventTypeMessage, m.CreatedAt
+}
+
+// isSystemMessage reports an administrative notice (member added/removed, transfer, close),
+// as opposed to input from a thread participant.
+func isSystemMessage(m model.Message) bool {
+	return m.System != nil || m.Type == model.IMMessageTypeSystem
+}
+
+// observe counts msg towards observed. The caller holds endMu, or owns c exclusively.
+func (c *Connection) observe(msg model.IMEventWrapper) {
+	switch kind, at := eventMark(msg); kind {
+	case model.IMEventTypeMessage:
+		c.observed.Messages = max(c.observed.Messages, at)
+	case model.IMEventTypeCallback:
+		c.observed.Callbacks = max(c.observed.Callbacks, at)
+	}
+}
+
+// accept counts msg and reports whether the dialog may still take it: false once Stop has
+// ended the dialog, when the event must neither be fed to it nor counted.
+func (c *Connection) accept(msg model.IMEventWrapper) bool {
+	c.endMu.Lock()
+	defer c.endMu.Unlock()
+
+	if c.ended {
+		return false
+	}
+
+	c.observe(msg)
+
+	return true
+}
+
+// MarkCompleted records that the schema reached its natural end, so stopping the dialog
+// keeps a consumption record instead of only dropping the session claim.
+func (c *Connection) MarkCompleted() {
+	c.completed.Store(true)
 }
 
 func (c *Connection) IMOugoingContext(ctx context.Context) context.Context {
@@ -296,6 +366,14 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 		wlog.Int64("domain_id", msg.GetDomainID()),
 	)
 
+	// Counted before the filters below: an event that reached a live dialog must never start
+	// a new one later, even if this schema ignored it (see server.consumedByFinishedDialog).
+	if !c.accept(msg) {
+		log.Debug("dialog already stopped, event not fed")
+
+		return
+	}
+
 	if msg.GetPayload().Sender().Sub == c.to.Sub {
 		log.Debug("message from sub changed")
 		return
@@ -309,12 +387,6 @@ func (c *Connection) OnMessage(msg model.IMEventWrapper) {
 	c.processViaMetadata(msg.Via())
 
 	log.Debug("processed on message event")
-}
-
-// isSystemMessage reports an administrative notice (member added/removed, transfer, close),
-// as opposed to input from a thread participant.
-func isSystemMessage(m model.Message) bool {
-	return m.System != nil || m.Type == model.IMMessageTypeSystem
 }
 
 func (c *Connection) From() model.ImEndpoint     { return c.from }
@@ -990,6 +1062,20 @@ func (c *Connection) Break() {
 }
 
 func (c *Connection) Stop(err error) {
+	// A schema that reached its natural end leaves a record even if a Break lands afterwards
+	// (a pop grant tearing down the finished child, a client leave): the record only holds
+	// back events this dialog already received. After a leave it outlives the thread's
+	// RemoveByThread until PruneConsumed drops it.
+	c.endMu.Lock()
+	c.ended = true
+
+	var consumedUpTo model.IMConsumedUpTo
+	if err == nil && c.completed.Load() {
+		consumedUpTo = c.observed
+	}
+
+	c.endMu.Unlock()
+
 	atomic.StoreInt32(&c.state, connStateTerminating)
 
 	c.Lock()
@@ -1004,7 +1090,7 @@ func (c *Connection) Stop(err error) {
 		lc()
 	}
 
-	c.srv.stopConnection(c)
+	c.srv.stopConnection(c, consumedUpTo)
 }
 
 func (c *Connection) receive(_ context.Context, timeout int) ([]model.IMEventWrapper, *model.AppError) {
