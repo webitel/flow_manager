@@ -91,3 +91,7 @@ func (s *LayeredStore) SocketSession() SocketSessionStore {
 func (s *LayeredStore) Session() SessionStore {
 	return s.DatabaseLayer.Session()
 }
+
+func (s *LayeredStore) UserNotification() UserNotificationStore {
+	return s.DatabaseLayer.UserNotification()
+}

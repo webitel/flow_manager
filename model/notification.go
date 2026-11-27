@@ -22,3 +22,12 @@ func (n *Notification) ToJson() []byte {
 	d, _ := json.Marshal(n)
 	return d
 }
+
+type UserNotification struct {
+	Id        int64   `json:"id" db:"id"`
+	DomainId  int64   `json:"-" db:"-"`
+	CreatedAt int64   `json:"created_at" db:"created_at"`
+	ForUsers  []int64 `json:"-" db:"-"`
+	Type      string  `json:"type" db:"-"`
+	Message   string  `json:"message" db:"-"`
+}
