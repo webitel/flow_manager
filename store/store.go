@@ -62,10 +62,10 @@ type EmailStore interface {
 	ProfileTaskFetch(node string) ([]*model.EmailProfileTask, *model.AppError)
 	GetProfile(id int) (*model.EmailProfile, *model.AppError)
 	GetProfileUpdatedAt(domainId int64, id int) (int64, *model.AppError)
-	SetError(profileId int, appErr *model.AppError) *model.AppError
+	SetError(domainId int64, profileId int, appErr *model.AppError) *model.AppError
 
 	GerProperties(domainId int64, id *int64, messageId *string, mapRes model.Variables) (model.Variables, *model.AppError)
-	SetToken(id int, token *oauth2.Token) *model.AppError
+	SetToken(domainId int64, id int, token *oauth2.Token) *model.AppError
 	SmtpSettings(domainId int64, search *model.SearchEntity) (*model.SmtSettings, *model.AppError)
 	SetContact(ctx context.Context, domainId int64, id string, contactIds []int64) *model.AppError
 }

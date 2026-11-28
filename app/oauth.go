@@ -14,9 +14,11 @@ import (
 
 var smtpOauth2Group singleflight.Group
 
-func (fm *FlowManager) SmtpSettingsOAuthToken(settings *model.SmtSettings) (string, *model.AppError) {
-	token, err, _ := smtpOauth2Group.Do(fmt.Sprintf("%v", settings.Id), func() (interface{}, error) {
-		token, err := fm.smtpSettingsOAuthToken(settings)
+// SmtpSettingsOAuthToken returns an access token for the profile, refreshing and persisting it if needed.
+// settings must be resolved via SmtpSettings(domainId, ...) — never taken from schema arguments.
+func (fm *FlowManager) SmtpSettingsOAuthToken(domainId int64, settings *model.SmtSettings) (string, *model.AppError) {
+	token, err, _ := smtpOauth2Group.Do(fmt.Sprintf("%d-%d", domainId, settings.Id), func() (interface{}, error) {
+		token, err := fm.smtpSettingsOAuthToken(domainId, settings)
 		if err != nil {
 			return token, err
 		}
@@ -36,9 +38,10 @@ func (fm *FlowManager) SmtpSettingsOAuthToken(settings *model.SmtSettings) (stri
 	return token.(string), nil
 }
 
-func (fm *FlowManager) smtpSettingsOAuthToken(settings *model.SmtSettings) (string, *model.AppError) {
+func (fm *FlowManager) smtpSettingsOAuthToken(domainId int64, settings *model.SmtSettings) (string, *model.AppError) {
 	if settings.Params == nil || settings.Params.OAuth2 == nil {
-		// TODO
+		return "", model.NewAppError("SmtSettingsOAuthToken", "app.smtp.oauth.config.app_err", nil,
+			fmt.Sprintf("profile_id=%v: oauth2 params not configured", settings.Id), http.StatusBadRequest)
 	}
 
 	oauthConfig := model.OAuthConfig(settings.Server, settings.Params.OAuth2)
@@ -54,7 +57,7 @@ func (fm *FlowManager) smtpSettingsOAuthToken(settings *model.SmtSettings) (stri
 	}
 
 	if !t.Equal(newToken.Expiry) {
-		if err2 := fm.Store.Email().SetToken(settings.Id, newToken); err2 != nil {
+		if err2 := fm.Store.Email().SetToken(domainId, settings.Id, newToken); err2 != nil {
 			wlog.Error(fmt.Sprintf("profile_id=%v, store token error: %s", settings.Id, err2.Error()))
 			return "", err2
 		}
